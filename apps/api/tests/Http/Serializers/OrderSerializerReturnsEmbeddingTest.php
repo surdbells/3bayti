@@ -57,7 +57,7 @@ final class OrderSerializerReturnsEmbeddingTest extends TestCase
     public function listShapeIncludesEmptyReturnsArrayWhenExplicitlyPassed(): void
     {
         // Passing [] (vs null) is the caller's signal that "I did
-        // look this up and the answer is zero" — the UI should
+        // look this up and the answer is zero", the UI should
         // show the section header (with "no returns") rather than
         // hiding it entirely.
         $order = $this->makeOrder();

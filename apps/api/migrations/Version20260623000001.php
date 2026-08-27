@@ -21,7 +21,7 @@ use Doctrine\Migrations\AbstractMigration;
  *      the post-delivery "review prompt" follow-up finder/cron (next
  *      agent). Nullable because every existing order pre-dates the
  *      column, and orders that have not been delivered legitimately
- *      have no value. NOT backfilled — the follow-up only targets
+ *      have no value. NOT backfilled, the follow-up only targets
  *      orders delivered AFTER this column exists, so a NULL backfill is
  *      both correct and avoids guessing at historical delivery times.
  *
@@ -31,12 +31,12 @@ use Doctrine\Migrations\AbstractMigration;
  *      channels) need to record against a *user* rather than an order,
  *      and may have no email recipient at all. So:
  *        - add user_id INTEGER NULL  (FK users(id) ON DELETE SET NULL,
- *          indexed) — preserves the audit row if the user is hard-
+ *          indexed), preserves the audit row if the user is hard-
  *          deleted, same posture as the existing order_id / cart_id FKs.
- *        - add channel VARCHAR(16) NOT NULL DEFAULT 'email' — every
+ *        - add channel VARCHAR(16) NOT NULL DEFAULT 'email', every
  *          existing row is an email send, so the default backfills them
  *          correctly; push rows will store 'push'.
- *        - make recipient NULLABLE — a push send targets device tokens,
+ *        - make recipient NULLABLE, a push send targets device tokens,
  *          not an email address, so recipient is meaningless there.
  *          Existing rows keep their (non-null) email recipient.
  *
@@ -60,7 +60,7 @@ use Doctrine\Migrations\AbstractMigration;
  * down() re-imposes NOT NULL on recipient. If any push rows (recipient
  * NULL) were written between up() and down(), the NOT NULL re-add would
  * fail. down() therefore first deletes rows where recipient IS NULL
- * before re-tightening — acceptable because rollback is exceptional and
+ * before re-tightening, acceptable because rollback is exceptional and
  * those rows only exist post-up() (i.e. they are the very rows this
  * migration enabled). Email/audit rows always have a recipient and are
  * untouched.
@@ -79,7 +79,7 @@ final class Version20260623000001 extends AbstractMigration
             'This migration only supports PostgreSQL.'
         );
 
-        // (1) orders.delivered_at — when the order first reached DELIVERED.
+        // (1) orders.delivered_at, when the order first reached DELIVERED.
         $this->addSql('ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ NULL');
 
         // (2) notification_logs generalization.
@@ -97,7 +97,7 @@ final class Version20260623000001 extends AbstractMigration
         // (push) that have no email recipient.
         $this->addSql('ALTER TABLE notification_logs ALTER COLUMN recipient DROP NOT NULL');
 
-        // (3) users.marketing_push_opt_out — push counterpart to the
+        // (3) users.marketing_push_opt_out, push counterpart to the
         // existing marketing_emails_opt_out flag.
         $this->addSql(
             'ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_push_opt_out BOOLEAN NOT NULL DEFAULT false'
@@ -114,7 +114,7 @@ final class Version20260623000001 extends AbstractMigration
         // (3) reverse
         $this->addSql('ALTER TABLE users DROP COLUMN IF EXISTS marketing_push_opt_out');
 
-        // (2) reverse — drop rows that could not satisfy the re-tightened
+        // (2) reverse, drop rows that could not satisfy the re-tightened
         // NOT NULL (only post-up() push rows), then restore the constraint
         // and drop the added columns/index.
         $this->addSql('DELETE FROM notification_logs WHERE recipient IS NULL');

@@ -11,7 +11,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Admin-initiated password reset for another user's account. Unlike the
  * self-service change (PATCH /v3/account/password), this does NOT require
- * the target user's current password — an admin is overriding it, typically
+ * the target user's current password, an admin is overriding it, typically
  * to unblock a locked-out staff member or rotate a compromised credential.
  *
  * Because that is a powerful action, it is admin-tier-gated at the route and

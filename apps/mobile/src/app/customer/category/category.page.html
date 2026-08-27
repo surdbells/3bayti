@@ -98,7 +98,7 @@
                   (load)="onImageLoad(product.product_id)"
                   (error)="onImageError(product.product_id)"
                   (click)="open_product(product.product_id, product.product_name)" />
-                <!-- SALE flag (top-left) — only when genuinely discounted -->
+                <!-- SALE flag (top-left), only when genuinely discounted -->
                 @if(product.sale_price && +product.sale_price > 0 && +product.sale_price < +product.price){
                   <span class="m6d-flag-badge m6d-flag-badge--sale">{{ 'badge_sale' | translate }}</span>
                 }

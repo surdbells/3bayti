@@ -140,6 +140,6 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
   ],
 })
 export class NavIconComponent {
-  /** Icon key — selects which glyph to render. Unknown/empty → nothing. */
+  /** Icon key, selects which glyph to render. Unknown/empty → nothing. */
   @Input() icon = '';
 }

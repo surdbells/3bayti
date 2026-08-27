@@ -34,7 +34,7 @@ use Psr\Log\NullLogger;
  * admin's own session.
  *
  * Guards: the vendor must have an owner account, it can't be the admin's own
- * account, and staff accounts (admin/finance/support) can't be impersonated —
+ * account, and staff accounts (admin/finance/support) can't be impersonated -
  * only sellers.
  */
 final class ImpersonateVendorController
@@ -102,7 +102,7 @@ final class ImpersonateVendorController
             $this->em->flush();
         });
 
-        // Audit trail — who impersonated whom.
+        // Audit trail, who impersonated whom.
         $this->logger->warning('admin.impersonate_vendor', [
             'admin_id' => $admin->getId(),
             'admin_email' => $admin->getEmail(),

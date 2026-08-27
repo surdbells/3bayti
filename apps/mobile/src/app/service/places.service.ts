@@ -1,5 +1,5 @@
 /* =============================================================================
-   PlacesService — wraps the Google Places API (New)
+   PlacesService, wraps the Google Places API (New)
    -----------------------------------------------------------------------------
    Two endpoints used:
 
@@ -16,7 +16,7 @@
      A "session" is one user-typing-an-address interaction. The session
      token (a v4 UUID) groups all autocomplete keystrokes + the final
      details call into one billable unit. After the details call fires,
-     the token must be discarded — re-using it makes future calls billed
+     the token must be discarded, re-using it makes future calls billed
      individually (no session discount).
 
    Field mask
@@ -62,7 +62,7 @@ export interface PlaceDetails {
   formattedAddress: string;
   addressComponents: PlaceAddressComponent[];
   location: { latitude: number; longitude: number };
-  /* Convenience extracted fields — populated via parseAddressComponents()
+  /* Convenience extracted fields, populated via parseAddressComponents()
      in this service. The mapping logic is centralized here so consumers
      don't all have to know which Google component types correspond to
      which app fields. */
@@ -77,11 +77,11 @@ export interface PlaceDetails {
    the Google response into just the bits the dropdown UI needs. */
 export interface PlaceSuggestion {
   placeId: string;
-  /* Full text — e.g. "Sheikh Zayed Road, Dubai - United Arab Emirates" */
+  /* Full text, e.g. "Sheikh Zayed Road, Dubai - United Arab Emirates" */
   fullText: string;
-  /* Main text — e.g. "Sheikh Zayed Road" — bold first line in UI */
+  /* Main text, e.g. "Sheikh Zayed Road", bold first line in UI */
   mainText: string;
-  /* Secondary text — e.g. "Dubai - United Arab Emirates" — lighter second line */
+  /* Secondary text, e.g. "Dubai - United Arab Emirates", lighter second line */
   secondaryText: string;
 }
 
@@ -156,7 +156,7 @@ export class PlacesService {
   }
 
   /* Fetch full details for a chosen suggestion. Terminates the session.
-     Returns null on error — consumer should fall back to using the
+     Returns null on error, consumer should fall back to using the
      suggestion's text as-is. */
   async details(placeId: string): Promise<PlaceDetails | null> {
     if (!this.isAvailable || !placeId) {
@@ -164,7 +164,7 @@ export class PlacesService {
     }
 
     /* Build URL with the session token (if any). The token can be missing
-       if startSession wasn't called — the details call still works, just
+       if startSession wasn't called, the details call still works, just
        billed without session benefits. */
     const url = new URL(`${DETAILS_URL_BASE}/${placeId}`);
     if (this.sessionToken) {
@@ -269,7 +269,7 @@ export class PlacesService {
     } else if (route) {
       street = route;
     } else if (streetNumber) {
-      /* Edge case — only number, no route name. Unusual but possible. */
+      /* Edge case, only number, no route name. Unusual but possible. */
       street = streetNumber;
     }
 

@@ -19,8 +19,8 @@ use Slim\Psr7\Factory\ServerRequestFactory;
  * Drives the full Slim app: builds it via Bootstrap::createApp(),
  * lets us swap the EntityManager for a mock, then makes real
  * request/response cycles. This is one step less synthetic than
- * unit-testing controllers in isolation — it exercises routes,
- * middleware, error handling, body parsing, JSON serialisation —
+ * unit-testing controllers in isolation, it exercises routes,
+ * middleware, error handling, body parsing, JSON serialisation -
  * which is where most M1.4 bugs would actually live.
  *
  * What we DON'T exercise here:
@@ -84,7 +84,7 @@ abstract class HttpTestCase extends TestCase
 
     /**
      * Build a JSON request. The body is JSON-encoded into the
-     * stream AND set as parsedBody — the real BodyParsingMiddleware
+     * stream AND set as parsedBody, the real BodyParsingMiddleware
      * would do the latter from the stream, but since we're skipping
      * a real HTTP server, setting both keeps things consistent.
      *
@@ -172,7 +172,7 @@ abstract class HttpTestCase extends TestCase
     {
         $em = $this->createMock(EntityManagerInterface::class);
         // wrapInTransaction just runs the callback synchronously
-        // for tests — no real transaction.
+        // for tests, no real transaction.
         $em->method('wrapInTransaction')->willReturnCallback(
             fn (callable $cb) => $cb($em)
         );

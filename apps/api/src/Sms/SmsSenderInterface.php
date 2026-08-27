@@ -9,7 +9,7 @@ namespace Bayti\Api\Sms;
  *
  * Implementations:
  *   - MessageCentralSmsSender: HTTPS to MessageCentral CPaaS (prod,
- *     env-gated — only selected when explicitly enabled + configured)
+ *     env-gated, only selected when explicitly enabled + configured)
  *   - NullSmsSender:           structured logger only; no actual send
  *                              (dev/test default, and the prod default
  *                              until the operator confirms the endpoint)
@@ -38,8 +38,8 @@ interface SmsSenderInterface
      * Whether this sender performs REAL sends. False only for the no-op
      * NullSmsSender (SMS not configured / not enabled).
      *
-     * Callers use this to record an unsent SMS honestly — as NOT delivered
-     * (pending) — instead of marking the channel delivered off a silent no-op.
+     * Callers use this to record an unsent SMS honestly, as NOT delivered
+     * (pending), instead of marking the channel delivered off a silent no-op.
      * A channel left pending is retried once real SMS is enabled.
      */
     public function isEnabled(): bool;

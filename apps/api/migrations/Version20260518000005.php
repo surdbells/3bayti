@@ -8,12 +8,12 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.2.X.15-A — Multi-currency display: fx_rates table + seed rates.
+ * M3.2.X.15-A, Multi-currency display: fx_rates table + seed rates.
  *
  * Single additive table holding the AED-base FX rates used by
  * the CurrencyConversionService (X.15-C) to convert catalog prices
  * for display only. Settlement (Carts, Orders, payments, refunds)
- * remains 100% AED — Q-Scope = A locked.
+ * remains 100% AED, Q-Scope = A locked.
  *
  * Schema
  * ======
@@ -27,13 +27,13 @@ use Doctrine\Migrations\AbstractMigration;
  *                                    (ON DELETE SET NULL preserves
  *                                    rate when admin user deleted)
  *
- * UNIQUE (base_code, target_code) — exactly one rate per pair.
+ * UNIQUE (base_code, target_code), exactly one rate per pair.
  * INDEX on target_code for the common 'fetch rate for currency X'
  * lookup pattern.
  *
  * Q-RateShape = A locked: AED base. Every product price IS in AED;
  * one multiplication per amount. Inverse-base shapes require
- * either inversion or a chain — slower + error-prone.
+ * either inversion or a chain, slower + error-prone.
  *
  * Q-Currencies = A locked: AED + USD + EUR + SAR + GBP (5
  * currencies in v1).
@@ -41,11 +41,11 @@ use Doctrine\Migrations\AbstractMigration;
  * Seed rates are reasonable as of late May 2026. Operator updates
  * via the X.15-F admin endpoint after deploy. The seed rates exist
  * so the conversion service has SOMETHING to work with on first
- * boot — otherwise every non-AED query would fall back to AED on
+ * boot, otherwise every non-AED query would fall back to AED on
  * a fresh install.
  *
  * NUMERIC(18, 8) holds rates like 0.27225000 (AED→USD). 18 total
- * digits and 8 fractional digits is comfortable headroom — even
+ * digits and 8 fractional digits is comfortable headroom, even
  * volatile pairs like AED→KWD (which a future currency might add)
  * won't exceed 6 fractional places of precision.
  */

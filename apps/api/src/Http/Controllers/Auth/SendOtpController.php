@@ -45,7 +45,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   - User exists, is_phone_verified = false → real OTP sent
  *   - User exists, is_phone_verified = true  → no-op, fake vid returned
  *     (same shape as real; client gets stuck in /confirm flow until
- *     they realise the account is already verified — they should be
+ *     they realise the account is already verified, they should be
  *     using /login)
  *   - User does not exist                    → no-op, fake vid returned
  *
@@ -55,7 +55,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * consistent with how /reset (M1.4.4) handles the same case.
  *
  * NOTE: We do NOT generate cryptographic random values for the fake
- * vid — we just return a consistent-looking string. Attackers can
+ * vid, we just return a consistent-looking string. Attackers can
  * tell post-hoc that a vid was fake by testing /confirm against it,
  * but that's already a high-rate-limited path.
  */
@@ -86,7 +86,7 @@ final class SendOtpController
         $user = $users->findByEmail($input->email);
 
         if ($user === null || $user->isPhoneVerified()) {
-            // No-op for non-existent or already-verified — return a
+            // No-op for non-existent or already-verified, return a
             // fake-but-consistent vid. See class docblock for reasoning.
             return $this->ok([
                 'verification_id' => 'fake-' . bin2hex(random_bytes(12)),
@@ -94,7 +94,7 @@ final class SendOtpController
         }
 
         // Legacy-migrated users may have NULL phone (4 such records as
-        // of Day 4 migration). They can't receive OTP — same no-op shape
+        // of Day 4 migration). They can't receive OTP, same no-op shape
         // as non-existent users so we don't disclose phone availability.
         if ($user->getPhone() === null) {
             return $this->ok([

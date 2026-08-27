@@ -35,7 +35,7 @@ final class OtpLoginVerifyControllerTest extends HttpTestCase
     }
 
     // -------------------------------------------------------------------
-    // Happy path — SMS (phone) channel
+    // Happy path, SMS (phone) channel
     // -------------------------------------------------------------------
 
     #[Test]
@@ -87,7 +87,7 @@ final class OtpLoginVerifyControllerTest extends HttpTestCase
     }
 
     // -------------------------------------------------------------------
-    // Happy path — email channel
+    // Happy path, email channel
     // -------------------------------------------------------------------
 
     #[Test]
@@ -134,7 +134,7 @@ final class OtpLoginVerifyControllerTest extends HttpTestCase
     }
 
     // -------------------------------------------------------------------
-    // Failure modes — all collapse to a single 401
+    // Failure modes, all collapse to a single 401
     // -------------------------------------------------------------------
 
     #[Test]
@@ -225,7 +225,7 @@ final class OtpLoginVerifyControllerTest extends HttpTestCase
     public function returns401ForCrossPurposeAttempt(): void
     {
         // OTP exists but its purpose is registration, not login_2fa.
-        // Must reject — cross-flow abuse.
+        // Must reject, cross-flow abuse.
         $user = $this->makeUser(active: true, phoneVerified: true);
         $attempt = new OtpAttempt(
             verificationId: 'mc-register',

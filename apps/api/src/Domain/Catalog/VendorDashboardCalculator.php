@@ -16,7 +16,7 @@ use Doctrine\ORM\EntityManagerInterface;
  *
  * Read-only aggregation over products + orders + order_items. Counts only
  * paid-and-beyond statuses (paid, fulfilling, shipped, delivered) as
- * realised sales — consistent with the per-product sales view.
+ * realised sales, consistent with the per-product sales view.
  */
 class VendorDashboardCalculator
 {

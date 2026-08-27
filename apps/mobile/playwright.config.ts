@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright e2e config for apps/mobile.
  *
- * M3.2.0-B — Capacitor mobile app testing via the Ionic web preview.
+ * M3.2.0-B, Capacitor mobile app testing via the Ionic web preview.
  *
  * Locked decisions (per m3.2.0-implementation-plan.md §3):
  *   Q3 = A: Mobile e2e in CI via Ionic serve (web preview) with
@@ -18,7 +18,7 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * What this does NOT test:
  *   - Native plugins (Camera, Preferences, Push Notifications,
- *     Haptics, etc.) — those need real device runs per the
+ *     Haptics, etc.), those need real device runs per the
  *     M3.1.7 device-test-checklist pattern.
  *   - Platform-specific UI (iOS bottom-sheet vs Android material).
  *   - Hardware interactions (gestures, biometric, background apps).
@@ -32,7 +32,7 @@ import { defineConfig, devices } from '@playwright/test';
  *   - Auto-starts `pnpm start` (ng serve at :4200)
  *   - 180s timeout (Ionic cold start is slower than vanilla Angular)
  *
- * Default viewport: 390×844 (iPhone 14 Pro) — most-common mobile size
+ * Default viewport: 390×844 (iPhone 14 Pro), most-common mobile size
  * in our analytics. Tests can override per case.
  */
 

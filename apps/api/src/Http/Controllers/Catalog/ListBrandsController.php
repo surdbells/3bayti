@@ -17,7 +17,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * GET /v3/brands  (public)
  *
  * Lists active brands only. Used by storefront filter UI ("brand: ____").
- * Uses publicShape — no lifecycle fields exposed.
+ * Uses publicShape, no lifecycle fields exposed.
  *
  * No pagination yet. Brands are bounded by definition (~hundreds even
  * at scale) and the response is fast to serialize. If the count grows

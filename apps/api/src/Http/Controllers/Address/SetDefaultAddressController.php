@@ -37,7 +37,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * this" workflow via AddressRepository::setAsDefaultShipping /
  * setAsDefaultBilling. Both methods open their own transaction.
  *
- * Setting a flag to `false` clears it on this address only — no
+ * Setting a flag to `false` clears it on this address only, no
  * other address auto-promotes. The user can have zero defaults
  * after this call (acceptable; checkout will prompt).
  *
@@ -102,7 +102,7 @@ final class SetDefaultAddressController
 
         // Apply each flag if its field was provided. Setting true
         // goes through the repo (transactional unset-others-set-this).
-        // Setting false just clears on this address — no other side
+        // Setting false just clears on this address, no other side
         // effects.
         if ($input->shipping === true) {
             $addresses->setAsDefaultShipping($address);
@@ -120,7 +120,7 @@ final class SetDefaultAddressController
 
         // Emit a 'default' audit event with the actual flag changes.
         // Only fields that actually changed end up in the changes map
-        // — if user PATCH'd shipping=true on an already-default
+        //, if user PATCH'd shipping=true on an already-default
         // address, no change happened, no audit row.
         $changes = [];
         if ($beforeShipping !== $address->isDefaultShipping()) {

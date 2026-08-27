@@ -119,7 +119,7 @@ final class GetVendorSelfMetricsControllerTest extends HttpTestCase
         $body = $this->jsonBody($response);
         self::assertSame('VENDOR_AMBIGUOUS', $body['error']['code']);
         self::assertSame([101, 202], $body['error']['details']['available_vendor_ids']);
-        // Calculator NOT invoked — control flow stopped at ambiguity
+        // Calculator NOT invoked, control flow stopped at ambiguity
         self::assertSame(0, $this->capturedVendorId);
     }
 
@@ -174,7 +174,7 @@ final class GetVendorSelfMetricsControllerTest extends HttpTestCase
     public function singleStoreUserWithMatchingVendorIdStillWorks(): void
     {
         // Single-store user passing their own vendor_id (redundant
-        // but client-friendly) — must succeed, not 422.
+        // but client-friendly), must succeed, not 422.
         $user = $this->makeVendorUser(50);
         $vendor = $this->makeVendor(101, 'almas', 'Almas');
         $this->bindDeps($user, [101], [101 => $vendor], $this->cannedMetrics(30));
@@ -217,7 +217,7 @@ final class GetVendorSelfMetricsControllerTest extends HttpTestCase
     #[Test]
     public function nonVendorUserBlockedByVendorAuthMiddleware(): void
     {
-        // Authenticated user but NOT a vendor — VendorAuthMiddleware
+        // Authenticated user but NOT a vendor, VendorAuthMiddleware
         // rejects upstream of the controller.
         $user = $this->makeUser(id: 50);  // no vendor role
         $vendor = $this->makeVendor(101, 'almas', 'Almas');
@@ -225,7 +225,7 @@ final class GetVendorSelfMetricsControllerTest extends HttpTestCase
 
         $response = $this->makeGet($user, '/v3/vendor/metrics');
 
-        // VendorAuthMiddleware returns 403 (or 401 — implementation
+        // VendorAuthMiddleware returns 403 (or 401, implementation
         // detail). Either way, NOT 200.
         self::assertNotSame(200, $response->getStatusCode());
         self::assertContains($response->getStatusCode(), [401, 403]);

@@ -30,7 +30,7 @@ use Psr\Log\NullLogger;
  *
  * Unit tests in VendorMetricsCalculatorTest cover the logging
  * behavior in isolation. This integration test confirms it survives
- * the DI wiring + middleware stack + serializer roundtrip — the
+ * the DI wiring + middleware stack + serializer roundtrip, the
  * difference between "logs work in unit tests" and "logs work in
  * production".
  *
@@ -135,7 +135,7 @@ final class VendorMetricsObservabilityIntegrationTest extends HttpTestCase
     /**
      * Connection mock that returns empty associative rows for every
      * executeQuery. The calculator still does its 3 queries and emits
-     * its observability logs — we just don't supply real data.
+     * its observability logs, we just don't supply real data.
      */
     private function emptyConnection(): Connection
     {

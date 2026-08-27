@@ -7,9 +7,9 @@ import type { Product } from './product.model';
  * A single recommendation row: the recommended product plus the
  * metadata the backend used to rank it. `source` distinguishes how the
  * recommendation was derived so the UI can (optionally) label it:
- *   - 'copurchase'       — customers who bought X also bought Y
- *   - 'category'         — same-category fallback
- *   - 'fallback_popular' — popular products when nothing pre-computed
+ *   - 'copurchase'      , customers who bought X also bought Y
+ *   - 'category'        , same-category fallback
+ *   - 'fallback_popular', popular products when nothing pre-computed
  */
 export interface Recommendation {
   product: Product;
@@ -18,7 +18,7 @@ export interface Recommendation {
 }
 
 /**
- * RecommendationsService — storefront reads for product recommendations
+ * RecommendationsService, storefront reads for product recommendations
  * (M3.2.W.1). Consumes the X.12 backend:
  *
  *   GET /v3/products/:slug/recommendations?limit=N  (public)

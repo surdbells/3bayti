@@ -24,7 +24,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Soft-fail: unknown slugs return 200 with empty data + an
  * applied_filters echo (so the UI can show "filtering by:
- * does-not-exist — 0 results"). NOT a 404.
+ * does-not-exist, 0 results"). NOT a 404.
  *
  * Public endpoint, no auth required.
  */

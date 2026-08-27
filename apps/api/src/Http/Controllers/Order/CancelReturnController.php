@@ -21,7 +21,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * POST /v3/returns/{id}/cancel
  *
  * Customer withdraws a return request that hasn't been decided
- * yet. Only allowed from STATUS_PENDING per the state machine —
+ * yet. Only allowed from STATUS_PENDING per the state machine -
  * the aggregate root rejects illegal transitions with
  * DomainException, which we translate to 422.
  *

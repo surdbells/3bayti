@@ -17,7 +17,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** POST /v3/admin/notification-schedules — schedule a (recurring) notification. */
+/** POST /v3/admin/notification-schedules, schedule a (recurring) notification. */
 final class CreateScheduleController
 {
     use Responder;

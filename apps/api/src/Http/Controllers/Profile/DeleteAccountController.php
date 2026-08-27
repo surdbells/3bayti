@@ -20,13 +20,13 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * DELETE /v3/me — delete the authenticated user's account.
+ * DELETE /v3/me, delete the authenticated user's account.
  *
  * Semantics (operator-confirmed, M3.2.Y.6)
  * ----------------------------------------
  *   - Q6.1: BOTH deactivate() (is_active = false) AND softDelete()
  *     (deleted_at stamp). Deactivation locks the account out
- *     immediately — both LoginController and AuthMiddleware already
+ *     immediately, both LoginController and AuthMiddleware already
  *     reject !isActive() users, so every existing access token stops
  *     working on its next request and re-login is impossible. The
  *     soft-delete stamp marks the row for retention/eventual purge
@@ -104,7 +104,7 @@ final class DeleteAccountController
             $user->deactivate();
             $user->softDelete();
 
-            // Revoke every refresh token — the account is gone; no
+            // Revoke every refresh token, the account is gone; no
             // session may continue. (Access tokens already fail on
             // their next request via the AuthMiddleware !isActive
             // check.)

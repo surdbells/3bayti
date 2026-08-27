@@ -19,12 +19,12 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * GET /v3/me/wishlist?limit=&offset= — the user's saved products.
+ * GET /v3/me/wishlist?limit=&offset=, the user's saved products.
  *
  * Returns the saved PRODUCTS (Q6.4) via the existing ProductSerializer
  * list shape in a PaginatedEnvelope, newest-saved first. So the client
  * renders a wishlist with the exact same product-card shape as the
- * catalogue — no bespoke shape to learn.
+ * catalogue, no bespoke shape to learn.
  */
 final class ListWishlistController
 {

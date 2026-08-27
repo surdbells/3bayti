@@ -174,7 +174,7 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
             ])
         );
 
-        // Clean 502 (not a 500), and — the point of this test — the cart is
+        // Clean 502 (not a 500), and, the point of this test, the cart is
         // active again so the customer can retry once the provider is fixed.
         self::assertSame(502, $response->getStatusCode(), 'Body: ' . (string) $response->getBody());
         self::assertTrue($cart->isActive(), 'Cart must be reactivated after a gateway failure');
@@ -716,7 +716,7 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
      * (e.g. street-less) address must NOT block its purchase. The gift-card
      * path resolves the buyer's billing address tolerantly ('N/A' placeholders
      * for the delivery-only fields Noon never receives) and proceeds to
-     * payment. (The normal cart checkout still enforces a complete address —
+     * payment. (The normal cart checkout still enforces a complete address -
      * see cartCheckoutWithStreetlessAddressReturns422NotInternalError.)
      */
     #[Test]

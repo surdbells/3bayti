@@ -12,7 +12,7 @@ import { NgFor, NgIf } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR, NG_VALIDATORS, Validator, AbstractControl, ValidationErrors } from '@angular/forms';
 
 /**
- * Phone input — E.164 entry with a country-code selector.
+ * Phone input, E.164 entry with a country-code selector.
  *
  * Scope (Y.1)
  * -----------
@@ -37,7 +37,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR, NG_VALIDATORS, Validator, Abst
  *   { phoneInvalid: true } when the national-digits portion doesn't
  *   match the selected country's pattern.
  *   { required: true } when no digits entered (only emitted if the
- *   consumer also attached Validators.required — we don't mark on our
+ *   consumer also attached Validators.required, we don't mark on our
  *   own; leaving emptiness to required gives consumers control).
  *
  * Implementation note: NG_VALIDATORS forwardRef cycle
@@ -57,7 +57,7 @@ export interface PhoneCountry {
    *  individually; using full English is acceptable in Arabic UI per
    *  X.7 register choice. */
   name: string;
-  /** Flag emoji — pure presentation, optional. */
+  /** Flag emoji, pure presentation, optional. */
   flag: string;
   /** Min and max national-digit lengths for validation. */
   nationalDigits: { min: number; max: number };
@@ -110,7 +110,7 @@ export const DEFAULT_COUNTRY_CODE = 'AE';
  * Parse an E.164 string into { country, nationalDigits }.
  *
  * Greedily picks the longest matching dial-code prefix from
- * PHONE_COUNTRIES (so '+1' US vs '+1' CA both match — we default to
+ * PHONE_COUNTRIES (so '+1' US vs '+1' CA both match, we default to
  * US for that ambiguity; UI lets user re-select).
  *
  * Returns null if the input doesn't start with '+' or no country
@@ -121,7 +121,7 @@ export function parseE164(value: string): { country: PhoneCountry; nationalDigit
 
   /* Sort countries by descending dialCode length so longer codes (e.g.
      '+971') win over shorter ones ('+97' doesn't exist but illustrates
-     the issue). Cache the sorted list — function is hot during typing. */
+     the issue). Cache the sorted list, function is hot during typing. */
   const sorted = [...PHONE_COUNTRIES].sort((a, b) => b.dialCode.length - a.dialCode.length);
   for (const country of sorted) {
     if (value.startsWith(country.dialCode)) {
@@ -268,7 +268,7 @@ export class PhoneInputComponent implements ControlValueAccessor, Validator {
     if (value === null || value === undefined || value === '') {
       this.nationalDigits.set('');
       /* Leave country at its existing default rather than reset on
-         writeValue('') — common during form.reset(). */
+         writeValue(''), common during form.reset(). */
       this.cdr.markForCheck();
       return;
     }
@@ -277,7 +277,7 @@ export class PhoneInputComponent implements ControlValueAccessor, Validator {
       this.countryCode.set(parsed.country.code);
       this.nationalDigits.set(parsed.nationalDigits);
     } else {
-      /* Couldn't parse — leave digits intact, leave country at default.
+      /* Couldn't parse, leave digits intact, leave country at default.
          The validator will mark this invalid. */
       this.nationalDigits.set(value.replace(/\D/g, ''));
     }

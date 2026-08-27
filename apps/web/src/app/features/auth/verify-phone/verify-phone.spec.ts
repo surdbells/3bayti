@@ -54,7 +54,7 @@ class StubAuthService {
     if (this.outcome === 'network') throw new TypeError('fetch failed');
 
     if (this.outcome === 'verification-failed') {
-      /* Nested proxy envelope — { error: { code } } — as returned by
+      /* Nested proxy envelope, { error: { code } }, as returned by
          /auth-proxy/confirm. Exercises both the nested-shape extraction
          and the OTP_VERIFICATION_FAILED -> inline mapping. */
       throw new HttpErrorResponse({
@@ -252,7 +252,7 @@ describe('VerifyPhoneComponent', () => {
         queryParams: { verification_id: 'mc-abc', phone: '+971501234567' },
       });
       /* We can't assert on the resolved subtitle text since translations
-         aren't loaded in the test harness — but we CAN assert the
+         aren't loaded in the test harness, but we CAN assert the
          translate key is present in the DOM via the subtitle paragraph. */
       const subtitle: HTMLElement | null = fixture.nativeElement.querySelector('.auth-card__subtitle');
       expect(subtitle).not.toBeNull();
@@ -493,7 +493,7 @@ describe('VerifyPhoneComponent', () => {
   });
 
   /* -----------------------------------------------------------------
-     Self-serve send (signed-in, unverified, no verification_id) —
+     Self-serve send (signed-in, unverified, no verification_id) -
      the post-registration nudge flow (account / checkout / header).
      ----------------------------------------------------------------- */
   describe('self-serve send', () => {

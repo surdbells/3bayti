@@ -8,14 +8,14 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One-time password attempt — local record of an OTP we asked
+ * One-time password attempt, local record of an OTP we asked
  * MessageCentral CPaaS to send.
  *
  * Architecture (Option B per Decision A.6 / M1.3 design)
  * -------------------------------------------------------
  * MessageCentral CPaaS handles code generation, SMS delivery, AND
  * code verification server-side. We never see the actual 6-digit
- * code — they generate it, send it to the user's phone, and we
+ * code, they generate it, send it to the user's phone, and we
  * validate by sending (verificationId + user-supplied code) back to
  * them. This entity is the LOCAL audit/coordination record:
  *
@@ -29,12 +29,12 @@ use Doctrine\ORM\Mapping as ORM;
  *        we ask MessageCentral to validate (verificationId + code)
  *        on success: row.consumed_at = now()
  *        on failure: row stays usable (MessageCentral tracks attempts
- *                    on their side — typically caps at 5 retries)
+ *                    on their side, typically caps at 5 retries)
  *
  * Why we still need a row at all
  * ------------------------------
  * Even though MessageCentral does verification, we keep a row for:
- *   - Rate limiting (max 3 sends per phone per hour) — counted in SQL
+ *   - Rate limiting (max 3 sends per phone per hour), counted in SQL
  *   - Audit trail (who requested OTPs, when, from what IP)
  *   - Linking to a user when known (registration OTPs are sent
  *     BEFORE the User row exists, so user_id is null at first)
@@ -74,7 +74,7 @@ class OtpAttempt
      *
      *   - CHANNEL_SMS:   delegated to MessageCentral CPaaS (code is
      *                    generated + verified on their side; code_hash
-     *                    stays null). This is the legacy default — all
+     *                    stays null). This is the legacy default, all
      *                    rows created before the email-OTP work have
      *                    channel='sms'.
      *   - CHANNEL_EMAIL: generated + verified LOCALLY. We store a
@@ -104,7 +104,7 @@ class OtpAttempt
     private ?int $id = null;
 
     /**
-     * MessageCentral's verificationId — opaque token that ties our
+     * MessageCentral's verificationId, opaque token that ties our
      * subsequent /validateOtp call to the SMS we asked them to
      * send. Returned by their /verification/v3/send response.
      *
@@ -115,7 +115,7 @@ class OtpAttempt
 
     /**
      * The phone number the OTP was sent to. May or may not have a
-     * matching User row at issuance time — registration OTPs are
+     * matching User row at issuance time, registration OTPs are
      * sent BEFORE user creation, so user_id is null in that case.
      * Stored separately from user.phone so we can rate-limit by
      * phone even before any account exists.
@@ -136,7 +136,7 @@ class OtpAttempt
     private string $purpose;
 
     /**
-     * Delivery channel — 'sms' (MessageCentral) or 'email' (local).
+     * Delivery channel, 'sms' (MessageCentral) or 'email' (local).
      * Defaults to 'sms' so existing rows + the legacy SMS path keep
      * working without code changes.
      */
@@ -146,7 +146,7 @@ class OtpAttempt
     /**
      * password_hash() of the 6-digit code, for the LOCAL email channel
      * only. Null for SMS (MessageCentral holds the code). We store a
-     * one-way hash and compare with password_verify() — the plaintext
+     * one-way hash and compare with password_verify(), the plaintext
      * code is never persisted or returned.
      */
     #[ORM\Column(name: 'code_hash', type: 'string', length: 255, nullable: true)]
@@ -255,7 +255,7 @@ class OtpAttempt
 
     /**
      * Record a failed local verify attempt (email channel). Capped at
-     * MAX_EMAIL_ATTEMPTS by the caller — this just increments.
+     * MAX_EMAIL_ATTEMPTS by the caller, this just increments.
      */
     public function incrementAttempts(): void { $this->attempts++; }
 
@@ -272,7 +272,7 @@ class OtpAttempt
     }
 
     /**
-     * Mark this OTP consumed — called by OtpService after MessageCentral
+     * Mark this OTP consumed, called by OtpService after MessageCentral
      * confirms the user-supplied code matches. Idempotent: re-consuming
      * an already-consumed row is a no-op (preserves original timestamp).
      */
@@ -285,7 +285,7 @@ class OtpAttempt
     }
 
     /**
-     * Bind this OTP to a user — used during registration confirm
+     * Bind this OTP to a user, used during registration confirm
      * once the User row has been created.
      */
     public function bindUser(User $user): void

@@ -10,7 +10,7 @@ namespace Bayti\Api\Domain\Chat;
  * consolidated from the legacy ModerationService so customers and vendors
  * cannot exchange details to take the deal off-platform.
  *
- * Pure and stateless — given a string it returns what was found; the
+ * Pure and stateless, given a string it returns what was found; the
  * caller decides whether to block, redact, or flag.
  */
 final class ModerationService

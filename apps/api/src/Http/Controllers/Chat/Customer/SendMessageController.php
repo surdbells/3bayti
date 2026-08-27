@@ -78,7 +78,7 @@ final class SendMessageController
             );
         }
 
-        // Notify the vendor (debounced). Fire-and-forget — never block the 201.
+        // Notify the vendor (debounced). Fire-and-forget, never block the 201.
         try {
             $this->notifier->maybeNotify($conversation, Conversation::PARTY_VENDOR, $result->message);
         } catch (\Throwable) {

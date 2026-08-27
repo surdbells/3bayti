@@ -21,7 +21,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * POST /v3/me/wishlist/labels  body { name } — create a label.
+ * POST /v3/me/wishlist/labels  body { name }, create a label.
  *
  * Idempotent on name: if the user already has a label with that name,
  * returns the existing one (200) instead of erroring; new → 201.

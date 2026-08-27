@@ -37,7 +37,7 @@ export interface NewAddress {
    * When true, make this the user's default (shipping + billing) address.
    *
    * IMPORTANT: the v3 CreateAddressInput DTO accepts a SINGLE `is_default`
-   * field — it has NO is_default_shipping/is_default_billing params, and
+   * field, it has NO is_default_shipping/is_default_billing params, and
    * RequestValidator silently drops unknown keys. Sending the split flags
    * (the old shape) meant the create dropped them and the address was
    * never promoted. Keep this as the single `is_default` the API expects.
@@ -46,7 +46,7 @@ export interface NewAddress {
 }
 
 /**
- * AddressService — the customer's saved address book on v3.
+ * AddressService, the customer's saved address book on v3.
  *
  * Wraps the /v3/me/addresses endpoints (routed by the adapter via
  * @3bayti/api-client route-keys). Used by the checkout saved-address
@@ -127,7 +127,7 @@ export class AddressService {
    * IMPORTANT: the v3 PATCH /me/addresses/:id/default endpoint REQUIRES a
    * body of `{ shipping?: bool, billing?: bool }` and has an Assert\Callback
    * that REJECTS an empty/all-null body with 422. Sending `{}` (the old
-   * shape) made this call a guaranteed no-op/422 — the standalone addresses
+   * shape) made this call a guaranteed no-op/422, the standalone addresses
    * page could never change which address was the default, and a user whose
    * default address was incomplete had no way to promote a good one, so
    * checkout (incl. gift-card payment) kept reading the bad/no default and

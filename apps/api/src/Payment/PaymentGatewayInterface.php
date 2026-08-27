@@ -26,7 +26,7 @@ use Bayti\Api\Domain\Order\Order;
  * with a 'NOT_SUPPORTED' provider code; callers handle it the same
  * way they handle any other upstream rejection.
  *
- * All amount params are string DECIMAL (e.g. "99.50") — never float.
+ * All amount params are string DECIMAL (e.g. "99.50"), never float.
  * Currency is ISO 4217 (e.g. "AED").
  */
 interface PaymentGatewayInterface
@@ -56,10 +56,10 @@ interface PaymentGatewayInterface
     /**
      * Look up order status by the gateway's order ref (returned
      * from initiateCheckout). PRIMARY use: webhook arrives saying
-     * "order X is paid" — call this to authoritatively verify
+     * "order X is paid", call this to authoritatively verify
      * before transitioning v3 order state.
      *
-     * Caller MUST NOT poll this for status — Noon's docs explicitly
+     * Caller MUST NOT poll this for status, Noon's docs explicitly
      * warn against repetitive polling (rate-limit ban risk). Use
      * once per state transition, not as a polling loop.
      *
@@ -70,7 +70,7 @@ interface PaymentGatewayInterface
     /**
      * Look up order status by the merchant's reference (our
      * orders.order_reference). Used when we don't know the
-     * provider order ref — e.g. handling a duplicate-reference
+     * provider order ref, e.g. handling a duplicate-reference
      * rejection where we need to learn the existing order's
      * provider ref.
      *
@@ -86,7 +86,7 @@ interface PaymentGatewayInterface
      *
      * Used by M3.1.7's refund flow (vendor / admin tooling).
      * Present on the M3.1.6 interface to keep the contract
-     * complete from day 1 — implementations can throw 'NOT_SUPPORTED'
+     * complete from day 1, implementations can throw 'NOT_SUPPORTED'
      * if they don't need refund support yet.
      *
      * @throws PaymentGatewayException
@@ -101,7 +101,7 @@ interface PaymentGatewayInterface
     /**
      * Cancel an order that hasn't been captured yet (i.e. the
      * gateway has authorised but not yet taken funds). Different
-     * from refund — no money moves.
+     * from refund, no money moves.
      *
      * @throws PaymentGatewayException
      */

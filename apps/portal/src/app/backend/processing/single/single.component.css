@@ -28,7 +28,7 @@
   border-radius: 6px;
 }
 
-/* Soft danger button — lighter than solid ax-btn-danger, used to reveal the
+/* Soft danger button, lighter than solid ax-btn-danger, used to reveal the
    cancel confirmation without shouting. Pairs with the global .ax-btn base. */
 .ax-btn-danger-soft {
   background: color-mix(in srgb, var(--ax-color-danger, #d92d20) 10%, transparent);

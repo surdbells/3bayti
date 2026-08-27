@@ -31,7 +31,7 @@ import { HomeDataService } from './home-data.service';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
- * Home page — the canonical "/" route.
+ * Home page, the canonical "/" route.
  *
  * Phase 1 W2 assembly: hero refresh + categories grid + 3 product
  * strips (Featured / Best Sellers / New Arrivals) + Store
@@ -40,7 +40,7 @@ import { TranslatePipe } from '@ngx-translate/core';
  * Data:
  *   All 5 sections fetch client-side on load. If any single API call
  *   fails, that section silently omits itself rather than showing a
- *   broken state — see HomeDataService for error handling.
+ *   broken state, see HomeDataService for error handling.
  *
  * SEO:
  *   - <title> + <meta description> set via SeoService
@@ -83,11 +83,11 @@ export class HomeComponent {
    * via the routed.get<Category[]>('GET /categories') call (v3 through
    * ENDPOINT_ROUTING). ----------------------------------------------- */
 
-  /** Categories — null while loading, Category[] once loaded. */
+  /** Categories, null while loading, Category[] once loaded. */
   readonly categories = toSignal(this.fetchCategories$(), { initialValue: null });
 
   /**
-   * Total on-sale products — count badge on the Discounted category tile.
+   * Total on-sale products, count badge on the Discounted category tile.
    * Shared with the header's Discounted nav badge via SaleCountService, so the
    * two surfaces stay in sync and the request fires at most once.
    */
@@ -112,12 +112,12 @@ export class HomeComponent {
   readonly flash       = computed(() => this.campaigns()?.flash ?? null);
   readonly serverNow   = computed(() => this.campaigns()?.server_now ?? new Date().toISOString());
 
-  /* ----- "For you" strip — personalized (signed-in) OR a guest fallback.
+  /* ----- "For you" strip, personalized (signed-in) OR a guest fallback.
      Signed-in users get the auth-gated recommendation engine (X.12 / W.1).
-     Anonymous visitors can't — so rather than leave the slot empty (the page
+     Anonymous visitors can't, so rather than leave the slot empty (the page
      would go sparse below the fold for every signed-out visitor), guests get
      a "Trending now" strip sourced from the editorial `featured` ranking
-     (HomeDataService.trending$ — deliberately distinct from Top Sellers'
+     (HomeDataService.trending$, deliberately distinct from Top Sellers'
      `popular` and New Arrivals' `newest`). Both paths resolve to a Product[]
      (possibly empty) and degrade to [] on error; the template still hides
      the strip when the resolved list is empty. ----- */
@@ -139,7 +139,7 @@ export class HomeComponent {
 
     const siteUrl = environment.SITE_URL;
 
-    /* Per-page SEO. Idempotent — calling set() updates in place. */
+    /* Per-page SEO. Idempotent, calling set() updates in place. */
     this.seo.set({
       title: 'Premium Abayas, Kaftans & Modest Wear',
       description:
@@ -151,7 +151,7 @@ export class HomeComponent {
       titleSuffix: false,  // home title doesn't need " | 3bayti" appended
     });
 
-    /* Organization + WebSite schema — establishes brand identity for
+    /* Organization + WebSite schema, establishes brand identity for
        search engines and enables Google's sitelinks search box once
        /search ships in Phase 6. */
     this.seo.setStructuredData([
@@ -183,7 +183,7 @@ export class HomeComponent {
 
   /* ----- Helpers (used in template) ------------------------------------- */
 
-  /* ----- Store Spotlight reveal — show 6, then +6 per "Load more" tap.
+  /* ----- Store Spotlight reveal, show 6, then +6 per "Load more" tap.
      The featured-vendors feed is fetched up to 12 (curated, no pagination),
      so the button reveals what's already loaded, client-side. */
   readonly storesShown = signal(6);
@@ -211,7 +211,7 @@ export class HomeComponent {
   private fetchCategories$() {
     return this.routed.get<Category[]>('GET /categories').pipe(
       map(envelope => envelope.data),
-      /* Show every category on the home row — icon-less ones (e.g. pyjamas)
+      /* Show every category on the home row, icon-less ones (e.g. pyjamas)
          fall back to a lettered tile in the template, so they're no longer
          hidden here. */
       /* Sort by product count DESC so the most-stocked categories

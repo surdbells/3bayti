@@ -15,7 +15,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** GET /v3/admin/notification-templates — paginated list (status + search). */
+/** GET /v3/admin/notification-templates, paginated list (status + search). */
 final class ListTemplatesController
 {
     use Responder;

@@ -60,7 +60,7 @@ final class CancelOrderControllerTest extends HttpTestCase
     #[Test]
     public function customerCancellingPaidOrderReturns422(): void
     {
-        // Customer can't cancel a paid order — must contact support.
+        // Customer can't cancel a paid order, must contact support.
         $customer = $this->makeUser(id: 42);
         $order = $this->makeOrder($customer, id: 100, reference: 'V3-001', subtotal: '299.00');
         $this->setEntityProp($order, 'status', Order::STATUS_PAID);
@@ -120,7 +120,7 @@ final class CancelOrderControllerTest extends HttpTestCase
 
         $this->bindEnvironment($customer, $order, $gateway);
 
-        // Empty body — no reason
+        // Empty body, no reason
         $response = $this->makePost($customer, '/v3/orders/100/cancel', []);
 
         self::assertSame(200, $response->getStatusCode(),

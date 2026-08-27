@@ -381,7 +381,7 @@ final class PromoCodeAdminControllersTest extends HttpTestCase
         $response = $this->makePost($admin, '/v3/admin/promo-codes', [
             'code' => 'OVER',
             'discount_type' => 'percentage',
-            'discount_value' => '150.00',  // exceeds 100 — entity rejects
+            'discount_value' => '150.00',  // exceeds 100, entity rejects
         ]);
 
         self::assertSame(422, $response->getStatusCode());

@@ -14,7 +14,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * PATCH /v3/admin/ota/bundles/{id} — activate/deactivate a bundle.
+ * PATCH /v3/admin/ota/bundles/{id}, activate/deactivate a bundle.
  *
  * Body: { "is_active": true|false }. Deactivating is the roll-back lever: the
  * update endpoint serves the newest ACTIVE bundle, so turning one off falls back

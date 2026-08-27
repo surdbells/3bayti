@@ -31,7 +31,7 @@ import {
 } from '../../shared/forms';
 
 /**
- * AddressFormComponent — the create/edit form for an address.
+ * AddressFormComponent, the create/edit form for an address.
  *
  * Renders inline; consumers wrap it in a modal/sheet if they want
  * modal semantics. Two modes:
@@ -42,7 +42,7 @@ import {
  *   - Create → AddressService.create(...) then emit (saved). If
  *     is_default toggle was on, the server flips the default flag.
  *   - Edit   → AddressService.update(...) then emit (saved). The
- *     is_default toggle is intentionally hidden in edit mode — to
+ *     is_default toggle is intentionally hidden in edit mode, to
  *     change defaults the user uses the Set as default button on
  *     the address card (semantically cleaner: form is about address
  *     content; default-toggle is about list state).
@@ -297,9 +297,9 @@ export class AddressFormComponent implements OnInit, OnDestroy {
 
   /** Debounce timer for autocomplete requests. */
   private streetDebounce: ReturnType<typeof setTimeout> | null = null;
-  /** Most recent query sent — used to drop stale responses. */
+  /** Most recent query sent, used to drop stale responses. */
   private streetLastQuery = '';
-  /** True while a details fetch is in flight after a selection — keeps
+  /** True while a details fetch is in flight after a selection, keeps
       blur from closing the dropdown before the mousedown handler runs. */
   private streetFetchingDetails = false;
 
@@ -424,7 +424,7 @@ export class AddressFormComponent implements OnInit, OnDestroy {
       suggestion's main text, then the formatted address). Emirate + area
       are intentionally left user-controlled. */
   protected async onSelectSuggestion(s: PlaceSuggestion, event: Event): Promise<void> {
-    /* mousedown fires before blur — prevent default so the input keeps
+    /* mousedown fires before blur, prevent default so the input keeps
        focus and the blur-close race never starts. */
     event.preventDefault();
 

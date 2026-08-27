@@ -27,7 +27,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Replaces the old dashboard's reliance on GET /vendor/metrics, which only
  * returned order-fulfilment rates (legitimately zero with no orders) and no
- * product count or sales — leaving the whole dashboard reading zero.
+ * product count or sales, leaving the whole dashboard reading zero.
  */
 final class GetVendorDashboardController
 {

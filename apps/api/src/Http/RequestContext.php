@@ -15,7 +15,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Why a trait
  * -----------
- * Same reasoning as Responder — these are tiny utilities that
+ * Same reasoning as Responder, these are tiny utilities that
  * belong with the consumer, not behind a service interface.
  */
 trait RequestContext
@@ -24,21 +24,21 @@ trait RequestContext
      * Extract the REAL client IP address.
      *
      * Resolution order (the API runs behind Cloudflare in production):
-     *   1. CF-Connecting-IP — Cloudflare sets this to the original
+     *   1. CF-Connecting-IP, Cloudflare sets this to the original
      *      client IP and strips any client-supplied copy at its edge, so
      *      it's the trustworthy source when we're behind Cloudflare.
-     *   2. X-Forwarded-For — leftmost entry, for non-Cloudflare proxy
+     *   2. X-Forwarded-For, leftmost entry, for non-Cloudflare proxy
      *      setups (DO App Platform, local nginx). Only trustworthy when
      *      a proxy WE control set it.
-     *   3. REMOTE_ADDR — the connection's remote address (direct hits).
+     *   3. REMOTE_ADDR, the connection's remote address (direct hits).
      *
      * Each candidate is validated as a real IP (filter_var) so a spoofed
-     * or garbage header value is ignored rather than treated as an IP —
+     * or garbage header value is ignored rather than treated as an IP -
      * important because the per-IP OTP rate limit keys on this value.
      *
      * Returns null when no candidate yields a valid IP; callers that
      * rate-limit by IP MUST skip the per-IP check in that case rather
-     * than block (per the OTP hardening contract — never block legit
+     * than block (per the OTP hardening contract, never block legit
      * users when the IP can't be resolved).
      *
      * Trust note: M5 may still verify X-Forwarded-By against a known

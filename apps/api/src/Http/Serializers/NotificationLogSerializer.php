@@ -10,7 +10,7 @@ use DateTimeInterface;
 /**
  * Serialize NotificationLog entities for admin endpoint responses.
  *
- * Only an adminShape exists — these rows contain recipient emails
+ * Only an adminShape exists, these rows contain recipient emails
  * + error messages that are NOT public data. No publicShape by
  * design.
  *

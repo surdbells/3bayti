@@ -35,10 +35,10 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  *   1. UX: avoids leaving the user with no default, which forces
  *      checkout to prompt every time
- *   2. "Oldest" is deterministic — the address the user has had
+ *   2. "Oldest" is deterministic, the address the user has had
  *      longest is most likely their actual home address
  *   3. The same logic could be triggered by deleting the LAST
- *      address (no promotion possible — that's fine, no defaults
+ *      address (no promotion possible, that's fine, no defaults
  *      to set)
  *
  * If no other addresses remain, no promotion happens and the user
@@ -96,13 +96,13 @@ final class DeleteAddressController
         $wasDefaultShipping = $address->isDefaultShipping();
         $wasDefaultBilling = $address->isDefaultBilling();
 
-        // M1.6.1.C — snapshot pre-delete state for audit. Must capture
-        // BEFORE the remove() — afterwards the entity is detached and
+        // M1.6.1.C, snapshot pre-delete state for audit. Must capture
+        // BEFORE the remove(), afterwards the entity is detached and
         // its id may be reset by Doctrine.
         $beforeSnapshot = $this->audit->snapshot($address);
         $deletedAddressId = $address->getId();
 
-        // Delete the address. Doctrine cascades nothing here — there
+        // Delete the address. Doctrine cascades nothing here, there
         // are no FK references from other tables to address.id yet
         // (orders snapshot the address at order time per M3 design).
         $addresses->remove($address);
@@ -128,7 +128,7 @@ final class DeleteAddressController
                 $promoted = $remaining[0];
                 if ($wasDefaultShipping) {
                     // setAsDefaultShipping unsets the flag on all
-                    // OTHER addresses (none of which had it now —
+                    // OTHER addresses (none of which had it now -
                     // we just deleted the one that did) and sets it
                     // on this one.
                     $addresses->setAsDefaultShipping($promoted);
@@ -143,7 +143,7 @@ final class DeleteAddressController
         // memory, even if detached) for type/id resolution; the actual
         // state captured is the pre-delete snapshot.
         // Note: subjectId is read from $address->getId() which Doctrine
-        // may have nulled — handle defensively by using the captured id
+        // may have nulled, handle defensively by using the captured id
         // when present.
         if ($deletedAddressId !== null) {
             // Build the audit row manually here because the standard

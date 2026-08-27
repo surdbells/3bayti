@@ -84,7 +84,7 @@ final class ListNotificationLogsControllerTest extends HttpTestCase
         self::assertArrayHasKey('meta', $body);
         self::assertCount(2, $body['data']);
 
-        // First entry (most recent — log2, the failed one)
+        // First entry (most recent, log2, the failed one)
         self::assertSame(2, $body['data'][0]['id']);
         self::assertSame('failed', $body['data'][0]['status']);
         self::assertSame('transport', $body['data'][0]['error_kind']);
@@ -212,7 +212,7 @@ final class ListNotificationLogsControllerTest extends HttpTestCase
     #[Test]
     public function nonAdminCallerReturns403(): void
     {
-        // Non-admin user (no admin role flag) — caught by AdminAuthMiddleware
+        // Non-admin user (no admin role flag), caught by AdminAuthMiddleware
         // before the controller is invoked.
         $regularUser = $this->makeUser(id: 42);
 

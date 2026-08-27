@@ -88,8 +88,8 @@ final class VendorMetricsSerializer
                 $entry['metrics'] = $metricsByVendorId[$vid]['metrics'];
             } else {
                 // Defensive: vendor present in list but no metrics row.
-                // This shouldn't happen — the calculator returns null-rate
-                // entries for empty vendors — but degrade cleanly if it does.
+                // This shouldn't happen, the calculator returns null-rate
+                // entries for empty vendors, but degrade cleanly if it does.
                 $entry['metrics'] = $this->nullMetrics();
             }
             $rows[] = $entry;
@@ -109,7 +109,7 @@ final class VendorMetricsSerializer
     /**
      * Canonical null-metrics block. Used as a degraded-state fallback
      * when a vendor entity exists but no metrics row was returned by
-     * the calculator (defensive only — the calculator handles this
+     * the calculator (defensive only, the calculator handles this
      * case internally).
      *
      * @return array<string, array<string, mixed>>

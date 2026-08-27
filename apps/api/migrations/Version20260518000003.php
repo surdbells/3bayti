@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.2.X.18-A — Create order_return_requests + child tables for the
+ * M3.2.X.18-A, Create order_return_requests + child tables for the
  * customer-initiated returns flow.
  *
  * Background
@@ -27,7 +27,7 @@ use Doctrine\Migrations\AbstractMigration;
  *   parent OrderItem so vendor-facing endpoints can filter cheaply
  *   without joining through order_items every time.
  *
- *   Vendors do NOT approve/deny — admin does, based on photo evidence.
+ *   Vendors do NOT approve/deny, admin does, based on photo evidence.
  *   Vendors only confirm physical receipt (status delivered_to_vendor).
  *
  * Status state machine on order_return_requests:
@@ -36,7 +36,7 @@ use Doctrine\Migrations\AbstractMigration;
  *   pending ──────┤
  *                 └─→ approved → picked_up → delivered_to_vendor → refunded (terminal)
  *                        ↑
- *                   cancelled (terminal — customer-initiated only, before approved)
+ *                   cancelled (terminal, customer-initiated only, before approved)
  *
  * Schema design choices
  * =====================
@@ -53,7 +53,7 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * order_return_requests.order_id ON DELETE CASCADE
  *   If an order is hard-deleted (very rare admin op), its returns
- *   should go with it — they're meaningless without the parent.
+ *   should go with it, they're meaningless without the parent.
  *
  * order_return_requests.customer_user_id ON DELETE RESTRICT
  *   Customer deletion isn't a flow we support; belt-and-braces.
@@ -64,7 +64,7 @@ use Doctrine\Migrations\AbstractMigration;
  *   trail philosophy.
  *
  * order_return_request_items.return_request_id ON DELETE CASCADE
- *   Children of a return request — go together.
+ *   Children of a return request, go together.
  *
  * order_return_request_items.order_item_id ON DELETE RESTRICT
  *   Don't let an OrderItem be deleted while a return references it.
@@ -77,7 +77,7 @@ use Doctrine\Migrations\AbstractMigration;
  *   Photos belong to the request lifecycle.
  *
  * order_return_request_photos.storage_path
- *   Flysystem path (relative to whatever adapter's root). No URL —
+ *   Flysystem path (relative to whatever adapter's root). No URL -
  *   that's computed at serialize time via a signed-URL or auth-gated
  *   serve endpoint. Decouples storage layer from API contract.
  *
@@ -94,20 +94,20 @@ use Doctrine\Migrations\AbstractMigration;
  * Indexes
  * -------
  * order_return_requests:
- *   - (customer_user_id, status) — customer's "my returns" filter
- *   - (status, requested_at DESC) — admin "pending review" list
- *   - (order_id) — order detail → returns reverse lookup
+ *   - (customer_user_id, status), customer's "my returns" filter
+ *   - (status, requested_at DESC), admin "pending review" list
+ *   - (order_id), order detail → returns reverse lookup
  *
  * order_return_request_items:
- *   - (vendor_id, return_request_id) — vendor portal queries
- *   - (return_request_id) — child-of-parent listing
- *   - (order_item_id) — anti-overlap eligibility check
+ *   - (vendor_id, return_request_id), vendor portal queries
+ *   - (return_request_id), child-of-parent listing
+ *   - (order_item_id), anti-overlap eligibility check
  *
  * order_return_request_photos:
- *   - (return_request_id) — list photos for a request
+ *   - (return_request_id), list photos for a request
  *
  * order_return_refunds:
- *   - UNIQUE (return_request_id) — one-refund-per-request
+ *   - UNIQUE (return_request_id), one-refund-per-request
  *
  * Postgres-only
  * -------------

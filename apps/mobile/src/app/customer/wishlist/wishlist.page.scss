@@ -1,5 +1,5 @@
 /* ============================================================================
-   Wishlist (My Closet) — full M2 redesign
+   Wishlist (My Closet), full M2 redesign
    Layout matches best-sellers: ion-grid lives directly under ion-content
    with ion-padding-horizontal, NOT inside a custom .sheet wrapper.
    ============================================================================ */
@@ -35,7 +35,7 @@ ion-content.page-bg {
   margin: 8px 0 12px;
 }
 
-/* ----- Categories — horizontal scroll ----------------------------------- */
+/* ----- Categories, horizontal scroll ----------------------------------- */
 
 .categories-row {
   display: flex;
@@ -115,7 +115,7 @@ ion-content.page-bg {
   color: var(--ax-color-text-secondary);
 }
 
-/* Add card variant — dashed border, no fill */
+/* Add card variant, dashed border, no fill */
 .category-card--add {
   background: transparent;
   border: 1.5px dashed var(--ax-color-text-brand);
@@ -130,7 +130,7 @@ ion-content.page-bg {
   }
 }
 
-/* ----- Items grid — uses canonical m6d-product-card from global.scss ----- */
+/* ----- Items grid, uses canonical m6d-product-card from global.scss ----- */
 /* Identical pattern to best-sellers / new-arrivals / category. */
 
 .products-grid {

@@ -20,7 +20,7 @@ import { refreshInterceptor } from './refresh.interceptor';
  * --------
  * We stand up Angular's HttpClientTesting + the real interceptor, then
  * stub AccessTokenStore and AuthService so we can drive their state
- * deterministically. The interceptor itself runs unmodified — it's the
+ * deterministically. The interceptor itself runs unmodified, it's the
  * surface under test.
  *
  * What we verify
@@ -46,7 +46,7 @@ import { refreshInterceptor } from './refresh.interceptor';
 class StubAuthService {
   private nextOutcome: boolean = true;
   refreshCalls = 0;
-  /** Returned promises by call index — exposed so tests can resolve
+  /** Returned promises by call index, exposed so tests can resolve
    *  them in a deliberate order to model concurrency. */
   private resolvers: Array<(value: boolean) => void> = [];
 
@@ -81,7 +81,7 @@ function configure(opts: ConfigureOpts = {}): {
 } {
   const auth = new StubAuthService();
   const tokenStore = {
-    /* Minimal AccessTokenStore stub — just getToken() is what the
+    /* Minimal AccessTokenStore stub, just getToken() is what the
        interceptor needs. We swap the return value mid-test for the
        refresh-retry case. */
     _token: opts.initialToken ?? null,
@@ -99,7 +99,7 @@ function configure(opts: ConfigureOpts = {}): {
     { provide: AuthService, useValue: auth },
     { provide: AccessTokenStore, useValue: tokenStore },
     /* Default proxy base. Individual tests can override by re-providing
-       AUTH_PROXY_BASE in their own TestBed pass — but since we want
+       AUTH_PROXY_BASE in their own TestBed pass, but since we want
        a single TestBed across the suite, we keep the standard '/auth-proxy'
        and exercise both paths via URL choice. */
     { provide: AUTH_PROXY_BASE, useValue: '/auth-proxy' },
@@ -159,7 +159,7 @@ describe('refreshInterceptor', () => {
   });
 
   /* ===================================================================
-     401 handling — non-proxy, with Bearer
+     401 handling, non-proxy, with Bearer
      =================================================================== */
   describe('401 retry after refresh', () => {
     it('calls AuthService.refresh() on 401 and retries the original request', async () => {
@@ -175,7 +175,7 @@ describe('refreshInterceptor', () => {
 
       const responsePromise = firstValueFrom(http.get('/v3/orders'));
 
-      /* First attempt — gets 401. */
+      /* First attempt, gets 401. */
       const first = controller.expectOne('/v3/orders');
       expect(first.request.headers.get('Authorization')).toBe('Bearer old.token');
       /* Mutate the token BEFORE flushing the 401, so when the
@@ -184,12 +184,12 @@ describe('refreshInterceptor', () => {
       updateTokenAfterRefresh();
       first.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
 
-      /* The interceptor awaits auth.refresh() — that resolves on the
+      /* The interceptor awaits auth.refresh(), that resolves on the
          next microtask. We let microtasks drain by awaiting a Promise. */
       await Promise.resolve();
       await Promise.resolve();
 
-      /* Second attempt — same URL, new Bearer. */
+      /* Second attempt, same URL, new Bearer. */
       const second = controller.expectOne('/v3/orders');
       expect(second.request.headers.get('Authorization')).toBe('Bearer new.token');
       second.flush({ ok: true });
@@ -216,7 +216,7 @@ describe('refreshInterceptor', () => {
   });
 
   /* ===================================================================
-     401 handling — passthrough cases (no refresh)
+     401 handling, passthrough cases (no refresh)
      =================================================================== */
   describe('401 propagation without refresh', () => {
     it('does NOT call refresh() on a 401 from the auth-proxy itself', async () => {
@@ -301,7 +301,7 @@ describe('refreshInterceptor', () => {
       await Promise.all([p1, p2, p3]);
 
       /* In a real AuthService, refresh() returns the same in-flight
-         promise to concurrent callers — refreshCalls === 1. Our stub
+         promise to concurrent callers, refreshCalls === 1. Our stub
          doesn't deduplicate, so we expect 3 here. The actual single-
          flight property is verified in auth.service.spec.ts where the
          real AuthService.refresh() runs. This test is documentation

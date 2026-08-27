@@ -5,22 +5,22 @@ import { AUTH_ERROR_CODES } from './auth.types';
  * Tests for the auth-types module's RUNTIME surface.
  *
  * The module is mostly type-only (interfaces and type aliases). The only
- * value-level export is AUTH_ERROR_CODES — a const-asserted object that
+ * value-level export is AUTH_ERROR_CODES, a const-asserted object that
  * pairs symbolic names with the exact string codes the API emits. These
  * tests pin those strings so any drift away from the API contract fails
  * loudly here rather than silently at the UI surface.
  *
  * Source-of-truth references in apps/api:
- *   - Bayti\Api\Http\Errors\ErrorCodes — string constants used by all
+ *   - Bayti\Api\Http\Errors\ErrorCodes, string constants used by all
  *     controllers via HttpException::*().
- *   - apps/api/src/Http/Controllers/Auth/*Controller.php — which codes
+ *   - apps/api/src/Http/Controllers/Auth/*Controller.php, which codes
  *     each endpoint emits.
  */
 describe('AUTH_ERROR_CODES', () => {
   it('mirrors the API ErrorCodes for the auth subset', () => {
     /* These exact strings come from apps/api/src/Http/Errors/ErrorCodes.php.
        Drift here means the UI maps an API error to a code that no API
-       endpoint actually emits — silent presentation failure. */
+       endpoint actually emits, silent presentation failure. */
     expect(AUTH_ERROR_CODES.INVALID_CREDENTIALS).toBe('AUTH_INVALID_CREDENTIALS');
     expect(AUTH_ERROR_CODES.ACCOUNT_INACTIVE).toBe('AUTH_ACCOUNT_INACTIVE');
     expect(AUTH_ERROR_CODES.CONFLICT_EMAIL_TAKEN).toBe('CONFLICT_EMAIL_TAKEN');

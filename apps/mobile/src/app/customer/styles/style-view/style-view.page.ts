@@ -139,7 +139,7 @@ export class StyleViewPage implements OnInit, OnDestroy {
   ngOnInit() {
     // Fast path: the style was passed in router state from the list. On a
     // hard reload / deep link that state is wiped, so fall back to fetching
-    // the style by its slug (from the route) and rebuilding it — instead of
+    // the style by its slug (from the route) and rebuilding it, instead of
     // bouncing back to /styles, which broke deep links + refresh.
     this.style = history.state?.style;
     if (!this.style) {
@@ -147,7 +147,7 @@ export class StyleViewPage implements OnInit, OnDestroy {
       if (slug) {
         this.loadStyleBySlug(slug);
       } else {
-        // No state AND no slug — nothing to render; return to the hub.
+        // No state AND no slug, nothing to render; return to the hub.
         this.router.navigate(['/styles']);
         return;
       }
@@ -176,7 +176,7 @@ export class StyleViewPage implements OnInit, OnDestroy {
         ) {
           this.style = response.data;
         } else {
-          // Unknown / inactive style — bounce back to the hub.
+          // Unknown / inactive style, bounce back to the hub.
           this.router.navigate(['/styles']);
         }
         this.ui_controls.is_loading = false;
@@ -223,7 +223,7 @@ export class StyleViewPage implements OnInit, OnDestroy {
   getTotal(): number {
     if (!this.style?.products) return 0;
     // item.price is a STRING post-transform (v3 DECIMAL preserved as text),
-    // so coerce with Number() — otherwise reduce string-concatenates ("1020"
+    // so coerce with Number(), otherwise reduce string-concatenates ("1020"
     // instead of 30) and the total renders garbage.
     return this.style.products.reduce((sum, item) => sum + Number(item.price), 0);
   }

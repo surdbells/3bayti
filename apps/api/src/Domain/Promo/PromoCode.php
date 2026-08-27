@@ -94,7 +94,7 @@ class PromoCode
 
     /**
      * Code text in normalized UPPER form. UNIQUE at DB level via a
-     * functional index on UPPER(code) — defense in depth against any
+     * functional index on UPPER(code), defense in depth against any
      * caller that bypasses the constructor normalization.
      */
     #[ORM\Column(name: 'code', type: 'string', length: self::CODE_MAX_LENGTH)]
@@ -139,7 +139,7 @@ class PromoCode
     /**
      * Hard cap on the computed discount amount for percentage codes
      * (e.g. "10% off, max 50 AED"). For fixed_amount codes this column
-     * is functionally redundant — the resolver clamps fixed_amount
+     * is functionally redundant, the resolver clamps fixed_amount
      * discounts to cart.subtotal anyway. NULL = no cap.
      */
     #[ORM\Column(name: 'max_discount_amount', type: 'decimal', precision: 10, scale: 2, nullable: true)]
@@ -273,7 +273,7 @@ class PromoCode
     public function getUpdatedAt(): DateTimeImmutable { return $this->updatedAt; }
 
     // -----------------------------------------------------------------
-    // Mutators — explicit; all validate
+    // Mutators, explicit; all validate
     // -----------------------------------------------------------------
 
     public function setCode(string $code): void

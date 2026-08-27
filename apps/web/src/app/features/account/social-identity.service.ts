@@ -15,11 +15,11 @@ export interface SocialIdentity {
 }
 
 /**
- * SocialIdentityService — read + link + unlink the current user's connected
+ * SocialIdentityService, read + link + unlink the current user's connected
  * Google/Apple accounts. Backs the "Connected accounts" account page.
  *
  * All three are Bearer-auth /me calls routed through RoutedHttpClient (the
- * access-token interceptor attaches Authorization) — NOT the BFF, which is
+ * access-token interceptor attaches Authorization), NOT the BFF, which is
  * only for the cookie-bound refresh model.
  *
  * Endpoints:
@@ -42,7 +42,7 @@ export class SocialIdentityService {
   /**
    * Link a fresh provider sign-in (Firebase ID token) to the current user.
    * The caller obtains the id_token via SocialAuthService's popup. A 409
-   * (CONFLICT_DUPLICATE — token belongs to another account) propagates as an
+   * (CONFLICT_DUPLICATE, token belongs to another account) propagates as an
    * HttpErrorResponse for the page to map.
    */
   async link(idToken: string): Promise<SocialIdentity> {
@@ -55,7 +55,7 @@ export class SocialIdentityService {
   }
 
   /**
-   * Unlink a provider. A 422 (BUSINESS_RULE_VIOLATION — last sign-in method)
+   * Unlink a provider. A 422 (BUSINESS_RULE_VIOLATION, last sign-in method)
    * or 404 (no such link) propagates for the page to map.
    */
   async unlink(provider: SocialProvider): Promise<void> {

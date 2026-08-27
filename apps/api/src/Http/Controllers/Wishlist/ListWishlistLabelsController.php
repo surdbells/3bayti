@@ -21,7 +21,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * GET /v3/me/wishlist/labels — the user's wishlist labels.
+ * GET /v3/me/wishlist/labels, the user's wishlist labels.
  *
  * Each label carries its saved-product count (computed in one grouped
  * query). Returned in a { data: [...] } envelope.

@@ -33,7 +33,7 @@ use Psr\Http\Message\ResponseInterface;
  *     requested roles and NEVER customer/vendor.
  *   - Create returns 409 on a taken email.
  *   - Create returns 422 on validation errors (missing name, short pw).
- *   - Create requires admin tier — 403 for a non-admin, 401 unauthenticated.
+ *   - Create requires admin tier, 403 for a non-admin, 401 unauthenticated.
  *   - Password reset re-hashes and revokes ALL the target's refresh tokens.
  *   - Password reset returns 404 for an unknown target.
  *   - Password reset requires admin tier.
@@ -132,7 +132,7 @@ final class AdminUserControllersTest extends HttpTestCase
     public function createWithUnknownRoleIdReturns422AndPersistsNothing(): void
     {
         $admin = $this->makeAdmin();
-        // findBy resolves to empty — none of the requested ids exist.
+        // findBy resolves to empty, none of the requested ids exist.
         $this->bindEmForCreate($admin, emailTaken: false, roles: []);
 
         $response = $this->makePost($admin, '/v3/admin/users', [

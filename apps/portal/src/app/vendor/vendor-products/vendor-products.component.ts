@@ -170,7 +170,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
     this.fetchProducts();
   }
 
-  /** Status chip filter — '' = All (excludes soft-deleted), 'active', 'draft'. */
+  /** Status chip filter, '' = All (excludes soft-deleted), 'active', 'draft'. */
   readonly statusChips: { value: string; label: string }[] = [
     { value: 'active', label: 'Active' },
     { value: 'draft', label: 'Draft' },

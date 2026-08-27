@@ -35,8 +35,8 @@ interface BroadcastRow extends Record<string, unknown> {
 }
 
 /**
- * Notification → History. Every push broadcast (immediate send, resend, or —
- * later — a scheduled occurrence) with its delivery summary. Row click / View
+ * Notification → History. Every push broadcast (immediate send, resend, or -
+ * later, a scheduled occurrence) with its delivery summary. Row click / View
  * opens the detail + recipient drill-down; Resend spins off a new broadcast.
  */
 @Component({

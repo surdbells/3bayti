@@ -17,7 +17,7 @@ use Psr\Log\LoggerInterface;
  *
  * Scale + memory
  * --------------
- * The audience is streamed in keyset-paginated batches — the whole
+ * The audience is streamed in keyset-paginated batches, the whole
  * recipient list is never loaded at once. Recipient result rows are written
  * with DBAL (not the ORM UnitOfWork), so a million-recipient send doesn't
  * accumulate entities in memory. Only the single broadcast entity is managed
@@ -25,7 +25,7 @@ use Psr\Log\LoggerInterface;
  *
  * Delivery honesty: a send that FCM accepts is recorded 'sent'; a rejection
  * is 'failed' with the PushException kind. Dead tokens (UNREGISTERED) are
- * deactivated so they leave future audiences. Partial success is normal —
+ * deactivated so they leave future audiences. Partial success is normal -
  * the broadcast finishes 'partially_delivered', never all-or-nothing.
  *
  * The broadcast is expected to already be in 'processing' (claimed by the
@@ -124,7 +124,7 @@ final class BroadcastSender
                     $broadcast->recordFailed($platform, $e->kind);
                     $broadcast->setErrorSample($e->getMessage());
                     if ($e->isTokenDead()) {
-                        // Prune permanently dead tokens (DBAL — no UoW growth).
+                        // Prune permanently dead tokens (DBAL, no UoW growth).
                         $conn->executeStatement(
                             'UPDATE device_tokens SET is_active = false WHERE id = :id',
                             ['id' => $row['id']],

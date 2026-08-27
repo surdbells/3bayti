@@ -94,8 +94,8 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Error responses
  * ---------------
- *   401 AUTH_MISSING_TOKEN / AUTH_INVALID_TOKEN — handled by middleware
- *   422 VALIDATION_FAILED — invalid lat/lng range, partial coords,
+ *   401 AUTH_MISSING_TOKEN / AUTH_INVALID_TOKEN, handled by middleware
+ *   422 VALIDATION_FAILED, invalid lat/lng range, partial coords,
  *                          country_code not 2 alpha chars, etc.
  *
  * Audit log
@@ -151,7 +151,7 @@ final class UpdateLocationController
     }
 
     /**
-     * UPDATE path — existing UserLocation row gets selected fields
+     * UPDATE path, existing UserLocation row gets selected fields
      * rewritten via the entity's update() method.
      */
     private function updatePath(
@@ -192,7 +192,7 @@ final class UpdateLocationController
     }
 
     /**
-     * CREATE path — no UserLocation row yet. Create one, apply the
+     * CREATE path, no UserLocation row yet. Create one, apply the
      * input, persist. The DB-level UNIQUE on user_id prevents the
      * race where two concurrent first-PATCH calls both try to create.
      */

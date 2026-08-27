@@ -25,7 +25,7 @@ final class RefundOrderInput
 {
     /**
      * Decimal amount as STRING. Omit or pass null for full refund.
-     * Format: '\\d+(\\.\\d{1,2})?' — '0.01' to '999999.99'.
+     * Format: '\\d+(\\.\\d{1,2})?', '0.01' to '999999.99'.
      * Server-side validates against the remaining-refundable balance.
      */
     #[Assert\Type(type: 'string', message: 'amount must be a string decimal (omit for full refund).')]

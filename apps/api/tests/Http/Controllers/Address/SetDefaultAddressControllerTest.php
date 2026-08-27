@@ -82,7 +82,7 @@ final class SetDefaultAddressControllerTest extends HttpTestCase
         self::assertTrue($addr->isDefaultShipping());
 
         [$em, $addrRepo] = $this->stubFor($user, $addr);
-        // No setAsDefault* calls — just clearing.
+        // No setAsDefault* calls, just clearing.
         $addrRepo->expects(self::never())->method('setAsDefaultShipping');
         $addrRepo->expects(self::never())->method('setAsDefaultBilling');
         $this->bind(EntityManagerInterface::class, $em);

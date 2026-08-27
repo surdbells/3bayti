@@ -13,7 +13,7 @@ import { PushManager } from '../../core/services/push-manager.service';
 import { BlockerService } from '../../blocker.service';
 
 // ---------------------------------------------------------------------------
-// Stubs (useValue) — no real network / no real constructors.
+// Stubs (useValue), no real network / no real constructors.
 // ---------------------------------------------------------------------------
 
 class ConnectionStub {

@@ -9,7 +9,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** DELETE /v3/admin/roles/{id} — non-system roles only; user_role rows cascade. */
+/** DELETE /v3/admin/roles/{id}, non-system roles only; user_role rows cascade. */
 final class DeleteRoleController
 {
     use Responder;

@@ -43,7 +43,7 @@ final class ConfirmControllerTest extends HttpTestCase
     {
         $user = $this->makeUser(id: 42, phoneVerified: false);
 
-        // Pre-stage an OTP through the provider — the provider will
+        // Pre-stage an OTP through the provider, the provider will
         // accept '000000' as the default code.
         $verificationId = $this->otpProvider->send($user->getPhone());
 
@@ -132,7 +132,7 @@ final class ConfirmControllerTest extends HttpTestCase
     }
 
     // -------------------------------------------------------------------
-    // Failure modes — all collapse to single 401
+    // Failure modes, all collapse to single 401
     // -------------------------------------------------------------------
 
     #[Test]
@@ -225,7 +225,7 @@ final class ConfirmControllerTest extends HttpTestCase
     public function returns401ForCrossPurposeAttempt(): void
     {
         // OTP exists but its purpose is password_reset, not registration.
-        // Must reject — cross-flow abuse.
+        // Must reject, cross-flow abuse.
         $user = $this->makeUser();
         $attempt = new OtpAttempt(
             verificationId: 'mc-pwreset',

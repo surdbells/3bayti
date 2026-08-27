@@ -28,7 +28,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * STATUS_DELIVERED_TO_VENDOR → STATUS_REFUNDED (terminal).
  *
  * Per Q-Refund locked: refunds are processed OFF the Noon API
- * — ops handles the actual money movement (bank transfer, store
+ *, ops handles the actual money movement (bank transfer, store
  * credit, cash) and records the event here for audit + compliance.
  *
  * 422 paths:
@@ -102,7 +102,7 @@ final class RecordReturnRefundController
                 currency: $input->currency,
             );
         } catch (\InvalidArgumentException $e) {
-            // Belt-and-braces — Symfony validator should have caught
+            // Belt-and-braces, Symfony validator should have caught
             // most of these at the DTO layer, but the entity is
             // stricter (e.g., positive-money via bccomp).
             throw HttpException::validation([

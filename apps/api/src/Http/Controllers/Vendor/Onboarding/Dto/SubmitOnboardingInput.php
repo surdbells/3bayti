@@ -16,16 +16,16 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Required: slug, name, contact_email.
  * Optional: description, contact_phone, legal_name.
  *
- * Validation rules mirror the admin CreateVendorInput shape — slugs
+ * Validation rules mirror the admin CreateVendorInput shape, slugs
  * are lowercase kebab-case ASCII, emails are RFC-5321 conforming,
- * etc. — so that a self-submitted vendor + admin-created vendor
+ * etc., so that a self-submitted vendor + admin-created vendor
  * have identical schema integrity.
  *
  * Per Q-OnboardingFlow=A (the implicit Option A locked in the M3.2.X.6
  * plan): admin approval is required before the vendor goes live.
  * This endpoint creates the Vendor entity but leaves it pending.
  *
- * Property assignment pattern matches CreateVendorInput — explicit
+ * Property assignment pattern matches CreateVendorInput, explicit
  * constructor with default values + trim() normalization so
  * RequestValidator's reflection-based instantiation works correctly.
  */
@@ -53,7 +53,7 @@ final class SubmitOnboardingInput
     /**
      * Contact email for vendor-facing communications (order
      * notifications, admin messages). NOT necessarily the same
-     * as the user's account email — vendors may want to route
+     * as the user's account email, vendors may want to route
      * business communications to a separate inbox.
      */
     #[Assert\NotBlank(message: 'contact_email is required.')]

@@ -1,4 +1,4 @@
-/* Register page — extends the shared auth-card via a deliberate copy.
+/* Register page, extends the shared auth-card via a deliberate copy.
    SCSS @use of a non-component file gets tricky with Angular's
    component-scoped style isolation; copying the small visual base
    into each auth page keeps every page self-contained. */
@@ -29,7 +29,7 @@
   margin-top: 12px;
 }
 
-/* Inline phone-availability hint (step 1). Best-effort UX — the
+/* Inline phone-availability hint (step 1). Best-effort UX, the
    Continue-time 409 is the hard gate. */
 .auth-field-hint {
   font-size: 13px;

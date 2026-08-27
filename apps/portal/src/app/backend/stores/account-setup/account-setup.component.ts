@@ -28,7 +28,7 @@ export class AccountSetupComponent implements OnInit, OnChanges {
   /**
    * The profile is loaded asynchronously (GET /admin/vendors/:id resolves
    * after the parent renders), so ngOnInit alone would compute the meter
-   * from the initial empty object and leave it stuck — the "7% for
+   * from the initial empty object and leave it stuck, the "7% for
    * everybody" bug. Recompute whenever the bound inputs change.
    */
   ngOnChanges(_changes: SimpleChanges): void {

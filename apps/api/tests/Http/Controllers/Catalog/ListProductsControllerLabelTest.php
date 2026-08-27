@@ -26,7 +26,7 @@ use PHPUnit\Framework\Attributes\Test;
  *   - ?label_id=<legacy_int> resolves via findActiveByLegacyId
  *   - Slug wins precedence when both ?label and ?label_id supplied
  *   - Unknown slug / unknown legacy id / non-numeric label_id all
- *     yield an empty result envelope (not 404 — empty list is the
+ *     yield an empty result envelope (not 404, empty list is the
  *     correct semantic for "no products under this label")
  */
 #[CoversClass(ListProductsController::class)]
@@ -102,7 +102,7 @@ final class ListProductsControllerLabelTest extends HttpTestCase
         $label = $this->makeLabelWithInternalId('eid-collection', 55);
 
         $labelRepo = $this->createMock(VendorLabelRepository::class);
-        // Slug wins — findOneBy fires, findActiveByLegacyId does NOT.
+        // Slug wins, findOneBy fires, findActiveByLegacyId does NOT.
         $labelRepo->expects(self::once())
             ->method('findOneBy')
             ->willReturn($label);

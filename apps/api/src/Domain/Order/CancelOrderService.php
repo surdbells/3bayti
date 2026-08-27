@@ -40,7 +40,7 @@ use Psr\Log\LoggerInterface;
  * Auto-refund failure handling
  * ----------------------------
  * If the gateway refund call fails during a paid/fulfilling cancel,
- * the order is LEFT in its original state — we don't half-cancel.
+ * the order is LEFT in its original state, we don't half-cancel.
  * The failed refund attempt is still recorded for forensics (same as
  * the standalone refund controller does). Caller sees a 502 with
  * the gateway error; can retry.
@@ -48,7 +48,7 @@ use Psr\Log\LoggerInterface;
  * Idempotency
  * -----------
  * Cancelling an already-cancelled order returns the same response
- * shape as a fresh cancel — no error. This keeps mobile retry-on-
+ * shape as a fresh cancel, no error. This keeps mobile retry-on-
  * timeout safe.
  */
 final class CancelOrderService
@@ -150,7 +150,7 @@ final class CancelOrderService
                 'auto_refund' => false,
             ]);
 
-            // M3.1.7-H — notify customer + vendors. Fire-and-forget.
+            // M3.1.7-H, notify customer + vendors. Fire-and-forget.
             //
             // The cancel has already been committed above (em->flush). The
             // notification fan-out is best-effort: a failure here (e.g. a
@@ -182,7 +182,7 @@ final class CancelOrderService
             );
         }
 
-        // Paid or fulfilling — admin only, with auto-refund
+        // Paid or fulfilling, admin only, with auto-refund
         if (!$allowedFromAdmin) {
             throw new CancellationNotAllowedException(
                 "Order in status '{$currentStatus}' has been paid; contact support to cancel.",
@@ -208,7 +208,7 @@ final class CancelOrderService
             );
         }
 
-        // Compute remaining refundable balance (defensive — a partial
+        // Compute remaining refundable balance (defensive, a partial
         // refund may have happened previously)
         $alreadyRefunded = $txnRepo->sumRefundsForOrder($order);
         $orderTotal = $order->getTotal();
@@ -229,7 +229,7 @@ final class CancelOrderService
                 );
             } catch (PaymentGatewayException $e) {
                 // Record failed refund attempt + bail (do NOT cancel
-                // the order — leave it in its original state)
+                // the order, leave it in its original state)
                 $failedTxn = new PaymentTransaction(
                     order: $order,
                     operation: PaymentTransaction::OPERATION_REFUND,
@@ -277,7 +277,7 @@ final class CancelOrderService
         }
 
         // Move order to CANCELLED (use overrideStatus to bypass any
-        // transition validation — we already validated via this method)
+        // transition validation, we already validated via this method)
         $order->overrideStatus(Order::STATUS_CANCELLED);
 
         $this->audit->recordOverride(
@@ -312,12 +312,12 @@ final class CancelOrderService
             'refund_amount' => $refundAmount,
         ]);
 
-        // M3.1.7-H — notify customer + vendors of the cancellation.
+        // M3.1.7-H, notify customer + vendors of the cancellation.
         // Customer gets refund details if applicable. Fire-and-forget.
         //
         // As with the pending_payment branch: the cancel (and any refund)
         // is already committed. A notification failure must NEVER surface
-        // as a 500 to the caller — the cancel succeeded. Wrap + swallow.
+        // as a 500 to the caller, the cancel succeeded. Wrap + swallow.
         try {
             $this->notifications->orderCancelled($order, [
                 'refund_issued' => $refundIssued,

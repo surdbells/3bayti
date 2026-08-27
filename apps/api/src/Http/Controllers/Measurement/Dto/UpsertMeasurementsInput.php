@@ -24,9 +24,9 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
  * Validation rules
  * ----------------
  *   - `values` is required, must be an associative array (object
- *     in JSON). Empty object IS allowed — same as "clear all values."
+ *     in JSON). Empty object IS allowed, same as "clear all values."
  *   - Each value in `values` must be a number, in (0, 500] cm.
- *     - Reject 0 (means "didn't measure" — omit the key instead).
+ *     - Reject 0 (means "didn't measure", omit the key instead).
  *     - Reject negatives (no meaningful negative measurement).
  *     - Reject >500 (clearly bogus; legitimate max <300cm for any
  *       human body part).
@@ -54,7 +54,7 @@ final class UpsertMeasurementsInput
 
     /**
      * The measurement field names mapped to numeric values.
-     * Schema is open — any vendor-defined key is accepted as long
+     * Schema is open, any vendor-defined key is accepted as long
      * as it follows the key naming rules.
      *
      * @var array<string, mixed>
@@ -83,7 +83,7 @@ final class UpsertMeasurementsInput
 
     /**
      * Validate the values map. Cross-validation is unavoidable here
-     * because the field structure is open — Symfony's standard
+     * because the field structure is open, Symfony's standard
      * constraints can't validate "all values in an open map are
      * positive numbers under 500."
      */
@@ -93,13 +93,13 @@ final class UpsertMeasurementsInput
         // Reject if the body lacked a "values" field. We can't
         // distinguish "values: null" from "values omitted" because
         // of constructor-based hydration, but treating both as the
-        // same is fine — both should fail.
+        // same is fine, both should fail.
         // Empty object {} is accepted (means "clear all measurements").
         // We use the count() check to catch the case where the user
         // sent {"values": null} explicitly.
 
         if (!is_array($this->values)) {
-            // Defensive — should not happen since the constructor
+            // Defensive, should not happen since the constructor
             // forces array, but keep the check for clarity.
             $context->buildViolation('values must be an object.')
                 ->atPath('values')
@@ -132,7 +132,7 @@ final class UpsertMeasurementsInput
         ExecutionContextInterface $context,
     ): void {
         // Reject non-numeric. is_numeric accepts numeric strings
-        // ("60.0") which we tolerate — the controller will cast to
+        // ("60.0") which we tolerate, the controller will cast to
         // float on save. But booleans and nulls are not numeric.
         if (!is_int($value) && !is_float($value)) {
             $context->buildViolation(sprintf(

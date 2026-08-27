@@ -50,7 +50,7 @@
               Image windowing: mount the <img> only for slides within ±2 of the
               active slide. Off-window slides keep the skeleton above and drop
               their <img> so iOS (WKWebView) frees the decoded full-screen bitmap
-              during infinite scroll — this prevents the memory-pressure reload.
+              during infinite scroll, this prevents the memory-pressure reload.
             -->
             @if (isInImageWindow(idx)) {
               <img

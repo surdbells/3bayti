@@ -10,7 +10,7 @@ use DateTimeInterface;
 /**
  * Convert PromoCode entities into admin response shapes.
  *
- * Only admin shapes exist — promo codes are catalog-management
+ * Only admin shapes exist, promo codes are catalog-management
  * primitives, never exposed publicly. The customer-facing surface
  * for promos is `applied_promo` on the cart quote / order serializer
  * (M3.2.X.8-C / -F), built from a PromoResolution, not from the
@@ -22,7 +22,7 @@ use DateTimeInterface;
  *
  * The optional `redemption_count` field is populated by the
  * controllers that want it (Get + List for at-a-glance dashboards);
- * not all callers pay the SQL cost for it — see adminShapeWithCount.
+ * not all callers pay the SQL cost for it, see adminShapeWithCount.
  */
 final class PromoCodeSerializer
 {
@@ -58,7 +58,7 @@ final class PromoCodeSerializer
 
     /**
      * Admin shape WITH a redemption count. The count is passed in
-     * rather than queried here — keeps the serializer dependency-free
+     * rather than queried here, keeps the serializer dependency-free
      * (no repository injection) and lets the caller decide between
      * effective vs gross counting via
      * PromoRedemptionRepository::countByPromoCodeIdEffective /

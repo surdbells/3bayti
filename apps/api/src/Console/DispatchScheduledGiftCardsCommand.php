@@ -49,7 +49,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *
  * Failure isolation
  * =================
- * Each card is processed in its own try/catch — one card's failure
+ * Each card is processed in its own try/catch, one card's failure
  * never aborts the batch. deliver() is itself non-blocking, so this is
  * belt-and-braces against unexpected repository errors.
  *
@@ -134,7 +134,7 @@ final class DispatchScheduledGiftCardsCommand extends Command
                 $this->deliveryService->deliver($card);
                 $processed++;
             } catch (\Throwable $e) {
-                // deliver() is non-blocking, so reaching here is rare —
+                // deliver() is non-blocking, so reaching here is rare -
                 // but a per-card guard keeps the batch alive regardless.
                 $errors++;
                 $io->writeln(sprintf(

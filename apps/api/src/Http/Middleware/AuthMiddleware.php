@@ -53,7 +53,7 @@ use Psr\Http\Server\RequestHandlerInterface;
  *   - Token's pwd_changed_at is older than the user's current value
  *     (i.e. the password was changed after the token was issued)
  *
- * Each path returns the SAME 401 response — no oracle leak about
+ * Each path returns the SAME 401 response, no oracle leak about
  * which check failed.
  */
 final class AuthMiddleware implements MiddlewareInterface
@@ -85,7 +85,7 @@ final class AuthMiddleware implements MiddlewareInterface
             return $this->unauthorized('AUTH_INVALID_TOKEN');
         }
 
-        // M1.6.2.A — set Sentry user context (id + role flags only).
+        // M1.6.2.A, set Sentry user context (id + role flags only).
         // Privacy decision (Q1=B): no email/phone in Sentry events.
         // Role flags are useful for filtering ("show errors hitting
         // vendor users") without exposing PII.
@@ -156,7 +156,7 @@ final class AuthMiddleware implements MiddlewareInterface
 
         // pwd_changed_at staleness check. If the token has a
         // pwd_changed_at claim and the user's current value is
-        // newer, the token is stale — reject.
+        // newer, the token is stale, reject.
         $userPwdChanged = $user->getPasswordChangedAt();
         $tokenPwdChanged = $claims->passwordChangedAt;
         if ($userPwdChanged !== null && $tokenPwdChanged !== null) {
@@ -166,7 +166,7 @@ final class AuthMiddleware implements MiddlewareInterface
         } elseif ($userPwdChanged !== null && $tokenPwdChanged === null) {
             // Edge case: user changed their password (so they have
             // a pwd_changed_at value) but the token was issued before
-            // that change (so it has no claim). Reject — the token
+            // that change (so it has no claim). Reject, the token
             // pre-dates the password change.
             return null;
         }

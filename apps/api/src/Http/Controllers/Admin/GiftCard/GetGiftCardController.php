@@ -25,7 +25,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Single gift card with full details, current balance, the complete
  * ordered transaction LEDGER and a delivery-status block. Gated by
  * gift_cards.view. The card + its ledger + buyer/recipient are fetched
- * in ONE query (findByIdForAdmin) — no lazy-load / N+1.
+ * in ONE query (findByIdForAdmin), no lazy-load / N+1.
  */
 final class GetGiftCardController
 {

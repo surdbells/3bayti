@@ -32,7 +32,7 @@ import { I18nService } from '../../i18n.service';
  *          status_mix }
  *
  * Single-store vendors need no vendor_id. Multi-store users get a 422
- * VENDOR_AMBIGUOUS — surfaced here as a message (store picking isn't built
+ * VENDOR_AMBIGUOUS, surfaced here as a message (store picking isn't built
  * on mobile yet).
  */
 interface Totals {

@@ -19,7 +19,7 @@ use PHPUnit\Framework\TestCase;
  *   - Null-safe transformations
  *
  * Any change to the keys here is a breaking change for the apps/web
- * CategoryDetail interface — keep them in sync.
+ * CategoryDetail interface, keep them in sync.
  */
 #[CoversClass(CategorySerializer::class)]
 final class CategorySerializerDetailShapeTest extends TestCase
@@ -90,7 +90,7 @@ final class CategorySerializerDetailShapeTest extends TestCase
     {
         $category = $this->makeCategory('test', 'Test', null);
 
-        // Verify the caller-supplied count is the value emitted —
+        // Verify the caller-supplied count is the value emitted -
         // the serializer must not transform it (e.g. coerce to string).
         $shape = $this->serializer->detailShape($category, rawProductCount: 0);
         self::assertSame(0, $shape['product_count']);

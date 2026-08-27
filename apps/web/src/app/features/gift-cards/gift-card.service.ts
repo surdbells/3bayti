@@ -14,7 +14,7 @@ import {
 } from './gift-card.model';
 
 /**
- * Direct v3 base — matches the convention in OrderService, wishlist and
+ * Direct v3 base, matches the convention in OrderService, wishlist and
  * profile services (each declares this locally rather than importing a
  * shared const). The auth Bearer is attached by the HTTP interceptor;
  * the two public endpoints (themes, balance) simply carry no token when
@@ -34,7 +34,7 @@ type ThemesPayload = Record<
 >;
 
 /**
- * GiftCardService — storefront gift-card operations (M3.5 / Phase E).
+ * GiftCardService, storefront gift-card operations (M3.5 / Phase E).
  *
  * Endpoints
  * ---------
@@ -45,7 +45,7 @@ type ThemesPayload = Record<
  *   POST /v3/gift-cards/redeem        (auth)    → claim a code into the account
  *   POST /v3/cart/gift-card           (auth)    → preview a card against the cart
  *
- * NOTE: there is no customer "activate" call — activation happens
+ * NOTE: there is no customer "activate" call, activation happens
  * server-side via the Noon webhook once the funding order is paid
  * (POST /v3/gift-cards/{id}/activate is admin-only).
  *
@@ -56,7 +56,7 @@ type ThemesPayload = Record<
 export class GiftCardService {
   private readonly http = inject(HttpClient);
 
-  /** Public — the 6 themes with palette + denomination presets, ordered. */
+  /** Public, the 6 themes with palette + denomination presets, ordered. */
   async getThemes(): Promise<GiftCardThemeOption[]> {
     const res = await firstValueFrom(
       this.http.get<Envelope<ThemesPayload>>(`${V3_BASE}/v3/gift-cards/themes`),
@@ -68,7 +68,7 @@ export class GiftCardService {
     }));
   }
 
-  /** Public — look up a single card by its code (for balance check / redeem preview). */
+  /** Public, look up a single card by its code (for balance check / redeem preview). */
   async checkBalance(code: string): Promise<GiftCard> {
     const params = new HttpParams().set('code', this.normaliseCode(code));
     const res = await firstValueFrom(
@@ -77,7 +77,7 @@ export class GiftCardService {
     return res.data;
   }
 
-  /** Auth — every gift card the signed-in buyer owns or received. */
+  /** Auth, every gift card the signed-in buyer owns or received. */
   async listMine(): Promise<GiftCard[]> {
     const res = await firstValueFrom(
       this.http.get<Envelope<GiftCard[]>>(`${V3_BASE}/v3/gift-cards/mine`),
@@ -86,7 +86,7 @@ export class GiftCardService {
   }
 
   /**
-   * Auth — create a card in `pending_payment`. The returned card's `id`
+   * Auth, create a card in `pending_payment`. The returned card's `id`
    * is then funded via POST /v3/checkout/initiate { gift_card_purchase_id }.
    */
   async purchase(input: GiftCardPurchaseInput): Promise<GiftCard> {
@@ -97,7 +97,7 @@ export class GiftCardService {
   }
 
   /**
-   * Auth — upload a luxury-theme recipient photo. Returns the public URL
+   * Auth, upload a luxury-theme recipient photo. Returns the public URL
    * to pass as `recipient_photo_url` on purchase(). The API field name is
    * "image" (multipart/form-data); the auth Bearer is attached by the
    * interceptor. Only meaningful for the luxury theme.
@@ -111,7 +111,7 @@ export class GiftCardService {
     return res.data.url;
   }
 
-  /** Auth — claim a gift-card code into the signed-in account. */
+  /** Auth, claim a gift-card code into the signed-in account. */
   async redeem(code: string): Promise<GiftCard> {
     const res = await firstValueFrom(
       this.http.post<Envelope<GiftCard>>(`${V3_BASE}/v3/gift-cards/redeem`, {
@@ -122,7 +122,7 @@ export class GiftCardService {
   }
 
   /**
-   * Auth — preview how much of a card applies to the current cart.
+   * Auth, preview how much of a card applies to the current cart.
    * Pure read; no balance is debited (the debit happens at checkout).
    */
   async previewCartApply(code: string): Promise<GiftCardCartPreview> {
@@ -135,7 +135,7 @@ export class GiftCardService {
   }
 
   /**
-   * Auth — preview applying the customer's whole gift WALLET (aggregate
+   * Auth, preview applying the customer's whole gift WALLET (aggregate
    * balance across every spendable card they own or redeemed) to the current
    * cart. One-tap alternative to entering a single code. Pure read; the debit
    * happens at POST /v3/checkout/initiate with use_gift_wallet=true.

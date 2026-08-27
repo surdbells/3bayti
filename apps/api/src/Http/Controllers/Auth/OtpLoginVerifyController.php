@@ -46,7 +46,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * ----------------
  * The attempt MUST carry PURPOSE_LOGIN_2FA. A registration- or
  * reset-purpose OTP replayed here is rejected with the same uniform
- * 401 — mirroring ConfirmController's purpose check.
+ * 401, mirroring ConfirmController's purpose check.
  *
  * Re-check active at verify time
  * ------------------------------
@@ -93,7 +93,7 @@ final class OtpLoginVerifyController
         $user = $attempt->getUser();
         if ($user === null) {
             // Login OTPs are always bound to a user at /otp-login/send.
-            // An unbound row means a broken audit trail — reject.
+            // An unbound row means a broken audit trail, reject.
             throw $this->verificationFailed();
         }
 
@@ -114,13 +114,13 @@ final class OtpLoginVerifyController
         }
 
         // Account could have been disabled between send and verify.
-        // Same uniform 401 — don't leak the disabled state here.
+        // Same uniform 401, don't leak the disabled state here.
         if (!$user->isActive()) {
             throw $this->verificationFailed();
         }
 
         // OTP confirmed. Issue tokens, persist refresh-token row, update
-        // login audit. All in one transaction — identical to
+        // login audit. All in one transaction, identical to
         // LoginController / ConfirmController.
         $pair = $this->jwt->issueTokenPair($user);
 

@@ -21,7 +21,7 @@ use Bayti\Api\Domain\User\UserLocation;
  * -----------------------
  * Doctrine stores latitude/longitude as DECIMAL(9,6), which PHP
  * surfaces as strings (to avoid float-precision drift). For JSON
- * output we convert to float — clients want numbers, not strings,
+ * output we convert to float, clients want numbers, not strings,
  * to feed into map/geocoding libraries.
  *
  * The conversion is safe because the column scale (6) is well within
@@ -32,7 +32,7 @@ use Bayti\Api\Domain\User\UserLocation;
 final class UserLocationSerializer
 {
     /**
-     * Public self-view — what the user sees about their own location.
+     * Public self-view, what the user sees about their own location.
      *
      * @return array<string, mixed>
      */

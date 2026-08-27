@@ -43,15 +43,15 @@ use Psr\Http\Server\RequestHandlerInterface;
  * 2. User authenticated but not vendor → 403 Forbidden.
  *    Distinct from 401: caller IS who they say they are; they just
  *    don't have the role. 403 communicates "we know who you are,
- *    you can't do this" — appropriate for a logged-in customer
+ *    you can't do this", appropriate for a logged-in customer
  *    trying to hit /v3/vendor/*.
  *
  * Role check
  * ----------
  * For M3.1.7, "vendor" means `is_vendor === true`. Multi-role users
- * (e.g. someone who's both customer and vendor) work naturally —
+ * (e.g. someone who's both customer and vendor) work naturally -
  * the same User can use customer endpoints elsewhere and vendor
- * endpoints here. Admin role doesn't grant vendor access — admins
+ * endpoints here. Admin role doesn't grant vendor access, admins
  * use /v3/admin/orders for cross-vendor oversight.
  *
  * Vendor lifecycle gate (M3.2.X.6)
@@ -63,7 +63,7 @@ use Psr\Http\Server\RequestHandlerInterface;
  *
  * The lifecycle check uses VendorRepository::existsApprovedForOwnerUser
  * resolved LAZILY from the injected EntityManagerInterface (per the
- * M3.2.X.4-B pattern — avoids eager Doctrine metadata loading at
+ * M3.2.X.4-B pattern, avoids eager Doctrine metadata loading at
  * service construction time, which breaks test mocks).
  *
  * Multi-vendor case: if the user owns mixed approved + suspended
@@ -104,7 +104,7 @@ final class VendorAuthMiddleware implements MiddlewareInterface
         }
 
         // Lifecycle gate (M3.2.X.6-B): user must own at least one
-        // approved vendor. Resolved lazily — if no EM was injected
+        // approved vendor. Resolved lazily, if no EM was injected
         // (legacy DI / test setup) we skip the gate to preserve
         // backwards-compatible behavior.
         if ($this->em !== null && !$this->hasApprovedVendor($user)) {
@@ -128,7 +128,7 @@ final class VendorAuthMiddleware implements MiddlewareInterface
      * Defensive: catches any unexpected Doctrine/DB exceptions so the
      * middleware never returns 500 from an audit-style lookup. The
      * worst-case behavior on a DB error is denying access (returning
-     * false), which is correct — better safe than letting a non-
+     * false), which is correct, better safe than letting a non-
      * approved vendor through.
      */
     private function hasApprovedVendor(User $user): bool

@@ -25,7 +25,7 @@ class PromoCodeRepository extends EntityRepository
     /**
      * Persist a promo code row + flush. Used by admin create/update
      * controllers. Same fire-and-forget shape as NotificationLogRepository::save
-     * and AuditLogRepository::save — the admin endpoint expects the row
+     * and AuditLogRepository::save, the admin endpoint expects the row
      * to land before the response goes out (audit emission needs the id).
      */
     public function save(PromoCode $code): void
@@ -54,7 +54,7 @@ class PromoCodeRepository extends EntityRepository
      * input always matches the stored UPPER form. Returns null if no
      * row matches (the resolver maps that to PROMO_NOT_FOUND).
      *
-     * Does NOT filter on is_active or time bounds — the resolver
+     * Does NOT filter on is_active or time bounds, the resolver
      * enforces those after lookup so it can return distinct error
      * codes (PROMO_INACTIVE, PROMO_EXPIRED) rather than a generic
      * "not found".
@@ -155,7 +155,7 @@ class PromoCodeRepository extends EntityRepository
                ->setParameter('needle', '%' . $needle . '%');
         }
         if (!empty($filters['validAt'])) {
-            // "Currently valid at this timestamp" — used by the admin
+            // "Currently valid at this timestamp", used by the admin
             // UI to surface "active right now" codes. Honors both
             // bounds; rows with null bounds always pass that side.
             $qb->andWhere('(pc.validFrom IS NULL OR pc.validFrom <= :validAt)')

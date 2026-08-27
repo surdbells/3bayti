@@ -61,14 +61,14 @@ class Address
     private ?string $label = null;
 
     /**
-     * Recipient name for this delivery — usually the same as the user's
+     * Recipient name for this delivery, usually the same as the user's
      * own name but can differ (gift, multi-occupant household, etc.).
      */
     #[ORM\Column(name: 'recipient_name', type: 'string', length: 200)]
     private string $recipientName;
 
     /**
-     * Recipient phone for delivery — courier needs this; defaults to
+     * Recipient phone for delivery, courier needs this; defaults to
      * the user's phone but can be overridden per address.
      */
     #[ORM\Column(name: 'recipient_phone', type: 'string', length: 25)]
@@ -91,7 +91,7 @@ class Address
     private ?string $streetAddress = null;
 
     /**
-     * Building/villa number, apartment number, floor, etc. — anything
+     * Building/villa number, apartment number, floor, etc., anything
      * the courier needs after finding the right street.
      */
     #[ORM\Column(name: 'building_details', type: 'text', nullable: true)]

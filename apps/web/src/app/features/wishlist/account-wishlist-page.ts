@@ -12,7 +12,7 @@ import { ToastService } from '../../shared/forms';
 import { WishlistService } from './wishlist.service';
 
 /**
- * /account/wishlist — the user's saved products.
+ * /account/wishlist, the user's saved products.
  *
  * Renders the saved products with the same ui-product-card used across
  * the catalogue (the heart on each card reflects + toggles saved

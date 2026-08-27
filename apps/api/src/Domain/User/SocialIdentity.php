@@ -8,18 +8,18 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Federated sign-in identity — links a verified provider account
+ * Federated sign-in identity, links a verified provider account
  * (Google or Apple, via Firebase) to a platform {@see User}.
  *
  * One user may hold several identities (e.g. both a Google and an Apple
  * login that resolve to the same account). A given (provider,
- * provider_uid) pair, however, belongs to AT MOST ONE user — the
+ * provider_uid) pair, however, belongs to AT MOST ONE user, the
  * UNIQUE(provider, provider_uid) constraint is both the integrity guard
  * and the lookup key for the "find or create" social-login flow.
  *
  * provider_uid
  * ------------
- * The provider's stable subject identifier — Google's `sub`, Apple's
+ * The provider's stable subject identifier, Google's `sub`, Apple's
  * `sub`. Pulled from the Firebase token's `firebase.identities` map
  * (falling back to the token `sub`). This NEVER changes for a given
  * provider account, which is why we key on it rather than email (email
@@ -29,7 +29,7 @@ use Doctrine\ORM\Mapping as ORM;
  * -----
  * Best-effort copy of the email the provider asserted at link time.
  * Nullable because Apple private-relay logins may omit it. Purely
- * informational (shown in "connected accounts" UI) — never used as a
+ * informational (shown in "connected accounts" UI), never used as a
  * security identifier.
  */
 #[ORM\Entity(repositoryClass: SocialIdentityRepository::class)]

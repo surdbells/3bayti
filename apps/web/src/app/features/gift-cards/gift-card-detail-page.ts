@@ -19,7 +19,7 @@ import type { GiftCard, GiftCardStatus, GiftCardTransaction } from './gift-card.
 type LoadState = 'loading' | 'ready' | 'notfound' | 'error';
 
 /**
- * /account/gift-cards/:id — a single gift card with its balance,
+ * /account/gift-cards/:id, a single gift card with its balance,
  * revealed code, and transaction history.
  *
  * There is no GET /gift-cards/{id} endpoint, so we load the buyer's
@@ -243,7 +243,7 @@ export class GiftCardDetailPageComponent implements OnInit {
       this.copied.set(true);
       setTimeout(() => this.copied.set(false), 2000);
     } catch {
-      /* Clipboard blocked (permissions / insecure context) — the code
+      /* Clipboard blocked (permissions / insecure context), the code
          is already visible on the card, so this is a non-fatal nicety. */
     }
   }

@@ -9,7 +9,7 @@ use Doctrine\Migrations\AbstractMigration;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 
 /**
- * Workstream C — profile pictures. Adds avatar_url to users (nullable; holds
+ * Workstream C, profile pictures. Adds avatar_url to users (nullable; holds
  * the full public URL of the uploaded avatar, served via the public uploads
  * path). Null users fall back to a placeholder in the API response.
  */

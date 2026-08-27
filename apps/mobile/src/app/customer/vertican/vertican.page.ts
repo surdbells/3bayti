@@ -112,13 +112,13 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
 
   // Bounded sliding window: never keep more than this many product SLIDES
   // mounted. Image windowing (above) drops off-screen <img> bitmaps, but the
-  // swiper-slide nodes themselves — hero, overlays, buttons, bindings and
-  // listeners — still accumulated for every product as the feed grew, and that
+  // swiper-slide nodes themselves, hero, overlays, buttons, bindings and
+  // listeners, still accumulated for every product as the feed grew, and that
   // unbounded slide count is what eventually pushed iOS/WKWebView over its
   // memory budget and forced a silent reload. trimRenderedWindow() keeps only
   // the newest MAX_RENDERED_PRODUCTS slides. Must comfortably exceed the fetch
   // page size (explore.limit = 10) plus the near-end prefetch trigger (5), so
-  // trimming never drops the slide the user is on or its neighbours — 20 keeps
+  // trimming never drops the slide the user is on or its neighbours, 20 keeps
   // two full pages live (a 5-slide back-scroll buffer behind the prefetch
   // point) while holding the mounted DOM lower for iOS/WKWebView.
   private readonly MAX_RENDERED_PRODUCTS = 20;
@@ -319,7 +319,7 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
   // ========================================
   // Horizontal swipe to change image
   //
-  // Lightweight touch handlers on the .image-container — NO nested Swiper.
+  // Lightweight touch handlers on the .image-container, NO nested Swiper.
   // The main swiper is direction="vertical", so horizontal drags never move
   // it; we do not stopPropagation, which keeps vertical dragging working.
   // ========================================
@@ -663,7 +663,7 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     this.explore.id = this.single_user.id;
     this.explore.token = this.single_user.token;
 
-    // Request the NEXT page without mutating the persisted offset yet — we only
+    // Request the NEXT page without mutating the persisted offset yet, we only
     // commit the advance after a successful, deduped, non-empty append. On an
     // empty/failed page the offset stays put and we stop.
     const nextOffset = this.explore.offset + this.explore.limit;
@@ -744,14 +744,14 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
   // feed would visibly jump forward. We compensate by shifting Swiper's active
   // index back by the same N (slideTo, instant, callbacks off).
   //
-  // removedCount MUST be computed BEFORE splicing — computing it against the
+  // removedCount MUST be computed BEFORE splicing, computing it against the
   // already-trimmed array yields 0 and the index re-sync silently never happens.
   private trimRenderedWindow() {
     const sw: any = this.verticalSwiper || (this.swiperEl?.nativeElement as any)?.swiper;
 
     const removedCount = this.products.length - this.MAX_RENDERED_PRODUCTS;
     if (removedCount <= 0) {
-      // Under the cap — just let Swiper pick up the freshly appended slides so
+      // Under the cap, just let Swiper pick up the freshly appended slides so
       // swiper.slides.length tracks the data, preserving the active index.
       setTimeout(() => sw?.update?.(), 0);
       return;

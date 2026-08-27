@@ -29,7 +29,7 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { DIAL_CODES, DialCode, mapDialToIso } from '../shared/dial-codes';
 
 /**
- * Mobile login page — passwordless-first redesign (Chipper-style).
+ * Mobile login page, passwordless-first redesign (Chipper-style).
  *
  * A single page hosting several view states (no router sub-pages), driven
  * by `view`:
@@ -410,7 +410,7 @@ export class LoginPage implements OnInit, OnDestroy {
 
     // Phone-after-social gate: a freshly social-signed-in account has
     // is_phone_verified=false. Persist the session (above) but DON'T navigate
-    // home yet — route into the phone-capture step instead, authenticated with
+    // home yet, route into the phone-capture step instead, authenticated with
     // the just-issued token. Email/OTP/password logins always have a verified
     // phone, so they fall through to the normal success path below.
     if ((userToStore as any)?.is_phone_verified === false) {
@@ -605,9 +605,9 @@ export class LoginPage implements OnInit, OnDestroy {
    * Shared native social sign-in path.
    *
    * Runs the native Firebase sign-in for the chosen provider, reads the
-   * Firebase ID token (NOT the provider token — our API verifies the
+   * Firebase ID token (NOT the provider token, our API verifies the
    * Firebase token), exchanges it at POST /auth/social for the standard
-   * login envelope, then funnels into onLoginSuccess() — the SAME success
+   * login envelope, then funnels into onLoginSuccess(), the SAME success
    * block the email/password + OTP flows use (persist user, push register,
    * cart merge, navigate / or the phone-after-social gate).
    *
@@ -652,7 +652,7 @@ export class LoginPage implements OnInit, OnDestroy {
     } catch (err) {
       this.socialLoading = false;
       const info = parseSocialAuthError(err);
-      // User cancelled the native sheet — stay quiet (no error toast).
+      // User cancelled the native sheet, stay quiet (no error toast).
       if (info.cancelled) return;
       // Log the real code + message so the failure is diagnosable off-device,
       // and show the user a message that names the cause (or carries the code
@@ -688,7 +688,7 @@ export class LoginPage implements OnInit, OnDestroy {
       next: (response: any) => {
         this.ui_controls.login_loading = false;
         if (response.response_code === 200 && response.status === 'success') {
-          // Capture the verification_id — POST /me/phone/verify REQUIRES it
+          // Capture the verification_id, POST /me/phone/verify REQUIRES it
           // alongside the code (same contract as the normal OTP flow).
           this.verificationId = response.data?.verification_id ?? '';
           this.otp.code = '';
@@ -720,7 +720,7 @@ export class LoginPage implements OnInit, OnDestroy {
       next: (response: any) => {
         this.ui_controls.login_loading = false;
         if (response.response_code === 200 && response.status === 'success') {
-          // Phone now verified — flip the cached flag and continue home,
+          // Phone now verified, flip the cached flag and continue home,
           // reusing the shared post-auth navigation (cart merge already ran
           // at social login; keep it idempotent + non-blocking).
           this.finishSocialGate();

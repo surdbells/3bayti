@@ -28,7 +28,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Body:
  * {
- *   "rate": "0.27225000"      — required, decimal string,
+ *   "rate": "0.27225000"     , required, decimal string,
  *                               validated by FxRate::setRate
  *                               (>0, <1000, /^\d+(\.\d+)?$/)
  * }
@@ -49,10 +49,10 @@ use Psr\Http\Message\ServerRequestInterface;
  * via subject_type='FxRate'. No new audit infrastructure.
  *
  * Errors:
- *   400 — body validation fails (rate out of range, non-numeric)
- *   404 — {target} is not a supported currency
- *   422 — body shape wrong (missing 'rate' field)
- *   403 — caller not admin (from AdminAuthMiddleware)
+ *   400, body validation fails (rate out of range, non-numeric)
+ *   404, {target} is not a supported currency
+ *   422, body shape wrong (missing 'rate' field)
+ *   403, caller not admin (from AdminAuthMiddleware)
  *
  * Response (200):
  * {
@@ -105,7 +105,7 @@ final class UpsertFxRateController
                 "Unsupported target currency: {$rawTarget}.",
             );
         }
-        // Reject AED specifically — identity rate is meaningless to
+        // Reject AED specifically, identity rate is meaningless to
         // update; would let an admin accidentally set 'AED→AED = 0.5'
         // and break every conversion.
         if ($targetUpper === Currency::AED->value) {

@@ -18,7 +18,7 @@ final class OtpRateLimitConfigTest extends TestCase
         $c = OtpRateLimitConfig::fromEnv([]);
 
         self::assertSame(60, $c->resendCooldownSeconds);
-        // Hard send caps disabled by default (product decision) — only the
+        // Hard send caps disabled by default (product decision), only the
         // 60s resend cooldown gates sends.
         self::assertSame(0, $c->sendsPerHour);
         self::assertSame(0, $c->sendsPerDay);
@@ -58,7 +58,7 @@ final class OtpRateLimitConfigTest extends TestCase
         self::assertSame(0, $c->sendsPerHour);
         self::assertSame(0, $c->resendCooldownSeconds);
         // Untouched keys still get their defaults (maxVerifyAttempts is
-        // still 5 — the send caps default to 0, so assert one that doesn't).
+        // still 5, the send caps default to 0, so assert one that doesn't).
         self::assertSame(5, $c->maxVerifyAttempts);
     }
 

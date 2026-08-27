@@ -63,7 +63,7 @@ export class AddressesPage implements OnInit, OnDestroy {
   isOnline = true;
   private sub: Subscription;
 
-  /* The 7 UAE emirates — same option set the checkout/legacy form used. */
+  /* The 7 UAE emirates, same option set the checkout/legacy form used. */
   readonly emirates: string[] = [
     'Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman',
     'Umm Al-Quwain', 'Ras Al Khaimah', 'Fujairah',
@@ -120,7 +120,7 @@ export class AddressesPage implements OnInit, OnDestroy {
 
   ngOnInit() {
     // Loaded in ionViewWillEnter so the address list refreshes on every entry
-    // (Ionic caches the page, so ngOnInit runs only once — otherwise a newly
+    // (Ionic caches the page, so ngOnInit runs only once, otherwise a newly
     // added/edited address doesn't show until a manual refresh).
   }
 
@@ -220,7 +220,7 @@ export class AddressesPage implements OnInit, OnDestroy {
 
   /**
    * Validate + persist the add/edit form. Required: recipient_name,
-   * recipient_phone, emirate, area, street_address — each surfaces a
+   * recipient_phone, emirate, area, street_address, each surfaces a
    * SPECIFIC error. Create (POST) when editingId === 0, otherwise update
    * (PUT). On success the book is reloaded and the sheet closes.
    */
@@ -257,7 +257,7 @@ export class AddressesPage implements OnInit, OnDestroy {
       return;
     }
 
-    // E.164 normalization — identical to checkout.saveNewAddress(): prefix
+    // E.164 normalization, identical to checkout.saveNewAddress(): prefix
     // +971 and strip leading zeros when there's no leading "+".
     const recipient_phone = phoneRaw.startsWith('+')
       ? phoneRaw
@@ -278,7 +278,7 @@ export class AddressesPage implements OnInit, OnDestroy {
       building_details: optionalOrNull(this.form.building_details),
       postal_code: optionalOrNull(this.form.postal_code),
       // The v3 CreateAddressInput accepts a single `is_default` flag (NOT
-      // is_default_shipping/is_default_billing — those were silently dropped
+      // is_default_shipping/is_default_billing, those were silently dropped
       // by RequestValidator, so a new "default" address was never promoted).
       is_default: this.form.is_default,
     };

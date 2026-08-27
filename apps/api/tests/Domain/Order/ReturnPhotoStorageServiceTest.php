@@ -17,7 +17,7 @@ use Slim\Psr7\UploadedFile;
  * Coverage for ReturnPhotoStorageService (M3.2.X.18-B).
  *
  * Uses a real LocalFilesystemAdapter rooted in a per-test temp
- * directory. No mocks for the filesystem — we want to verify the
+ * directory. No mocks for the filesystem, we want to verify the
  * service actually writes + reads + deletes via Flysystem.
  *
  * Each test creates a fresh temp dir + tears it down afterward.
@@ -48,7 +48,7 @@ final class ReturnPhotoStorageServiceTest extends TestCase
     }
 
     // =================================================================
-    // store() — happy paths
+    // store(), happy paths
     // =================================================================
 
     #[Test]
@@ -132,7 +132,7 @@ final class ReturnPhotoStorageServiceTest extends TestCase
     }
 
     // =================================================================
-    // store() — validation rejections
+    // store(), validation rejections
     // =================================================================
 
     #[Test]
@@ -240,7 +240,7 @@ final class ReturnPhotoStorageServiceTest extends TestCase
         $this->service->delete($stored->storagePath);
         self::assertFalse($this->service->exists($stored->storagePath));
 
-        // Idempotent — second delete must not throw.
+        // Idempotent, second delete must not throw.
         $this->service->delete($stored->storagePath);
         self::assertFalse($this->service->exists($stored->storagePath));
     }
@@ -252,7 +252,7 @@ final class ReturnPhotoStorageServiceTest extends TestCase
     #[Test]
     public function generatedPathsAreCollisionResistant(): void
     {
-        // Generate many paths in quick succession — none should
+        // Generate many paths in quick succession, none should
         // collide. The ULID's 16-char random tail makes collisions
         // astronomically improbable.
         $paths = [];

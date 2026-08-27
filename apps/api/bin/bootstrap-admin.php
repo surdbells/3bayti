@@ -4,7 +4,7 @@
 declare(strict_types=1);
 
 /**
- * Bootstrap admin — promote a user to admin via CLI.
+ * Bootstrap admin, promote a user to admin via CLI.
  *
  * Usage:
  *   php bin/bootstrap-admin.php <email>
@@ -103,8 +103,8 @@ try {
     /** @var AuditEmitter $audit */
     $audit = $container->get(AuditEmitter::class);
     $audit->recordUpdate(
-        request: null,        // no HTTP request — CLI invocation
-        actor: null,          // no actor user — system event
+        request: null,        // no HTTP request, CLI invocation
+        actor: null,          // no actor user, system event
         subject: $user,
         beforeSnapshot: ['is_admin' => false],
         afterSnapshot: ['is_admin' => true],

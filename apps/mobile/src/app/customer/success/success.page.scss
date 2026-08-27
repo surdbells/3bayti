@@ -4,7 +4,7 @@
    action bar that matches the product page footer.
    ============================================================ */
 
-/* Brand gradient aliases — declared per-page (see product.page.scss); without
+/* Brand gradient aliases, declared per-page (see product.page.scss); without
    them the primary CTA's gradient resolves to nothing and its white label
    becomes invisible. */
 :host {
@@ -298,7 +298,7 @@
 .success-secondary-btn {
   background: transparent;
   border: 1px solid var(--ax-color-border-default, rgba(46, 36, 28, 0.16));
-  /* Theme-aware token — the legacy --text-primary isn't remapped for dark mode,
+  /* Theme-aware token, the legacy --text-primary isn't remapped for dark mode,
      so the label rendered dark-on-dark (invisible) there. */
   color: var(--ax-color-text-primary, #2e241c);
 }

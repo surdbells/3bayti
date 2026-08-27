@@ -38,7 +38,7 @@ use Psr\Log\LoggerInterface;
  *      so it is approved + active + is_store_approved in one step.
  *   3. Mark the application approved (vendor_id + reviewed_by + reviewed_at).
  *   4. Email the applicant a welcome/approval message with their login
- *      credentials — the portal URL, their email, and (for a freshly-created
+ *      credentials, the portal URL, their email, and (for a freshly-created
  *      account) a temporary password to change on first sign-in. Non-blocking.
  *
  * Idempotent: re-calling on an already-approved application is a 200

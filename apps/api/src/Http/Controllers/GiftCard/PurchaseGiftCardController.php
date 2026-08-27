@@ -104,7 +104,7 @@ final class PurchaseGiftCardController
         }
 
         // Recipient contact is optional in general (the buyer can share the
-        // code manually) — BUT a card scheduled for a future delivery date has
+        // code manually), BUT a card scheduled for a future delivery date has
         // no one to deliver to without it, so require at least an email or
         // phone when scheduling.
         if ($scheduledDeliveryAt !== null && $recipientEmail === null && $recipientPhone === null) {

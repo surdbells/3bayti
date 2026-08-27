@@ -16,7 +16,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** POST /v3/admin/notification-templates/{id}/duplicate — clone a template. */
+/** POST /v3/admin/notification-templates/{id}/duplicate, clone a template. */
 final class DuplicateTemplateController
 {
     use Responder;

@@ -8,9 +8,9 @@ namespace Bayti\Api\Payment;
  * Result of querying a payment gateway for order status.
  *
  * `status` is the gateway's order-level status (provider-specific
- * strings — Noon returns AUTHORIZED, CAPTURED, FAILED, etc.).
+ * strings, Noon returns AUTHORIZED, CAPTURED, FAILED, etc.).
  * Mapping to our v3 orders.status state machine happens in the
- * controller layer, not here — we don't want gateway changes to
+ * controller layer, not here, we don't want gateway changes to
  * cascade silently into our domain state.
  *
  * `terminal` is a derived boolean: true for finalised states
@@ -19,7 +19,7 @@ namespace Bayti\Api\Payment;
  * GetCheckoutStatusController to know when to stop fetching.
  *
  * `amount` and `currency` echo the order amount as the gateway
- * sees it — used to verify our v3 order's total matches what
+ * sees it, used to verify our v3 order's total matches what
  * the gateway processed (no silent total drift).
  */
 final class OrderStatusResponse

@@ -9,7 +9,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** GET /v3/admin/roles — all roles (system first, then alphabetical). */
+/** GET /v3/admin/roles, all roles (system first, then alphabetical). */
 final class ListRolesController
 {
     use Responder;

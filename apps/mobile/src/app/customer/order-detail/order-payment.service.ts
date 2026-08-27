@@ -8,10 +8,10 @@ import { I18nService } from '../../i18n.service';
  * Shared "complete payment" flow for an existing pending_payment ORDER.
  *
  * Mirrors GiftCardPaymentService but resumes an order rather than a gift
- * card — the mobile equivalent of the web "retry payment":
+ * card, the mobile equivalent of the web "retry payment":
  *
  *   1. POST /checkout/initiate { order_reference }  (server reuses the order's
- *      existing Noon session when one is on file, else initiates a fresh one —
+ *      existing Noon session when one is on file, else initiates a fresh one -
  *      never creates a duplicate order)
  *   2. open the returned checkout_url in the in-app browser webview
  *   3. poll GET /checkout/status/:order_reference until paid/failed
@@ -147,7 +147,7 @@ export class OrderPaymentService {
     attempts = 0,
   ): void {
     if (attempts > 12) { // 12 × 2.5s = 30s timeout
-      // Unknown outcome — the webhook may still land. Don't claim success or
+      // Unknown outcome, the webhook may still land. Don't claim success or
       // failure; send the caller to refresh, showing an honest message.
       this.notify.info(this.i18n.t('text_payment_processing_check_later'));
       handlers.onPaid();

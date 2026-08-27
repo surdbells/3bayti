@@ -16,7 +16,7 @@ use Doctrine\ORM\QueryBuilder;
 class DeviceTokenRepository extends EntityRepository
 {
     /**
-     * Active tokens for a user — the push fan-out lookup. Returns the
+     * Active tokens for a user, the push fan-out lookup. Returns the
      * raw token strings (the sender only needs the strings, not the
      * entities), newest-seen first.
      *
@@ -39,7 +39,7 @@ class DeviceTokenRepository extends EntityRepository
     }
 
     /**
-     * Every active device token across all users — for admin broadcast.
+     * Every active device token across all users, for admin broadcast.
      * Optionally narrowed to an audience by user role flag.
      *
      * @param 'all'|'customers'|'vendors'|'admins' $audience
@@ -71,7 +71,7 @@ class DeviceTokenRepository extends EntityRepository
     }
 
     /**
-     * One keyset-paginated batch of active device tokens for an audience —
+     * One keyset-paginated batch of active device tokens for an audience -
      * ordered by id so a broadcast can stream the whole audience in bounded
      * chunks (never loading every recipient into memory). Returns the fields
      * the broadcast sender needs: id, token, platform, owning user id.
@@ -127,7 +127,7 @@ class DeviceTokenRepository extends EntityRepository
     }
 
     /**
-     * Active-token counts for an audience, split by platform — powers the
+     * Active-token counts for an audience, split by platform, powers the
      * compose-time audience preview and the broadcast totals.
      *
      * @param 'all'|'customers'|'vendors'|'admins' $audience
@@ -211,13 +211,13 @@ class DeviceTokenRepository extends EntityRepository
      *
      * Uses a single atomic Postgres UPSERT (ON CONFLICT) rather than a
      * check-then-insert. The old check-then-insert raced under concurrent
-     * registrations — the app re-registers its FCM token on app open/resume,
+     * registrations, the app re-registers its FCM token on app open/resume,
      * so two near-simultaneous POSTs both saw no row and both inserted,
      * violating uq_device_tokens_token with a 500 (Sentry PHP-11). ON CONFLICT
      * is race-proof and never trips the unique index.
      *
      * created_at is only set on INSERT (preserved on conflict). $flush is kept
-     * for signature stability but is now a no-op — the UPSERT commits itself.
+     * for signature stability but is now a no-op, the UPSERT commits itself.
      */
     public function register(User $user, string $token, string $platform, bool $flush = true): DeviceToken
     {
@@ -278,7 +278,7 @@ class DeviceTokenRepository extends EntityRepository
     }
 
     /**
-     * Deactivate a token by string regardless of owner — used by the
+     * Deactivate a token by string regardless of owner, used by the
      * push sender when FCM reports a token is permanently invalid
      * (UNREGISTERED). No-op if the token is unknown.
      */

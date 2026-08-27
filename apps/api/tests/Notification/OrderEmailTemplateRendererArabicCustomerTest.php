@@ -145,7 +145,7 @@ final class OrderEmailTemplateRendererArabicCustomerTest extends TestCase
     public function orderShippedCustomerArHandlesLatinItemName(): void
     {
         // Mixed-script case: Latin product name within Arabic email.
-        // Common in UAE — many products have English brand names
+        // Common in UAE, many products have English brand names
         // even when targeting Arabic-speaking customers.
         $order = $this->makeOrder('V3-AR-SHIP2');
         $rendered = $this->renderer->render(

@@ -32,7 +32,7 @@ import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 
 /**
- * Wishlist ("My Closet") — M3.2.Z.3-Mobile.
+ * Wishlist ("My Closet"), M3.2.Z.3-Mobile.
  *
  * Migrated off the legacy GlobalComponent.readWishlist /
  * addWishlistLabel / readWishlistLabel "closets" endpoints onto the v3
@@ -119,7 +119,7 @@ export class WishlistPage implements OnInit, OnDestroy {
 
   ngOnInit() {
     // Loaded in ionViewWillEnter so the wishlist refreshes on every entry
-    // (Ionic caches the page, so ngOnInit runs only once — otherwise labels
+    // (Ionic caches the page, so ngOnInit runs only once, otherwise labels
     // and items show a stale/empty snapshot after adding elsewhere and
     // returning).
   }

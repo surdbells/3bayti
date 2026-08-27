@@ -40,13 +40,13 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * What it does
  * ============
  *   1. UserRepository::findLapsedForReengagement(...) returns eligible
- *      user ids (raw SQL — the cadence guard reads the unmapped
+ *      user ids (raw SQL, the cadence guard reads the unmapped
  *      notification_logs.user_id / channel columns).
  *   2. For each, PushNotificationService::reEngagementNudge() fans the
  *      push out (fire-and-forget; re-checks marketing_push_opt_out at
  *      dispatch as defence-in-depth).
  *   3. Logs the attempt to notification_logs with
- *      template='re_engagement.nudge', channel='push', user_id set —
+ *      template='re_engagement.nudge', channel='push', user_id set -
  *      that row enforces the 14-day cadence on the next run.
  *
  * Idempotency / failure isolation

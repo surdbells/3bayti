@@ -7,11 +7,11 @@ import type { FeaturedVendor } from '../catalog/store-card';
 import type { ActiveCampaigns } from '../campaigns/campaign.model';
 
 /**
- * HomeDataService — encapsulates the four data fetches the home page
+ * HomeDataService, encapsulates the four data fetches the home page
  * needs (three product strips + the store spotlight).
  *
  * Why a service instead of fetching inline in HomeComponent:
- *   - Each strip + spotlight is independent — keeps HomeComponent slim
+ *   - Each strip + spotlight is independent, keeps HomeComponent slim
  *   - The four fetches share the same shape + graceful-degradation
  *     pattern; abstracting it here avoids repetition
  *   - Easy to mock in tests without monkey-patching components
@@ -24,7 +24,7 @@ import type { ActiveCampaigns } from '../campaigns/campaign.model';
  *
  * Failure mode:
  *   Each method returns an Observable that emits an empty array on
- *   error. The home page degrades gracefully — a failed strip silently
+ *   error. The home page degrades gracefully, a failed strip silently
  *   omits itself rather than showing a broken section. Errors still
  *   log to console (via RoutedHttpClient's handle()).
  */
@@ -32,14 +32,14 @@ import type { ActiveCampaigns } from '../campaigns/campaign.model';
 export class HomeDataService {
   private routed = inject(RoutedHttpClient);
 
-  /** Number of products per strip — matches the locked Phase 1 W2 spec. */
+  /** Number of products per strip, matches the locked Phase 1 W2 spec. */
   private readonly STRIP_LIMIT = 12;
 
   /** Number of vendors in the Store Spotlight. */
   private readonly SPOTLIGHT_LIMIT = 12;
 
   /**
-   * Featured products — the curated "this week's edit" strip.
+   * Featured products, the curated "this week's edit" strip.
    * Backed by /products?sort=featured (v3 computes featured from
    * top-rated vendors + recent products + a small randomness factor).
    */
@@ -52,7 +52,7 @@ export class HomeDataService {
   }
 
   /**
-   * Best sellers — backed by /products?sort=popular (v3 counts
+   * Best sellers, backed by /products?sort=popular (v3 counts
    * cart-add events per product as a popularity proxy).
    */
   bestSellers$(): Observable<Product[]> {
@@ -64,7 +64,7 @@ export class HomeDataService {
   }
 
   /**
-   * New arrivals — backed by /products?sort=newest (product_id DESC,
+   * New arrivals, backed by /products?sort=newest (product_id DESC,
    * which is roughly chronological since IDs are auto-incremented).
    */
   newArrivals$(): Observable<Product[]> {
@@ -76,7 +76,7 @@ export class HomeDataService {
   }
 
   /**
-   * Trending now — the GUEST fallback for the personalized "For you" strip.
+   * Trending now, the GUEST fallback for the personalized "For you" strip.
    *
    * Anonymous visitors don't get recommendations (the engine is auth-gated),
    * which previously left the "For you" slot empty for everyone signed-out.
@@ -102,13 +102,13 @@ export class HomeDataService {
   }
 
   /**
-   * Featured vendors — on /v3/featured-vendors per M3.2.X.2. Each vendor
+   * Featured vendors, on /v3/featured-vendors per M3.2.X.2. Each vendor
    * comes with up to 4 embedded product thumbnails for the Store
    * Spotlight section. Backend computes rating aggregate + alphabetical-
    * by-name ordering.
    *
    * Curation: admin flags vendors via PUT /v3/admin/vendors/{id} with
-   * { is_featured: true }. Empty curation returns 200 with data: [] —
+   * { is_featured: true }. Empty curation returns 200 with data: [] -
    * handled by the catchError fallback (the strip hides silently).
    */
   featuredVendors$(): Observable<FeaturedVendor[]> {
@@ -120,9 +120,9 @@ export class HomeDataService {
   }
 
   /**
-   * Active campaigns — the live Anniversary Deals + Flash Sale for the
+   * Active campaigns, the live Anniversary Deals + Flash Sale for the
    * homepage. Unlike the strips, the payload is an object (not a list),
-   * so it falls back to null (not []) on error/none — each section hides
+   * so it falls back to null (not []) on error/none, each section hides
    * itself when its campaign is null.
    */
   activeCampaigns$(): Observable<ActiveCampaigns | null> {

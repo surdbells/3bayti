@@ -10,7 +10,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * Body shape for PUT /v3/admin/promo-codes/{id}.
  *
- * All fields are optional — only those provided as non-null are
+ * All fields are optional, only those provided as non-null are
  * applied to the entity. This matches the existing UpdateBrandInput /
  * UpdateVendorInput partial-update convention.
  *
@@ -20,7 +20,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * "field omitted" from "field set to null". The controller treats
  * non-null as "apply this value" and null as "leave unchanged" for
  * most fields. The exception is the nullable money / limit / date
- * fields — for those, an explicit null in the body would normally
+ * fields, for those, an explicit null in the body would normally
  * mean "clear the value", but our PUT semantics here treat null as
  * "unchanged". Admins who want to clear a field should be given an
  * explicit DELETE on it in a future iteration (out of v1 scope).

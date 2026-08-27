@@ -18,10 +18,10 @@ use Stringable;
  *   - context: array (the original $context)
  *
  * Inspection helpers:
- *   - records() — full list
- *   - findByMessage(string) — filter to records whose message matches
- *   - findByLevel(string) — filter by level
- *   - clear() — reset between cases
+ *   - records(), full list
+ *   - findByMessage(string), filter to records whose message matches
+ *   - findByLevel(string), filter by level
+ *   - clear(), reset between cases
  */
 final class InMemoryLogger extends AbstractLogger
 {

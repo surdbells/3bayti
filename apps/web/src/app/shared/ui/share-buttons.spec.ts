@@ -9,7 +9,7 @@ import { provideI18n } from '../../core/i18n';
 
 /**
  * Coverage for the PDP social-share row (Phase C4, decision #5): six
- * channels — WhatsApp, copy link, native share, Facebook, X, Telegram.
+ * channels, WhatsApp, copy link, native share, Facebook, X, Telegram.
  * Exercises the URL builders, the safe new-tab anchors, the copy flow
  * (clipboard + transient confirmation), and the Web Share API
  * feature-detection (hidden when unsupported, invoked when present).

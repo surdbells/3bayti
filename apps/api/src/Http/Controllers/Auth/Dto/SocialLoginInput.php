@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * The client signs in with Google/Apple via the Firebase SDK and sends
  * us the resulting Firebase ID token. first_name / last_name are
  * optional client-supplied hints used ONLY when we have to CREATE a new
- * account and the token carries no usable name — they never override an
+ * account and the token carries no usable name, they never override an
  * existing user's profile.
  */
 final class SocialLoginInput

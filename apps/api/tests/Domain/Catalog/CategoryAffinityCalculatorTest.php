@@ -59,7 +59,7 @@ final class CategoryAffinityCalculatorTest extends TestCase
     #[Test]
     public function sqlExcludesUncategorisedProducts(): void
     {
-        // Products without a category don't get category fallback —
+        // Products without a category don't get category fallback -
         // they fall through to fallback_popular in X.12-E.
         $captured = $this->captureSql();
         $calc = new CategoryAffinityCalculator($captured['em'], new InMemoryLogger());
@@ -87,7 +87,7 @@ final class CategoryAffinityCalculatorTest extends TestCase
     public function sqlPreventsSelfRecommendation(): void
     {
         // A product cannot recommend itself even within the same
-        // category — the JOIN includes p2.id != p1.id
+        // category, the JOIN includes p2.id != p1.id
         $captured = $this->captureSql();
         $calc = new CategoryAffinityCalculator($captured['em'], new InMemoryLogger());
         $calc->computeFullGraph();

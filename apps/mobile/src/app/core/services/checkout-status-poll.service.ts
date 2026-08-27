@@ -24,15 +24,15 @@ export type CheckoutStatus = {
 /**
  * Outcome of a polling session.
  *
- *   - 'paid'    — terminal=true && paid=true; order is successfully paid
- *   - 'failed'  — terminal=true && paid=false; order failed at the
+ *   - 'paid'   , terminal=true && paid=true; order is successfully paid
+ *   - 'failed' , terminal=true && paid=false; order failed at the
  *                 gateway (declined, cancelled, etc.)
- *   - 'timeout' — polled for the full window without reaching terminal;
- *                 the order may still complete via a delayed webhook —
+ *   - 'timeout', polled for the full window without reaching terminal;
+ *                 the order may still complete via a delayed webhook -
  *                 mobile should navigate to my-orders with a "we'll
  *                 update you shortly" notice rather than show a hard
  *                 failure
- *   - 'error'   — non-recoverable error during polling (4xx/5xx,
+ *   - 'error'  , non-recoverable error during polling (4xx/5xx,
  *                 network); shown as a soft error with retry option
  */
 export type PollOutcome =
@@ -109,7 +109,7 @@ export class CheckoutStatusPollService {
    * Errors during a tick are absorbed and the poll continues for the
    * next tick (transient network blip shouldn't fail the whole
    * session). Repeated failures across the full window produce a
-   * 'timeout' outcome rather than 'error' — the order may have
+   * 'timeout' outcome rather than 'error', the order may have
    * completed via webhook; user shouldn't see a hard failure.
    */
   pollUntilTerminal(orderReference: string, authToken: string): Observable<PollOutcome> {
@@ -127,7 +127,7 @@ export class CheckoutStatusPollService {
       switchMap((tick): Observable<PollOutcome | null> => {
         tickCount = tick + 1;
         if (tickCount > POLL_MAX_TICKS) {
-          // Final tick after the cap — emit timeout and complete
+          // Final tick after the cap, emit timeout and complete
           stop$.next();
           stop$.complete();
           return of<PollOutcome>({ kind: 'timeout', lastStatus });
@@ -142,7 +142,7 @@ export class CheckoutStatusPollService {
                 ? { kind: 'paid', status }
                 : { kind: 'failed', status };
             }
-            // Not terminal — keep polling. Returning null filters out
+            // Not terminal, keep polling. Returning null filters out
             // this tick from the outer observable.
             return null;
           }),
@@ -162,12 +162,12 @@ export class CheckoutStatusPollService {
   }
 
   /**
-   * Single status fetch — also exposed for unit testability without
+   * Single status fetch, also exposed for unit testability without
    * standing up the full poll machinery.
    */
   fetchStatus(orderReference: string, authToken: string): Observable<CheckoutStatus> {
     // Direct v3 (GET /v3/checkout/status/:order_reference). Uses the v3 host +
-    // Bearer auth (the endpoint is user-scoped — a raw GET to the legacy host
+    // Bearer auth (the endpoint is user-scoped, a raw GET to the legacy host
     // without auth previously failed every tick and fell back to 'timeout').
     // transformCheckoutStatusResponse applies via get_v3, so response.data is
     // the CheckoutStatus shape.
@@ -195,7 +195,7 @@ export class CheckoutStatusPollService {
   }
 }
 
-/** Exported for testing only — do not use in production code. */
+/** Exported for testing only, do not use in production code. */
 export const _internals = {
   POLL_INTERVAL_MS,
   POLL_TIMEOUT_MS,

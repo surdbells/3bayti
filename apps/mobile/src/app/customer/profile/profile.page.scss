@@ -1,5 +1,5 @@
 /* ============================================================================
-   Profile page — edit user details
+   Profile page, edit user details
    Used in HTML: .sheet, .cc-flag, .cc-code, .cc-sheet*, .cc-list*
    ============================================================================ */
 
@@ -25,7 +25,7 @@
   padding: 8px 16px 12px;
 }
 
-/* Compact field rows — replaces the heavier ion-padding-bottom utility. */
+/* Compact field rows, replaces the heavier ion-padding-bottom utility. */
 .profile-row {
   padding-bottom: 8px;
 }
@@ -57,7 +57,7 @@
   margin-bottom: 6px;
 }
 
-/* Native date input for date-of-birth — styled to sit alongside the
+/* Native date input for date-of-birth, styled to sit alongside the
    migrated <ax-text-field> / <ion-select> controls. */
 .profile-date-input {
   width: 100%;
@@ -80,7 +80,7 @@
   border-color: var(--ion-color-primary, #1f6feb);
 }
 
-/* ----- Country-code picker — flag + code displayed inside the dial-code button */
+/* ----- Country-code picker, flag + code displayed inside the dial-code button */
 .cc-flag { font-size: 1rem; line-height: 1; }
 .cc-code { font-weight: 600; }
 
@@ -134,7 +134,7 @@
 }
 
 /* ion-searchbar inside the slotted header gets minimal restyling.
-   Keep it visually quiet — the default chrome is fine in this context. */
+   Keep it visually quiet, the default chrome is fine in this context. */
 .cc-sheet__header ion-searchbar {
   --background: transparent;
   --box-shadow: none;

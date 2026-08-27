@@ -20,7 +20,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * GET /v3/chat/unread-count
  *
  * Total unread chat messages for the authenticated customer. Cheap aggregate
- * intended for frequent badge polling — no conversation rows are loaded.
+ * intended for frequent badge polling, no conversation rows are loaded.
  */
 final class GetUnreadCountController
 {

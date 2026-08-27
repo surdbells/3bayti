@@ -121,7 +121,7 @@ final class CheckoutReturnRedirectControllerTest extends HttpTestCase
     #[Test]
     public function isReachableWithoutAuthentication(): void
     {
-        // No Authorization header supplied — must still 302, proving
+        // No Authorization header supplied, must still 302, proving
         // the route is mounted OUTSIDE the AuthMiddleware group.
         $response = $this->handle(
             $this->jsonRequest('GET', '/v3/checkout/return/V3-ORDER-001'),

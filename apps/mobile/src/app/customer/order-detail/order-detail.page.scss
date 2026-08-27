@@ -1,4 +1,4 @@
-/* Customer order-detail page styles — M3.2.Z.1.
+/* Customer order-detail page styles, M3.2.Z.1.
    Mirrors my-orders.page.scss pill + card conventions, extended to
    the full v3 status enum. */
 
@@ -361,7 +361,7 @@
   color: var(--ax-color-text-secondary, #6b6056);
 }
 
-/* Complete-payment card — shown while the order awaits payment. */
+/* Complete-payment card, shown while the order awaits payment. */
 .pay-card {
   background: var(--ax-color-bg-brand-subtle, #f3ede2);
   border: 1px solid var(--ax-color-border-subtle, #e7ddcd);

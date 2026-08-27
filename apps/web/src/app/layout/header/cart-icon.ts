@@ -10,7 +10,7 @@ import { CartService } from '../../core/cart';
 import { CartDrawerService } from '../../core/cart';
 
 /**
- * Cart icon — header-mounted trigger that opens the cart drawer.
+ * Cart icon, header-mounted trigger that opens the cart drawer.
  *
  * Visual
  * ------
@@ -26,7 +26,7 @@ import { CartDrawerService } from '../../core/cart';
  *   - The badge has aria-hidden because the count is already in
  *     the aria-label
  *
- * The icon doesn't render the drawer itself — that's a separate
+ * The icon doesn't render the drawer itself, that's a separate
  * sibling at the app shell. Clicking the icon just opens the drawer.
  */
 @Component({
@@ -130,7 +130,7 @@ export class CartIconComponent {
     return '99+';
   });
 
-  /** Picks the i18n key — different key for empty vs non-empty so
+  /** Picks the i18n key, different key for empty vs non-empty so
    *  translations can read naturally in both states. */
   protected readonly ariaLabel = computed(() => {
     return this.cart.itemCount() === 0 ? 'header.cart.openEmpty' : 'header.cart.openWithCount';

@@ -13,7 +13,7 @@ use Doctrine\Migrations\AbstractMigration;
  * The register() UPSERT briefly wrote its timestamp columns with now(), which
  * stores microsecond precision (e.g. "2026-08-15 17:33:14.295927+02"). Doctrine's
  * DateTimeTzImmutableType hydrates those columns with the format "Y-m-d H:i:sO"
- * (seconds only), so reading such a row threw InvalidFormat — a 500 on any full
+ * (seconds only), so reading such a row threw InvalidFormat, a 500 on any full
  * DeviceToken hydration (findOneByToken, findActiveForUser), surfacing as Sentry
  * PHP-1P. The repository now writes date_trunc('second', now()); this backfill
  * truncates the already-written rows to second precision so they round-trip.

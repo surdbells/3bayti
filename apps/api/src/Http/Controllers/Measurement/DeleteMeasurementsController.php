@@ -21,11 +21,11 @@ use Psr\Http\Message\ServerRequestInterface;
  * DELETE /v3/me/measurements/default
  * DELETE /v3/me/measurements/category/{id}
  *
- * Delete a measurement set entirely. Hard delete — measurement data
+ * Delete a measurement set entirely. Hard delete, measurement data
  * is small enough that soft-delete adds query complexity for no
  * benefit.
  *
- * Idempotent — DELETE on a non-existent set returns 204 (the
+ * Idempotent, DELETE on a non-existent set returns 204 (the
  * desired end state is achieved either way). Same shape as DELETE
  * on a real set.
  *
@@ -69,7 +69,7 @@ final class DeleteMeasurementsController
         if (isset($args['id'])) {
             $idRaw = (string) $args['id'];
             if (!ctype_digit($idRaw) || (int) $idRaw < 1) {
-                // Bad path arg — could be 404, but for DELETE we
+                // Bad path arg, could be 404, but for DELETE we
                 // treat it as a no-op too (idempotency wins).
                 return $this->noContent();
             }
@@ -81,7 +81,7 @@ final class DeleteMeasurementsController
         $existing = $repo->findForUserAndCategory($user, $categoryId);
 
         if ($existing !== null) {
-            // M1.6.1.C — capture pre-delete state. Same caveat as
+            // M1.6.1.C, capture pre-delete state. Same caveat as
             // DeleteAddressController: id may be reset by Doctrine
             // after remove(), so we capture it explicitly and
             // restore via reflection if needed.

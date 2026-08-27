@@ -36,7 +36,7 @@ const SWATCH: Record<string, string> = {
 type OpenChip = 'sort' | 'size' | 'color' | 'price' | null;
 
 /**
- * FilterBar — the unified, premium product-filter surface (web-uplift #5).
+ * FilterBar, the unified, premium product-filter surface (web-uplift #5).
  *
  * Replaces the old vertical `FacetFilters` sidebar with a horizontal bar
  * of dropdown "chips" (Sort · Size · Colour · Price), an active-filter
@@ -51,7 +51,7 @@ type OpenChip = 'sort' | 'size' | 'color' | 'price' | null;
  * with the FacetFilters contract, so listings + category share it.
  *
  * Group bodies are declared once as <ng-template> blocks and rendered in
- * both the desktop popovers and the mobile sheet via ngTemplateOutlet —
+ * both the desktop popovers and the mobile sheet via ngTemplateOutlet -
  * no markup duplication.
  *
  * a11y: each chip is a button with aria-haspopup + aria-expanded; the
@@ -371,7 +371,7 @@ export class FilterBarComponent {
     // Facet price-band bounds arrive from the API as decimal STRINGS
     // ("50.00"), but FacetValue types them as number. Coerce to numbers so
     // the band radios match the active filter (isPriceBandActive compares
-    // with ===) and setPriceBand emits numeric min/max — catalog.service's
+    // with ===) and setPriceBand emits numeric min/max, catalog.service's
     // toQuery only forwards a bound when `typeof === 'number'`, so without
     // this the price filter silently does nothing.
     return (this.facets()?.price.values ?? []).map((v) => ({
@@ -387,7 +387,7 @@ export class FilterBarComponent {
   }
 
   /** Number of *facet* selections active (size + colour + price). Sort is
-   *  excluded — it always has a value, so it isn't a "filter" to clear. */
+   *  excluded, it always has a value, so it isn't a "filter" to clear. */
   activeCount(): number {
     const f = this.filters();
     return (f.sizes?.length ?? 0) + (f.colors?.length ?? 0) + (this.hasPrice() ? 1 : 0);

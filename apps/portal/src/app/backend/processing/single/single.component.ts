@@ -167,7 +167,7 @@ export class SingleComponent implements OnInit {
   /**
    * Collapse consecutive identical events (same type/summary/actor) into a
    * single row with a count. The feed is newest-first, so the first event of a
-   * run is the latest — we keep its occurred_at as the row's time and just tally
+   * run is the latest, we keep its occurred_at as the row's time and just tally
    * the rest, turning six "Order viewed" rows into one "Order viewed ×6".
    */
   private collapseTimeline(events: TimelineEvent[]): Array<TimelineEvent & { count: number }> {

@@ -90,19 +90,19 @@ export class CheckoutPage implements OnInit, OnDestroy {
   isOnline = true;
   isConfirmBilling = false;
   /* Multistep flow (web parity): 1 = Address, 2 = Review. Payment is
-     implicit — the Noon webview opens from step 2 on Place Order, so
+     implicit, the Noon webview opens from step 2 on Place Order, so
      there is no explicit step-3 state. */
   step: 1 | 2 = 1;
-  /* Z.2 — saved-address book picker. */
+  /* Z.2, saved-address book picker. */
   savedAddresses: SavedAddress[] = [];
   isAddressPickerOpen = false;
   selectedAddressId: number | null = null;
   isLoadingAddresses = false;
 
-  /* Add-new-address bottom sheet (web parity — mirrors address-form.ts). */
+  /* Add-new-address bottom sheet (web parity, mirrors address-form.ts). */
   isAddAddressOpen = false;
   isSavingAddress = false;
-  /* The 7 UAE emirates — same option set the inline form used. */
+  /* The 7 UAE emirates, same option set the inline form used. */
   readonly emirates: string[] = [
     'Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman',
     'Umm Al-Quwain', 'Ras Al Khaimah', 'Fujairah',
@@ -280,7 +280,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
   // One-tap alternative to typing a single code: the server sums every
   // spendable card the customer owns/redeemed and draws across them
   // (soonest-expiry first). Full cover skips Noon entirely; partial cover
-  // charges Noon the remainder. Mutually exclusive with the code path — an
+  // charges Noon the remainder. Mutually exclusive with the code path, an
   // explicit code wins server-side, so the UI only offers one at a time.
   wallet = {
     balance:   0,        // total spendable wallet balance (AED)
@@ -295,7 +295,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
   }
 
   /**
-   * The order total the gift balance has to cover — the server-authoritative
+   * The order total the gift balance has to cover, the server-authoritative
    * quote total (subtotal + delivery − promo), i.e. exactly the "Amount due"
    * the summary and floating bar show before any gift credit.
    */
@@ -307,7 +307,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
    * Amount the wallet draws for this cart (0 when not applied).
    *
    * Computed against payableBeforeGift rather than echoing the preview's
-   * `applied`, so the figure always matches the total on screen — including
+   * `applied`, so the figure always matches the total on screen, including
    * when a promo is applied after the preview was fetched. The server caps
    * the real draw the same way at initiate.
    */
@@ -325,7 +325,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
   /**
    * Fetch the wallet preview for the current cart. Safe to call repeatedly;
-   * failures degrade silently (the wallet section just stays hidden — the
+   * failures degrade silently (the wallet section just stays hidden, the
    * customer can still pay normally or use a code).
    */
   loadGiftWallet(): void {
@@ -406,7 +406,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
   // ── Promo code ─────────────────────────────────────────────────────
   // Additive (M-promo). The server is authoritative for all totals via
-  // POST /v3/cart/quote — `promo.quote` holds the last response.data so
+  // POST /v3/cart/quote, `promo.quote` holds the last response.data so
   // the breakdown card renders server-computed money (DECIMAL STRINGS).
   promo = {
     code:     '',          // user-entered promo code
@@ -524,7 +524,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     this.request.id = this.single_user.id;
     // Direct v3 (GET /v3/cart). The transformCartListResponse response
     // transform still applies via get_v3, so response.data keeps the
-    // {items, bill, ...} shape — the dual-shape handling below is left
+    // {items, bill, ...} shape, the dual-shape handling below is left
     // intact (the v3 branch is the one that runs).
     this.networkAdapter.get_v3('GET /cart', { authToken: this.single_user.token })
       .subscribe(({
@@ -542,7 +542,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
               // v3 shape (post-transform)
               this.carts = data.items;
               // Merge transform's {count, subtotal} over the default
-              // bill — v3 doesn't compute delivery/discount on the
+              // bill, v3 doesn't compute delivery/discount on the
               // cart endpoint; those come from the checkout flow.
               this.bill = {
                 ...this.bill,
@@ -660,7 +660,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     //
     // The v3 API return endpoint 302-redirects to the web return page. Some
     // webviews only surface the FINAL committed URL (the web page), not the
-    // intermediate API URL — so we must also match the web return page or the
+    // intermediate API URL, so we must also match the web return page or the
     // browser hangs on a blank screen after a successful payment. Whichever
     // matches first closes the webview and hands off to /process, which polls
     // GET /v3/checkout/status to the authoritative outcome.
@@ -670,7 +670,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     let processed = false; // ensure we only handle the redirect once
     // Direct v3 (POST /v3/checkout/initiate). The server derives the cart,
     // the customer's default address, and all totals from the authenticated
-    // session — delivery_fee/discount are ignored server-side and promo is a
+    // session, delivery_fee/discount are ignored server-side and promo is a
     // later stage. So we send only the channel + optional gift card code,
     // NOT the big Noon `checkout` object. The registered
     // transformInitiatePaymentResponse maps v3 'checkout_url' -> 'url', so the
@@ -700,8 +700,8 @@ export class CheckoutPage implements OnInit, OnDestroy {
           //   Legacy (raw Noon):   response.resultCode === 0,
           //                        response.result.checkoutData.postUrl
 
-          // M3.5 — Gift card full-cover: gateway was skipped server-side.
-          // No webview needed — go straight to the success/process page.
+          // M3.5, Gift card full-cover: gateway was skipped server-side.
+          // No webview needed, go straight to the success/process page.
           const isGatewaySkipped =
             response.response_code === 200 &&
             response.data?.gateway_skipped === true;
@@ -916,7 +916,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
   async pasteGiftCode(): Promise<void> {
     const text = await this.clipboard.read();
     if (text === null) {
-      // Clipboard couldn't be read (blocked / old shell) — tell the user to
+      // Clipboard couldn't be read (blocked / old shell), tell the user to
       // paste manually rather than failing silently.
       this.error_notification(this.i18n.t('gc_paste_failed'));
       return;
@@ -939,11 +939,11 @@ export class CheckoutPage implements OnInit, OnDestroy {
     if (raw.length !== 16) { this.error_notification(this.i18n.t('text_gift_card_enter_full')); return; }
     this.giftCard.checking = true;
     // Direct v3 (POST /v3/cart/gift-card). Must pass the route-key form, not
-    // a raw path — resolveConfig throws on a non-route-key, so the previous
+    // a raw path, resolveConfig throws on a non-route-key, so the previous
     // '/v3/cart/gift-card' literal broke the call. 'POST /cart/gift-card' is
     // registered in feature-flags. Response.data shape:
     // { code, theme, gift_card_amount, gateway_amount, balance_remaining,
-    //   cart_total, currency } — the page reads gift_card_amount/gateway_amount.
+    //   cart_total, currency }, the page reads gift_card_amount/gateway_amount.
     this.networkAdapter.post_v3('POST /cart/gift-card', { code: this.giftCard.code }, { authToken: this.single_user.token }).subscribe({
       next: (res: any) => {
         this.giftCard.checking = false;
@@ -1143,7 +1143,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
               this.single_user.billing_street = this.update.street;
               this.single_user.villa_number = this.update.villa_number;
             } else {
-              // No billing address set yet (new user) — keep the
+              // No billing address set yet (new user), keep the
               // prefilled defaults from getObject().
               this.ui_controls.is_empty = true;
             }
@@ -1158,7 +1158,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
       }))
   }
   /**
-   * Z.2 — Load the user's saved address book (v3). Pre-selects the
+   * Z.2, Load the user's saved address book (v3). Pre-selects the
    * default address (if any) and applies it to the checkout so a
    * returning customer can confirm in one tap.
    */
@@ -1188,7 +1188,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
    * Open the add-new-address bottom sheet (web parity). Resets the form to
    * a clean slate so a previous (cancelled) entry doesn't leak in, then
    * pre-fills the recipient Name and Phone from the logged-in user as a
-   * convenience default — both stay fully editable (most people ship to
+   * convenience default, both stay fully editable (most people ship to
    * themselves, but they can type a different recipient). Closes the
    * saved-address picker if it happened to be open.
    */
@@ -1230,7 +1230,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
   /**
    * Validate + create a new saved address (web parity with address-form.ts).
-   * Required: recipient_name, recipient_phone, emirate, area, street_address —
+   * Required: recipient_name, recipient_phone, emirate, area, street_address -
    * each surfaces a SPECIFIC error, never a generic message. On success the
    * new address is added to the list, selected (applySavedAddress), and the
    * sheet closes. On failure the SERVER message is surfaced.
@@ -1269,7 +1269,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
       return;
     }
 
-    // E.164 normalization — identical to update_billing(): prefix +971 and
+    // E.164 normalization, identical to update_billing(): prefix +971 and
     // strip leading zeros when there's no leading "+".
     const recipient_phone = phoneRaw.startsWith('+')
       ? phoneRaw
@@ -1363,10 +1363,10 @@ export class CheckoutPage implements OnInit, OnDestroy {
    * User selected a Google Places suggestion. Autofill the street from
    * the structured place details. Emirate is a fixed dropdown and area
    * is free text (web parity), so we no longer auto-match them against a
-   * city/area API — the user picks the emirate and types the area.
+   * city/area API, the user picks the emirate and types the area.
    */
   async onPlaceSelected(place: PlaceDetails): Promise<void> {
-    /* Street is the easy case — always assign whatever Google parsed. */
+    /* Street is the easy case, always assign whatever Google parsed. */
     if (place.street) {
       this.update.street = place.street;
       this.toast.success(

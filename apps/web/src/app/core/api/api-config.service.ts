@@ -6,32 +6,32 @@ import { Injectable } from '@angular/core';
  * Four base URLs because the 10-day rollout uses a strangler-fig
  * migration (Decision 10):
  *
- *   - `v3BaseUrl`     — new Slim 4 backend (api-v3.3bayti.ae). Day 5+
+ *   - `v3BaseUrl`    , new Slim 4 backend (api-v3.3bayti.ae). Day 5+
  *                       onwards this serves catalog reads, auth, and
  *                       account. ENDPOINT_ROUTING in @3bayti/api-client
  *                       decides which endpoints use this.
  *
- *   - `legacyBaseUrl` — legacy host with NO version prefix
+ *   - `legacyBaseUrl`, legacy host with NO version prefix
  *                       (https://api.3bayti.ae). Used by
  *                       RoutedHttpClient as `bases.old`. ENDPOINT_ROUTING
  *                       entries include the version segment in their
  *                       oldPath (e.g. '/v2/featured-vendors',
  *                       '/users/login'), so we don't want
- *                       v2BaseUrl's '/v2' suffix here — that would
+ *                       v2BaseUrl's '/v2' suffix here, that would
  *                       produce a double-prefix URL.
  *
- *   - `v2BaseUrl`     — legacy v2 base WITH '/v2' suffix
+ *   - `v2BaseUrl`    , legacy v2 base WITH '/v2' suffix
  *                       (https://api.3bayti.ae/v2). Still used by the
  *                       deprecated ApiClientService for any consumer
  *                       not yet migrated to RoutedHttpClient. New code
- *                       should NOT use this — use RoutedHttpClient
+ *                       should NOT use this, use RoutedHttpClient
  *                       instead.
  *
- *   - `v1BaseUrl`     — same host as `legacyBaseUrl` but kept under
+ *   - `v1BaseUrl`    , same host as `legacyBaseUrl` but kept under
  *                       the old name because mobile-app code (Day 6+)
  *                       references it. Will consolidate post-cutover.
  *
- * The base URLs do NOT differ between dev/staging/prod — there's one
+ * The base URLs do NOT differ between dev/staging/prod, there's one
  * legacy host and one v3 host. Build-time env injection happens for
  * SITE_URL only (canonical site URL for sitemaps + OG tags), see
  * scripts/inject-environment.mjs.

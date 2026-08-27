@@ -21,11 +21,11 @@ import { LocaleService } from '../../core/i18n/locale.service';
 import { MessagesService } from './messages.service';
 import type { ConversationSummary, ChatMessage } from './messages.service';
 
-/** Polling cadence for new messages — mirrors mobile's 5s loop. */
+/** Polling cadence for new messages, mirrors mobile's 5s loop. */
 const POLL_INTERVAL_MS = 5000;
 
 /**
- * /account/messages/:uuid — one order conversation.
+ * /account/messages/:uuid, one order conversation.
  *
  * Auth-gated. Renders the message thread as sent/received bubbles
  * (customer's own messages on the trailing side, the vendor's on the
@@ -158,7 +158,7 @@ export class MessagesThreadPageComponent implements OnInit, OnDestroy {
     content: ['', [Validators.required, Validators.maxLength(4000)]],
   });
 
-  /** Template helper — the rendered message list. */
+  /** Template helper, the rendered message list. */
   protected messages(): ChatMessage[] {
     return this._messages();
   }
@@ -200,7 +200,7 @@ export class MessagesThreadPageComponent implements OnInit, OnDestroy {
       const result = await this.chat.getMessages(this.uuid, this.highestId);
       if (result.messages.length > 0) {
         this.appendNew(result.messages);
-        /* New (possibly vendor) messages arrived while viewing — clear them. */
+        /* New (possibly vendor) messages arrived while viewing, clear them. */
         await this.chat.markAsRead(this.uuid);
       }
     } catch {
@@ -251,7 +251,7 @@ export class MessagesThreadPageComponent implements OnInit, OnDestroy {
     } catch (err) {
       const message = this.blockedMessage(err);
       if (message !== null) {
-        /* 422 CHAT_MESSAGE_BLOCKED — keep the text so the user can edit. */
+        /* 422 CHAT_MESSAGE_BLOCKED, keep the text so the user can edit. */
         this.toast.warning(message);
       } else {
         this.toast.error('account.messages.thread.errors.sendFailed');

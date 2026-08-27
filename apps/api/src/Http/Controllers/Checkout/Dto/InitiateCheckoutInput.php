@@ -10,12 +10,12 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * Input DTO for POST /v3/checkout/initiate.
  *
- * All fields optional — sensible server defaults apply:
+ * All fields optional, sensible server defaults apply:
  *   - channel:             MOBILE (mobile is the current sole client)
  *   - delivery_fee:        '0.00' if omitted (caller must compute
  *                          and pass; v3 doesn't ship a delivery-fee
- *                          calculator yet — comes in M3.2.x)
- *   - discount:            '0.00' if omitted (LEGACY — see promo_code
+ *                          calculator yet, comes in M3.2.x)
+ *   - discount:            '0.00' if omitted (LEGACY, see promo_code
  *                          notes below)
  *   - promo_code:          null if omitted (M3.2.X.8-D)
  *   - billing_address_id:  user's default-billing address
@@ -133,7 +133,7 @@ final class InitiateCheckoutInput
     public readonly ?int $gift_card_purchase_id;
 
     /**
-     * Resume payment for an EXISTING pending_payment order — the mobile
+     * Resume payment for an EXISTING pending_payment order, the mobile
      * "Complete payment" action. When supplied, checkout does NOT touch the
      * cart or create a new order: it re-initiates the gateway session for
      * this order and returns its checkout_url. Distinct from
@@ -147,7 +147,7 @@ final class InitiateCheckoutInput
 
     /**
      * Apply the customer's whole gift-card WALLET (aggregate balance across
-     * all their spendable cards) to this order — the one-tap alternative to
+     * all their spendable cards) to this order, the one-tap alternative to
      * supplying a single gift_card_code. The server debits across the cards
      * (soonest-expiry first) up to the order total, then charges Noon the
      * remainder (or skips the gateway when the wallet covers it all).
@@ -171,7 +171,7 @@ final class InitiateCheckoutInput
     ) {
         /* Accept any casing from clients (the web app sends 'web'); the
            Choice + Noon gateway require uppercase. Normalising here means
-           a lowercase channel is corrected rather than 422'd or — worse —
+           a lowercase channel is corrected rather than 422'd or, worse -
            reaching the gateway and throwing a raw 500. */
         $this->channel = strtoupper(trim($channel ?? 'MOBILE'));
         $this->delivery_fee = $delivery_fee ?? '0.00';

@@ -35,7 +35,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * After the item override, Order::recomputeStatusFromItems() rolls
  * the order status up. The order's own status is NOT directly
- * overridden by this endpoint — use OverrideOrderStatusController
+ * overridden by this endpoint, use OverrideOrderStatusController
  * for that.
  */
 final class OverrideOrderItemStatusController
@@ -133,7 +133,7 @@ final class OverrideOrderItemStatusController
 
         // Notify the customer of the per-item state change (email + push),
         // mirroring TransitionVendorOrderItemController's dispatch. All
-        // sends are fire-and-forget — a notification failure must never
+        // sends are fire-and-forget, a notification failure must never
         // break the override (the status change is already persisted).
         if ($newStatus === OrderItem::ITEM_STATUS_ACCEPTED) {
             $this->notifications->itemAccepted($order, $item);

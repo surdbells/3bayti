@@ -19,7 +19,7 @@ use Slim\Psr7\Factory\ServerRequestFactory;
  * Unit tests for CurrencyContextMiddleware (M3.2.X.15-D).
  *
  * Verify the request attribute is set correctly for each input
- * shape — known currencies, case insensitive, fallback to AED
+ * shape, known currencies, case insensitive, fallback to AED
  * on unknown / missing / non-string.
  *
  * Strategy: build a real ServerRequest via Slim's factory; pass

@@ -22,7 +22,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Vendor self-serve visibility into their own store(s) lifecycle
  * state. Returns ALL vendors owned by the authenticated user
- * regardless of status — so pending vendors can see they're still
+ * regardless of status, so pending vendors can see they're still
  * waiting for review, and suspended vendors can see the reason.
  *
  * Auth design (Q-MiddlewareGate=A + Option I locked in plan)
@@ -36,13 +36,13 @@ use Psr\Http\Message\ServerRequestInterface;
  *              constant array; middleware bypasses gate for matching
  *              paths
  *
- * Option I won — simpler, isolated to one controller, doesn't
+ * Option I won, simpler, isolated to one controller, doesn't
  * complicate the shared middleware with one-off exceptions.
  *
  * Flow:
  *   1. AuthMiddleware verifies token + populates user attribute
  *   2. This controller's inline is_vendor check filters out non-
- *      vendor users (returns 403 with FORBIDDEN — they should
+ *      vendor users (returns 403 with FORBIDDEN, they should
  *      submit onboarding first)
  *   3. Repository query fetches all vendors owned by the user
  *
@@ -56,11 +56,11 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Multi-vendor users see all their stores in one response. A vendor
  * with no stores (is_vendor=true but never submitted) sees an empty
- * vendors array — semantically correct, not a 404.
+ * vendors array, semantically correct, not a 404.
  *
  * Errors:
  *   - 401 if no auth token (AuthMiddleware)
- *   - 403 if user is not a vendor (inline check) — code FORBIDDEN
+ *   - 403 if user is not a vendor (inline check), code FORBIDDEN
  *
  * Audit
  * =====

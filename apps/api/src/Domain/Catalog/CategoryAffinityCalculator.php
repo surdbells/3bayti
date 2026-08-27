@@ -23,7 +23,7 @@ use Psr\Log\LoggerInterface;
  * recommendations from here.
  *
  * The scoring is intentionally weak. Category similarity alone
- * isn't a strong signal — products in the same category compete
+ * isn't a strong signal, products in the same category compete
  * with each other rather than complement. We rank category rows
  * at score=1.0 (vs co-purchase scores that start at 3.0 with
  * MIN_SUPPORT=3 and go up). Higher MIN_SUPPORT co-purchase rows
@@ -87,7 +87,7 @@ class CategoryAffinityCalculator
         //
         // Both products must:
         //   - have category_id NOT NULL (uncategorised products
-        //     don't get category fallback — they fall through to
+        //     don't get category fallback, they fall through to
         //     fallback_popular in X.12-E)
         //   - be active (is_active = true) so we don't recommend
         //     hidden or deleted products

@@ -23,15 +23,15 @@ export interface OtaUploadMeta {
   version: string;
   channel?: string;
   min_native?: string;
-  /** Signed bundles only — the ivSessionKey from `@capgo/cli encrypt`. */
+  /** Signed bundles only, the ivSessionKey from `@capgo/cli encrypt`. */
   session_key?: string;
-  /** Signed bundles only — the checksum from `@capgo/cli encrypt`. */
+  /** Signed bundles only, the checksum from `@capgo/cli encrypt`. */
   checksum?: string;
 }
 
 /**
  * Admin client for the self-hosted OTA endpoints (/v3/admin/ota/bundles).
- * Direct HttpClient calls — like ImageUploadService — because the upload is
+ * Direct HttpClient calls, like ImageUploadService, because the upload is
  * multipart and these routes aren't in the generated typed route-key registry.
  * The bearer token + base URL are read from PortalCrudAdapter so auth stays in
  * one place.
@@ -60,7 +60,7 @@ export class OtaAdminService {
 
   /**
    * Upload + publish a bundle. Streams `onProgress` (0-100) via HttpClient
-   * upload events for the UI progress bar. Returns the created bundle rows —
+   * upload events for the UI progress bar. Returns the created bundle rows -
    * one for a single platform, two when `platform: 'both'`.
    */
   async upload(

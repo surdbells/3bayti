@@ -7,7 +7,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** GET /v3/admin/permission-catalog — modules+permissions and role presets for the matrix UI. */
+/** GET /v3/admin/permission-catalog, modules+permissions and role presets for the matrix UI. */
 final class ListPermissionCatalogController
 {
     use Responder;

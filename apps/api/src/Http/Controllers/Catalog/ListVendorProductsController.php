@@ -20,14 +20,14 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/vendors/{slug}/products
  *
- * Vendor storefront — paginated active products for a single vendor.
+ * Vendor storefront, paginated active products for a single vendor.
  *
  * Same filter + sort semantics as /v3/products, but vendor is fixed
  * (not filterable away from the URL slug).
  *
  * Returns: { data: Product[], meta: PaginationMeta }
  *
- * 404 if the vendor slug is unknown OR the vendor is inactive — we
+ * 404 if the vendor slug is unknown OR the vendor is inactive, we
  * treat inactive vendors as nonexistent to public callers.
  */
 final class ListVendorProductsController

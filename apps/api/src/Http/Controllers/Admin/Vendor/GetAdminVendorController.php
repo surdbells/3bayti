@@ -28,7 +28,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * ({@see VendorSerializer::manageShape}).
  *
  * Without this route the portal's GET /admin/vendors/:id 404s, leaving
- * the store object at its initialised defaults — which is why the
+ * the store object at its initialised defaults, which is why the
  * Information tab rendered empty and the setup-progress meter was stuck
  * at 7% (two default `false` booleans out of ~30 fields) for every
  * vendor.

@@ -32,7 +32,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Photos
  * ======
- * Photos are NOT part of this DTO — they ride in via PSR-7
+ * Photos are NOT part of this DTO, they ride in via PSR-7
  * uploaded files and are handled directly by the controller. The
  * MAX_PHOTOS_PER_REQUEST = 5 cap is enforced there.
  */

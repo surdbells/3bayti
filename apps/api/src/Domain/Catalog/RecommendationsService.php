@@ -14,11 +14,11 @@ use Psr\Log\LoggerInterface;
  * Single hot-path entry point: getRecommendationsForProduct(\$productId, \$limit)
  * which:
  *   1. Queries the denormalized product_recommendations table
- *      via the (product_id, rank) composite index — typically
+ *      via the (product_id, rank) composite index, typically
  *      sub-millisecond.
  *   2. If the result is empty (product has never appeared with
  *      another product in a paid order AND has no category, OR
- *      is a brand-new product the cron hasn't seen yet) — falls
+ *      is a brand-new product the cron hasn't seen yet), falls
  *      back to marketplace-wide popular products.
  *   3. Hydrates the recommended Product entities so callers can
  *      shape them through ProductSerializer.
@@ -249,7 +249,7 @@ class RecommendationsService
 
         if ($result === []) {
             // User has bought everything in their top category → fall
-            // back to popular products (still useful — broaden scope)
+            // back to popular products (still useful, broaden scope)
             $result = $this->getPopularFallback(0, $limit);
             $this->logger->debug('recommendations.user.served', [
                 'user_id' => $userId,

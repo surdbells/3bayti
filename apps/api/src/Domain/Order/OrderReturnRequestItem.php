@@ -20,16 +20,16 @@ use Doctrine\ORM\Mapping as ORM;
  * (idx_orri_vendor_request) for "show me returns containing items I
  * sold". A JSONB-on-parent design would force every vendor query to
  * scan + json_each every return request. The child entity is one
- * Postgres row per returned item — cheap, indexed, queryable.
+ * Postgres row per returned item, cheap, indexed, queryable.
  *
  * Denormalized vendor_id
  * ======================
  * The vendor_id is denormalized here (we already have it via
  * order_item.vendor_id). Two reasons:
  *
- *   1. Fast vendor-portal filtering — no join through order_items
+ *   1. Fast vendor-portal filtering, no join through order_items
  *      every time a vendor lists their incoming returns.
- *   2. Vendor-of-record stability — if an admin ever reassigns an
+ *   2. Vendor-of-record stability, if an admin ever reassigns an
  *      OrderItem to a different vendor (unlikely but possible in
  *      future ops scenarios), the return request's vendor
  *      attribution stays with the original vendor that fulfilled
@@ -41,7 +41,7 @@ use Doctrine\ORM\Mapping as ORM;
  * at refund time). This matters because:
  *
  *   - If the product price changes after the order was placed, the
- *     refund is owed at the price the customer paid — not the
+ *     refund is owed at the price the customer paid, not the
  *     current catalog price.
  *   - OrderItem.unit_price IS already a snapshot of the price at
  *     order time, so for v1 this is mostly belt-and-braces, but
@@ -50,7 +50,7 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * Per-item quantity
  * =================
- * A customer can partially return an OrderItem — e.g., bought 3 of a
+ * A customer can partially return an OrderItem, e.g., bought 3 of a
  * size-M shirt, returning 1. The quantity here is the count being
  * returned; the line_subtotal column is unit_price_snapshot * quantity
  * (computed at create time).
@@ -60,7 +60,7 @@ use Doctrine\ORM\Mapping as ORM;
  * No status column
  * ================
  * The OrderReturnRequestItem's "status" is the parent
- * OrderReturnRequest's status — they all advance together. The
+ * OrderReturnRequest's status, they all advance together. The
  * fine-grained OrderItem.item_status (RETURNED, REFUNDED) is set on
  * the originating OrderItem when the parent return request reaches
  * the corresponding terminal state.
@@ -135,7 +135,7 @@ class OrderReturnRequestItem
     }
 
     /**
-     * Bidirectional collection setter — called from
+     * Bidirectional collection setter, called from
      * OrderReturnRequest::addItem after the parent persists itself.
      */
     public function setReturnRequest(OrderReturnRequest $returnRequest): void

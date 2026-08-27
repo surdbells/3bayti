@@ -93,7 +93,7 @@ final class UpdateBrandController
 
         // logo_url + is_active: null = unchanged for is_active; null
         // for logo_url means "clear". UpdateBrandInput doesn't
-        // distinguish "absent" from "null" — see UpdateProfileInput
+        // distinguish "absent" from "null", see UpdateProfileInput
         // (M1.7.1) for the same tristate limitation. PUT semantics
         // here mean: send the logo_url you want, or null to clear.
         $brand->setLogoUrl($input->logo_url);

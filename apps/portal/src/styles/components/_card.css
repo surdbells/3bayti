@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Card
+   Abayti Design System, Card
    .ax-card  base container with header/body/footer subparts.
    Modifiers: --elevated --flat --bordered --interactive --brand
    ========================================================================= */
@@ -76,7 +76,7 @@
   border: 1px solid var(--ax-color-border-default);
 }
 
-/* Interactive — for clickable cards (role=button, routerLink) */
+/* Interactive, for clickable cards (role=button, routerLink) */
 .ax-card-interactive {
   cursor: pointer;
 }
@@ -90,13 +90,13 @@
   box-shadow: var(--ax-shadow-sm);
 }
 
-/* Brand — beige tinted card, for onboarding / highlights */
+/* Brand, beige tinted card, for onboarding / highlights */
 .ax-card-brand {
   background-color: var(--ax-color-bg-brand-subtle);
   border-color: var(--ax-palette-beige-200);
 }
 
-/* Emphasized card — brown hero for KPIs */
+/* Emphasized card, brown hero for KPIs */
 .ax-card-hero {
   background-color: var(--ax-color-bg-brand);
   color: var(--ax-color-text-on-brand);
@@ -128,7 +128,7 @@
   margin: 0;
 }
 
-/* Mobile density — tighten card padding on phones so content inside a card
+/* Mobile density, tighten card padding on phones so content inside a card
    isn't double-padded against the (already reduced) page gutter. Pairs with
    the --ax-content-padding-* override in _tokens.css. */
 @media (max-width: 768px) {

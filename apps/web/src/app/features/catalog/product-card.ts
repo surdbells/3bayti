@@ -7,7 +7,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 /**
- * ProductCard — single card in any product display surface.
+ * ProductCard, single card in any product display surface.
  *
  * Used by:
  *   - /category/:slug              (W2.1)
@@ -16,7 +16,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
  *   - /designer/:slug storefront   (Phase 6)
  *   - /search results              (Phase 6)
  *
- * Design language: "Gilded Boutique" — locked in roadmap §4.4.
+ * Design language: "Gilded Boutique", locked in roadmap §4.4.
  *   - Cream surface (#fdfaf3) lifts off the canvas
  *   - 20px card radius, 14px image radius with 14px padding (image
  *     floats inside the card, doesn't bleed to its edges)
@@ -239,7 +239,7 @@ export class ProductCardComponent {
       return;
     }
     /* Fire-and-forget; the service updates the saved-set signal which
-       re-renders the heart. Errors are swallowed here — a failed
+       re-renders the heart. Errors are swallowed here, a failed
        toggle simply leaves the prior state. */
     void this.wishlist.toggle(product).catch(() => undefined);
   }

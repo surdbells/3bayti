@@ -13,7 +13,7 @@
  * business-rule violation) is surfaced instead of a generic "try again".
  */
 export function apiErrorMessage(err: any, fallback = 'Something went wrong. Please try again.'): string {
-  // Network / connection failure — no server body to read.
+  // Network / connection failure, no server body to read.
   if (err?.status === 0) {
     return 'Network problem — check your connection and try again.';
   }
@@ -22,10 +22,10 @@ export function apiErrorMessage(err: any, fallback = 'Something went wrong. Plea
   // (or proxies) return the inner object directly, so accept both.
   const body = err?.error?.error ?? err?.error ?? err;
 
-  // Field-level validation details win — they're the most specific. The v3
+  // Field-level validation details win, they're the most specific. The v3
   // envelope nests them as details.fields.<field> = ["message"] (see
   // HttpException::validation), while some errors put arrays directly on
-  // details. Dig through whichever shape to the FIRST usable string — never
+  // details. Dig through whichever shape to the FIRST usable string, never
   // stringify a raw object, which is what surfaced "[object Object]" to users
   // (details.fields is an object, and String({...}) === "[object Object]").
   const details = body?.details;

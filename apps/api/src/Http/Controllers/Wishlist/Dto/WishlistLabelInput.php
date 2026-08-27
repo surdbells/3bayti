@@ -8,7 +8,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Input for POST /v3/me/wishlist/labels and
- * PATCH /v3/me/wishlist/labels/{id} — the label name.
+ * PATCH /v3/me/wishlist/labels/{id}, the label name.
  */
 final class WishlistLabelInput
 {

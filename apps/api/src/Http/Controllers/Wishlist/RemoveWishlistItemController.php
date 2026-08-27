@@ -19,7 +19,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * DELETE /v3/me/wishlist/{productId} — un-save a product.
+ * DELETE /v3/me/wishlist/{productId}, un-save a product.
  *
  * Idempotent: returns 204 whether or not the product was actually
  * saved. "Make it not be on my wishlist" is the goal; if it's already

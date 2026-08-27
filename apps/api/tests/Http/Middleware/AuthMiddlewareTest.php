@@ -93,7 +93,7 @@ final class AuthMiddlewareTest extends TestCase
         $user = $this->makeUser();
         $pair = $this->jwt->issueTokenPair($user);
 
-        // EM returns null — user was deleted between token issuance and now.
+        // EM returns null, user was deleted between token issuance and now.
         $middleware = new AuthMiddleware(
             $this->jwt,
             $this->stubEm(null),
@@ -134,7 +134,7 @@ final class AuthMiddlewareTest extends TestCase
 
         // Simulate the user changing their password AFTER the token was issued.
         // The token's pwd_changed_at will be null (or the old value); the user's
-        // current pwd_changed_at is "now" — newer than the token.
+        // current pwd_changed_at is "now", newer than the token.
         $user->setPasswordHash('rotated-hash');
 
         $middleware = new AuthMiddleware(

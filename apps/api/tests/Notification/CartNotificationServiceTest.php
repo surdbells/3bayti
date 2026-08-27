@@ -28,13 +28,13 @@ use Psr\Log\NullLogger;
  * Unit tests for CartNotificationService (M3.2.X.11-E).
  *
  * Covers all 4 dispatch outcomes:
- *   1. SENT     — happy path; mailer called, notification_log row created
- *   2. SKIPPED  — eligibility check fails; no mailer call; SKIPPED row
+ *   1. SENT    , happy path; mailer called, notification_log row created
+ *   2. SKIPPED , eligibility check fails; no mailer call; SKIPPED row
  *                  written with the reason so X.11-C finder excludes
  *                  the cart on future runs
- *   3. FAILED   — mailer throws MailerException; FAILED row captures
+ *   3. FAILED  , mailer throws MailerException; FAILED row captures
  *                  kind + message
- *   4. FAILED   — mailer throws generic Throwable; FAILED row captures
+ *   4. FAILED  , mailer throws generic Throwable; FAILED row captures
  *                  the class name as kind
  *
  * Verifies opt-out gating, unsubscribe URL embedding, locale dispatch
@@ -255,7 +255,7 @@ final class CartNotificationServiceTest extends TestCase
         $user = $this->makeUser(email: 'alice@example.com', optedOut: false);
         $cart = $this->makeCart($user);
 
-        // EM throws on getRepository call — simulates DB outage
+        // EM throws on getRepository call, simulates DB outage
         $em = $this->createMock(EntityManagerInterface::class);
         $em->method('getRepository')->willThrowException(
             new \RuntimeException('connection refused'),
@@ -382,7 +382,7 @@ final class CartNotificationServiceTest extends TestCase
             /** @param list<NotificationLog> $sink */
             public function __construct(private array &$sink)
             {
-                // Skip the parent EntityRepository ctor — we never
+                // Skip the parent EntityRepository ctor, we never
                 // touch ORM internals in this capture class.
             }
             public function save(NotificationLog $log): void

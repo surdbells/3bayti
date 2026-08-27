@@ -36,13 +36,13 @@ use Psr\Log\LoggerInterface;
  * ===========================
  * Each facet is one aggregation query against indexed columns:
  *   - size: GROUP BY jsonb_array_elements_text(available_sizes)
- *           — uses products_sizes_idx (GIN)
+ *          , uses products_sizes_idx (GIN)
  *   - color: GROUP BY jsonb_array_elements_text(available_colors)
- *           — uses products_colors_idx (GIN)
+ *          , uses products_colors_idx (GIN)
  *   - price-band: CASE WHEN price < 50 / 50-100 / etc. GROUP BY band
- *           — uses products_active_idx + price scan
- *   - vendor: GROUP BY vendor_id — uses products_vendor_idx
- *   - category: GROUP BY category_id — uses products_category_idx
+ *          , uses products_active_idx + price scan
+ *   - vendor: GROUP BY vendor_id, uses products_vendor_idx
+ *   - category: GROUP BY category_id, uses products_category_idx
  *
  * On a 2k-product staging catalog the full 5-facet aggregation runs in
  * <50ms. If contention surfaces at scale, M4 introduces caching keyed on
@@ -95,7 +95,7 @@ class FacetAggregator
      *
      * A defensive cap so a runaway facet query (malformed jsonb, lock
      * contention, etc.) cannot tie up a DB connection indefinitely.
-     * 2000ms is generous — realistic queries complete in <50ms on a
+     * 2000ms is generous, realistic queries complete in <50ms on a
      * 2k-product catalog. If a query EVER hits this ceiling something
      * is genuinely wrong and we want a fast clear error rather than
      * a slow degraded one.
@@ -128,11 +128,11 @@ class FacetAggregator
      */
     public function compute(array $filters): array
     {
-        // M3.2.X.10-D — defensive per-statement timeout. SET LOCAL is
+        // M3.2.X.10-D, defensive per-statement timeout. SET LOCAL is
         // scoped to the current transaction only, so it doesn't bleed
         // across pool connections. If the request runs outside a TX
         // (which is the default for read endpoints) the SET LOCAL is
-        // a no-op — that's a known acceptable degradation; the
+        // a no-op, that's a known acceptable degradation; the
         // realistic risk we're guarding against is malformed jsonb
         // queries hitting a long fallback plan, and Doctrine's
         // default plan picker handles those well even without the
@@ -143,7 +143,7 @@ class FacetAggregator
             );
         } catch (\Throwable $e) {
             // Some test setups + non-PostgreSQL drivers don't speak
-            // statement_timeout. Log and continue — the lack of a
+            // statement_timeout. Log and continue, the lack of a
             // cap is a defense-in-depth degradation, not a hard
             // failure.
             $this->logger->debug('facets.timeout.skipped', [
@@ -162,10 +162,10 @@ class FacetAggregator
         ];
         $elapsedMs = (int) ((hrtime(true) - $startNs) / 1_000_000);
 
-        // M3.2.X.10-D — operator visibility: emit a single 'facets.computed'
+        // M3.2.X.10-D, operator visibility: emit a single 'facets.computed'
         // log line per request with timing + active-filter signature so
         // ops can grep "slow facet queries" / correlate spikes with
-        // specific filter shapes. Debug level — not noisy under
+        // specific filter shapes. Debug level, not noisy under
         // production WARNING threshold but available when LOG_LEVEL=debug.
         $this->logger->debug('facets.computed', [
             'duration_ms' => $elapsedMs,
@@ -289,7 +289,7 @@ class FacetAggregator
         $byLabel = [];
         foreach ($rows as $r) {
             if ($r['value'] === null) {
-                continue;  // products without a price (defensive — column is NOT NULL)
+                continue;  // products without a price (defensive, column is NOT NULL)
             }
             $byLabel[$r['value']] = (int) $r['count'];
         }
@@ -434,11 +434,11 @@ class FacetAggregator
         if (!empty($filters['isSale'])) {
             // On sale = a real markdown (sale_price below regular price), matching
             // the price-based listing filter in ProductRepository, not the
-            // standalone is_sale flag — so the facet count agrees with results.
+            // standalone is_sale flag, so the facet count agrees with results.
             $where[] = '(p.sale_price IS NOT NULL AND p.sale_price < p.price)';
         }
 
-        // M3.1.5.5d — fulltext via TSMATCH; reuse the same approach as
+        // M3.1.5.5d, fulltext via TSMATCH; reuse the same approach as
         // findActivePaginated. plainto_tsquery is forgiving of user input.
         $searchQuery = $filters['searchQuery'] ?? null;
         if (is_string($searchQuery) && trim($searchQuery) !== '') {
@@ -446,7 +446,7 @@ class FacetAggregator
             $params['searchQuery'] = trim($searchQuery);
         }
 
-        // M3.2.X.10 — refining filters: sizes, colors. JSONB containment
+        // M3.2.X.10, refining filters: sizes, colors. JSONB containment
         // with OR semantics ("available_* contains ANY of the requested
         // values"; @> would require ALL of them present).
         //
@@ -454,7 +454,7 @@ class FacetAggregator
         // equivalent `?|` operator. The `?` in `?|` (like `?` and `?&`) is
         // parsed by DBAL/PDO as a positional parameter placeholder, so a
         // query that mixes `?|` with bound parameters throws at execute
-        // time — that was the cause of the /v3/products/facets 500 whenever
+        // time, that was the cause of the /v3/products/facets 500 whenever
         // a size or color filter was applied. The function form is the
         // documented equivalent and carries no `?`, so it binds cleanly.
         if (!empty($filters['sizes']) && is_array($filters['sizes'])) {
@@ -505,7 +505,7 @@ class FacetAggregator
             if ($aRank !== $bRank) {
                 return $aRank <=> $bRank;
             }
-            // Both unknown — alpha-ascending. PHP's natural compare
+            // Both unknown, alpha-ascending. PHP's natural compare
             // handles numeric strings correctly ('39' < '40').
             return strnatcmp($a['value'], $b['value']);
         });

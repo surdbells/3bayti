@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 
 /**
- * Heading — typographic primitive with decoupled semantic + visual levels.
+ * Heading, typographic primitive with decoupled semantic + visual levels.
  *
  * The semantic level (h1..h6) drives accessibility + SEO outline; the
  * visual size is a separate concern. Common pattern: a card title might
@@ -15,11 +15,11 @@ import { NgTemplateOutlet } from '@angular/common';
  *   <ui-heading level="h3" size="md">Card title</ui-heading>
  *
  * Sizes (matches the type scale in styles.scss):
- *   display  64px  — once-per-page hero headlines
- *   xl       40px  — section titles on landing pages
- *   lg       28px  — primary card / panel titles
- *   md       20px  — secondary headings
- *   sm       16px  — small section labels
+ *   display  64px , once-per-page hero headlines
+ *   xl       40px , section titles on landing pages
+ *   lg       28px , primary card / panel titles
+ *   md       20px , secondary headings
+ *   sm       16px , small section labels
  *
  * Why content is captured into a single <ng-template>:
  * ====================================================
@@ -32,7 +32,7 @@ import { NgTemplateOutlet } from '@angular/common';
  *
  * The previous implementation had six separate <ng-content /> slots,
  * one per @case branch. During SSR prerender, projected content was
- * lost — every <h1>..<h6> rendered as an empty element in the
+ * lost, every <h1>..<h6> rendered as an empty element in the
  * prerendered HTML. Real-world impact: search-engine crawlers (which
  * don't run JS) saw NO product names in product-page H1s and NO
  * category names in category-page H1s, despite hydrated browsers
@@ -41,7 +41,7 @@ import { NgTemplateOutlet } from '@angular/common';
  * The fix: project content EXACTLY ONCE, into a single <ng-template>
  * that's never directly rendered. Then stamp that template into the
  * chosen heading element via [ngTemplateOutlet]. The template ref is
- * stable across renders — Angular can capture projected content into
+ * stable across renders, Angular can capture projected content into
  * it deterministically during SSR. Every @case branch references the
  * same ref, so the projected content lands inside the correct heading
  * element regardless of `level`.
@@ -87,7 +87,7 @@ import { NgTemplateOutlet } from '@angular/common';
 export class HeadingComponent {
   /** Semantic level (h1..h6). Drives accessibility tree + SEO outline. */
   @Input() level: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' = 'h2';
-  /** Visual size — independent of level. Defaults to 'lg'. */
+  /** Visual size, independent of level. Defaults to 'lg'. */
   @Input() size: 'display' | 'xl' | 'lg' | 'md' | 'sm' = 'lg';
 
   cssClass(): string {

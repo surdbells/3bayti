@@ -30,7 +30,7 @@ use Psr\Log\LoggerInterface;
  *         resolution_note?: '...' }
  *
  * resolution_note is REQUIRED for terminal statuses (resolved_*,
- * withdrawn) — admin accountability. Optional for in_review.
+ * withdrawn), admin accountability. Optional for in_review.
  *
  * Q5=A: emits ACTION_OVERRIDDEN with full before/after diff.
  *
@@ -38,7 +38,7 @@ use Psr\Log\LoggerInterface;
  * -----------
  * Re-applying the same status to a dispute already in that state is
  * a no-op for in_review. For terminal statuses, re-applying throws
- * (handled by OrderDispute::markResolved) — preventing accidental
+ * (handled by OrderDispute::markResolved), preventing accidental
  * "re-resolution" with a different note.
  */
 final class ResolveDisputeController
@@ -121,7 +121,7 @@ final class ResolveDisputeController
                 );
             }
         } catch (\DomainException $e) {
-            // Dispute was already terminal — re-resolution attempt
+            // Dispute was already terminal, re-resolution attempt
             throw new HttpException(
                 status: 422,
                 errorCode: 'dispute_not_mutable',

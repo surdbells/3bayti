@@ -1,5 +1,5 @@
 /**
- * AxPlaceAutocompleteComponent — address autocomplete via Google Places (New).
+ * AxPlaceAutocompleteComponent, address autocomplete via Google Places (New).
  *
  * Portal port of the mobile ax-place-autocomplete. Drop-in for a plain
  * <input class="ax-input"> when capturing an address: ngModel two-way binds the

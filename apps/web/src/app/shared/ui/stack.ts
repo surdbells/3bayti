@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 
 /**
- * Stack — vertical or horizontal flex container with consistent gap.
+ * Stack, vertical or horizontal flex container with consistent gap.
  *
  * Replaces the common pattern of "div with display:flex and a gap I
  * keep typing the same numbers for." Standardizes spacing across the

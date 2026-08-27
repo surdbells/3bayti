@@ -1,10 +1,10 @@
 /**
- * Style (Style Hub) domain types — the customer-facing curated-outfit view.
+ * Style (Style Hub) domain types, the customer-facing curated-outfit view.
  *
  * A "style" is a curated outfit that bundles up to ~4 products. Two
  * provenances exist (style_type):
- *   - 'community'  — submitted by shoppers (the "Community" tab).
- *   - 'editorial'  — curated by 3bayti (the "3bayti" / "Editorial" tab).
+ *   - 'community' , submitted by shoppers (the "Community" tab).
+ *   - 'editorial' , curated by 3bayti (the "3bayti" / "Editorial" tab).
  *
  * These mirror the v3 StyleSerializer shapes exactly.
  *
@@ -15,18 +15,18 @@
  *   POST /me/styles                         → Style    (create)
  *
  * IMPORTANT: `total_price` is a DISPLAY-ONLY string sum of the bundled
- * products' prices — it is NOT a checkout amount and must never be sent
+ * products' prices, it is NOT a checkout amount and must never be sent
  * to cart/checkout. Use each StyleProduct's v3 `id` for cart / wishlist /
  * PDP links (NOT `legacy_product_id`, which is only useful for legacy
  * deep-links).
  */
 
-/** Style provenance — community-submitted vs 3bayti-curated. */
+/** Style provenance, community-submitted vs 3bayti-curated. */
 export type StyleType = 'community' | 'editorial';
 
 /** A single product bundled into a style. */
 export interface StyleProduct {
-  /** v3 product id — use this for cart / wishlist / PDP. */
+  /** v3 product id, use this for cart / wishlist / PDP. */
   id: number;
   /** Legacy product id, when present (deep-link compatibility only). */
   legacy_product_id?: number;
@@ -61,7 +61,7 @@ export interface StyleListParams {
   offset?: number;
 }
 
-/** Result of a paginated style fetch — items plus whether more exist. */
+/** Result of a paginated style fetch, items plus whether more exist. */
 export interface StylesPage {
   items: Style[];
   hasMore: boolean;

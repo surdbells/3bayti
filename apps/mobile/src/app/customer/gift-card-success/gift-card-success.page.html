@@ -1,7 +1,7 @@
 <ion-content [fullscreen]="true" class="gcs-bg">
   <div class="gcs-screen">
 
-    <!-- Success mark — inline SVG, same language as the order success screen -->
+    <!-- Success mark, inline SVG, same language as the order success screen -->
     <div class="gcs-mark" aria-hidden="true">
       <svg viewBox="0 0 96 96" width="96" height="96" focusable="false">
         <circle class="gcs-mark__ring" cx="48" cy="48" r="44" />
@@ -70,13 +70,13 @@
     }
 
     @if (!isLoading && !card) {
-      <!-- Payment succeeded but we couldn't load the card — never an error. -->
+      <!-- Payment succeeded but we couldn't load the card, never an error. -->
       <p class="gcs-fallback">{{ 'gcs_fallback' | translate }}</p>
     }
   </div>
 </ion-content>
 
-<!-- Floating actions — same bar language as the product page footer -->
+<!-- Floating actions, same bar language as the product page footer -->
 <ion-footer class="gcs-footer ion-no-border">
   <div class="footer-content">
     <button type="button" class="gcs-secondary-btn" (click)="goHome()">

@@ -19,10 +19,10 @@ use Bayti\Api\Http\Controllers\HealthController;
  *   - The Slim app boots from Bootstrap::createApp() without errors
  *   - GET /v3/health (liveness) returns 200 with no DB dependency
  *   - GET /v3/health/ready (readiness) returns either 200 (DB up) or
- *     503 (DB down) — both are acceptable in tests where there's no
+ *     503 (DB down), both are acceptable in tests where there's no
  *     real Postgres connection. We just verify the response shape.
  *
- * If liveness fails, the API can't even boot — every other test is
+ * If liveness fails, the API can't even boot, every other test is
  * moot. That's why it's the first one written.
  */
 #[CoversClass(HealthController::class)]
@@ -49,7 +49,7 @@ final class HealthTest extends TestCase
         self::assertArrayHasKey('timestamp', $payload);
         self::assertArrayHasKey('version', $payload);
 
-        // Liveness must NOT include 'checks' — that's readiness's job.
+        // Liveness must NOT include 'checks', that's readiness's job.
         self::assertArrayNotHasKey('checks', $payload);
     }
 
@@ -58,14 +58,14 @@ final class HealthTest extends TestCase
     {
         // Note: in CI there's no real Postgres, so the DB ping in
         // /ready will either fail (with 503) or possibly succeed if
-        // Doctrine's lazy connection masks it. Either is fine — we
+        // Doctrine's lazy connection masks it. Either is fine, we
         // only verify the response shape is what we expect.
         $app = Bootstrap::createApp();
 
         $request = (new ServerRequestFactory())->createServerRequest('GET', '/v3/health/ready');
         $response = $app->handle($request);
 
-        // Status MUST be 200 or 503 — nothing else.
+        // Status MUST be 200 or 503, nothing else.
         self::assertContains(
             $response->getStatusCode(),
             [200, 503],

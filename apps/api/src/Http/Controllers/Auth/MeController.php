@@ -31,7 +31,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   - Confirmed is_active and pwd_changed_at staleness
  *   - Attached the User to the request under AuthMiddleware::ATTR_USER
  *
- * So this controller is JUST a serializer — no DB calls, no further
+ * So this controller is JUST a serializer, no DB calls, no further
  * checks.
  *
  * If the request reaches this controller without a User attribute,
@@ -59,7 +59,7 @@ final class MeController
         if (!$user instanceof User) {
             // Defensive: AuthMiddleware should have placed a User
             // here. If it didn't, the route was wired without the
-            // middleware — that's a config bug, not user error.
+            // middleware, that's a config bug, not user error.
             throw HttpException::unauthorized(
                 ErrorCodes::AUTH_INVALID_TOKEN,
                 'Authentication required.',

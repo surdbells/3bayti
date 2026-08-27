@@ -39,12 +39,12 @@ export interface MeasurementUpsert {
 }
 
 /**
- * MeasurementService — read / upsert / clear the user's DEFAULT body
+ * MeasurementService, read / upsert / clear the user's DEFAULT body
  * measurement set. Authenticated account data, so it uses the
  * Bearer-bound direct HttpClient (auth attached by the interceptor),
  * consistent with AddressService / OrderService.
  *
- * Endpoints (no `data` envelope — body is `{ measurements: ... }`):
+ * Endpoints (no `data` envelope, body is `{ measurements: ... }`):
  *   GET    /v3/me/measurements/default → { measurements: Measurement | null }
  *   PUT    /v3/me/measurements/default → { measurements: Measurement }
  *   DELETE /v3/me/measurements/default → 204

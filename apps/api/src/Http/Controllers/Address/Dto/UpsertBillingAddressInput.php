@@ -20,7 +20,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * stay unchanged. But for the CREATE case, we can't create an entity
  * with NULL recipient_name (NOT NULL in schema). To resolve this
  * tension cleanly, we treat this endpoint as an upsert that ALWAYS
- * requires the four mandatory fields — same as POST /v3/me/addresses.
+ * requires the four mandatory fields, same as POST /v3/me/addresses.
  *
  * The reasoning: a customer "updating" their billing address rarely
  * leaves the name blank. The CREATE flow benefits from a single

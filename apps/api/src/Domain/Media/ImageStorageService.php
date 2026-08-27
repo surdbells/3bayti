@@ -13,9 +13,9 @@ use Psr\Http\Message\UploadedFileInterface;
  *
  * Path scheme
  * ===========
- *   products/{vendor-slug}/{ULID}.{ext}   — product images
- *   vendors/{vendor-slug}/logo.{ext}      — vendor logo
- *   vendors/{vendor-slug}/cover.{ext}     — vendor cover image
+ *   products/{vendor-slug}/{ULID}.{ext}  , product images
+ *   vendors/{vendor-slug}/logo.{ext}     , vendor logo
+ *   vendors/{vendor-slug}/cover.{ext}    , vendor cover image
  *
  * The vendor-slug segment keeps vendor images isolated. ULID
  * filenames on product images give time-sortable, collision-safe
@@ -32,12 +32,12 @@ use Psr\Http\Message\UploadedFileInterface;
  * The UPLOADS_PUBLIC_URL env var holds the base
  * (e.g. "https://api-v3.3bayti.ae/uploads") so callers can
  * construct the full URL without knowing the server origin.
- * Cloudflare image transforms are applied by the front-end —
+ * Cloudflare image transforms are applied by the front-end -
  * the API always stores and returns the canonical origin URL.
  *
  * Adapter swap
  * ============
- * Swapping to R2 in the future is a single change in config/di.php —
+ * Swapping to R2 in the future is a single change in config/di.php -
  * the AwsS3V3Adapter points at the same logical paths. The UPLOADS_PUBLIC_URL
  * then becomes the R2 public bucket URL (e.g. https://cdn.3bayti.ae).
  * No consumer-side changes needed.
@@ -78,7 +78,7 @@ final class ImageStorageService
     }
 
     /**
-     * Store a vendor logo. Stable path — re-upload overwrites.
+     * Store a vendor logo. Stable path, re-upload overwrites.
      *
      * @throws \InvalidArgumentException on invalid mime / size / upload error.
      * @throws FilesystemException on backing-store failure.
@@ -94,7 +94,7 @@ final class ImageStorageService
     }
 
     /**
-     * Store a vendor cover image. Stable path — re-upload overwrites.
+     * Store a vendor cover image. Stable path, re-upload overwrites.
      *
      * @throws \InvalidArgumentException on invalid mime / size / upload error.
      * @throws FilesystemException on backing-store failure.
@@ -115,8 +115,8 @@ final class ImageStorageService
      * Path: gift-cards/{userId}/{ULID}.{ext}. ULID filenames are
      * time-sortable, collision-safe, and unguessable.
      *
-     * Visibility is PUBLIC by design: the gift-card *recipient* — who is
-     * not the uploader — renders this photo on the card via a plain
+     * Visibility is PUBLIC by design: the gift-card *recipient*, who is
+     * not the uploader, renders this photo on the card via a plain
      * <img> tag (on the redeem / detail / my-cards views), so an
      * auth-gated or private URL would not display for them. The
      * unguessable ULID path is the privacy lever, mirroring how product
@@ -137,7 +137,7 @@ final class ImageStorageService
     }
 
     /**
-     * Store a raw decoded image (from base64 blob — used by the
+     * Store a raw decoded image (from base64 blob, used by the
      * image migration script for legacy vendor logos).
      *
      * @throws FilesystemException on backing-store failure.
@@ -204,7 +204,7 @@ final class ImageStorageService
         try {
             $this->filesystem->delete($storagePath);
         } catch (FilesystemException) {
-            // Already gone — fine.
+            // Already gone, fine.
         }
     }
 
@@ -236,7 +236,7 @@ final class ImageStorageService
 
     /**
      * The inverse of publicUrl(): given a public image URL, return the
-     * storage path relative to the uploads root — or null when the URL is
+     * storage path relative to the uploads root, or null when the URL is
      * not one we host (external/legacy URLs must never be deleted).
      */
     public static function storagePathFromUrl(?string $url): ?string

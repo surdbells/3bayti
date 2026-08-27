@@ -43,7 +43,7 @@ test.describe('Catalog browsing', () => {
     }
 
     await page.waitForLoadState('networkidle');
-    // No specific assertion — this is a smoke test that the
+    // No specific assertion, this is a smoke test that the
     // route doesn't blow up. Future M3.2.Z phases will add
     // detail-level assertions.
   });

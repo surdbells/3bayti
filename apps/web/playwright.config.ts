@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright e2e config for apps/web.
  *
- * M3.2.0-A — first phase of M3.2 quality infrastructure.
+ * M3.2.0-A, first phase of M3.2 quality infrastructure.
  *
  * Locked decisions (per m3.2.0-implementation-plan.md §3):
  *   Q4 = A: Chromium only. WebKit/Firefox deferred to M4 unless
@@ -54,7 +54,7 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
 
-    // trace + screenshot on first retry — diagnoses flakes without
+    // trace + screenshot on first retry, diagnoses flakes without
     // bloating green-run artifacts.
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',

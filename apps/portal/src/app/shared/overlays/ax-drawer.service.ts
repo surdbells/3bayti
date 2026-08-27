@@ -82,7 +82,7 @@ export class AxDrawerService {
     } else if (position === 'left') {
       positionStrategy.left('0').top('0');
     } else {
-      // 'bottom' — full-width sheet anchored to bottom edge
+      // 'bottom', full-width sheet anchored to bottom edge
       positionStrategy.bottom('0').left('0').right('0');
     }
 

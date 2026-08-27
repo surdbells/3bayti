@@ -1,9 +1,9 @@
 /* =========================================================================
-   Bottom navigation — mobile-only, vendor app shell
+   Bottom navigation, mobile-only, vendor app shell
    ========================================================================= */
 
 .ax-bottom-nav {
-  /* Hidden on desktop — sidenav handles primary navigation there. */
+  /* Hidden on desktop, sidenav handles primary navigation there. */
   display: none;
 }
 

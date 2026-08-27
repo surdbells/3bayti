@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Controls
+   Abayti Design System, Controls
    Styled native checkbox, radio, switch, range. Works with [formControl],
    [ngModel], and plain DOM.
    Usage:
@@ -58,7 +58,7 @@
   flex: 1;
 }
 
-/* Hover state — only when not disabled */
+/* Hover state, only when not disabled */
 .ax-check:hover input:not(:disabled) ~ .ax-check-box,
 .ax-radio:hover input:not(:disabled) ~ .ax-radio-dot {
   border-color: var(--ax-color-border-brand);
@@ -71,7 +71,7 @@
   box-shadow: var(--ax-shadow-focus);
 }
 
-/* Checked — checkbox */
+/* Checked, checkbox */
 .ax-check input:checked ~ .ax-check-box {
   background-color: var(--ax-color-bg-brand);
   border-color: var(--ax-color-bg-brand);
@@ -86,7 +86,7 @@
   transform: translateY(-1px) rotate(45deg);
 }
 
-/* Indeterminate — checkbox */
+/* Indeterminate, checkbox */
 .ax-check input:indeterminate ~ .ax-check-box {
   background-color: var(--ax-color-bg-brand);
   border-color: var(--ax-color-bg-brand);
@@ -100,7 +100,7 @@
   border-radius: 1px;
 }
 
-/* Checked — radio */
+/* Checked, radio */
 .ax-radio input:checked ~ .ax-radio-dot {
   border-color: var(--ax-color-bg-brand);
 }

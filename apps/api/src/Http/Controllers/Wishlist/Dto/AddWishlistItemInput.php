@@ -7,14 +7,14 @@ namespace Bayti\Api\Http\Controllers\Wishlist\Dto;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Input for POST /v3/me/wishlist — save a product.
+ * Input for POST /v3/me/wishlist, save a product.
  *
  * product_id is required. label_id is optional (Q-Z3=B): when present
  * and > 0, the saved product is filed under that label (must belong to
  * the user, else 404); omitted/null leaves it uncategorized. The
  * controller resolves the product (404 if missing/inactive) and is
  * idempotent: saving an already-saved product is a no-op success
- * (Q6.3) — but a provided label_id will (re)assign the label.
+ * (Q6.3), but a provided label_id will (re)assign the label.
  */
 final class AddWishlistItemInput
 {

@@ -71,7 +71,7 @@ final class GetDisputeController
         }
 
         $shape = $this->serializer->shape($dispute);
-        // Include raw_event on detail view (not in list shape — too big
+        // Include raw_event on detail view (not in list shape, too big
         // for paginated responses)
         $shape['raw_event'] = $dispute->getRawEvent();
 

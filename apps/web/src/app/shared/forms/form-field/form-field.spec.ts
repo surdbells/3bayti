@@ -109,7 +109,7 @@ describe('FormFieldComponent', () => {
     const error: HTMLElement | null = fixture.nativeElement.querySelector('.form-field__error');
     expect(error).not.toBeNull();
     /* We assert on the resolved i18n key (data-error-key) rather than
-       textContent — the translate pipe needs HTTP-loaded translations
+       textContent, the translate pipe needs HTTP-loaded translations
        which we don't wire up in unit tests. */
     expect(error?.getAttribute('data-error-key')).toBe('auth.fields.email_invalid');
   });

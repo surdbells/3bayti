@@ -144,7 +144,7 @@ final class GetCartControllerTest extends HttpTestCase
 
     private function makeProduct(int $id, string $name, string $price): Product
     {
-        // Build minimal Product via reflection — bypass constructor
+        // Build minimal Product via reflection, bypass constructor
         // requirements (vendor, etc.) we don't need to exercise here.
         $product = (new \ReflectionClass(Product::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($product, 'id', $id);

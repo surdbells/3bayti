@@ -28,7 +28,7 @@ import type { AuthUser, BffLoginResponse } from './auth.types';
  * Strategy
  * --------
  * Real HttpClient via HttpClientTesting (so we can match URLs and flush
- * canned responses). LocaleService and ApplicationRef are stubbed —
+ * canned responses). LocaleService and ApplicationRef are stubbed -
  * LocaleService because we only care about whether setLocale gets
  * called on a locale mismatch; ApplicationRef because we drive the
  * isStable observable manually to control scheduler arming. The
@@ -329,7 +329,7 @@ describe('AuthService', () => {
       req.flush({ verification_id: 'fake-aaa111' });
 
       const result = await promise;
-      /* The frontend just passes the value through — the API's fake-prefix
+      /* The frontend just passes the value through, the API's fake-prefix
          protocol is hidden from us deliberately. */
       expect(result.verification_id).toBe('fake-aaa111');
     });
@@ -357,7 +357,7 @@ describe('AuthService', () => {
   });
 
   /* -----------------------------------------------------------------
-     refresh() — single-flight
+     refresh(), single-flight
      ----------------------------------------------------------------- */
   describe('refresh() single-flight', () => {
     it('returns the SAME promise when called concurrently', async () => {
@@ -390,7 +390,7 @@ describe('AuthService', () => {
       r1.flush(makeLoginResponse());
       expect(await p1).toBe(true);
 
-      /* Second refresh — should issue a NEW request since the first
+      /* Second refresh, should issue a NEW request since the first
          resolved. */
       const p2 = service.refresh();
       const r2 = controller.expectOne('/auth-proxy/refresh');
@@ -507,7 +507,7 @@ describe('AuthService', () => {
   });
 
   /* -----------------------------------------------------------------
-     hydrate() session resilience (H0.2 — "cart disappears on reload")
+     hydrate() session resilience (H0.2, "cart disappears on reload")
 
      Regression guard for the bug where a successful /me hydrate was
      undone by a throwing locale side-effect, logging the user out on
@@ -618,7 +618,7 @@ describe('AuthService', () => {
         await Promise.resolve();
 
         /* Issue a response with expires_at JUST 30 seconds in the future
-           — well INSIDE the refresh lead window. Scheduler should fire
+          , well INSIDE the refresh lead window. Scheduler should fire
            immediately (clamped delay = 0). */
         const loginPromise = service.login({ email: 'a@b.com', password: 'x' });
         controller.expectOne('/auth-proxy/login').flush(
@@ -746,7 +746,7 @@ describe('AuthService', () => {
       await Promise.resolve();
       TestBed.tick();
 
-      /* Switch to ar — fires one PATCH. */
+      /* Switch to ar, fires one PATCH. */
       await locale.setLocale('ar');
       TestBed.tick();
       controller.expectOne('https://api-v3.3bayti.ae/v3/me/profile').flush({});

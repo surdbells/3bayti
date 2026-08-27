@@ -7,14 +7,14 @@ namespace Bayti\Api\Http\Middleware;
 /**
  * Per-request static holder for the correlation id.
  *
- * Why static state — and why it's safe here
+ * Why static state, and why it's safe here
  * ------------------------------------------
  * Monolog's processor pattern works by attaching a callable that
  * decorates each log record with extra context. The processor has
  * to be installed when the Logger is built (DI container time);
  * but the request id only exists at request time. Threading the
  * request id through the logger as a constructor parameter would
- * mean rebuilding the logger every request — defeating DI.
+ * mean rebuilding the logger every request, defeating DI.
  *
  * The static-state pattern resolves this: the processor reads from
  * RequestIdContext::get() each time a log record is emitted. The
@@ -29,7 +29,7 @@ namespace Bayti\Api\Http\Middleware;
  *
  * Why we don't just put it in $_SERVER or similar
  * -----------------------------------------------
- * We could, but $_SERVER is a god object — too easy for unrelated
+ * We could, but $_SERVER is a god object, too easy for unrelated
  * code to corrupt or read it. A dedicated holder is more honest
  * about what we're doing (per-request global) and lets us add
  * type safety + tests around it.

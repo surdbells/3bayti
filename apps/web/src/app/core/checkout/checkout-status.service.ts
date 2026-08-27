@@ -19,7 +19,7 @@ export interface PollResult {
   timedOut: boolean;
 }
 
-/** Options for pollUntilTerminal — injectable so tests drive timing. */
+/** Options for pollUntilTerminal, injectable so tests drive timing. */
 export interface PollOptions {
   intervalMs?: number;
   ceilingMs?: number;
@@ -30,13 +30,13 @@ export interface PollOptions {
 }
 
 /**
- * CheckoutStatusService — reads the authoritative payment outcome
+ * CheckoutStatusService, reads the authoritative payment outcome
  * from GET /v3/checkout/status/{ref} and offers a polling primitive
  * for the /checkout/return page.
  *
  * Why poll rather than trust the return redirect
  * ----------------------------------------------
- * Noon's browser redirect just means "the shopper came back" — not
+ * Noon's browser redirect just means "the shopper came back", not
  * "payment succeeded". The truth arrives asynchronously via Noon's
  * webhook → our backend → local Order state. So the return page
  * polls this endpoint until the status is terminal.
@@ -45,7 +45,7 @@ export interface PollOptions {
  * ----------------------------------
  * GetCheckoutStatusController reads ONLY local DB state; it never
  * calls Noon (Noon bans aggressive GET_ORDER polling). So a 2s poll
- * for up to 60s is just ~30 cheap DB reads — safe.
+ * for up to 60s is just ~30 cheap DB reads, safe.
  */
 @Injectable({ providedIn: 'root' })
 export class CheckoutStatusService {
@@ -96,7 +96,7 @@ export class CheckoutStatusService {
 
     this._isPolling.set(true);
     try {
-      // poll loop — fetch, check terminal, check ceiling, sleep, repeat
+      // poll loop, fetch, check terminal, check ceiling, sleep, repeat
       for (;;) {
         try {
           lastStatus = await this.getStatus(reference);
@@ -104,13 +104,13 @@ export class CheckoutStatusService {
             return { status: lastStatus, timedOut: false };
           }
         } catch {
-          /* Transient error — keep lastStatus (may be null) and let
+          /* Transient error, keep lastStatus (may be null) and let
              the ceiling check below decide whether to keep trying. */
         }
 
         const elapsed = now() - startedAt;
         if (elapsed + intervalMs >= ceilingMs) {
-          /* Next sleep would cross (or reach) the ceiling — stop now
+          /* Next sleep would cross (or reach) the ceiling, stop now
              rather than overshoot. */
           return { status: lastStatus, timedOut: true };
         }

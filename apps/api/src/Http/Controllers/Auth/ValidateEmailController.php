@@ -24,14 +24,14 @@ use Psr\Http\Message\ServerRequestInterface;
  * Why expose this at all
  * ----------------------
  * Without it, the frontend has to actually attempt registration to
- * find out the email is taken — wasteful UX (blocks form submission
+ * find out the email is taken, wasteful UX (blocks form submission
  * + shows a generic error). With it, the frontend can show
  * "this email is already registered" inline as the user types.
  *
  * Privacy note
  * ------------
  * This endpoint DOES leak which emails are registered with the
- * platform. That's the unavoidable trade-off — we either give
+ * platform. That's the unavoidable trade-off, we either give
  * better UX or guard the user-enumeration vector. We're choosing
  * UX because:
  *   1. Registration itself reveals the same info (failed register
@@ -41,7 +41,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *      based for /validate-phone) to make bulk enumeration costly
  *
  * If we ever flip the policy to "always say available, fail at
- * registration time", change ONLY the response — no schema change.
+ * registration time", change ONLY the response, no schema change.
  */
 final class ValidateEmailController
 {

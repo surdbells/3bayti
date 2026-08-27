@@ -19,7 +19,7 @@ namespace Bayti\Api\Http\Errors;
  * envelope.
  *
  * Use the named factories (validation(), unauthorized(), conflict(),
- * etc.) instead of new HttpException(...) when possible — they
+ * etc.) instead of new HttpException(...) when possible, they
  * encode status-to-code conventions in one place.
  */
 final class HttpException extends \RuntimeException
@@ -41,11 +41,11 @@ final class HttpException extends \RuntimeException
     }
 
     // -------------------------------------------------------------------
-    // Named factories — the everyday way to construct these.
+    // Named factories, the everyday way to construct these.
     // -------------------------------------------------------------------
 
     /**
-     * 400 Bad Request — body wasn't parseable or couldn't be processed.
+     * 400 Bad Request, body wasn't parseable or couldn't be processed.
      */
     public static function badRequest(string $message = 'Invalid request.'): self
     {
@@ -53,7 +53,7 @@ final class HttpException extends \RuntimeException
     }
 
     /**
-     * 401 Unauthorized — authentication failure of any kind.
+     * 401 Unauthorized, authentication failure of any kind.
      */
     public static function unauthorized(
         string $errorCode = ErrorCodes::AUTH_INVALID_CREDENTIALS,
@@ -63,7 +63,7 @@ final class HttpException extends \RuntimeException
     }
 
     /**
-     * 403 Forbidden — caller is authenticated but not allowed.
+     * 403 Forbidden, caller is authenticated but not allowed.
      */
     public static function forbidden(string $message = 'You do not have permission.'): self
     {
@@ -71,7 +71,7 @@ final class HttpException extends \RuntimeException
     }
 
     /**
-     * 403 Forbidden — the account's phone number isn't verified yet.
+     * 403 Forbidden, the account's phone number isn't verified yet.
      * Distinct from forbidden() (a role/permission check) so clients can
      * detect this case precisely and route the user to phone verification.
      */
@@ -90,7 +90,7 @@ final class HttpException extends \RuntimeException
     }
 
     /**
-     * 409 Conflict — uniqueness violation (email/phone taken etc.).
+     * 409 Conflict, uniqueness violation (email/phone taken etc.).
      */
     public static function conflict(string $errorCode, string $message): self
     {
@@ -98,7 +98,7 @@ final class HttpException extends \RuntimeException
     }
 
     /**
-     * 422 — a chat message was withheld by PII moderation. `flagTypes`
+     * 422, a chat message was withheld by PII moderation. `flagTypes`
      * (e.g. ['phone','email']) is surfaced under details.flag_types so the
      * client can warn the sender precisely.
      *
@@ -115,7 +115,7 @@ final class HttpException extends \RuntimeException
     }
 
     /**
-     * 422 Unprocessable — body parsed OK but failed validation.
+     * 422 Unprocessable, body parsed OK but failed validation.
      *
      * @param array<string, list<string>> $fieldErrors Map of fieldName → list of messages
      */
@@ -130,7 +130,7 @@ final class HttpException extends \RuntimeException
     }
 
     /**
-     * 429 Too Many Requests — rate limit hit.
+     * 429 Too Many Requests, rate limit hit.
      */
     public static function rateLimited(
         string $errorCode = ErrorCodes::OTP_RATE_LIMITED,
@@ -140,7 +140,7 @@ final class HttpException extends \RuntimeException
     }
 
     /**
-     * 502 Bad Gateway — an upstream service we depend on (CPaaS,
+     * 502 Bad Gateway, an upstream service we depend on (CPaaS,
      * payment gateway) failed. Our service didn't break; theirs did.
      */
     public static function upstreamFailure(
@@ -151,13 +151,13 @@ final class HttpException extends \RuntimeException
         // Forward the originating exception (e.g. OtpProviderException carrying
         // the provider's kind + HTTP status/body) as `previous`. ApiErrorMiddleware
         // captures 5xx HttpExceptions to Sentry, and Sentry walks the cause chain
-        // — so the real upstream reason is preserved instead of being swallowed
+        //, so the real upstream reason is preserved instead of being swallowed
         // behind the generic public message.
         return new self(502, $errorCode, $message, previous: $previous);
     }
 
     /**
-     * 422 Unprocessable — body validation passed, but a business
+     * 422 Unprocessable, body validation passed, but a business
      * rule says no (e.g. cart-empty at checkout, can't refund a
      * cancelled order). Different from validation(): the input
      * is *shape*-valid but the *state* makes the request

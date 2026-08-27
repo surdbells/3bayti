@@ -103,7 +103,7 @@ final class ResetConfirmControllerTest extends HttpTestCase
     }
 
     // -------------------------------------------------------------------
-    // Failure modes — all collapse to single 401
+    // Failure modes, all collapse to single 401
     // -------------------------------------------------------------------
 
     #[Test]

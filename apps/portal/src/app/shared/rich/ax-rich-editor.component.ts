@@ -23,7 +23,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 
 import { IconComponent } from '../icon/icon.component';
 /**
- * Tiptap-based rich text editor. Text formatting only — no images, no
+ * Tiptap-based rich text editor. Text formatting only, no images, no
  * uploads. Outputs HTML. Replaces @kolkov/angular-editor usages in the app.
  *
  *   <app-ax-rich-editor
@@ -225,7 +225,7 @@ export class AxRichEditorComponent implements AfterViewInit, OnDestroy, ControlV
           role: 'textbox',
           'aria-multiline': 'true',
         },
-        // Strip pasted images — we explicitly don't support images.
+        // Strip pasted images, we explicitly don't support images.
         transformPastedHTML: (html: string) => html.replace(/<img[^>]*>/gi, ''),
         // Also strip dropped images.
         handleDrop: (_view, event) => {
@@ -297,7 +297,7 @@ export class AxRichEditorComponent implements AfterViewInit, OnDestroy, ControlV
   addLink(): void {
     if (!this.editor) return;
     const previous = this.editor.getAttributes('link')['href'] as string | undefined;
-    // Simple prompt — design-system demo only. In the app, wire up a proper
+    // Simple prompt, design-system demo only. In the app, wire up a proper
     // popover or modal. Keeping this minimal here avoids coupling to a
     // specific overlay system.
     const url = typeof window !== 'undefined'
@@ -308,7 +308,7 @@ export class AxRichEditorComponent implements AfterViewInit, OnDestroy, ControlV
       this.editor.chain().focus().extendMarkRange('link').unsetLink().run();
       return;
     }
-    // Basic validation — require a protocol-prefixed URL
+    // Basic validation, require a protocol-prefixed URL
     const normalised = /^https?:\/\//i.test(url) ? url : `https://${url}`;
     this.editor.chain().focus().extendMarkRange('link').setLink({ href: normalised }).run();
   }
@@ -318,7 +318,7 @@ export class AxRichEditorComponent implements AfterViewInit, OnDestroy, ControlV
   writeValue(value: string | null): void {
     const safe = value ?? '';
     if (this.editor) {
-      // Avoid writing if content is equivalent — prevents cursor jumps on
+      // Avoid writing if content is equivalent, prevents cursor jumps on
       // round-trip through ngModel.
       if (this.editor.getHTML() !== safe) {
         this.editor.commands.setContent(safe, false);

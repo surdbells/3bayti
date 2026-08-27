@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\Test;
  *
  * Mirrors the auth/me test setup since the underlying mechanics
  * (AuthMiddleware → User attribute → serializer) are identical.
- * What's different here is the response shape — we verify the new
+ * What's different here is the response shape, we verify the new
  * profile fields (gender, dob, locale, timezone) appear in the JSON.
  */
 #[CoversClass(GetProfileController::class)]

@@ -52,7 +52,7 @@ class RefreshTokenRepository extends EntityRepository
      * /v3/auth/logout-all and as a side effect of password change.
      *
      * Returns the number of tokens revoked. Done as a single bulk
-     * UPDATE for efficiency — Doctrine doesn't fire entity lifecycle
+     * UPDATE for efficiency, Doctrine doesn't fire entity lifecycle
      * hooks for DQL UPDATE, but RefreshToken has none anyway.
      */
     public function revokeAllForUser(User $user, string $reason): int
@@ -71,7 +71,7 @@ class RefreshTokenRepository extends EntityRepository
     }
 
     /**
-     * Cleanup job — delete tokens that expired more than `daysOld`
+     * Cleanup job, delete tokens that expired more than `daysOld`
      * days ago. Run nightly via a cron in M5; for M1 we just have
      * the method ready.
      *

@@ -20,7 +20,7 @@ namespace Bayti\Api\Http;
  *     }
  *   }
  *
- * This shape is locked by the roadmap §9.3 — endpoints must match the
+ * This shape is locked by the roadmap §9.3, endpoints must match the
  * legacy v2 contract on responses so frontends don't need per-endpoint
  * adapters. All v3 catalog list endpoints emit this shape.
  *
@@ -62,7 +62,7 @@ final class PaginatedEnvelope
     }
 
     /**
-     * Wrap a single resource in the envelope shape too — for endpoints
+     * Wrap a single resource in the envelope shape too, for endpoints
      * that aren't paginated but should still emit { data: ... } for
      * shape consistency. No `meta` for single resources.
      *

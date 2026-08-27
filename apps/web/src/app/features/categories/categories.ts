@@ -21,7 +21,7 @@ import { Category } from './category.model';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
- * Categories index — `/category`.
+ * Categories index, `/category`.
  *
  * Lists all visible product categories as a clickable grid, fetched
  * client-side on load.
@@ -56,7 +56,7 @@ export class CategoriesComponent {
   /**
    * Loaded categories. Starts as null (= loading); becomes Category[]
    * once data arrives. Errors resolve to empty array so the page still
-   * renders — caller-side error handling can be added later.
+   * renders, caller-side error handling can be added later.
    */
   readonly categories = toSignal(this.fetchCategories$(), { initialValue: null });
 
@@ -68,7 +68,7 @@ export class CategoriesComponent {
     return [...cats].sort((a, b) => b.product_count - a.product_count);
   });
 
-  /** Loading state — true until the first fetch resolves. */
+  /** Loading state, true until the first fetch resolves. */
   readonly loading = computed(() => this.categories() === null);
 
   constructor() {

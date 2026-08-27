@@ -36,7 +36,7 @@ interface DashboardData {
 }
 
 /**
- * Insightful vendor dashboard — a balanced view of sales (revenue, orders,
+ * Insightful vendor dashboard, a balanced view of sales (revenue, orders,
  * AOV, trend) and operations (items awaiting action, low stock), plus
  * catalog health, top products, and recent orders. Reads
  * GET /vendor/dashboard.

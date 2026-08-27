@@ -1,7 +1,7 @@
 import type { Product } from '../catalog/product.model';
 
 /**
- * Category — matches the GET /v2/categories response item shape.
+ * Category, matches the GET /v2/categories response item shape.
  *
  * Note on the `image` field: the backend's category.icon column historically
  * stores Lucide icon names (e.g. '@tui.sparkles') rather than image
@@ -21,12 +21,12 @@ export interface Category {
 }
 
 /**
- * CategoryDetail — matches the GET /v3/categories/:slug response shape.
+ * CategoryDetail, matches the GET /v3/categories/:slug response shape.
  *
  * Extends Category with the embedded first-page list of products that the
  * detail endpoint returns alongside the category metadata. This means
  * `/category/:slug` can render the full landing page from a single API
- * call — no follow-up `/products?category=...` request needed.
+ * call, no follow-up `/products?category=...` request needed.
  *
  * `meta.total_products` ≠ `product_count`. `product_count` is the raw
  * count in the category JOIN (includes products from non-approved
@@ -40,7 +40,7 @@ export interface CategoryDetail extends Category {
 
 /** Pagination meta returned alongside CategoryDetail. */
 export interface CategoryDetailMeta {
-  /** Approved+published count — the number we display to users. */
+  /** Approved+published count, the number we display to users. */
   total_products: number;
   page_size: number;
 }

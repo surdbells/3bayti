@@ -13,7 +13,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
  * Body shape: { "shipping": bool, "billing": bool }
  *
  * Either field optional individually but at LEAST ONE must be present
- * (sending an empty body has no operation to perform — different from
+ * (sending an empty body has no operation to perform, different from
  * PATCH /me/profile where 'no change' is meaningful).
  *
  * Tristate constructor caveat
@@ -28,7 +28,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
  *   - false  = clear this address from being default for that role
  *
  * If both fields are null after validation, that means an empty
- * body or an all-null payload — Callback rejects with a 422.
+ * body or an all-null payload, Callback rejects with a 422.
  */
 final class SetDefaultInput
 {

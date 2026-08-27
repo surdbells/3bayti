@@ -18,7 +18,7 @@ use Psr\Log\LoggerInterface;
  *
  * Filters applied:
  *   - Only PAID orders (orders.paid_at IS NOT NULL)
- *   - Only items NOT in (rejected, refunded) — same status exclusions
+ *   - Only items NOT in (rejected, refunded), same status exclusions
  *     as revenue (rejected items represent broken transactions; the
  *     customer never actually got both products together)
  *   - Window: last 365 days (Q-CoPurchaseWindow = C locked: 1 year
@@ -28,7 +28,7 @@ use Psr\Log\LoggerInterface;
  *     products)
  *
  * Q-VendorScope = A locked: marketplace-wide. Co-purchases can span
- * vendors — if a customer bought product X from vendor A and product
+ * vendors, if a customer bought product X from vendor A and product
  * Y from vendor B in the same order, that's still a valid signal.
  *
  * Q-PersonalizedScope = C locked: this calculator is product-pair-
@@ -59,7 +59,7 @@ class CoPurchaseAffinityCalculator
 
     /**
      * Top-N pairs per source product. Set well above the X.12-G
-     * read-side default limit (10) so the cron has headroom — but
+     * read-side default limit (10) so the cron has headroom, but
      * not so high that the table grows unboundedly. With ~10k
      * products * 50 rows = 500k rows max, which fits comfortably
      * in the indexed lookup.
@@ -68,7 +68,7 @@ class CoPurchaseAffinityCalculator
 
     /**
      * OrderItem statuses excluded from co-purchase counting.
-     * Same exclusions as revenue (X.13-B) — rejected + refunded
+     * Same exclusions as revenue (X.13-B), rejected + refunded
      * items represent broken transactions.
      */
     private const EXCLUDED_ITEM_STATUSES = ['rejected', 'refunded'];
@@ -114,7 +114,7 @@ class CoPurchaseAffinityCalculator
         // order contributes one co-occurrence count to BOTH
         // directions (X→Y and Y→X). We get symmetric pair counts
         // by joining on a.order_id = b.order_id with a.product_id
-        // != b.product_id (NOT < — we want both directions
+        // != b.product_id (NOT <, we want both directions
         // populated so each source product gets its own top-N list).
         //
         // ROW_NUMBER() OVER (PARTITION BY ...) ranks pairs within

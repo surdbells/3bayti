@@ -33,10 +33,10 @@ use Psr\Http\Message\ServerRequestInterface;
  * Body:
  *   title     string  required
  *   body      string  required
- *   audience  string  optional  — all | customers | vendors | admins (default all)
+ *   audience  string  optional , all | customers | vendors | admins (default all)
  *   image_url string  optional
  *   deep_link string  optional
- *   data      object  optional  — extra string key/values forwarded to the client
+ *   data      object  optional , extra string key/values forwarded to the client
  *
  * Backward compatible: the response still carries { recipients, sent, failed }
  * for a synchronously-sent (small) broadcast; queued sends return status
@@ -142,7 +142,7 @@ final class SendBroadcastNotificationController
         $names = [(int) $user->getId() => $this->displayName($user)];
 
         if ($totals['total'] <= self::INLINE_THRESHOLD) {
-            // Small audience — send now and return the finished summary.
+            // Small audience, send now and return the finished summary.
             $broadcast->markProcessing();
             $this->em->persist($broadcast);
             $this->em->flush();
@@ -160,7 +160,7 @@ final class SendBroadcastNotificationController
             )]);
         }
 
-        // Larger audience — queue for the background dispatcher.
+        // Larger audience, queue for the background dispatcher.
         $this->em->persist($broadcast);
         $this->em->flush();
 

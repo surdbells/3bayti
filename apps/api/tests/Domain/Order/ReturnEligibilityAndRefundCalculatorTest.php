@@ -45,7 +45,7 @@ use PHPUnit\Framework\TestCase;
 final class ReturnEligibilityAndRefundCalculatorTest extends TestCase
 {
     // =================================================================
-    // ReturnRequestEligibilityService — Rule 1 (window)
+    // ReturnRequestEligibilityService, Rule 1 (window)
     // =================================================================
 
     #[Test]
@@ -110,7 +110,7 @@ final class ReturnEligibilityAndRefundCalculatorTest extends TestCase
     #[Test]
     public function acceptsAtExactlyWindowBoundary(): void
     {
-        // Paid 13 days ago — well within the 14-day window. Microsecond
+        // Paid 13 days ago, well within the 14-day window. Microsecond
         // drift between the test computing daysAgo and the service
         // computing 'now' makes the exact 14-day boundary slightly
         // racy in tests; 13 days unambiguously inside is sufficient
@@ -132,7 +132,7 @@ final class ReturnEligibilityAndRefundCalculatorTest extends TestCase
     #[Test]
     public function customWindowDaysIsHonored(): void
     {
-        // 30-day window — paid 25 days ago should pass; 35 should fail.
+        // 30-day window, paid 25 days ago should pass; 35 should fail.
         $customer = $this->makeCustomer(42);
         $order = $this->makeOrder(user: $customer);
         $this->setProp($order, 'paidAt', $this->daysAgo(25));
@@ -149,7 +149,7 @@ final class ReturnEligibilityAndRefundCalculatorTest extends TestCase
     }
 
     // =================================================================
-    // ReturnRequestEligibilityService — Rule 2 (items)
+    // ReturnRequestEligibilityService, Rule 2 (items)
     // =================================================================
 
     #[Test]
@@ -304,7 +304,7 @@ final class ReturnEligibilityAndRefundCalculatorTest extends TestCase
     }
 
     // =================================================================
-    // ReturnRequestEligibilityService — Rule 3 (overlap)
+    // ReturnRequestEligibilityService, Rule 3 (overlap)
     // =================================================================
 
     #[Test]
@@ -325,7 +325,7 @@ final class ReturnEligibilityAndRefundCalculatorTest extends TestCase
     }
 
     // =================================================================
-    // ReturnRequestEligibilityService — early rejects + defense-in-depth
+    // ReturnRequestEligibilityService, early rejects + defense-in-depth
     // =================================================================
 
     #[Test]
@@ -457,7 +457,7 @@ final class ReturnEligibilityAndRefundCalculatorTest extends TestCase
     {
         // Even if the pro-rated math somehow goes negative (it can't
         // realistically, but defensive), result is clamped at 0.
-        // To trigger this we'd need pro_rated > returned_subtotal —
+        // To trigger this we'd need pro_rated > returned_subtotal -
         // can't happen with a properly computed pro-ration. So this
         // test just verifies the non-negative invariant on a normal
         // small case.
@@ -564,7 +564,7 @@ final class ReturnEligibilityAndRefundCalculatorTest extends TestCase
      * overlapping pending. Used when we want Rule 3 to pass.
      *
      * We bypass EntityRepository's constructor entirely via
-     * newInstanceWithoutConstructor — we only need to override
+     * newInstanceWithoutConstructor, we only need to override
      * hasOverlappingPendingForOrderItems, not any inherited behaviour.
      */
     private function makeRepoNeverFinds(): OrderReturnRequestRepository
@@ -595,7 +595,7 @@ final class ReturnEligibilityAndRefundCalculatorTest extends TestCase
 }
 
 /**
- * Concrete subclass used by makeRepoNeverFinds — newInstanceWithoutConstructor
+ * Concrete subclass used by makeRepoNeverFinds, newInstanceWithoutConstructor
  * needs a named class to instantiate.
  */
 final class NeverFindsReturnRepo extends OrderReturnRequestRepository

@@ -88,7 +88,7 @@ export class AdminComponent implements OnInit {
   @ViewChild('chart') chart!: ChartComponent;
   public chartOptions: Partial<ChartOptions>;
 
-  /** Rolling window (days) for the KPI metrics — keeps caption + metric in sync. */
+  /** Rolling window (days) for the KPI metrics, keeps caption + metric in sync. */
   windowDays = 30;
 
   // Recent orders pagination (server-driven)

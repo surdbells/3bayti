@@ -11,10 +11,10 @@
  *            https://developers.google.com/search/docs/appearance/structured-data
  *
  * Add new builders here as we ship new pages with rich-result eligibility:
- *   - Product (PDP) — done
- *   - BreadcrumbList — done
- *   - Organization (home) — done
- *   - WebSite (home, with sitelinks search box) — done
+ *   - Product (PDP), done
+ *   - BreadcrumbList, done
+ *   - Organization (home), done
+ *   - WebSite (home, with sitelinks search box), done
  *   - LocalBusiness, Review, ItemList, etc. as needed
  */
 
@@ -161,7 +161,7 @@ export interface ItemListEntry {
 }
 
 /**
- * ItemList schema — lets Google understand that a page contains a
+ * ItemList schema, lets Google understand that a page contains a
  * collection of related items. Helps with rich results for category
  * pages where users expect to see "all the abayas" type listings.
  *

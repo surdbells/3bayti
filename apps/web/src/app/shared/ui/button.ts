@@ -3,21 +3,21 @@ import { RouterLink } from '@angular/router';
 import { NgIf } from '@angular/common';
 
 /**
- * Button — interactive primitive.
+ * Button, interactive primitive.
  *
  * Renders as <button> by default, or <a> when `href` or `routerLink` is
  * provided. This means semantic correctness (button-vs-link) is driven
  * by props instead of forcing the consumer to pick a different component.
  *
  * Variants:
- *   primary    Solid gold, white text — main CTAs
- *   secondary  Bordered, brand-colored text — secondary actions
- *   ghost      Transparent, brand-colored text — tertiary / inline
+ *   primary    Solid gold, white text, main CTAs
+ *   secondary  Bordered, brand-colored text, secondary actions
+ *   ghost      Transparent, brand-colored text, tertiary / inline
  *
  * Sizes:
- *   sm   32px tall  — compact / inline
- *   md   44px tall  — default (mobile-friendly tap target)
- *   lg   52px tall  — hero CTAs
+ *   sm   32px tall , compact / inline
+ *   md   44px tall , default (mobile-friendly tap target)
+ *   lg   52px tall , hero CTAs
  *
  * Usage:
  *   <ui-button (clicked)="onClick()">Buy now</ui-button>

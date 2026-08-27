@@ -103,11 +103,11 @@ const SIZE_MAP: Record<string, string> = {
  * (create-product, edit-product) and the admin product pages.
  *
  * Behaviour is driven by inputs:
- *   - mode='create'|'edit'   — controls submit verb + page copy.
- *   - adminMode=true          — targets the /admin/products write API and
+ *   - mode='create'|'edit'  , controls submit verb + page copy.
+ *   - adminMode=true         , targets the /admin/products write API and
  *                               shows a required vendor/store selector
  *                               (admins create/edit on behalf of a vendor).
- *   - productId               — when editing, the product to load.
+ *   - productId              , when editing, the product to load.
  *
  * The component owns the entire form (fields, images, colors, sizes,
  * collections, labels), self-loads on edit, self-submits to the correct
@@ -135,7 +135,7 @@ export class ProductFormComponent implements OnInit {
   @Input() mode: 'create' | 'edit' = 'create';
   @Input() adminMode = false;
   @Input() productId = 0;
-  /** Optional slug — preferred edit-load key when present (admin list
+  /** Optional slug, preferred edit-load key when present (admin list
    *  exposes slug + v3 id but not the legacy id). */
   @Input() productSlug = '';
   /** Where to navigate after a successful save (defaults per role). */
@@ -330,7 +330,7 @@ export class ProductFormComponent implements OnInit {
         this.model.stock_status = p.stock_status ?? 'in_stock';
         this.model.allow_checkout_when_out_of_stock = !!(p.allow_oversell ?? p.allow_checkout_when_out_of_stock);
         // Coerce 0/blank to 1: the API requires a positive min/max order qty,
-        // and `0 ?? 1` keeps 0 (0 isn't nullish) — which then fails on save.
+        // and `0 ?? 1` keeps 0 (0 isn't nullish), which then fails on save.
         this.model.minimum_order_quantity = Number(p.min_order_qty ?? p.minimum_order_quantity) || 1;
         this.model.maximum_order_quantity = Number(p.max_order_qty ?? p.maximum_order_quantity) || 1;
         this.model.is_featured = !!p.is_featured;
@@ -339,7 +339,7 @@ export class ProductFormComponent implements OnInit {
         this.model.is_sale = !!p.is_sale;
         this.model.require_extra_msmt = !!(p.requires_extra_msmt ?? p.require_extra_msmt);
         this.model.extra_msmt = p.extra_msmt ?? '';
-        // Delivery estimate — restore so an edit round-trips it instead of wiping.
+        // Delivery estimate, restore so an edit round-trips it instead of wiping.
         const di = p.delivery_info ?? {};
         this.model.delivery_time = di.time ?? '';
         this.model.custom_delivery_time = di.custom_time ?? '';
@@ -361,7 +361,7 @@ export class ProductFormComponent implements OnInit {
           .filter((src: string) => src && !src.includes('placeholder'));
         this.galleryUrls = [...this.existingImages];
 
-        // Collections multiselect — the product holds a single collection_id;
+        // Collections multiselect, the product holds a single collection_id;
         // tolerate a legacy `collection` array too.
         const serverCollection = p.collection ?? (p.collection_id != null ? [p.collection_id] : []);
         this.selectedCollectionIds = Array.isArray(serverCollection)
@@ -370,7 +370,7 @@ export class ProductFormComponent implements OnInit {
         // Label (single).
         if (p.label_id != null) this.model.label = p.label_id;
 
-        // Sizes — v3 returns [{label, in_stock}]; tolerate bare strings/flags.
+        // Sizes, v3 returns [{label, in_stock}]; tolerate bare strings/flags.
         const sizesArr: string[] = Array.isArray(p.sizes)
           ? p.sizes.map((s: any) => String(typeof s === 'string' ? s : s?.label ?? '').toUpperCase())
           : [];
@@ -378,7 +378,7 @@ export class ProductFormComponent implements OnInit {
           if (sizesArr.includes(label.toUpperCase())) (this.model as any)[flag] = true;
         }
 
-        // Colors — v3 returns [{label, hex_code}]; tolerate array of strings or CSV.
+        // Colors, v3 returns [{label, hex_code}]; tolerate array of strings or CSV.
         const colorVals: string[] = Array.isArray(p.colors)
           ? p.colors.map((c: any) => (typeof c === 'string' ? c : c?.label)).filter(Boolean)
           : String(p.colors ?? '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -483,7 +483,7 @@ export class ProductFormComponent implements OnInit {
       this.toast.error('Please wait for the image upload to finish.'); return false;
     }
     // Store is only chosen at create time; on edit it's fixed (read-only), so
-    // don't block the save on it — the product already belongs to a vendor.
+    // don't block the save on it, the product already belongs to a vendor.
     if (this.adminMode && !this.isEdit && !this.model.vendor_id) { this.toast.error('Select the store this product belongs to'); return false; }
     if (Number(this.model.category) === 0) { this.toast.error('Product category is required'); return false; }
     if (!this.model.name.length) { this.toast.error('Name is required'); return false; }

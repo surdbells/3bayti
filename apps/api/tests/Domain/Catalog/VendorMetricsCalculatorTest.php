@@ -68,7 +68,7 @@ final class VendorMetricsCalculatorTest extends TestCase
     public function emptyVendorReturnsNullRatesWithZeroCounts(): void
     {
         // Q-EmptyHandling = A: rates are null when denominator is 0
-        // (not 0.0 — that would imply "perfect performance, vendor
+        // (not 0.0, that would imply "perfect performance, vendor
         // had 100 orders all delivered" which is wrong).
         $captured = $this->captureSingleVendor([
             'items' => ['total' => '0', 'fulfilled' => '0', 'rejected' => '0'],
@@ -211,7 +211,7 @@ final class VendorMetricsCalculatorTest extends TestCase
             ],
             'returns' => [
                 ['vendor_id' => '101', 'approved' => '1'],
-                // vendor 202 had no approved returns — absent from rows
+                // vendor 202 had no approved returns, absent from rows
             ],
             'orders' => [
                 ['vendor_id' => '101', 'total' => '40', 'disputed' => '0'],
@@ -225,13 +225,13 @@ final class VendorMetricsCalculatorTest extends TestCase
         self::assertArrayHasKey(101, $result);
         self::assertArrayHasKey(202, $result);
 
-        // Vendor 101 — good performance
+        // Vendor 101, good performance
         self::assertSame(0.96, $result[101]['metrics']['fulfillment_rate']['value']);
         self::assertSame(0.02, $result[101]['metrics']['cancellation_rate']['value']);
         self::assertSame(0.02, $result[101]['metrics']['return_rate']['value']);
         self::assertSame(0.0, $result[101]['metrics']['dispute_rate']['value']);
 
-        // Vendor 202 — poor performance
+        // Vendor 202, poor performance
         self::assertSame(0.5, $result[202]['metrics']['fulfillment_rate']['value']);
         self::assertSame(0.25, $result[202]['metrics']['cancellation_rate']['value']);
         self::assertSame(0.0, $result[202]['metrics']['return_rate']['value']);

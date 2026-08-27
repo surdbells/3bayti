@@ -14,8 +14,8 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * listShape must emit `category_id` (alongside `category_slug`) so the admin
- * product-edit form — which slug-loads the storefront detail shape (detailShape
- * inherits listShape) — can pre-select the category radio. Without the numeric
+ * product-edit form, which slug-loads the storefront detail shape (detailShape
+ * inherits listShape), can pre-select the category radio. Without the numeric
  * id the radio (bound by [value]="c.id") never matches and stays empty.
  *
  * @see ProductSerializer::listShape()
@@ -52,7 +52,7 @@ final class ProductSerializerCategoryTest extends TestCase
     #[Test]
     public function detailShapeInheritsCategoryIdFromListShape(): void
     {
-        // Admin edit slug-loads detailShape, which inherits listShape — guard
+        // Admin edit slug-loads detailShape, which inherits listShape, guard
         // that the inherited key flows through to the detail payload too.
         $serializer = new ProductSerializer();
         $product = $this->makeProduct();

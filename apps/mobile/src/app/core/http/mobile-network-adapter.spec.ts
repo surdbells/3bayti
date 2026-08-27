@@ -8,7 +8,7 @@
  * than mobile currently has set up (no integration tests, no
  * HttpClient mocks anywhere in the codebase).
  *
- * The two translate functions and the URL resolver are PURE — they
+ * The two translate functions and the URL resolver are PURE, they
  * don't touch HttpClient. So they can be tested as straight unit
  * tests without any test harness. They're also where the most subtle
  * bugs would land (id/token extraction edge cases, v3 envelope
@@ -17,7 +17,7 @@
  *
  * Why the spec exists if CI doesn't run it
  * =========================================
- * Mobile CI is type-check + build only — no `ng test` execution.
+ * Mobile CI is type-check + build only, no `ng test` execution.
  * This spec still earns its place:
  *
  *   1. It compile-checks against the implementation. Any breaking

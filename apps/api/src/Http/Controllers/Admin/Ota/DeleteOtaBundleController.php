@@ -14,7 +14,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * DELETE /v3/admin/ota/bundles/{id} — remove a bundle row and its stored .zip.
+ * DELETE /v3/admin/ota/bundles/{id}, remove a bundle row and its stored .zip.
  *
  * @param array<string, string> $args
  */

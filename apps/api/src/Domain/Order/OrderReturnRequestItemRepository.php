@@ -13,7 +13,7 @@ use Doctrine\ORM\EntityRepository;
  * OrderReturnRequest's items collection (Doctrine fetches the
  * association lazily). Direct repo queries are reserved for the
  * vendor-side queries that filter by vendor_id without needing to
- * materialize the parent — covered by the parent repo's
+ * materialize the parent, covered by the parent repo's
  * findForVendorPaginated method.
  */
 class OrderReturnRequestItemRepository extends EntityRepository

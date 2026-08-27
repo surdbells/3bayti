@@ -1,12 +1,12 @@
 /**
- * PlacesService — wraps the Google Places API (New) for the portal.
+ * PlacesService, wraps the Google Places API (New) for the portal.
  *
  * Ported from apps/web/src/app/core/places/places.service.ts (itself ported
- * from mobile). Pure fetch() against the Places API (New) — no Google Maps JS
+ * from mobile). Pure fetch() against the Places API (New), no Google Maps JS
  * SDK / script loader. Reads the key from ./places.config.
  *
- *   1. POST https://places.googleapis.com/v1/places:autocomplete  — suggestions
- *   2. GET  https://places.googleapis.com/v1/places/{placeId}      — details
+ *   1. POST https://places.googleapis.com/v1/places:autocomplete , suggestions
+ *   2. GET  https://places.googleapis.com/v1/places/{placeId}     , details
  *
  * A session token (v4 UUID) groups autocomplete keystrokes + the final details
  * call into one billable unit; discarded after details. If the API key is

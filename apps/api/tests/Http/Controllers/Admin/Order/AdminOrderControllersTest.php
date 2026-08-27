@@ -160,7 +160,7 @@ final class AdminOrderControllersTest extends HttpTestCase
     public function overrideStatusBypassesTransitionValidation(): void
     {
         // Admin forces an order from pending_payment directly to
-        // refunded — a transition the normal state machine would reject.
+        // refunded, a transition the normal state machine would reject.
         $admin = $this->makeAdminUser(99);
         $customer = $this->makeUser(id: 42);
         $order = $this->makeOrder($customer, id: 100, reference: 'V3-001', subtotal: '299.00');
@@ -216,7 +216,7 @@ final class AdminOrderControllersTest extends HttpTestCase
     #[Test]
     public function overrideItemStatusBypassesItemTransitionRules(): void
     {
-        // Admin forces an item from pending directly to delivered —
+        // Admin forces an item from pending directly to delivered -
         // would be illegal via the normal vendor endpoint.
         $admin = $this->makeAdminUser(99);
         $customer = $this->makeUser(id: 42);
@@ -300,7 +300,7 @@ final class AdminOrderControllersTest extends HttpTestCase
         $userRepo->method('findById')->willReturn($user);
 
         // GetAdminOrderController enriches the detail shape with the customer's
-        // saved body measurements — mock the repo so that unguarded lookup
+        // saved body measurements, mock the repo so that unguarded lookup
         // resolves (empty set) instead of returning null and 500ing.
         $measurementRepo = $this->createMock(MeasurementRepository::class);
         $measurementRepo->method('findAllForUser')->willReturn([]);
@@ -310,7 +310,7 @@ final class AdminOrderControllersTest extends HttpTestCase
         $giftCardRepo = $this->createMock(GiftCardRepository::class);
         $giftCardRepo->method('findByPurchaseOrderReference')->willReturn($giftCard);
 
-        // Capturing audit repository — collects logs in $this->recordedAuditLogs
+        // Capturing audit repository, collects logs in $this->recordedAuditLogs
         $auditRepo = new class($this->recordedAuditLogs) extends \Doctrine\ORM\EntityRepository {
             public function __construct(private array &$sink) {}
             public function save(\Bayti\Api\Domain\Audit\AuditLog $log): void

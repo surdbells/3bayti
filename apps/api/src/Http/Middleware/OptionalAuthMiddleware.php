@@ -16,7 +16,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 /**
  * Optional authentication middleware.
  *
- * Like AuthMiddleware, but never returns 401 — instead, it just
+ * Like AuthMiddleware, but never returns 401, instead, it just
  * doesn't set the `user` and `claims` attributes when no valid
  * token is present. Downstream handlers must check whether the
  * attribute is null.
@@ -26,13 +26,13 @@ use Psr\Http\Server\RequestHandlerInterface;
  * Endpoints that work for both signed-in and anonymous visitors but
  * personalise when authenticated. Examples (all M2/M3):
  *
- *   GET /v3/products/:slug    — fetch product. Anonymous gets the
+ *   GET /v3/products/:slug   , fetch product. Anonymous gets the
  *                                 raw product; authed user gets the
  *                                 same plus their wishlist state for
  *                                 this product, their measurement-
  *                                 size suggestion, etc.
  *
- *   GET /v3/cart              — anonymous returns 401? No — better
+ *   GET /v3/cart             , anonymous returns 401? No, better
  *                                 to return their guest-cart state
  *                                 (server holds nothing; client uses
  *                                 the local-first cart from Phase 2).
@@ -52,14 +52,14 @@ final class OptionalAuthMiddleware implements MiddlewareInterface
     {
         $token = $this->extractBearerToken($request);
         if ($token === null) {
-            // No header at all — proceed anonymous.
+            // No header at all, proceed anonymous.
             return $handler->handle($request);
         }
 
         $claims = $this->jwt->verifyAccessToken($token);
         if ($claims === null) {
-            // Token was present but invalid — silently drop it and
-            // proceed anonymous. Don't 401, don't 400 — anonymous
+            // Token was present but invalid, silently drop it and
+            // proceed anonymous. Don't 401, don't 400, anonymous
             // requests are valid for these endpoints.
             return $handler->handle($request);
         }
@@ -71,7 +71,7 @@ final class OptionalAuthMiddleware implements MiddlewareInterface
             return $handler->handle($request);
         }
 
-        // pwd_changed_at staleness — same logic as AuthMiddleware.
+        // pwd_changed_at staleness, same logic as AuthMiddleware.
         $userPwdChanged = $user->getPasswordChangedAt();
         $tokenPwdChanged = $claims->passwordChangedAt;
         if ($userPwdChanged !== null) {
@@ -83,7 +83,7 @@ final class OptionalAuthMiddleware implements MiddlewareInterface
         // Attribute audit-log rows for this request to the resolved user.
         \Bayti\Api\Domain\Audit\AuditContext::setActor($user->getId());
 
-        // All checks passed — decorate request with user + claims.
+        // All checks passed, decorate request with user + claims.
         $request = $request
             ->withAttribute(AuthMiddleware::ATTR_USER, $user)
             ->withAttribute(AuthMiddleware::ATTR_CLAIMS, $claims);

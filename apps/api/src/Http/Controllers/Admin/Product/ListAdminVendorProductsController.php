@@ -25,7 +25,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * (GET /v3/vendors/{slug}/products and the by-legacy-id shim), this
  * applies NO storefront gates: products in ALL states (draft, inactive,
  * out-of-stock) are returned, and there is NO vendor active/approved
- * gate — admins manage inactive and pending stores too. The store-products
+ * gate, admins manage inactive and pending stores too. The store-products
  * page in the portal previously called the public by-legacy-id route,
  * which 404'd inactive vendors and (via ProductRepository::findActivePaginated)
  * hid every product of a non active+approved vendor, so admins saw an
@@ -72,7 +72,7 @@ final class ListAdminVendorProductsController
 
         /** @var VendorRepository $vendorRepo */
         $vendorRepo = $this->em->getRepository(Vendor::class);
-        // Admins manage inactive/pending stores — no active/approved gate.
+        // Admins manage inactive/pending stores, no active/approved gate.
         $vendor = $vendorRepo->find($vendorId);
         if ($vendor === null) {
             throw HttpException::notFound('Vendor not found.');

@@ -12,7 +12,7 @@ ion-content.app-bg {
   ion-content.app-bg { --background: var(--ax-color-bg-surface); }
 }
 
-/* ----- Auth container — LEFT-aligned single column, footer pinned bottom ----- */
+/* ----- Auth container, LEFT-aligned single column, footer pinned bottom ----- */
 .auth-container {
   display: flex;
   flex-direction: column;
@@ -22,7 +22,7 @@ ion-content.app-bg {
   padding: 1.5rem 0;
 }
 
-/* ----- Heading block — bold left heading + helper text ----- */
+/* ----- Heading block, bold left heading + helper text ----- */
 .auth-head {
   margin: 0.5rem 0 1.75rem;
   text-align: start;
@@ -191,7 +191,7 @@ ion-content.app-bg {
   &:active { opacity: 0.7; }
 }
 
-/* ----- Forgot-password link — right-aligned, subtle ----- */
+/* ----- Forgot-password link, right-aligned, subtle ----- */
 .forgot-password-row {
   display: flex;
   justify-content: flex-end;
@@ -206,7 +206,7 @@ ion-content.app-bg {
   margin: 1rem 0 0;
 }
 
-/* ----- Auth footer — pinned to bottom, full-width primary button ----- */
+/* ----- Auth footer, pinned to bottom, full-width primary button ----- */
 .auth-footer {
   margin-top: auto;
   padding-top: 1.5rem;
@@ -259,7 +259,7 @@ ion-content.app-bg {
   &:active { opacity: 0.7; }
 }
 
-/* ----- Loader row — centered ----- */
+/* ----- Loader row, centered ----- */
 .loader-row {
   display: flex;
   justify-content: center;

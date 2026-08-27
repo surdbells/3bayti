@@ -22,7 +22,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * POST /v3/vendor-applications  (PUBLIC — no auth)
+ * POST /v3/vendor-applications  (PUBLIC, no auth)
  *
  * A prospective seller submits an application from the storefront
  * "Become a seller" form. This is the ONLY door into the marketplace;
@@ -41,13 +41,13 @@ use Psr\Log\LoggerInterface;
  * Idempotent dedup
  * ----------------
  * If the email already has a PENDING application, we DON'T create a
- * second row — we return 200 with the existing application's id/status
+ * second row, we return 200 with the existing application's id/status
  * and a friendly already_submitted=true flag.
  *
  * Success: 201 { "application": { "id": 123, "status": "pending" } }
  *
  * Optional ops notification (env VENDOR_APPLICATIONS_NOTIFY_EMAIL) is
- * sent non-blocking — a mailer failure never fails the submit.
+ * sent non-blocking, a mailer failure never fails the submit.
  */
 final class SubmitVendorApplicationController
 {
@@ -135,11 +135,11 @@ final class SubmitVendorApplicationController
      */
     private function enforceRateLimits(?string $ip, string $email): void
     {
-        // Per-email (always available — email is in the body).
+        // Per-email (always available, email is in the body).
         $this->enforceCooldown('vendorapp:cd:email:' . $email);
         $this->enforceHourlyCap('vendorapp:rl:email:' . $email, self::PER_EMAIL_HOURLY_CAP);
 
-        // Per-IP (skipped entirely when the IP can't be resolved — never
+        // Per-IP (skipped entirely when the IP can't be resolved, never
         // block a legit user because we couldn't read their IP).
         if ($ip !== null && $ip !== '') {
             $this->enforceCooldown('vendorapp:cd:ip:' . $ip);
@@ -196,7 +196,7 @@ final class SubmitVendorApplicationController
     /**
      * Optionally email a configured ops address that a new application
      * arrived. Env-gated (VENDOR_APPLICATIONS_NOTIFY_EMAIL) + entirely
-     * non-blocking — a mailer failure never fails the submit.
+     * non-blocking, a mailer failure never fails the submit.
      */
     private function notifyOps(VendorApplication $application): void
     {

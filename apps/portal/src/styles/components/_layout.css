@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Layout & Topbar
+   Abayti Design System, Layout & Topbar
    .ax-layout (shell), .ax-main, .ax-topbar, .ax-page-header
    ========================================================================= */
 
@@ -136,7 +136,7 @@
 
 /* .ax-main already supplies the horizontal content inset (--ax-content-padding-x).
    The dashboard renders straight into .ax-main, but most pages wrap their content
-   in a .ax-container which re-applies the same padding — doubling the left/right
+   in a .ax-container which re-applies the same padding, doubling the left/right
    inset and misaligning those pages against the dashboard. When a container sits
    directly inside the shell, drop its redundant horizontal padding so every page
    shares the dashboard's left/right spacing. (The container keeps its max-width

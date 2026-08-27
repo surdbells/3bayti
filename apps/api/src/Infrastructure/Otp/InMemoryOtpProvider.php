@@ -8,7 +8,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * In-memory OTP provider — used in dev + tests; no network calls.
+ * In-memory OTP provider, used in dev + tests; no network calls.
  *
  * Behavior
  * --------
@@ -23,7 +23,7 @@ use Psr\Log\NullLogger;
  *
  * Default test code
  * -----------------
- * '000000' — chosen because it's:
+ * '000000', chosen because it's:
  *   - Easy to remember during dev
  *   - Obviously a test value (no real OTP would be all zeros)
  *   - Non-conflicting with any pattern a real CPaaS might generate
@@ -32,7 +32,7 @@ use Psr\Log\NullLogger;
  * -----------------
  * This provider is bound in DI ONLY when APP_ENV is 'dev' or
  * 'test'. The MessageCentral provider activates for 'prod'. There's
- * no path for InMemoryOtpProvider to leak into production — the DI
+ * no path for InMemoryOtpProvider to leak into production, the DI
  * factory throws if APP_ENV=prod and the in-memory adapter is
  * specified.
  */

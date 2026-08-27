@@ -102,7 +102,7 @@ class NotificationBroadcastRecipientRepository extends EntityRepository
 
     /**
      * Platform-split count of resend targets (active tokens) for a source
-     * broadcast — used to seed the new broadcast's totals.
+     * broadcast, used to seed the new broadcast's totals.
      *
      * @return array{total:int, android:int, ios:int}
      */

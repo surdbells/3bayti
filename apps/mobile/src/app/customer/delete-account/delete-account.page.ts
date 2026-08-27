@@ -24,7 +24,7 @@ import { I18nService } from '../../i18n.service';
 import { PushManager } from '../../core/services/push-manager.service';
 
 /**
- * In-app account deletion (App Store requirement — Apple 5.1.1(v)).
+ * In-app account deletion (App Store requirement, Apple 5.1.1(v)).
  *
  * Backend contract (M3.2.Y.6-A):
  *   DELETE /v3/me  body { current_password }  -> 204
@@ -137,7 +137,7 @@ export class DeleteAccountPage implements OnInit {
     try {
       await this.pushManager.onSignedOutReadingToken();
     } catch {
-      /* swallow — account is gone regardless */
+      /* swallow, account is gone regardless */
     }
     await Preferences.remove({ key: 'keep_session' });
     await Preferences.remove({ key: 'user' });

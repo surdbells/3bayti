@@ -33,7 +33,7 @@ import { ToastService, mapApiErrors } from '../../shared/forms';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
- * /account/orders/:id/return — submit a return request.
+ * /account/orders/:id/return, submit a return request.
  *
  * Auth-gated. Reachable from the order detail page's "Request a
  * return" CTA (Y.5 wires the CTA; this route stands on its own and
@@ -302,7 +302,7 @@ export class AccountOrderReturnPageComponent implements OnInit {
   private readonly _photos = signal<File[]>([]);
   protected readonly photos = this._photos.asReadonly();
 
-  /** Currently-selected item ids — stored separately from the form
+  /** Currently-selected item ids, stored separately from the form
    *  for cleaner template binding (checkbox group). */
   private readonly _selectedItemIds = signal<number[]>([]);
   protected readonly selectedItemIds = this._selectedItemIds.asReadonly();

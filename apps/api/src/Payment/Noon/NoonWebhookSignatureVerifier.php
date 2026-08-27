@@ -9,10 +9,10 @@ namespace Bayti\Api\Payment\Noon;
  *
  * Why an interface (not a single class):
  * Noon's webhook signature algorithm is documented behind the
- * merchant portal — not publicly available. M3.1.6 ships
+ * merchant portal, not publicly available. M3.1.6 ships
  * WITHOUT trusting webhook signatures, relying instead on the
  * "retrieve-order-before-acting" pattern (Noon-recommended per
- * docs.noonpayments.com/test/evaluating-api — they explicitly
+ * docs.noonpayments.com/test/evaluating-api, they explicitly
  * advise "it is also possible to call the GET ORDER API to
  * determine the order status").
  *
@@ -23,11 +23,11 @@ namespace Bayti\Api\Payment\Noon;
  *
  * Two implementations ship in M3.1.6:
  *
- *   - LoggingOnlyVerifier — accepts everything, records the
+ *   - LoggingOnlyVerifier, accepts everything, records the
  *     supplied signature header to payment_webhook_events for
  *     forensic analysis (M3.1.7 input). Bound by default.
  *
- *   - HmacSha256SignatureVerifier — best-guess implementation
+ *   - HmacSha256SignatureVerifier, best-guess implementation
  *     using industry-standard HMAC-SHA256 over the raw request
  *     body with NOON_WEBHOOK_SECRET as the key. NOT bound by
  *     default; tests instantiate directly. M3.1.7 confirms or
@@ -41,7 +41,7 @@ interface NoonWebhookSignatureVerifier
      * @return bool true if the signature is valid (or trusted by
      *              policy, e.g. LoggingOnlyVerifier). Caller MUST
      *              NOT take the return value as the sole basis
-     *              for trusting the payload — the canonical
+     *              for trusting the payload, the canonical
      *              authority is GET_ORDER, not the webhook
      *              signature.
      */
@@ -50,7 +50,7 @@ interface NoonWebhookSignatureVerifier
     /**
      * Whether this verifier performs a real cryptographic check on
      * the signature (true), or accepts everything without verifying
-     * (false — e.g. LoggingOnlyVerifier).
+     * (false, e.g. LoggingOnlyVerifier).
      *
      * The controller stamps payment_webhook_events.signature_verified
      * with this value (only ever reached when verify() returned true),

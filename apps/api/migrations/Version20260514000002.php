@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.1.5.5a — schema for deferred mobile catalog endpoints.
+ * M3.1.5.5a, schema for deferred mobile catalog endpoints.
  *
  * Creates four schema artefacts to back the v3 endpoints that M3.1.5
  * couldn't flip because v3 had no equivalent:
@@ -38,15 +38,15 @@ use Doctrine\Migrations\AbstractMigration;
  * =====================================================
  * Three ways to keep a tsvector in sync with row mutations:
  *
- *   (a) PostgreSQL generated column (STORED) — declarative, no trigger
+ *   (a) PostgreSQL generated column (STORED), declarative, no trigger
  *       code, no chance of drift. Cost: every UPDATE recomputes the
  *       tsvector. For our write rate (product edits are rare) this
  *       cost is negligible.
  *
- *   (b) Trigger-maintained — flexible (can include data from other
+ *   (b) Trigger-maintained, flexible (can include data from other
  *       tables) but needs careful BEFORE INSERT/UPDATE OF handling.
  *
- *   (c) Application-managed — adapter or repo updates the tsvector on
+ *   (c) Application-managed, adapter or repo updates the tsvector on
  *       every write. Fragile (one missing call = stale index).
  *
  * Locked: (a) generated column. Tradeoff: can't include vendor.name
@@ -59,23 +59,23 @@ use Doctrine\Migrations\AbstractMigration;
  * GIN is faster for queries, slower for updates. GiST is the reverse.
  * For our read-heavy workload (search >> product edits), GIN wins.
  * Defaults: GIN's `fastupdate=on` mode batches updates into a pending
- * list and flushes periodically — fine for our profile.
+ * list and flushes periodically, fine for our profile.
  *
  * vendor_labels schema rationale
  * ===============================
- *   - legacy_label_id: BIGINT nullable + UNIQUE — preserves the original
+ *   - legacy_label_id: BIGINT nullable + UNIQUE, preserves the original
  *     legacy id from the legacy WordPress/CodeIgniter schema so M3.1.5
  *     mobile compat can resolve `label: 5` → v3 label via the existing
  *     by-legacy-id pattern.
- *   - vendor_id: FK to vendors(id) ON DELETE CASCADE — labels are
+ *   - vendor_id: FK to vendors(id) ON DELETE CASCADE, labels are
  *     per-vendor-only (Q3 default locked); a vendor delete cleans up
  *     their labels.
  *   - slug: per-vendor unique (UNIQUE on vendor_id+slug). Two vendors
  *     can each have an "Eid Collection" label; same vendor can't have
  *     two with the same slug.
- *   - display_order: smallint nullable — defaults to legacy ordering
+ *   - display_order: smallint nullable, defaults to legacy ordering
  *     when migrated; vendors/admins can re-sort later.
- *   - is_active: boolean — soft-disable a label without losing its
+ *   - is_active: boolean, soft-disable a label without losing its
  *     product associations.
  *
  * Why no labels-products join table
@@ -91,14 +91,14 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * styles schema rationale
  * ========================
- *   - legacy_style_id: BIGINT nullable + UNIQUE — same pattern as
+ *   - legacy_style_id: BIGINT nullable + UNIQUE, same pattern as
  *     legacy_label_id; supports legacy-id-keyed reads if needed.
  *   - style_type: smallint enum (1=community, 2=editorial). Mobile
- *     sends `type: "community"` in the body — the request transform
+ *     sends `type: "community"` in the body, the request transform
  *     in M3.1.5.5g maps the string to the int. Why smallint not
  *     varchar? Cheaper, plus a CHECK constraint catches typos.
  *   - cover_image_url: 500 chars (matches products.primary_image_url).
- *   - total_price: DECIMAL(10,2) — denormalised sum of contained
+ *   - total_price: DECIMAL(10,2), denormalised sum of contained
  *     products' prices. Computed at style-creation time (admin UI);
  *     not auto-recomputed when product prices change. Acceptable
  *     because mobile uses total_price as a display-only "outfit
@@ -107,12 +107,12 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * style_products schema rationale
  * ================================
- *   - Composite PK (style_id, product_id) — a product appears in a
+ *   - Composite PK (style_id, product_id), a product appears in a
  *     given style at most once.
- *   - display_order: smallint NOT NULL — controls render order in the
+ *   - display_order: smallint NOT NULL, controls render order in the
  *     style's product strip. Mobile reads `style.products[0]`,
- *     `style.products[1]`, etc. — order matters.
- *   - Both FKs ON DELETE CASCADE — deleting a style or product
+ *     `style.products[1]`, etc., order matters.
+ *   - Both FKs ON DELETE CASCADE, deleting a style or product
  *     cleans up the join.
  *
  * Idempotency
@@ -121,7 +121,7 @@ use Doctrine\Migrations\AbstractMigration;
  * uses COALESCE so NULL name/description don't NPE the tsvector. The
  * GIN index build is fast on an empty (or small) products table; for
  * a populated production table this migration will pause writes
- * briefly during the index build — acceptable maintenance window.
+ * briefly during the index build, acceptable maintenance window.
  *
  * Reversibility
  * =============
@@ -145,11 +145,11 @@ final class Version20260514000002 extends AbstractMigration
         );
 
         // -----------------------------------------------------------------
-        // 1) products.search_tsv — generated tsvector column + GIN index
+        // 1) products.search_tsv, generated tsvector column + GIN index
         // -----------------------------------------------------------------
         //
         // Generated column uses simple_text concatenation with COALESCE
-        // guards. Locale-aware searches use the 'english' config — fine
+        // guards. Locale-aware searches use the 'english' config, fine
         // for the current English-first catalog. Arabic/multilingual
         // requires a config-per-row approach (out of scope here).
         //
@@ -176,7 +176,7 @@ final class Version20260514000002 extends AbstractMigration
         $this->addSql('CREATE INDEX idx_products_search_tsv ON products USING GIN (search_tsv)');
 
         // -----------------------------------------------------------------
-        // 2) vendor_labels — per-vendor merchandising collections
+        // 2) vendor_labels, per-vendor merchandising collections
         // -----------------------------------------------------------------
         $this->addSql(<<<'SQL'
             CREATE TABLE vendor_labels (
@@ -225,7 +225,7 @@ final class Version20260514000002 extends AbstractMigration
         SQL);
 
         // -----------------------------------------------------------------
-        // 4) styles — community/editorial curated outfits
+        // 4) styles, community/editorial curated outfits
         // -----------------------------------------------------------------
         $this->addSql(<<<'SQL'
             CREATE TABLE styles (
@@ -254,7 +254,7 @@ final class Version20260514000002 extends AbstractMigration
         $this->addSql('CREATE INDEX idx_styles_legacy ON styles (legacy_style_id) WHERE legacy_style_id IS NOT NULL');
 
         // -----------------------------------------------------------------
-        // 5) style_products — many-to-many between styles and products
+        // 5) style_products, many-to-many between styles and products
         // -----------------------------------------------------------------
         $this->addSql(<<<'SQL'
             CREATE TABLE style_products (

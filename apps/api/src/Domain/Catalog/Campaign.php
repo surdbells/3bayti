@@ -15,15 +15,15 @@ use Doctrine\ORM\Mapping as ORM;
  * "Flash Sale").
  *
  * Two types drive distinct homepage treatments:
- *   - 'anniversary' — celebratory deals, event countdown to ends_at
- *   - 'flash'       — urgency: live countdown + per-item stock bars
+ *   - 'anniversary', celebratory deals, event countdown to ends_at
+ *   - 'flash'      , urgency: live countdown + per-item stock bars
  *
  * Pricing
  * -------
  * `discount_percent` here is the campaign-wide default applied to every
  * product in the campaign. An individual CampaignItem may override it.
  * The effective discount is resolved per item (item override ?? campaign
- * default) and applied to the product's current price by the serializer —
+ * default) and applied to the product's current price by the serializer -
  * the campaign never stores a per-product money amount, so it stays
  * correct as product prices change.
  *

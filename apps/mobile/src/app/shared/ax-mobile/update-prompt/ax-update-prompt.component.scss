@@ -1,5 +1,5 @@
 /* ============================================================================
-   AxUpdatePromptComponent — centered floating modal for force-update prompts
+   AxUpdatePromptComponent, centered floating modal for force-update prompts
 
    Visually distinct from AxBottomSheet:
      - Centered (not bottom-aligned)
@@ -18,7 +18,7 @@
   /* Full-viewport overlay positioned above all app content. The 9999
      z-index puts us above tab bars (z-1000), notification host (z-1500),
      bottom sheets (z-1000), and Ionic's own modals/toasts (z-2000).
-     We're a hard blocker — nothing should sit on top of us. */
+     We're a hard blocker, nothing should sit on top of us. */
   position: fixed;
   inset: 0;
   z-index: 9999;
@@ -34,11 +34,11 @@
 .ax-update-prompt__backdrop {
   position: absolute;
   inset: 0;
-  /* Stronger than typical sheet backdrop (rgba(0,0,0,0.4)) — makes
+  /* Stronger than typical sheet backdrop (rgba(0,0,0,0.4)), makes
      clear that the underlying app is non-interactive. */
   background: rgba(0, 0, 0, 0.65);
   /* Block pointer events so the user can't tap through to the page
-     behind us — even though there's no Cancel button, scrolls and
+     behind us, even though there's no Cancel button, scrolls and
      accidental taps shouldn't reach the app. */
   pointer-events: auto;
 }
@@ -56,7 +56,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  /* Subtle entrance animation — fades in + scales up. Cubic ease-out
+  /* Subtle entrance animation, fades in + scales up. Cubic ease-out
      for a "settle" feel rather than linear. */
   animation: ax-update-prompt-enter 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }

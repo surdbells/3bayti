@@ -18,7 +18,7 @@ use Doctrine\Migrations\AbstractMigration;
  *   - `url` / `checksum`   public CDN URL of the .zip + its SHA256 (the plugin
  *                          verifies the download against this)
  *   - `min_native_version` lowest native app build this bundle is compatible
- *                          with — the compatibility gate that keeps a bundle
+ *                          with, the compatibility gate that keeps a bundle
  *                          needing a newer native shell off older installs
  *   - `session_key`        non-null only for signed/encrypted bundles
  *   - `is_active`          flip false to retire/roll back a bundle; the endpoint
@@ -54,7 +54,7 @@ final class Version20260806000002 extends AbstractMigration
 
         // Lookup path for the update check: newest active bundle for an
         // app + platform + channel. Plain btree (matches the entity's
-        // #[ORM\Index] so schema:validate stays clean) — Postgres scans it
+        // #[ORM\Index] so schema:validate stays clean), Postgres scans it
         // backward for the ORDER BY created_at DESC LIMIT 1.
         $this->addSql(
             'CREATE INDEX idx_ota_bundles_lookup ON ota_bundles '

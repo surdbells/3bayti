@@ -30,7 +30,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * The return URL lives on the API host because:
  *   1. Noon needs ONE stable return URL set at initiate time.
  *   2. The mobile webview detects this exact API path to know the
- *      hosted checkout finished — it must NOT change to a web URL,
+ *      hosted checkout finished, it must NOT change to a web URL,
  *      or mobile breaks.
  * But web shoppers need to land in the Angular app (different host)
  * where the polling UI lives. A 302 bridges the two cleanly: mobile

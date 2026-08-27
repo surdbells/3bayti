@@ -39,7 +39,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *
  *   1. Looks up the order's INITIATE PaymentTransaction to get
  *      provider_order_ref (Noon's order id)
- *   2. Calls gateway.retrieveOrder(provider_order_ref) — the SAME
+ *   2. Calls gateway.retrieveOrder(provider_order_ref), the SAME
  *      authoritative call the webhook controller uses (Noon GET_ORDER)
  *   3. If Noon says paid: marks the order paid (idempotent)
  *   4. If Noon says failed: marks failed
@@ -49,7 +49,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * Critical safety property: this command uses the SAME retrieve-order-
  * before-acting pattern as the webhook receiver. The state change is
  * driven by Noon's authoritative response, not by any local inference.
- * Re-running the command is safe — markPaid/markFailed are idempotent.
+ * Re-running the command is safe, markPaid/markFailed are idempotent.
  *
  * Rate-limit awareness
  * ====================
@@ -191,7 +191,7 @@ final class ReconcilePendingOrdersCommand extends Command
                 continue;
             }
 
-            // Ask Noon — authoritative response. This is the same call
+            // Ask Noon, authoritative response. This is the same call
             // the webhook receiver uses; same safety semantics.
             try {
                 $status = $this->gateway->retrieveOrder($providerOrderRef);
@@ -238,7 +238,7 @@ final class ReconcilePendingOrdersCommand extends Command
             }
         }
 
-        // Persist all changes in one flush — keeps the cron's DB churn
+        // Persist all changes in one flush, keeps the cron's DB churn
         // bounded. markPaid/markFailed are idempotent so re-running
         // is safe.
         if (!$dryRun && $resolved > 0) {
@@ -277,7 +277,7 @@ final class ReconcilePendingOrdersCommand extends Command
      *   terminal + !paid   → markFailed()
      *   !terminal          → no-op (will retry next run)
      *
-     * markPaid/markFailed are idempotent at the entity level —
+     * markPaid/markFailed are idempotent at the entity level -
      * calling them on an already-paid/failed order is a no-op,
      * not an error.
      */
@@ -296,7 +296,7 @@ final class ReconcilePendingOrdersCommand extends Command
             }
             try {
                 if ($order->markPaid()) {
-                    // First paid transition for this order — decrement
+                    // First paid transition for this order, decrement
                     // flash-campaign stock. The command flushes once after
                     // processing the batch, so this persists with it.
                     $this->flashStock->reduceForPaidOrder($order);

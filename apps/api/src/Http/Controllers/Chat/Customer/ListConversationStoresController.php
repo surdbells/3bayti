@@ -18,7 +18,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * GET /v3/chat/conversation-stores — the store-grouped chat inbox for a
+ * GET /v3/chat/conversation-stores, the store-grouped chat inbox for a
  * customer. Replaces legacy /customer/read-messages.
  *
  * v3 chat is order-scoped (one Conversation per order item), but the
@@ -28,7 +28,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   { store, store_name, store_address, total_products }
  *
  * The response is shaped as { data: [...] } so the mobile envelope
- * adapter unwraps it directly into the page's `response.data` array —
+ * adapter unwraps it directly into the page's `response.data` array -
  * no client-side transform required.
  */
 final class ListConversationStoresController

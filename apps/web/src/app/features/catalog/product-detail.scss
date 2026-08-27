@@ -1,4 +1,4 @@
-/* PDP page — `/product/:slug`.
+/* PDP page, `/product/:slug`.
 
    Two-column layout on desktop (gallery left, info right).
    Single column stacked on mobile (gallery first, info below). */
@@ -796,7 +796,7 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--color-brand-700);
-  /* Subtle brand-tinted pill — keeps the badge from competing with
+  /* Subtle brand-tinted pill, keeps the badge from competing with
      the star rating but signals trust at a glance. */
   background: var(--color-brand-50);
   padding: 2px 8px;
@@ -853,7 +853,7 @@
   color: var(--color-brand-700);
 }
 
-/* "You may also like" — wrapping 5×2 grid (decision #5): 2 per row on
+/* "You may also like", wrapping 5×2 grid (decision #5): 2 per row on
    mobile, 3 on tablet, 5 across at the 1280 desktop breakpoint so 10
    items read as two tidy rows. Uses the compact ui-product-card. */
 .pdp-related__grid {
@@ -1229,7 +1229,7 @@
   .pdp-sticky-cta { transition: none; }
 }
 
-/* Empty reviews state (#4) — shown when a product has no reviews yet, so
+/* Empty reviews state (#4), shown when a product has no reviews yet, so
    the Reviews section is present + inviting rather than missing. */
 .pdp-reviews__empty {
   display: flex;

@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Create the vendor_applications table — the "apply → admin approves"
+ * Create the vendor_applications table, the "apply → admin approves"
  * seller intake flow that replaces self-serve vendor creation.
  *
  * Columns mirror the VendorApplication entity attribute mapping:

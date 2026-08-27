@@ -13,7 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
  * Legacy schema vs new schema
  * ---------------------------
  * The legacy backend stores measurements as fixed columns (`arm`,
- * `bust`, `hip`, `length`, `shoulder`, `armhole`) — one row per user,
+ * `bust`, `hip`, `length`, `shoulder`, `armhole`), one row per user,
  * a single canonical set of measurements. Adding a new field
  * required a schema change.
  *

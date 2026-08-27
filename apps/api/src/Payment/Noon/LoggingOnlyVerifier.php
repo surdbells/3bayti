@@ -16,7 +16,7 @@ use Psr\Log\NullLogger;
  * the body content known to be signed).
  *
  * The load-bearing safety mechanism in M3.1.6 is NOT this class
- * — it's the retrieve-order-before-acting pattern in
+ *, it's the retrieve-order-before-acting pattern in
  * NoonWebhookController. Even with no signature verification,
  * a spoofed webhook cannot make us mark an order paid because
  * we always call retrieveOrder() (server-to-server, authenticated
@@ -63,7 +63,7 @@ final class LoggingOnlyVerifier implements NoonWebhookSignatureVerifier
     }
 
     /**
-     * Passthrough verifier — accepts without any cryptographic check,
+     * Passthrough verifier, accepts without any cryptographic check,
      * so events it admits are NOT signature-verified. The controller
      * records this as payment_webhook_events.signature_verified=false.
      */

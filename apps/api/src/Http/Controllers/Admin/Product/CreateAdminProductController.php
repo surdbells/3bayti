@@ -20,7 +20,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** POST /v3/admin/products — Create a product on behalf of a vendor. Requires vendor_id in body. */
+/** POST /v3/admin/products, Create a product on behalf of a vendor. Requires vendor_id in body. */
 final class CreateAdminProductController
 {
     use Responder;

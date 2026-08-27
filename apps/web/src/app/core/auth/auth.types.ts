@@ -56,14 +56,14 @@ export interface TokenPair {
 }
 
 /**
- * Full login response — token pair + user.
+ * Full login response, token pair + user.
  */
 export interface LoginResponse extends TokenPair {
   user: AuthUser;
 }
 
 /**
- * Public-side login response — what the BFF returns to the browser.
+ * Public-side login response, what the BFF returns to the browser.
  *
  * Diverges from LoginResponse: the BFF strips refresh_token from the
  * JSON body and parks it as an HttpOnly cookie so it never reaches
@@ -81,13 +81,13 @@ export interface BffLoginResponse {
 }
 
 /**
- * Public-side refresh response — same shape as BffLoginResponse,
+ * Public-side refresh response, same shape as BffLoginResponse,
  * which is what the BFF returns when called via /auth-proxy/refresh.
  */
 export type BffRefreshResponse = BffLoginResponse;
 
 /**
- * Register endpoint response (unverified state — no tokens yet).
+ * Register endpoint response (unverified state, no tokens yet).
  *
  * Mirrors RegisterController response shape.
  */
@@ -102,7 +102,7 @@ export interface RegisterResponse {
 }
 
 /**
- * Reset password endpoint response — just a verification_id.
+ * Reset password endpoint response, just a verification_id.
  *
  * Anti-enumeration: the API returns the same shape whether the email
  * is registered or not (fake `fake-...` prefix vid for unknown
@@ -120,13 +120,13 @@ export interface SendOtpResponse {
 }
 
 /**
- * Logout response — always 204. Modelled as `void` so consumers don't
+ * Logout response, always 204. Modelled as `void` so consumers don't
  * have to write `await ... as void`.
  */
 export type LogoutResponse = void;
 
 /* ===========================================================================
-   Passwordless parity (#8) — mirrors the mobile v3 passwordless flows.
+   Passwordless parity (#8), mirrors the mobile v3 passwordless flows.
    =========================================================================== */
 
 /**
@@ -134,14 +134,14 @@ export type LogoutResponse = void;
  * BFF passes this straight through to /v3/auth/otp-login/send.
  *
  * Anti-enumeration: the API always returns a verification_id even for an
- * unknown identifier, so the UI never reveals whether an account exists —
+ * unknown identifier, so the UI never reveals whether an account exists -
  * a bad/unknown identifier only fails at the verify step.
  */
 export type OtpLoginSendInput =
   | { channel: 'phone'; country_code: string; phone: string }
   | { channel: 'email'; email: string };
 
-/** OTP-login send response — just a verification_id. */
+/** OTP-login send response, just a verification_id. */
 export interface OtpLoginSendResponse {
   verification_id: string;
 }
@@ -154,7 +154,7 @@ export interface OtpLoginVerifyInput {
 }
 
 /**
- * Register step 1 (phone) — initiate inputs. Returns a verification_id
+ * Register step 1 (phone), initiate inputs. Returns a verification_id
  * for the phone OTP.
  */
 export interface RegisterInitiateInput {
@@ -164,7 +164,7 @@ export interface RegisterInitiateInput {
   country_code: string;
 }
 
-/** Register step 1 response — phone-OTP verification_id. */
+/** Register step 1 response, phone-OTP verification_id. */
 export interface RegisterInitiateResponse {
   verification_id: string;
 }
@@ -179,13 +179,13 @@ export interface RegisterVerifyPhoneInput {
   code: string;
 }
 
-/** Register step 2 response — registration_token. */
+/** Register step 2 response, registration_token. */
 export interface RegisterVerifyPhoneResponse {
   registration_token: string;
 }
 
 /**
- * Register step 3 (details) — submit inputs. The verified phone is
+ * Register step 3 (details), submit inputs. The verified phone is
  * carried implicitly by the registration_token; we send the rest.
  */
 export interface RegisterSubmitInput {
@@ -196,7 +196,7 @@ export interface RegisterSubmitInput {
   last_name?: string | null;
 }
 
-/** Register step 3 response — email-OTP verification_id. */
+/** Register step 3 response, email-OTP verification_id. */
 export interface RegisterSubmitResponse {
   verification_id: string;
 }
@@ -212,13 +212,13 @@ export interface RegisterConfirmEmailInput {
   code: string;
 }
 
-/** validate-phone inputs — best-effort availability probe. */
+/** validate-phone inputs, best-effort availability probe. */
 export interface ValidatePhoneInput {
   /** E.164 with leading '+', e.g. '+971501234567'. */
   phone: string;
 }
 
-/** validate-phone response — { phone, available }. */
+/** validate-phone response, { phone, available }. */
 export interface ValidatePhoneResponse {
   phone: string;
   /** false = already registered. */
@@ -226,7 +226,7 @@ export interface ValidatePhoneResponse {
 }
 
 /**
- * Reset request inputs — two-channel (email | phone), mirroring the
+ * Reset request inputs, two-channel (email | phone), mirroring the
  * mobile reset flow. The BFF passes this straight to /v3/auth/reset.
  */
 export type ResetRequestInput =
@@ -242,7 +242,7 @@ export interface LoginInput {
 }
 
 /**
- * Social sign-in input — the Firebase ID token plus the name fields the
+ * Social sign-in input, the Firebase ID token plus the name fields the
  * popup surfaced (used only when the API is creating a brand-new account;
  * ignored for an existing linked identity). Sent to the BFF /auth-proxy/social,
  * which forwards it to /v3/auth/social.
@@ -310,7 +310,7 @@ export const AUTH_ERROR_CODES = {
   REFRESH_TOKEN_INVALID: 'AUTH_REFRESH_TOKEN_INVALID',
   REFRESH_TOKEN_EXPIRED: 'AUTH_REFRESH_TOKEN_EXPIRED',
   /* Passwordless parity (#8): the short-lived registration_token from
-     register/verify-phone can expire before register/submit — the API
+     register/verify-phone can expire before register/submit, the API
      emits AUTH_INVALID_TOKEN and the UI restarts the flow at step 1. */
   INVALID_TOKEN: 'AUTH_INVALID_TOKEN',
 } as const;

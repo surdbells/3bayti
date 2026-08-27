@@ -52,7 +52,7 @@ use Psr\Http\Message\ResponseInterface;
 final class AdminReturnControllersTest extends HttpTestCase
 {
     // =================================================================
-    // GET /v3/admin/returns — list
+    // GET /v3/admin/returns, list
     // =================================================================
 
     #[Test]
@@ -129,7 +129,7 @@ final class AdminReturnControllersTest extends HttpTestCase
     }
 
     // =================================================================
-    // GET /v3/admin/returns/{id} — detail with suggested refund amount
+    // GET /v3/admin/returns/{id}, detail with suggested refund amount
     // =================================================================
 
     #[Test]
@@ -138,7 +138,7 @@ final class AdminReturnControllersTest extends HttpTestCase
         $admin = $this->makeAdmin();
         $customer = $this->makeUser(id: 42);
         $vendor = $this->makeVendor(101);
-        // Order subtotal 100, discount 10 — refund of 100 worth of items
+        // Order subtotal 100, discount 10, refund of 100 worth of items
         // should suggest 90 (pro-rated discount).
         $order = $this->makeOrder($customer, subtotal: '100.00', discount: '10.00');
         $rr = $this->makePendingReturn($order, $customer, $vendor, returnId: 7);
@@ -379,7 +379,7 @@ final class AdminReturnControllersTest extends HttpTestCase
     #[Test]
     public function recordRefundReturns422FromWrongState(): void
     {
-        // Pending state — can't refund yet.
+        // Pending state, can't refund yet.
         $admin = $this->makeAdmin();
         $customer = $this->makeUser(id: 42);
         $vendor = $this->makeVendor(101);

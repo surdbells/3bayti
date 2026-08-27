@@ -28,7 +28,7 @@ use Doctrine\ORM\Query\TokenType;
  * The md5 key is a pure function of (seed, id). For a fixed seed the key
  * of every row is fixed, so the total order over the whole result set is
  * fixed too. Paging with LIMIT/OFFSET therefore walks a single stable
- * order — page 2 never re-shuffles, so infinite scroll never duplicates
+ * order, page 2 never re-shuffles, so infinite scroll never duplicates
  * or skips a product. Change the seed and the whole order changes.
  *
  * md5() returns a 32-char hex TEXT; ordering lexicographically over that

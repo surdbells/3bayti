@@ -42,14 +42,14 @@ interface VendorApplicationResponse {
 }
 
 /**
- * /sell — the vendor recruitment pitch (Phase F, #13 + #6).
+ * /sell, the vendor recruitment pitch (Phase F, #13 + #6).
  *
  * Public marketing page. Keeps the storefront shopper-first while giving
  * prospective sellers a full pitch.
  *
  * APPLY-TO-SELL flow
  * ------------------
- * Self-serve vendor signup on the external app is gone — the ONLY door
+ * Self-serve vendor signup on the external app is gone, the ONLY door
  * into the marketplace is an application that an admin reviews. The hero
  * + final CTAs now scroll to an inline "Apply to sell" form (#sell-apply)
  * which POSTs to the PUBLIC endpoint 'POST /vendor-applications'
@@ -543,7 +543,7 @@ export class SellPageComponent implements OnInit {
     if (result.unmapped.length > 0) {
       this.toast.error('sell.apply.errors.unexpected');
     }
-    /* per-field VALIDATION_FAILED already rendered inline — no toast. */
+    /* per-field VALIDATION_FAILED already rendered inline, no toast. */
   }
 }
 
@@ -555,7 +555,7 @@ function blankToNull(value: string): string | null {
 
 /**
  * ISO 3166-1 alpha-2 from an E.164 number; longest-prefix match, UAE
- * default. Mirrors register.ts — keeps the page from reaching into
+ * default. Mirrors register.ts, keeps the page from reaching into
  * PhoneInputComponent internals.
  */
 function deriveCountryCode(e164: string): string {

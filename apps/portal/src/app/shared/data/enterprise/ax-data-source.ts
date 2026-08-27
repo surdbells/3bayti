@@ -1,5 +1,5 @@
 /**
- * Data source abstraction for the enterprise table — the API abstraction
+ * Data source abstraction for the enterprise table, the API abstraction
  * layer required by the brief.
  *
  * A data source maps an `AxQueryState` stream to an `AxPage<T>` stream. The
@@ -10,11 +10,11 @@
  *
  * Two built-in implementations:
  *
- * - `AxClientDataSource`  — holds the full array in memory and performs
+ * - `AxClientDataSource` , holds the full array in memory and performs
  *   search / multi-sort / pagination client-side. Suitable for small,
  *   already-loaded sets.
  *
- * - `AxServerDataSource`  — delegates each query to a `fetcher` callback
+ * - `AxServerDataSource` , delegates each query to a `fetcher` callback
  *   (typically a PortalCrudAdapter call). Debounces rapid input, cancels
  *   superseded requests via `switchMap`, and surfaces loading + error
  *   state. Suitable for the 100k-record requirement.
@@ -209,7 +209,7 @@ export class AxServerDataSource<T> extends AxDataSource<T> {
   connect(query$: Observable<AxQueryState>): Observable<AxPage<T>> {
     // Monotonic tick that increments on every retry() call. Carrying it through
     // the pipeline lets a retry force a re-fetch even when the table's own
-    // AxQueryState (q) is unchanged — which is the case for pages that drive
+    // AxQueryState (q) is unchanged, which is the case for pages that drive
     // filtering through EXTERNAL controls (e.g. admin/customers, admin/stores)
     // and call retry() to reload. Without it, distinctUntilChanged sees the
     // same q and dedupes the retry away, so the grid never refreshes.

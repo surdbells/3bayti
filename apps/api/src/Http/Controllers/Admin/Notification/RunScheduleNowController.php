@@ -20,7 +20,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * POST /v3/admin/notification-schedules/{id}/run-now
  *
- * Manually emit one occurrence right now — creates a QUEUED broadcast from
+ * Manually emit one occurrence right now, creates a QUEUED broadcast from
  * the schedule (the dispatcher sends it within a minute). This is out-of-band:
  * it does NOT advance the recurrence, so the normal cadence is unaffected. The
  * new broadcast is linked to the schedule and appears among its occurrences.

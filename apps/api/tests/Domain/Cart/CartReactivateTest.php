@@ -12,7 +12,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Unit tests for Cart::reactivate() — the inverse of markConverted(),
+ * Unit tests for Cart::reactivate(), the inverse of markConverted(),
  * used to restore a cart when an order created from it could not be
  * handed to the payment provider. A failed payment initiation must
  * never strand the customer's cart.

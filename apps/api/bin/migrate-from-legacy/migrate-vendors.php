@@ -5,12 +5,12 @@ declare(strict_types=1);
 /**
  * Migrate vendors from legacy users.is_vendor=1 into v3 vendors table.
  *
- * Source criteria — "real vendor" = legacy users row where:
+ * Source criteria, "real vendor" = legacy users row where:
  *   - is_vendor = 1
  *   - store_name IS NOT NULL AND store_name != ''
  *
  * Discovered count: 101 named vendors. Plus we auto-promote any user who
- * owns a product but isn't a "real vendor" — these are the 15 is_vendor=0
+ * owns a product but isn't a "real vendor", these are the 15 is_vendor=0
  * product owners + the 24 nameless product owners. Total: ~140 vendors.
  *
  * Target columns
@@ -36,7 +36,7 @@ declare(strict_types=1);
  *   - legacy_vendor_id        → legacy users.user_id (preserved for idempotency)
  *
  * NOTE: vendor.legacy_vendor_id IS the user.legacy_user_id of the vendor's
- *       owner. There's no separate legacy "vendor" table — vendors live as
+ *       owner. There's no separate legacy "vendor" table, vendors live as
  *       users with is_vendor=1. So a vendor's "legacy id" is just the user_id
  *       of its owner. This is intentional.
  *
@@ -149,7 +149,7 @@ try {
         $storeName = trim((string) ($u['store_name'] ?? ''));
         $isSynthetic = false;
         if ($storeName === '') {
-            // Auto-promoted vendor — synthesize name from email local-part
+            // Auto-promoted vendor, synthesize name from email local-part
             $emailLocal = explode('@', (string) $u['email'])[0] ?? 'store';
             // Capitalize first letter, replace dots/underscores with spaces
             $clean = ucwords(str_replace(['.', '_', '-'], ' ', $emailLocal));
@@ -192,7 +192,7 @@ try {
         // Tax fields
         $vatRegDate = parseLegacyDate((string) ($u['vat_registration_effective_date'] ?? ''));
 
-        // Logo / cover — keep base64 verbatim in legacy_*_data_url columns.
+        // Logo / cover, keep base64 verbatim in legacy_*_data_url columns.
         $logoBlob = $u['store_logo'] ?? null;
         $coverBlob = $u['store_cover'] ?? null;
         $logoDataUrl = is_string($logoBlob) && $logoBlob !== '' ? $logoBlob : null;
@@ -291,7 +291,7 @@ try {
             $log->info('vendors', $userId, "INSERT as '{$slug}' ({$storeName})" . ($isSynthetic ? ' [SYNTHETIC NAME]' : ''));
             $migrated++;
         } else {
-            // -------- UPDATE — slug stable, owner stable, all else updated --------
+            // -------- UPDATE, slug stable, owner stable, all else updated --------
             $changes = [];
             if ($existingVendor['name'] !== $storeName) {
                 $changes['name'] = ['from' => $existingVendor['name'], 'to' => $storeName];

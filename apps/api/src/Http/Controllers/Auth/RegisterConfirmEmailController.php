@@ -34,7 +34,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *     access_token, access_token_expires_at,
  *     refresh_token, refresh_token_expires_at,
  *     user
- *   }   — SAME shape as /v3/auth/confirm and /v3/auth/login.
+ *   }  , SAME shape as /v3/auth/confirm and /v3/auth/login.
  *
  * The OtpAttempt MUST be a registration-purpose, EMAIL-channel row
  * bound to a user (the account created at /register/submit). A
@@ -104,7 +104,7 @@ final class RegisterConfirmEmailController
         }
 
         // Email confirmed. Mark verified, issue tokens, persist the
-        // refresh-token row + login audit — all in one transaction.
+        // refresh-token row + login audit, all in one transaction.
         $pair = $this->jwt->issueTokenPair($user);
 
         $this->em->wrapInTransaction(function () use ($user, $pair, $request): void {

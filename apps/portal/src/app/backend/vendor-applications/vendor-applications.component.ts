@@ -166,7 +166,7 @@ export class VendorApplicationsComponent implements OnInit {
       if (!ok) return;
       this.busyId = row.id;
       // Guard against a synchronous adapter throw (e.g. a missing route entry)
-      // wedging busyId — which would leave the modal stuck and undismissable.
+      // wedging busyId, which would leave the modal stuck and undismissable.
       try {
         this.adapter.post_v3('POST /admin/vendor-applications/:id/resend-credentials', {}, { params: { id: row.id } }).subscribe({
           next: () => {

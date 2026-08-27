@@ -101,7 +101,7 @@ export class ReviewsPage implements OnInit, OnDestroy {
 
   ngOnInit() {
     // Loaded in ionViewWillEnter so the list refreshes on every entry (Ionic
-    // caches the page, so ngOnInit runs only once — otherwise it shows a
+    // caches the page, so ngOnInit runs only once, otherwise it shows a
     // stale/empty snapshot after navigating away and back).
   }
   ionViewWillEnter() {
@@ -135,7 +135,7 @@ get_reviews() {
     this.ui_controls.is_loading = true;
     // Direct v3 (GET /v3/me/reviews). The transformReviewDisplayResponse
     // response transform still applies via get_v3, so response.data keeps
-    // the legacy Reviews[] shape — no field remapping needed here.
+    // the legacy Reviews[] shape, no field remapping needed here.
     this.networkAdapter.get_v3('GET /me/reviews', { authToken: this.single_user.token })
       .subscribe(({
         next: (response: any) => {

@@ -28,24 +28,24 @@ use Doctrine\ORM\EntityManagerInterface;
  *   - Easier to unit-test as a unit with mocked repositories
  *
  * Filter array contract (consumed by ProductRepository + FacetAggregator):
- *   vendorId:    int|null   — resolved from slug or legacy_id
+ *   vendorId:    int|null  , resolved from slug or legacy_id
  *   categoryId:  int|null
  *   labelId:     int|null
- *   minPrice:    string|null — DECIMAL(10,2), e.g. "50.00"
+ *   minPrice:    string|null, DECIMAL(10,2), e.g. "50.00"
  *   maxPrice:    string|null
  *   isFeatured:  bool|null
  *   isNew:       bool|null
  *   isSale:      bool|null
- *   sort:        string      — 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'relevance' | 'best_seller'
- *   searchQuery: string|null — trimmed to 200 chars
- *   sizes:       list<string>|null — refinement (M3.2.X.10-A)
- *   colors:      list<string>|null — refinement (M3.2.X.10-A)
- *   limit:       int         — clamped 1-100, default 24
- *   offset:      int         — >= 0
+ *   sort:        string     , 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'relevance' | 'best_seller'
+ *   searchQuery: string|null, trimmed to 200 chars
+ *   sizes:       list<string>|null, refinement (M3.2.X.10-A)
+ *   colors:      list<string>|null, refinement (M3.2.X.10-A)
+ *   limit:       int        , clamped 1-100, default 24
+ *   offset:      int        , >= 0
  *
  * Plus a `_filterNotFound` boolean sentinel set when a slug filter
  * matched no entity. Callers should short-circuit to an empty
- * result when this is true (matches existing soft-fail semantics —
+ * result when this is true (matches existing soft-fail semantics -
  * unknown slugs don't 404, they just return empty data).
  */
 class ProductFilterParser
@@ -66,8 +66,8 @@ class ProductFilterParser
      * Parse a raw query-params array into the canonical filter shape.
      *
      * Returns:
-     *   - 'filters' — array suitable for findActivePaginated / FacetAggregator
-     *   - 'filterNotFound' — true when a slug filter matched nothing
+     *   - 'filters', array suitable for findActivePaginated / FacetAggregator
+     *   - 'filterNotFound', true when a slug filter matched nothing
      *
      * @param array<string, mixed> $query
      * @return array{filters: array<string, mixed>, filterNotFound: bool}
@@ -278,7 +278,7 @@ class ProductFilterParser
     }
 
     /**
-     * Build the public `applied_filters` echo block — only the keys
+     * Build the public `applied_filters` echo block, only the keys
      * the client actually supplied, in the same form they supplied
      * them (slug, not resolved id; raw string price, not formatted).
      *

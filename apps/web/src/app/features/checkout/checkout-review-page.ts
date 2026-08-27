@@ -29,7 +29,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 const CHECKOUT_REVIEW_PATH = '/checkout/review';
 
 /**
- * /checkout/review — step 2 of 3.
+ * /checkout/review, step 2 of 3.
  *
  * Final review before payment handoff.
  *
@@ -38,9 +38,9 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
  *   - Stepper at top (activeStep=1)
  *   - "Delivery to" card showing the selected shipping address
  *     (with an inline link back to /checkout/address to change)
- *   - Items list — same line-item shape as the cart drawer, but
+ *   - Items list, same line-item shape as the cart drawer, but
  *     read-only (no qty adjusters here; that's the cart page's job)
- *   - Promo code input — pre-populated from CheckoutService if a
+ *   - Promo code input, pre-populated from CheckoutService if a
  *     code was carried in. Apply → /v3/cart/quote; result drives
  *     the totals breakdown. Remove → unset code, refresh quote with
  *     null.
@@ -526,7 +526,7 @@ export class CheckoutReviewPageComponent implements OnInit {
   protected readonly promoForm: FormGroup<{ code: FormControl<string> }>;
 
   /* -----------------------------------------------------------------
-     Gift card (Phase E5) — apply an existing card to this cart order.
+     Gift card (Phase E5), apply an existing card to this cart order.
      Preview via POST /v3/cart/gift-card; the resolved code is sent to
      initiate, where the server debits the card and charges only the
      remainder. The totals dl is left untouched (server-authoritative);
@@ -540,7 +540,7 @@ export class CheckoutReviewPageComponent implements OnInit {
   protected readonly appliedGiftCode = computed<string | null>(() => this._giftPreview()?.code ?? null);
 
   /* -----------------------------------------------------------------
-     Gift WALLET — one-tap alternative to typing a single code. Previews
+     Gift WALLET, one-tap alternative to typing a single code. Previews
      GET /v3/cart/gift-wallet (aggregate balance across every spendable
      card the customer owns/redeemed) and, when applied, sends
      use_gift_wallet=true to initiate. Mutually exclusive with the single
@@ -557,7 +557,7 @@ export class CheckoutReviewPageComponent implements OnInit {
   });
 
   /**
-   * The payable total the gift balance must cover — the server-authoritative
+   * The payable total the gift balance must cover, the server-authoritative
    * quote total (subtotal + delivery − promo), i.e. the "amount due" shown in
    * the summary before any gift credit.
    */
@@ -803,7 +803,7 @@ export class CheckoutReviewPageComponent implements OnInit {
       }
 
       /* Hand off to the payment-handoff page with the URL via router
-         state — query params would expose the redirect URL in browser
+         state, query params would expose the redirect URL in browser
          history which is fine for Noon but better kept off the URL bar. */
       await this.router.navigate(['/checkout/payment'], {
         state: {

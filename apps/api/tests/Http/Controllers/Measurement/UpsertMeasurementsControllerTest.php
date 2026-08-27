@@ -77,7 +77,7 @@ final class UpsertMeasurementsControllerTest extends HttpTestCase
 
         $repo = $this->createMock(MeasurementRepository::class);
         $repo->method('findForUserAndCategory')->with($user, null)->willReturn($existing);
-        // No save call — entity is updated in-place + flush.
+        // No save call, entity is updated in-place + flush.
         $repo->expects(self::never())->method('save');
 
         $em = $this->stubEm(function ($em) use ($userRepo, $repo) {
@@ -137,7 +137,7 @@ final class UpsertMeasurementsControllerTest extends HttpTestCase
         $jwt = $this->app->getContainer()->get(JwtService::class);
         $pair = $jwt->issueTokenPair($user);
 
-        // Body has no 'notes' field — PUT semantics should clear it.
+        // Body has no 'notes' field, PUT semantics should clear it.
         $response = $this->handle(
             $this->jsonRequest('PUT', '/v3/me/measurements/default', [
                 'values' => ['arm' => 60.0],

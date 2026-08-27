@@ -38,7 +38,7 @@ export const AUTH_REFRESH_LEAD_TIME_MS = new InjectionToken<number>(
 );
 
 /**
- * The vendor / seller app URL — the "Vendor" header CTA target. It lives
+ * The vendor / seller app URL, the "Vendor" header CTA target. It lives
  * on a separate origin (the seller console), so this is a full absolute
  * URL the header opens directly. Tokenised so tests + future env wiring
  * can override it.

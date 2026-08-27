@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * F7c — customer notifications for the previously-silent item transitions
+ * F7c, customer notifications for the previously-silent item transitions
  * (accepted, preparing, rejected). Verifies each template renders the order
  * reference + item name in subject/text/html, in both locales.
  */

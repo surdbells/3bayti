@@ -23,7 +23,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * POST /v3/cart/gift-card
  *
  * Preview the impact of applying a gift card to the current cart.
- * Pure read — no DB writes, no balance deducted (debit happens at
+ * Pure read, no DB writes, no balance deducted (debit happens at
  * POST /v3/checkout/initiate with gift_card_code in the body).
  *
  * Body: { "code": "XXXX-XXXX-XXXX-XXXX" }
@@ -68,7 +68,7 @@ final class ApplyGiftCardToCartController
         }
 
         // Must be spendable BY THIS USER. A card the buyer designated for
-        // someone else belongs to that recipient — the buyer can still claim
+        // someone else belongs to that recipient, the buyer can still claim
         // it back for themselves via POST /v3/gift-cards/redeem, which assigns
         // recipient_user and makes it spendable again.
         if (!$card->isSpendableBy($user)) {

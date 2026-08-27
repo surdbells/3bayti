@@ -25,8 +25,8 @@ use PHPUnit\Framework\TestCase;
  * includeGiftCards = true so they surface as sales (the serializer synthesizes
  * a "Gift Card" line). Both paths are asserted below.
  *
- * CI has no PostgreSQL, so — same DQL-capture approach as
- * StyleRepositoryFindByOwnerTest / ProductRepositoryActiveVendorGatingTest — we
+ * CI has no PostgreSQL, so, same DQL-capture approach as
+ * StyleRepositoryFindByOwnerTest / ProductRepositoryActiveVendorGatingTest, we
  * drive the repository through a mocked EntityManager that returns REAL
  * Doctrine QueryBuilders, capture every DQL string the method generates, and
  * assert the gift-card exclusion predicate is present (or absent) on BOTH the
@@ -90,7 +90,7 @@ final class OrderRepositoryGiftCardExclusionTest extends TestCase
             . '.*\)/is';
 
         // With the opt-in flag the gatekeeper queries must NOT carry the
-        // exclusion — gift-card sales belong on the merged Orders & Sales list.
+        // exclusion, gift-card sales belong on the merged Orders & Sales list.
         self::assertDoesNotMatchRegularExpression(
             $pattern,
             $dqls[0],
@@ -142,7 +142,7 @@ final class OrderRepositoryGiftCardExclusionTest extends TestCase
         $repo = new OrderRepository($em, new ClassMetadata(Order::class));
         // No status/user/vendor filters: prove the gift-card scope + type filter
         // stand on their own. The stub count returns non-zero so the method
-        // proceeds into the id-page query — we assert >= 2 captured above.
+        // proceeds into the id-page query, we assert >= 2 captured above.
         $repo->paginatedForAdmin(20, 0, includeGiftCards: $includeGiftCards, typeFilter: $type);
 
         self::assertNotEmpty($captured, 'paginatedForAdmin produced no DQL.');

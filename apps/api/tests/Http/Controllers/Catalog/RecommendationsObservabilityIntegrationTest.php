@@ -38,14 +38,14 @@ use Symfony\Component\Console\Tester\CommandTester;
  *
  * Two coverage paths:
  *
- *   1. CRON SIDE — BuildRecommendationsCommand drives both real
+ *   1. CRON SIDE, BuildRecommendationsCommand drives both real
  *      calculators + writes the denormalized table via real EM
  *      + capturing Connection. Verifies recommendations.build.completed
  *      INFO log propagates through with all stats. Verifies the
  *      cron writes the EXACT rows in the order the merge logic
  *      produces.
  *
- *   2. READ SIDE — GetProductRecommendationsController drives real
+ *   2. READ SIDE, GetProductRecommendationsController drives real
  *      RecommendationsService + real RecommendationsSerializer.
  *      Mocked Connection returns canned popular-fallback rows.
  *      Verifies the recommendations.product.served DEBUG log
@@ -128,7 +128,7 @@ final class RecommendationsObservabilityIntegrationTest extends HttpTestCase
         $em = $this->createMock(EntityManagerInterface::class);
         $em->method('getConnection')->willReturn($connection);
 
-        // REAL calculators + REAL command — all use the same EM
+        // REAL calculators + REAL command, all use the same EM
         $copurchaseCalc = new CoPurchaseAffinityCalculator($em, $this->logger);
         $categoryCalc = new CategoryAffinityCalculator($em, $this->logger);
         $cmd = new BuildRecommendationsCommand(

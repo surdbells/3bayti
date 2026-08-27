@@ -98,7 +98,7 @@ final class GetMeasurementsControllerTest extends HttpTestCase
 
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->willReturn($user);
-        // No measurement repo expectation — bad path arg should
+        // No measurement repo expectation, bad path arg should
         // 404 before even hitting the repo.
         $em = $this->stubEm(fn ($em) =>
             $em->method('getRepository')->with(User::class)->willReturn($userRepo));

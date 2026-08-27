@@ -22,7 +22,7 @@ use Doctrine\ORM\Query\TokenType;
  * Why websearch_to_tsquery vs to_tsquery vs plainto_tsquery
  * =========================================================
  * `websearch_to_tsquery` is the right choice for user-supplied search
- * input — it gracefully tolerates input that other tsquery functions
+ * input, it gracefully tolerates input that other tsquery functions
  * choke on:
  *   - quoted phrases ("silk abaya") become phrase queries
  *   - "or" between words becomes an OR

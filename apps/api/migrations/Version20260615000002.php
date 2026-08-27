@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Add `created_by_user_id` to `styles` — attribution for user-submitted
+ * Add `created_by_user_id` to `styles`, attribution for user-submitted
  * styles (Group B / B4 customer style creation).
  *
  * NULL for the editorial/community styles seeded by admins; set to the

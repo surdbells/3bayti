@@ -9,7 +9,7 @@ namespace Bayti\Api\Http\Serializers;
  * for GET /v3/products/facets (M3.2.X.10-B).
  *
  * The aggregator's compute() return value is ALREADY very close to
- * the wire shape — this serializer mostly just wraps it in the
+ * the wire shape, this serializer mostly just wraps it in the
  * canonical { data, meta } envelope and surfaces the applied filter
  * set so the UI can render an "active filters" chip row without
  * re-parsing the query string.

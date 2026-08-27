@@ -89,7 +89,7 @@ final class DeleteVendorProductController
             return $this->noContent();
         }
 
-        // Never sold — hard delete. Clear the transient cart rows first (a
+        // Never sold, hard delete. Clear the transient cart rows first (a
         // deleted product can't be checked out anyway); CASCADE / SET NULL FKs
         // handle the rest. Raw DBAL in a transaction, so an unexpected reference
         // throws without closing the EntityManager and we fall back to a soft

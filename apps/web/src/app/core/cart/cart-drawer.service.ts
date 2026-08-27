@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 
 /**
- * CartDrawerService — global controller for the slide-out cart drawer.
+ * CartDrawerService, global controller for the slide-out cart drawer.
  *
  * Responsibilities
  * ----------------

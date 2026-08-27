@@ -33,7 +33,7 @@ use Psr\Log\LoggerInterface;
  *
  *   1. Signature header verification (M3.1.6: LoggingOnlyVerifier
  *      accepts everything + logs hashes; M3.1.7: real algo)
- *   2. ** retrieve-order-before-acting ** — the load-bearing safety
+ *   2. ** retrieve-order-before-acting **, the load-bearing safety
  *      mechanism. Even with no signature check, a spoofed webhook
  *      cannot make us mark an order paid: we call gateway.retrieveOrder
  *      (server-to-server, authenticated with OUR merchant credentials)
@@ -46,7 +46,7 @@ use Psr\Log\LoggerInterface;
  *
  * Idempotency
  * -----------
- * Noon retries failed deliveries — possibly with the same event_id
+ * Noon retries failed deliveries, possibly with the same event_id
  * or with a fresh one but identical content. We dedupe via the
  * payment_webhook_events table's UNIQUE constraint on
  * (provider, idempotency_key). The idempotency_key is derived from
@@ -56,11 +56,11 @@ use Psr\Log\LoggerInterface;
  * --------
  * Always 200 OK on successful receipt + processing, even if the
  * payload was malformed or the order wasn't found. We don't want
- * Noon to keep retrying because of OUR bug — log and accept.
+ * Noon to keep retrying because of OUR bug, log and accept.
  *
  * Only 401 is returned (when signature verification fails in
  * M3.1.7); 500 for our own crashes (Noon will retry, which is
- * fine — we'll hopefully be fixed by then).
+ * fine, we'll hopefully be fixed by then).
  */
 final class NoonWebhookController
 {
@@ -80,11 +80,11 @@ final class NoonWebhookController
         private readonly LoggerInterface $logger,
         private readonly \Bayti\Api\Domain\Chat\OrderChatProvisioner $chatProvisioner,
         private readonly \Bayti\Api\Domain\Catalog\FlashCampaignStockReducer $flashStock,
-        // M3.1.7 — gated raw (body+signature) capture for offline
+        // M3.1.7, gated raw (body+signature) capture for offline
         // signature-algorithm confirmation. No-op unless NOON_WEBHOOK_CAPTURE
         // is enabled; safe to inject unconditionally.
         private readonly \Bayti\Api\Payment\Noon\NoonWebhookCaptureRecorder $captureRecorder,
-        // Required (no default) so PHP-DI autowires it — same convention as
+        // Required (no default) so PHP-DI autowires it, same convention as
         // $logger above. Used to deliver a gift card to its recipient the
         // moment its funding payment is confirmed (deliverIfDue).
         private readonly \Bayti\Api\Notification\GiftCardDeliveryService $giftCardDelivery,
@@ -109,7 +109,7 @@ final class NoonWebhookController
         }
         $signatureHeader = $signatureHeader !== '' ? $signatureHeader : null;
 
-        // M3.1.7 — capture the raw (body, signature) pair for offline
+        // M3.1.7, capture the raw (body, signature) pair for offline
         // algorithm confirmation. Runs BEFORE the signature check so we
         // record even would-be-rejected pairs during the capture window.
         // No-op unless NOON_WEBHOOK_CAPTURE is enabled.
@@ -135,8 +135,8 @@ final class NoonWebhookController
         // Noon delivers the notification as a SIGNED JWT wrapped in a JSON
         // envelope: the body is {"data": "<header>.<payload>.<sig>"} (HS256,
         // header {"alg":"HS256","kid":"key1"}). The order identifiers, event
-        // type and event id all live INSIDE the JWT payload — the outer
-        // envelope only carries `data` — so decode the claims and merge them
+        // type and event id all live INSIDE the JWT payload, the outer
+        // envelope only carries `data`, so decode the claims and merge them
         // up before extraction. Without this every real webhook extracts a
         // null order id and resolves to no_match. Signature verification is
         // the separate NoonWebhookSignatureVerifier concern; retrieve-order
@@ -192,7 +192,7 @@ final class NoonWebhookController
         $events->save($event);
 
         // ------------------------------------------------------------------
-        // M3.2.X.5-A — OBSERVABILITY: catch unknown dispute-shaped events.
+        // M3.2.X.5-A, OBSERVABILITY: catch unknown dispute-shaped events.
         //
         // Our DISPUTE_EVENT_TYPES constant is based on Noon's API contract
         // docs, not empirical observation. If Noon ever sends a real
@@ -238,7 +238,7 @@ final class NoonWebhookController
                 order: $order,
                 payload: $payload,
             );
-            // M3.1.7-H — notify admins. Only fires on FIRST sight of a
+            // M3.1.7-H, notify admins. Only fires on FIRST sight of a
             // given dispute id (persistDispute returns null on
             // idempotent re-delivery). $order may be null for orphan
             // disputes; OrderNotificationService::disputeOpened
@@ -259,12 +259,12 @@ final class NoonWebhookController
                 'merchant_reference' => $merchantReference,
                 'idempotency_key' => $idempotencyKey,
             ]);
-            // Always 200 — we don't want Noon to retry on our missing data
+            // Always 200, we don't want Noon to retry on our missing data
             return $this->ok(['status' => 'no_match']);
         }
 
         // ------------------------------------------------------------------
-        // RETRIEVE-ORDER-BEFORE-ACTING — the load-bearing safety mechanism.
+        // RETRIEVE-ORDER-BEFORE-ACTING, the load-bearing safety mechanism.
         //
         // We call gateway.retrieveOrder server-to-server (authenticated
         // with our merchant credentials) to confirm the true state with
@@ -272,7 +272,7 @@ final class NoonWebhookController
         // authoritative.
         // ------------------------------------------------------------------
         // Prefer the webhook's OWN signed JWT when we can verify it (Noon
-        // signs HS256 with NOON_WEBHOOK_SECRET) — a valid signature makes the
+        // signs HS256 with NOON_WEBHOOK_SECRET), a valid signature makes the
         // claimed orderStatus authoritative WITHOUT a GET_ORDER call, which
         // Noon's account rejects with 403. Fall back to
         // retrieve-order-before-acting when the JWT can't be verified. Both
@@ -295,16 +295,16 @@ final class NoonWebhookController
         $event->markProcessed();
         $this->em->flush();
 
-        // M3.1.7-H — fire lifecycle notifications AFTER the flush so
+        // M3.1.7-H, fire lifecycle notifications AFTER the flush so
         // we never email about state that isn't committed. Idempotent
         // re-deliveries find $transition='' and skip notifying.
         if ($transition === 'paid') {
-            // M3.5 Phase 4 — activate gift card when its purchase order is paid.
+            // M3.5 Phase 4, activate gift card when its purchase order is paid.
             // Wrapped in try/catch so a repository or activation failure never
             // aborts the webhook response (order is already marked paid).
             try {
                 $this->activateGiftCardForOrder($order);
-            } catch (\Throwable) { /* silent — logged inside activateGiftCardForOrder */ }
+            } catch (\Throwable) { /* silent, logged inside activateGiftCardForOrder */ }
 
             // A gift-card PURCHASE order is a synthetic payment vehicle with
             // NO vendor line items, so the vendor "new order to prepare" email
@@ -317,7 +317,7 @@ final class NoonWebhookController
 
             // Single order-confirmation for the gateway flow. This is the
             // authoritative paid transition (gated above on $transition ===
-            // 'paid', which only happens on the FIRST markPaid() — idempotent
+            // 'paid', which only happens on the FIRST markPaid(), idempotent
             // re-deliveries find $transition='' and skip). The pre-payment
             // orderPlaced() dispatch was removed from InitiateCheckoutController,
             // so this is the ONE place a gateway order is confirmed:
@@ -326,7 +326,7 @@ final class NoonWebhookController
             $this->notifications->orderPaid($order);
             $this->pushNotifications->orderPaid($order);
 
-            // Vendor-facing side effects — ONLY for real product orders.
+            // Vendor-facing side effects, ONLY for real product orders.
             if (!$isGiftCardPurchase) {
                 //   - orderPaidVendors(): vendor "new order to prepare" email
                 //     (moved here from the old pre-payment orderPlaced() so
@@ -386,7 +386,7 @@ final class NoonWebhookController
         if (isset($payload['eventId']) && (is_string($payload['eventId']) || is_int($payload['eventId']))) {
             return 'noon:' . substr((string) $payload['eventId'], 0, 100);
         }
-        // Fall back to sha256 of the raw body — collision-free for our purposes
+        // Fall back to sha256 of the raw body, collision-free for our purposes
         return 'noon:body:' . hash('sha256', $rawBody);
     }
 
@@ -394,7 +394,7 @@ final class NoonWebhookController
      * Noon delivers its webhook as a signed JWT wrapped in a JSON envelope:
      *   { "data": "<base64url header>.<base64url payload>.<base64url sig>" }
      * (HS256, signed with NOON_WEBHOOK_SECRET). The order identifiers, event
-     * type and event id live in the JWT PAYLOAD, not the outer envelope — so
+     * type and event id live in the JWT PAYLOAD, not the outer envelope, so
      * if the body is that envelope, decode the JWT claims and merge them up so
      * the extractors read the real fields. Non-envelope bodies pass through
      * unchanged. This reads the (as-yet unverified) claims only; signature
@@ -460,7 +460,7 @@ final class NoonWebhookController
 
     /**
      * Build an authoritative OrderStatusResponse from the webhook's OWN
-     * signed JWT — used INSTEAD of a GET_ORDER round-trip when we can verify
+     * signed JWT, used INSTEAD of a GET_ORDER round-trip when we can verify
      * the signature.
      *
      * Noon signs each notification HS256 with NOON_WEBHOOK_SECRET, so a valid
@@ -469,8 +469,8 @@ final class NoonWebhookController
      * INITIATE/SALE succeed, which otherwise leaves every paid order stuck at
      * "received_unconfirmed" with no confirmation email.
      *
-     * Returns null — so the caller falls back to retrieve-order-before-acting
-     * — when there is no secret, the body is not the JWT envelope, or the
+     * Returns null, so the caller falls back to retrieve-order-before-acting
+     *, when there is no secret, the body is not the JWT envelope, or the
      * signature does not verify. Fails CLOSED: an unverifiable webhook never
      * yields a trusted status.
      *
@@ -565,7 +565,7 @@ final class NoonWebhookController
     {
         // Noon's WEBHOOK notification is a FLAT payload with the order id
         // at the top level as `orderId` (int or string). This differs from
-        // the API-response shape (result.order.id) — an earlier assumption
+        // the API-response shape (result.order.id), an earlier assumption
         // that the two shared a shape caused every webhook to resolve to
         // no_match. Check the webhook shape first.
         $flat = $this->firstScalar($payload, ['orderId', 'order_id']);
@@ -573,7 +573,7 @@ final class NoonWebhookController
             return $flat;
         }
 
-        // Fallback — API-response / nested shape: result.order.id or order.id.
+        // Fallback, API-response / nested shape: result.order.id or order.id.
         $result = $payload['result'] ?? $payload;
         if (is_array($result)) {
             $order = $result['order'] ?? null;
@@ -592,7 +592,7 @@ final class NoonWebhookController
      */
     private function extractMerchantReference(array $payload): ?string
     {
-        // Webhook flat shape — Noon carries the merchant's own reference
+        // Webhook flat shape, Noon carries the merchant's own reference
         // (our V3-... order_reference) under one of these keys. Noon's JWT
         // notification uses `merchantOrderRef`; other shapes/docs use the
         // longer variants, so probe them all.
@@ -607,7 +607,7 @@ final class NoonWebhookController
             return $flat;
         }
 
-        // Fallback — nested API-response shape: result.order.reference.
+        // Fallback, nested API-response shape: result.order.reference.
         $result = $payload['result'] ?? $payload;
         if (is_array($result)) {
             $order = $result['order'] ?? null;
@@ -676,21 +676,21 @@ final class NoonWebhookController
 
     /**
      * Return values:
-     *   'paid'   — order just transitioned to paid (newly)
-     *   'failed' — order just transitioned to failed (newly)
-     *   ''       — no transition (already paid, already terminal, or non-terminal)
+     *   'paid'  , order just transitioned to paid (newly)
+     *   'failed', order just transitioned to failed (newly)
+     *   ''      , no transition (already paid, already terminal, or non-terminal)
      */
     private function applyAuthoritativeStatus(Order $order, OrderStatusResponse $status): string
     {
         if (!$status->terminal) {
-            // Still in flight — nothing to do at this point. The next
+            // Still in flight, nothing to do at this point. The next
             // webhook or the polling endpoint will pick up the change.
             return '';
         }
 
         if ($status->paid) {
             $previous = $order->getStatus();
-            // markPaid() is idempotent — safe to call even if already
+            // markPaid() is idempotent, safe to call even if already
             // marked paid. Don't double-stamp.
             $justPaid = $order->markPaid();
             // Flash-campaign stock is decremented exactly once, on the
@@ -698,7 +698,7 @@ final class NoonWebhookController
             // re-deliveries). Mutations are persisted by the webhook's flush.
             if ($justPaid) {
                 $this->flashStock->reduceForPaidOrder($order);
-                // Payment confirmed — convert the cart this order was created
+                // Payment confirmed, convert the cart this order was created
                 // from (kept active until now so cancelling checkout didn't
                 // empty it). Null for orders with no cart, e.g. gift-card
                 // purchases, so nothing is converted for those.
@@ -764,7 +764,7 @@ final class NoonWebhookController
     }
 
     /**
-     * M3.2.X.5-A — Observability hook for unknown dispute-shaped events.
+     * M3.2.X.5-A, Observability hook for unknown dispute-shaped events.
      *
      * Emits a warning log line when an eventType contains 'dispute' or
      * 'chargeback' (case-insensitive) but isn't in our recognized
@@ -959,7 +959,7 @@ final class NoonWebhookController
 
     /**
      * If this order was created to fund a gift card purchase, activate
-     * the card now that payment is confirmed. Idempotent — already-active
+     * the card now that payment is confirmed. Idempotent, already-active
      * cards are silently skipped.
      */
     private function activateGiftCardForOrder(Order $order): void
@@ -983,7 +983,7 @@ final class NoonWebhookController
             // this try so it can never break webhook processing of a paid order.
             $this->giftCardDelivery->deliverIfDue($card);
         } catch (\Throwable $e) {
-            // Log but never throw — the order is already paid.
+            // Log but never throw, the order is already paid.
             $this->logger->error('webhook: gift card activation failed', [
                 'order_reference' => $ref,
                 'card_id'         => $card->getId(),

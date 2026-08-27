@@ -31,7 +31,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Conflict
  * --------
  * If that (provider, provider_uid) is ALREADY linked to a DIFFERENT
- * user, respond 409 — a provider account can belong to only one
+ * user, respond 409, a provider account can belong to only one
  * platform account. If it's already linked to THIS user, it's a no-op
  * success (idempotent re-link).
  */
@@ -79,7 +79,7 @@ final class LinkSocialIdentityController
         $existing = $identities->findByProviderUid($verified->provider, $verified->providerUid);
         if ($existing !== null) {
             if ($existing->getUser()->getId() === $user->getId()) {
-                // Already linked to this user — idempotent success.
+                // Already linked to this user, idempotent success.
                 return $this->created([
                     'provider' => $existing->getProvider(),
                     'email' => $existing->getEmail(),

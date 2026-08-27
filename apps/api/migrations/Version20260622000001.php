@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Vendor location — add emirate + country to vendors, for the admin
+ * Vendor location, add emirate + country to vendors, for the admin
  * Stores screen's location filter + the store editor's location fields.
  *
  * New columns

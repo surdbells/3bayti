@@ -31,7 +31,7 @@ use Psr\Log\NullLogger;
  * rows regardless of outcome (sent/failed/skipped). Repository write
  * failures must NEVER propagate to the caller.
  *
- * Repository resolution is LAZY per call — the service holds an
+ * Repository resolution is LAZY per call, the service holds an
  * EntityManagerInterface and resolves the repository inside
  * safePersist(). Tests construct a mock EM that returns the capturing
  * repo when getRepository(NotificationLog::class) is called.
@@ -91,7 +91,7 @@ final class OrderNotificationServicePersistenceTest extends TestCase
 
     /**
      * Build an EM whose NotificationLogRepository::save throws on
-     * every call — verifies the repository-failure-doesn't-propagate
+     * every call, verifies the repository-failure-doesn't-propagate
      * contract.
      */
     private function buildEmWithThrowingRepo(): EntityManagerInterface
@@ -250,7 +250,7 @@ final class OrderNotificationServicePersistenceTest extends TestCase
     {
         // Vendor entity with an UNINITIALIZED contact_email (typed property
         // never set) but a linked owner account. The new-order email must fall
-        // back to the owner's email instead of silently skipping — a vendor
+        // back to the owner's email instead of silently skipping, a vendor
         // without a dedicated contact address still gets notified.
         $order = $this->makeOrder('V3-205');
         $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
@@ -312,7 +312,7 @@ final class OrderNotificationServicePersistenceTest extends TestCase
 
         $order = $this->makeOrder('V3-207');
 
-        // This MUST NOT throw — the contract is preserved.
+        // This MUST NOT throw, the contract is preserved.
         $service->orderPaid($order);
 
         // The mailer still sent (primary action unaffected)
@@ -361,7 +361,7 @@ final class OrderNotificationServicePersistenceTest extends TestCase
         // Note: this is the primary defensive path for tests that
         // don't care about notification_logs persistence. Passing
         // null is cleaner than wiring a mock EM just to get a no-op.
-        // The other branch — EM returning non-NotificationLogRepository —
+        // The other branch, EM returning non-NotificationLogRepository -
         // is covered structurally by the `instanceof` check in
         // safePersist; can't easily be unit-tested because the EM
         // interface declares EntityRepository as the return type and

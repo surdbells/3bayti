@@ -13,7 +13,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Single optional field: `promo_code`. When supplied, the controller
  * passes it through PromoCodeResolverService::resolveForCart and
  * surfaces the resulting price breakdown. When omitted (or empty),
- * the endpoint returns the breakdown with no promo applied — the
+ * the endpoint returns the breakdown with no promo applied, the
  * "preview your cart total" call.
  *
  * Normalization happens at the entrance per locked pattern #3:
@@ -22,7 +22,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * it here gives the validator a consistent value to length-check
  * and means controllers / tests see the same canonical form.
  *
- * Empty + missing both collapse to null — the controller branches
+ * Empty + missing both collapse to null, the controller branches
  * on null to short-circuit the resolver call, so we don't need a
  * Sentinel value distinguishing "user typed nothing" from "user
  * omitted the field".

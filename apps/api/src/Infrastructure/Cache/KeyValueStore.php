@@ -9,7 +9,7 @@ namespace Bayti\Api\Infrastructure\Cache;
  *
  * Backed by Redis in production (RedisKeyValueStore) and an in-memory
  * array in tests / local dev (InMemoryKeyValueStore). The interface
- * stays deliberately small — when more operations are needed, we
+ * stays deliberately small, when more operations are needed, we
  * extend; we don't pre-empt.
  *
  * What this is for
@@ -23,7 +23,7 @@ namespace Bayti\Api\Infrastructure\Cache;
  * --------------------
  *   - Anything that needs durability across Redis restarts. Use
  *     Postgres for that. Redis CAN persist (RDB/AOF) but treat it
- *     as cache — restarts may lose data.
+ *     as cache, restarts may lose data.
  *   - Anything large. Values should be small (a counter, a token,
  *     a timestamp). For caching query results or fragments, a
  *     dedicated cache abstraction is better.
@@ -35,7 +35,7 @@ namespace Bayti\Api\Infrastructure\Cache;
  * -----------------
  * Implementations MAY throw on infrastructure failure (Redis down,
  * network timeout, etc.). Callers are responsible for catching
- * and degrading gracefully — the canonical pattern is:
+ * and degrading gracefully, the canonical pattern is:
  *
  *   try {
  *       $count = $store->incr($key);
@@ -45,7 +45,7 @@ namespace Bayti\Api\Infrastructure\Cache;
  *       // Fail open: allow the request, log for ops to investigate.
  *   }
  *
- * The implementations DO NOT silently swallow errors — that hides
+ * The implementations DO NOT silently swallow errors, that hides
  * outages. They throw KeyValueStoreException; callers decide.
  */
 interface KeyValueStore
@@ -88,14 +88,14 @@ interface KeyValueStore
      * "won" the claim), false if the key was already present (someone
      * else owns it).
      *
-     * This is Redis SET key val NX EX ttl — the canonical
+     * This is Redis SET key val NX EX ttl, the canonical
      * claim-a-lock / set-if-not-exists primitive. Use it to serialize
      * a critical section across FPM workers:
      *
      *   if ($store->setIfAbsent("lock:$id", '1', 30)) {
-     *       // we hold the claim — do the work, release on failure
+     *       // we hold the claim, do the work, release on failure
      *   } else {
-     *       // someone else holds it — back off
+     *       // someone else holds it, back off
      *   }
      *
      * Unlike set(), the TTL is mandatory-by-convention here: a claim
@@ -109,7 +109,7 @@ interface KeyValueStore
 
     /**
      * Set/refresh the TTL on an existing key. No-op if the key
-     * doesn't exist (we don't error here — the typical use case is
+     * doesn't exist (we don't error here, the typical use case is
      * "set TTL if first hit", and getting a key not found means
      * something else cleaned up).
      *
@@ -128,7 +128,7 @@ interface KeyValueStore
      * Check whether the backend is reachable. Used by /v3/health/ready
      * to surface Redis health.
      *
-     * Returns true on success, false on any failure. Does NOT throw —
+     * Returns true on success, false on any failure. Does NOT throw -
      * that's the explicit difference from the other methods.
      */
     public function ping(): bool;

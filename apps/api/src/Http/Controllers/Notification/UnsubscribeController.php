@@ -17,14 +17,14 @@ use Psr\Log\LoggerInterface;
  * GET /v3/notifications/unsubscribe?token=...
  *
  * Public marketing-email unsubscribe endpoint (M3.2.X.11-G). No
- * authentication required — verification is via the signed JWT
+ * authentication required, verification is via the signed JWT
  * token in the query string.
  *
  * Q-UnsubscribeFlow = A locked: no-login flow is required for
  * PDPL compliance (right to withdraw consent must be 'as simple
  * as giving consent', UAE PDPL Article 13).
  *
- * Returns HTML (not JSON) — this endpoint is hit from the user's
+ * Returns HTML (not JSON), this endpoint is hit from the user's
  * email client, not a programmatic API consumer.
  *
  * Behavior
@@ -32,7 +32,7 @@ use Psr\Log\LoggerInterface;
  *   - Valid token + user exists: set marketing_emails_opt_out=TRUE,
  *     persist, return 200 with confirmation page
  *   - Valid token + user already opted out: return 200 with the
- *     SAME confirmation page (idempotent — second click does
+ *     SAME confirmation page (idempotent, second click does
  *     nothing, but the user sees confirmation either way)
  *   - Valid token + user not found: return 400 with generic
  *     'invalid or expired link' page (don't leak whether the
@@ -51,7 +51,7 @@ use Psr\Log\LoggerInterface;
  * Audit
  * =====
  * Logger captures every call with the outcome. No notification_log
- * row written here (this is the inverse of a send — recording it
+ * row written here (this is the inverse of a send, recording it
  * in the same table would be a category error). Future enhancement
  * could add a dedicated 'consent_log' table; deferred per
  * Q-OptOutHandling = A's minimum-viable scope.

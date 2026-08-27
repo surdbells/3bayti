@@ -7,12 +7,12 @@ import { expect, type Page, type TestInfo } from '@playwright/test';
  * Mirrors apps/web's a11y helper. Mobile-specific notes:
  *
  *   - Tests run against the Ionic dev server (web preview), so this
- *     catches AA issues in the Angular layer — not OS-level a11y
+ *     catches AA issues in the Angular layer, not OS-level a11y
  *     (VoiceOver/TalkBack) which still need real device verification
  *     per M3.1.7 device-test pattern.
  *
  *   - We don't yet have a mobile allowlist file. M3.1.x mobile pages
- *     shipped through M3.1.7 — adding axe-core retroactively would
+ *     shipped through M3.1.7, adding axe-core retroactively would
  *     surface known issues. The mobile allowlist will land alongside
  *     the first M3.2.Z mobile phase that adds e2e coverage to specific
  *     pages.

@@ -32,7 +32,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   Request:  { registration_token, email, password, first_name?, last_name? }
  *   Response: 200 { verification_id }   (email-OTP verification id)
  *
- * The phone + country_code come from the TOKEN, not the request body —
+ * The phone + country_code come from the TOKEN, not the request body -
  * a client cannot register an account for a phone it didn't verify.
  *
  * The created User is:
@@ -43,15 +43,15 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Failure modes
  * -------------
- *   - 401 AUTH_INVALID_TOKEN   — registration token missing/expired/bad
- *   - 409 CONFLICT_EMAIL_TAKEN — email already registered
- *   - 409 CONFLICT_PHONE_TAKEN — phone taken since step 1 (race)
- *   - 422 VALIDATION_FAILED    — body shape errors
- *   - 429 OTP_RATE_LIMITED     — email hit hourly cap
- *   - 502 OTP_PROVIDER_ERROR   — mail transport failed
+ *   - 401 AUTH_INVALID_TOKEN  , registration token missing/expired/bad
+ *   - 409 CONFLICT_EMAIL_TAKEN, email already registered
+ *   - 409 CONFLICT_PHONE_TAKEN, phone taken since step 1 (race)
+ *   - 422 VALIDATION_FAILED   , body shape errors
+ *   - 429 OTP_RATE_LIMITED    , email hit hourly cap
+ *   - 502 OTP_PROVIDER_ERROR  , mail transport failed
  *
  * Like /register, the User row is intentionally LEFT IN PLACE if the
- * email-OTP send fails — the user can resend without re-registering
+ * email-OTP send fails, the user can resend without re-registering
  * (and a nightly cleanup removes never-verified rows).
  */
 final class RegisterSubmitController
@@ -124,7 +124,7 @@ final class RegisterSubmitController
         }
 
         // Send the email-OTP. If this fails the User row stays in place
-        // (deliberate — the user can resend).
+        // (deliberate, the user can resend).
         try {
             $verificationId = $this->otp->send(
                 to: $input->email,

@@ -1,5 +1,5 @@
 /* =========================================================================
-   Ionic theme — Abayti mobile (M2)
+   Ionic theme, Abayti mobile (M2)
    --------------------------------------------------------------------------
    This file maps Ionic's CSS variables to the ax-* design tokens defined in
    src/app/shared/ax-mobile/_tokens.scss. Every <ion-*> component inherits
@@ -138,21 +138,21 @@
    Most --ion-* vars above already cascade through ax tokens that flip
    automatically (--ion-text-color points at --ax-color-text-primary, which
    the tokens.scss dark block remaps to neutral-100). The vars below DON'T
-   cascade — they're pinned to specific palette values (white card bg, beige
+   cascade, they're pinned to specific palette values (white card bg, beige
    toolbar) that would stay light in dark mode. Override them here.
 
    Same selector strategy as tokens.scss: an SCSS mixin applied under both
    the manual data-attribute and the prefers-color-scheme media query.
    ========================================================================= */
 @mixin ax-ionic-dark-overrides {
-	/* Toolbar — beige in light, surface (espresso-700) in dark */
+	/* Toolbar, beige in light, surface (espresso-700) in dark */
 	--ion-toolbar-background: var(--ax-color-bg-surface);
 	--ion-toolbar-color:      var(--ax-color-text-primary);
 
-	/* Tab bar — white in light, surface (espresso-700) in dark */
+	/* Tab bar, white in light, surface (espresso-700) in dark */
 	--ion-tab-bar-background: var(--ax-color-bg-surface);
 
-	/* Cards + items — white in light, surface in dark */
+	/* Cards + items, white in light, surface in dark */
 	--ion-card-background: var(--ax-color-bg-surface);
 	--ion-item-background: var(--ax-color-bg-surface);
 
@@ -161,7 +161,7 @@
 	--ion-background-color-rgb: 28, 25, 22;
 	--ion-text-color-rgb: 241, 237, 231;
 
-	/* Shorthand vars — pages still consume these; keep them in sync. */
+	/* Shorthand vars, pages still consume these; keep them in sync. */
 	--card:        var(--ax-color-bg-surface);
 	--header-bg:   var(--ax-color-bg-surface);
 	--header-text: var(--ax-color-text-primary);

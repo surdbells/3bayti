@@ -134,7 +134,7 @@ $skipped = 0;
 $errors = 0;
 
 try {
-    // Build the column list — products has 50+ cols, we name them explicitly
+    // Build the column list, products has 50+ cols, we name them explicitly
     $sizeCols = implode(', ', array_keys(SIZE_COLUMN_MAP));
     $sql = "
         SELECT
@@ -162,7 +162,7 @@ try {
             [$legacyId]
         );
 
-        // Resolve vendor (REQUIRED — product can't exist without vendor)
+        // Resolve vendor (REQUIRED, product can't exist without vendor)
         $legacyStoreId = (int) ($row['store_id'] ?? 0);
         $vendorId = $vendorMap[$legacyStoreId] ?? null;
         if ($vendorId === null) {
@@ -267,7 +267,7 @@ try {
             ], JSON_UNESCAPED_UNICODE);
         }
 
-        // Prices — legacy double unsigned, our v3 NUMERIC(10,2)
+        // Prices, legacy double unsigned, our v3 NUMERIC(10,2)
         $price = $row['price'] !== null ? number_format((float) $row['price'], 2, '.', '') : '0.00';
         $salePrice = $row['sale_price'] !== null
             ? number_format((float) $row['sale_price'], 2, '.', '')
@@ -289,7 +289,7 @@ try {
         $updatedAt = parseLegacyTimestamp((string) ($row['updated_at'] ?? '')) ?? $createdAt;
 
         try {
-            // Postgres UPSERT — on conflict of legacy_product_id, update
+            // Postgres UPSERT, on conflict of legacy_product_id, update
             // every column EXCEPT slug + created_at (stable per decision).
             $conn->executeStatement(
                 "INSERT INTO products

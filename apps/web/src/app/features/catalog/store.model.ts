@@ -1,5 +1,5 @@
 /**
- * Store (vendor) domain types — the customer-facing storefront view.
+ * Store (vendor) domain types, the customer-facing storefront view.
  *
  * "Store" is the customer-facing word; the API entity is `vendor`
  * (see apps/api VendorSerializer, whose storefront view is literally
@@ -19,7 +19,7 @@
 
 import type { FeaturedVendor } from './store-card';
 
-/** Storefront-facing store (vendor) — mirrors VendorSerializer::publicShape. */
+/** Storefront-facing store (vendor), mirrors VendorSerializer::publicShape. */
 export interface Store {
   id: number;
   slug: string;
@@ -36,7 +36,7 @@ export interface Store {
 }
 
 /**
- * Directory store card (Stores H2.B) — the shape GET /vendors now returns
+ * Directory store card (Stores H2.B), the shape GET /vendors now returns
  * (VendorSerializer::directoryShape): a FeaturedVendor (embedded products +
  * rating, rendered by StoreCard) PLUS the publicShape identity fields, so
  * the directory grid renders with the same <ui-store-card> as the Spotlight.
@@ -55,7 +55,7 @@ export interface StoreListParams {
 }
 
 /**
- * A public store review — what GET /v3/vendors/{slug}/reviews returns
+ * A public store review, what GET /v3/vendors/{slug}/reviews returns
  * (ReviewSerializer::publicShape). Covers both product reviews and the
  * migrated store-level reviews (product_id null). Never exposes status
  * or the reviewer's email.

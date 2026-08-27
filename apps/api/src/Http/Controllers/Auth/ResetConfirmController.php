@@ -39,10 +39,10 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Steps 2-5 happen in a single Doctrine transaction. The OTP itself
  * is consumed (step 1) in OtpService::verify's own flush; consuming
- * an OTP without changing the password is harmless — the user just
+ * an OTP without changing the password is harmless, the user just
  * retries with a fresh OTP.
  *
- * Response (200) — same shape as /v3/auth/login + /v3/auth/confirm.
+ * Response (200), same shape as /v3/auth/login + /v3/auth/confirm.
  *
  * Why issue tokens on success
  * ---------------------------
@@ -115,7 +115,7 @@ final class ResetConfirmController
         }
 
         // OTP verified. Set new password + logout-everywhere + issue
-        // fresh tokens — all in one transaction.
+        // fresh tokens, all in one transaction.
         $pair = $this->jwt->issueTokenPair($user);
         $newPasswordHash = password_hash($input->new_password, PASSWORD_BCRYPT);
         $clientIp = $this->extractIp($request);
@@ -127,7 +127,7 @@ final class ResetConfirmController
             // AuthMiddleware pwd_changed_at check.
             $user->setPasswordHash($newPasswordHash);
 
-            // Revoke all refresh tokens — including the requesting
+            // Revoke all refresh tokens, including the requesting
             // client's. We then issue a fresh pair, so the user stays
             // logged in on THIS device. All others are kicked out
             // (Decision A.6.2).

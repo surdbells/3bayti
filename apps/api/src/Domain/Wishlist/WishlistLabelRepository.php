@@ -15,7 +15,7 @@ use Doctrine\ORM\EntityRepository;
 class WishlistLabelRepository extends EntityRepository
 {
     /**
-     * The user's labels, oldest first (creation order — stable for UI).
+     * The user's labels, oldest first (creation order, stable for UI).
      *
      * @return list<WishlistLabel>
      */

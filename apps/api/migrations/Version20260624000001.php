@@ -12,7 +12,7 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * The support-ticket domain (entities, repository, customer + admin
  * controllers, serializer and routes) has been removed from the
- * application — the only retained support channel is WhatsApp. This
+ * application, the only retained support channel is WhatsApp. This
  * migration drops the two tables (and their indexes) introduced by
  * Version20260523000001's M3.4-G changes.
  *

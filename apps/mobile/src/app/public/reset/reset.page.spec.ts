@@ -10,7 +10,7 @@ import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { I18nService } from '../../i18n.service';
 
 // ---------------------------------------------------------------------------
-// Stubs (useValue) — no real network / no real constructors.
+// Stubs (useValue), no real network / no real constructors.
 // ---------------------------------------------------------------------------
 
 class ConnectionStub {
@@ -244,7 +244,7 @@ describe('ResetPage (v3 two-option reset flow)', () => {
       fillStep2(component);
       // v3 confirm returns tokens; the page must DISCARD them. The reset
       // page deliberately has NO cartMerge/pushManager/Preferences
-      // collaborators in its success path — the only observable success
+      // collaborators in its success path, the only observable success
       // effect is a success toast + navigation to /login (NOT /account).
       adapter.post_v3.and.returnValue(ok({
         access_token: 'should-be-discarded',

@@ -27,7 +27,7 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * No FK back to a "saved address" table
  * ======================================
- * OrderAddress is a SNAPSHOT — the customer's saved billing address
+ * OrderAddress is a SNAPSHOT, the customer's saved billing address
  * (M3.1.6g controllers manage that) is COPIED here at checkout. If
  * the customer later edits their saved address, this row stays as
  * it was at order time. Same snapshotting principle as order_items.

@@ -12,7 +12,7 @@ import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-com
 import { OtaAdminService, OtaBundle, OtaUploadMeta } from '../../services/ota-admin.service';
 
 /**
- * Admin page to manage self-hosted OTA (over-the-air) mobile web bundles —
+ * Admin page to manage self-hosted OTA (over-the-air) mobile web bundles -
  * upload a built .zip, publish it, roll it back, or delete it, all without
  * touching the server shell. Backed by /v3/admin/ota/bundles.
  */

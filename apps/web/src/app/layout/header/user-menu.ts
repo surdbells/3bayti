@@ -18,7 +18,7 @@ import { MessagesService } from '../../features/messages/messages.service';
 import type { AuthUser } from '../../core/auth/auth.types';
 
 /**
- * User menu — the dropdown that appears when an authenticated user
+ * User menu, the dropdown that appears when an authenticated user
  * clicks the avatar/name in the header.
  *
  * Contents:
@@ -289,7 +289,7 @@ export class UserMenuComponent implements OnInit {
   private readonly hostEl = inject(ElementRef);
   private readonly messages = inject(MessagesService);
 
-  /** Unread order-chat total — drives the Messages item badge. */
+  /** Unread order-chat total, drives the Messages item badge. */
   protected readonly unreadMessages = this.messages.unreadTotal;
 
   ngOnInit(): void {

@@ -14,7 +14,7 @@ import {
 import { ApiConfigService } from '../api/api-config.service';
 
 /**
- * RoutedHttpClient — Angular HttpClient adapter that consumes the
+ * RoutedHttpClient, Angular HttpClient adapter that consumes the
  * `@3bayti/api-client` routing tables.
  *
  * Why this exists
@@ -31,19 +31,19 @@ import { ApiConfigService } from '../api/api-config.service';
  *
  * What we keep from `@3bayti/api-client`
  * ======================================
- *   - ENDPOINT_ROUTING table — the single source of truth for which
+ *   - ENDPOINT_ROUTING table, the single source of truth for which
  *     endpoint is on 'new' vs 'old'.
- *   - resolveUrl / resolveConfig — same path-param substitution and
+ *   - resolveUrl / resolveConfig, same path-param substitution and
  *     shape lookup the fetch client uses, so mobile/portal and web
  *     stay consistent.
- *   - normaliseResponse — turns the three different wire shapes
+ *   - normaliseResponse, turns the three different wire shapes
  *     (v2 envelope, v3 envelope, raw) into one `{ data, meta? }`
  *     contract for consumers.
  *
  * Public API
  * ==========
  * All methods take a routing KEY of the form `"GET /products"`,
- * `"GET /products/:slug"`, etc. — the same keys ENDPOINT_ROUTING uses.
+ * `"GET /products/:slug"`, etc., the same keys ENDPOINT_ROUTING uses.
  * That lets feature services express intent at the logical level
  * ("fetch products") rather than committing to a specific backend.
  *
@@ -66,7 +66,7 @@ import { ApiConfigService } from '../api/api-config.service';
  * HTTP errors propagate as `HttpErrorResponse` through the Observable
  * error channel. We log once at the boundary; callers decide UX
  * (retry, fallback, 404 page). We deliberately do NOT swallow errors
- * here — silently empty results break things in surprising ways. See
+ * here, silently empty results break things in surprising ways. See
  * HomeDataService's per-stream `catchError(() => of([]))` for the
  * "degrade gracefully" pattern at the consumer layer.
  *
@@ -80,7 +80,7 @@ import { ApiConfigService } from '../api/api-config.service';
  *     (separate concern; will wire up in M2.3 when the web app starts
  *     hitting authenticated v3 endpoints).
  *   - Request cancellation. Angular Observables already do this when
- *     the subscriber unsubscribes — no extra plumbing needed.
+ *     the subscriber unsubscribes, no extra plumbing needed.
  */
 @Injectable({ providedIn: 'root' })
 export class RoutedHttpClient {
@@ -151,7 +151,7 @@ export class RoutedHttpClient {
     routeKey: string,
     options: RequestOptions,
   ): Observable<NormalisedResponse<T>> {
-    // resolveConfig will throw if the route key isn't registered —
+    // resolveConfig will throw if the route key isn't registered -
     // good fail-fast for typos. resolveUrl does the path-param
     // substitution.
     const cfg = resolveConfig(routeKey);
@@ -159,7 +159,7 @@ export class RoutedHttpClient {
       // legacyBaseUrl is the unversioned legacy host; ENDPOINT_ROUTING
       // entries include the version segment in their `oldPath`
       // (e.g. '/v2/featured-vendors', '/users/login'), so we must NOT
-      // use v2BaseUrl here — that would produce a double-prefix URL.
+      // use v2BaseUrl here, that would produce a double-prefix URL.
       old: this.config.legacyBaseUrl,
       new: this.config.v3BaseUrl,
     };
@@ -183,7 +183,7 @@ export class RoutedHttpClient {
 
     // Angular's HttpClient typing for `request` is more permissive
     // than its method-specific overloads (get/post/etc) when both
-    // params and body are involved — so we go through `request` for
+    // params and body are involved, so we go through `request` for
     // uniformity across verbs.
     return this.http
       .request<unknown>(method, url, httpOptions)
@@ -231,10 +231,10 @@ export class RoutedHttpClient {
 /**
  * Options bag for requests.
  *
- * `params` — path parameters; `:slug` in the routing-table path is
+ * `params`, path parameters; `:slug` in the routing-table path is
  *            substituted with `params.slug`.
- * `query` — query string parameters. Falsy values dropped.
- * `body`  — JSON body for mutations. Serialised by HttpClient.
+ * `query`, query string parameters. Falsy values dropped.
+ * `body` , JSON body for mutations. Serialised by HttpClient.
  */
 export interface RequestOptions {
   params?: Record<string, string | number>;

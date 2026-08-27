@@ -24,7 +24,7 @@ export interface PortalSession {
   is_finance?: boolean;
   is_support?: boolean;
   is_phone_verified?: boolean;
-  /** Provisioned with a temporary password — must change it before using the app. */
+  /** Provisioned with a temporary password, must change it before using the app. */
   must_change_password?: boolean;
 }
 
@@ -86,7 +86,7 @@ export function mustChangePassword(s: PortalSession | null): boolean {
  * base64(UTF-8(JSON)) format PortalAuthService writes). No-op if there is no
  * session. `undefined` values are skipped so they never clobber existing
  * fields. Loosely typed because the stored session is a superset of the read
- * shape (it also carries refresh_token + token expiries) — used to update the
+ * shape (it also carries refresh_token + token expiries), used to update the
  * rotated tokens and clear must_change_password after a forced change.
  */
 export function patchSession(patch: Record<string, unknown>): void {

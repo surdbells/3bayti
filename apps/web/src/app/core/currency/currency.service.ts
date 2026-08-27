@@ -22,7 +22,7 @@ const STORAGE_KEY = 'bayti_currency';
 const DEFAULT: SupportedCurrency = 'AED';
 
 /**
- * CurrencyService — persists the visitor's chosen display currency and
+ * CurrencyService, persists the visitor's chosen display currency and
  * exposes it as a signal so catalog services can thread ?currency=XXX
  * through their API calls (M3.2.W.3).
  *

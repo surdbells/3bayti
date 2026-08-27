@@ -17,7 +17,7 @@ use Doctrine\ORM\EntityRepository;
  *
  * The "effective" suffix on the count methods denotes that orders in
  * terminal-failed states (cancelled / failed) are excluded from
- * the count — so a customer whose checkout failed at the gateway
+ * the count, so a customer whose checkout failed at the gateway
  * doesn't burn their one allowed redemption.
  *
  * Status taxonomy reference: Order::STATUS_* in
@@ -34,7 +34,7 @@ class PromoRedemptionRepository extends EntityRepository
     /**
      * Order statuses that should NOT count toward usage limits. A
      * canceled or payment-failed order's redemption is historical
-     * only — the customer never actually got the discount.
+     * only, the customer never actually got the discount.
      *
      * Note: we deliberately do NOT exclude pending_payment here.
      * A pending-payment order has reserved the redemption slot;

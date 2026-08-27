@@ -61,7 +61,7 @@ final class UpdateVendorStoreController
         // the DB reject them at flush() with a raw 500 (SQLSTATE 22001 "value too
         // long"). Limits mirror the Vendor column definitions; both the legacy
         // and store_* aliases the client may send are covered. The image-URL
-        // fields (logo/cover) are the common offender — a long/data URL blows the
+        // fields (logo/cover) are the common offender, a long/data URL blows the
         // 500-char cap.
         $maxLengths = [
             'name' => 200, 'store_name' => 200,

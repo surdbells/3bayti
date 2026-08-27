@@ -8,9 +8,9 @@
  *
  *   {
  *     first_name, last_name, email, phone, password,
- *     confirm_password,            // client-side only — drop
+ *     confirm_password,            // client-side only, drop
  *     countryCode: "+971",         // wrong key + wrong format for v3
- *     accepted_terms: true         // client-side only — drop
+ *     accepted_terms: true         // client-side only, drop
  *   }
  *
  * v3's RegisterInput DTO (apps/api/src/Http/Controllers/Auth/Dto/
@@ -41,7 +41,7 @@
  * ====================
  * 3bayti is currently UAE-only but the codebase is built with multi-
  * country headroom. The mapping below covers the dial codes the
- * existing UI exposes — primarily "+971" (UAE). Any unknown dial
+ * existing UI exposes, primarily "+971" (UAE). Any unknown dial
  * code falls back to "AE" because:
  *   1. v3 validates country_code as exactly 2 uppercase letters; "" or
  *      a malformed value would 422.
@@ -120,7 +120,7 @@ function mapCountryCode(raw: string | undefined): string {
   if (raw === undefined || raw === null || raw.length === 0) {
     return 'AE';
   }
-  // Already ISO alpha-2 — pass through.
+  // Already ISO alpha-2, pass through.
   if (ISO_CODE_REGEX.test(raw)) {
     return raw;
   }
@@ -129,7 +129,7 @@ function mapCountryCode(raw: string | undefined): string {
   if (mapped !== undefined) {
     return mapped;
   }
-  // Fallback. Logged for visibility — if this fires in production
+  // Fallback. Logged for visibility, if this fires in production
   // we'd see "+44" or similar unmapped codes in the console and can
   // add them to the table.
   console.warn(`[register-request.transform] unrecognised countryCode "${raw}"; defaulting to AE`);

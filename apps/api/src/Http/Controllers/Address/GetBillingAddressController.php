@@ -52,7 +52,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Billing-address-not-set is an expected state for new users.
  * { "address": null } is the right semantic.
  *
- * The companion PATCH endpoint upserts — clients calling GET to
+ * The companion PATCH endpoint upserts, clients calling GET to
  * read, then PATCH to write, never have to handle a 404 transition
  * mid-flow.
  */
@@ -78,7 +78,7 @@ final class GetBillingAddressController
     ): ResponseInterface {
         $user = $request->getAttribute(AuthMiddleware::ATTR_USER);
         if (!$user instanceof User) {
-            // Defensive — AuthMiddleware should have already 401'd
+            // Defensive, AuthMiddleware should have already 401'd
             // before reaching us. Keep the check for completeness.
             throw HttpException::unauthorized(
                 ErrorCodes::AUTH_INVALID_TOKEN,

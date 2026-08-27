@@ -20,7 +20,7 @@ import {
   LISTING_SORTS,
 } from './product-filter.types';
 
-/** i18n key for each sort value — web-matching labels. */
+/** i18n key for each sort value, web-matching labels. */
 const SORT_LABEL_KEYS: Record<ProductSort, string> = {
   newest: 'filter_sort_newest',
   oldest: 'filter_sort_oldest',
@@ -39,7 +39,7 @@ const SWATCH: Record<string, string> = {
 };
 
 /**
- * AxProductFilterSheet — web-parity SORT / SIZE / COLOR / PRICE refinement
+ * AxProductFilterSheet, web-parity SORT / SIZE / COLOR / PRICE refinement
  * for the mobile listing pages (best-sellers, new-arrivals, category).
  *
  * Renders inside the shared ax-bottom-sheet. The host page owns the
@@ -75,7 +75,7 @@ export class AxProductFilterSheetComponent {
   /** Sort options the page allows (all listing sorts by default). */
   @Input() sorts: readonly ProductSort[] = LISTING_SORTS;
 
-  /** The page's identity sort — what Clear all resets to. */
+  /** The page's identity sort, what Clear all resets to. */
   @Input() defaultSort: ProductSort = 'newest';
 
   /** Facet data from GET /products/facets (unwrapped `data`). */

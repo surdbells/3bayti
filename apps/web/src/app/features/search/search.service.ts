@@ -14,11 +14,11 @@ export interface SearchResults {
 export const SEARCH_GROUP_LIMIT = 6;
 
 /**
- * SearchService — powers the global header search overlay (Stores H2.C).
+ * SearchService, powers the global header search overlay (Stores H2.C).
  *
  * A query fans out to two public catalog reads in PARALLEL:
  *   GET /products?q=…  (ListProductsController name search)
- *   GET /vendors?q=…   (ListVendorsController name search — Stores H2.A;
+ *   GET /vendors?q=…   (ListVendorsController name search, Stores H2.A;
  *                       returns directoryShape, so each store row has its
  *                       logo + rating + product thumbnails available)
  * and returns both groups. Public reads go through RoutedHttpClient (same

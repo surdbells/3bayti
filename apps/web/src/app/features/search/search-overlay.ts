@@ -24,7 +24,7 @@ import type { DirectoryStore } from '../catalog/store.model';
 const SEARCH_DEBOUNCE_MS = 250;
 
 /**
- * Global search overlay (Stores H2.C) — a header-triggered typeahead over
+ * Global search overlay (Stores H2.C), a header-triggered typeahead over
  * products + stores.
  *
  * Controlled component: the header owns the open/close state via [open] +

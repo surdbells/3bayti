@@ -11,11 +11,11 @@ import {
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 /**
- * Countdown — a compact days/hours/minutes/seconds timer to a deadline.
+ * Countdown, a compact days/hours/minutes/seconds timer to a deadline.
  *
  * Server-clock aware: when [serverNow] (the API's clock at response time)
  * is supplied, the component measures the device's offset from it once and
- * counts down against the server clock — so a skewed device clock can't
+ * counts down against the server clock, so a skewed device clock can't
  * misreport the time remaining. Ticks once a second; clears on destroy.
  *
  * Accessibility: the ticking digits are aria-hidden (announcing every

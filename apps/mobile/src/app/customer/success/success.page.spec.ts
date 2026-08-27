@@ -131,7 +131,7 @@ describe('SuccessPage', () => {
   });
 
   it('still confirms success when the order fetch fails', async () => {
-    // Payment already succeeded — a failed detail fetch must not error the screen.
+    // Payment already succeeded, a failed detail fetch must not error the screen.
     adapter.failOrder = true;
     configure({ orderReference: 'V3-TEST-1', orderId: '42' }, adapter);
     fixture = TestBed.createComponent(SuccessPage);

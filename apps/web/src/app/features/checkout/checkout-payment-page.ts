@@ -13,7 +13,7 @@ import { CheckoutStepperComponent } from './checkout-stepper';
 import { CheckoutService } from '../../core/checkout';
 
 /**
- * /checkout/payment — step 3 of 3.
+ * /checkout/payment, step 3 of 3.
  *
  * Handoff bridge between our checkout and Noon's hosted payment page.
  *
@@ -169,7 +169,7 @@ export class CheckoutPaymentPageComponent implements OnInit {
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) {
-      /* SSR — nothing to do; the browser hydrate will run ngOnInit
+      /* SSR, nothing to do; the browser hydrate will run ngOnInit
          again. */
       return;
     }
@@ -183,7 +183,7 @@ export class CheckoutPaymentPageComponent implements OnInit {
     const ref = typeof state.order_reference === 'string' ? state.order_reference : null;
 
     if (url === null) {
-      /* No state — likely a refresh or direct navigation. Bounce
+      /* No state, likely a refresh or direct navigation. Bounce
          back to review after a small grace period so the user sees
          a transition, not an instant flash. */
       window.setTimeout(() => {
@@ -216,7 +216,7 @@ export class CheckoutPaymentPageComponent implements OnInit {
       window.location.assign(url);
     } catch {
       /* If the assign throws (e.g. blocked URL scheme), the manual
-         link still works. No toast — the UI already exposes the
+         link still works. No toast, the UI already exposes the
          fallback. */
     }
   }

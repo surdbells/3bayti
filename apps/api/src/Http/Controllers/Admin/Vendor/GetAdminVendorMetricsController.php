@@ -35,7 +35,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Window:
  *   - days defaults to 30 (DEFAULT_WINDOW_DAYS)
- *   - clamped to MIN_WINDOW_DAYS (7) — MAX_WINDOW_DAYS (365) range
+ *   - clamped to MIN_WINDOW_DAYS (7), MAX_WINDOW_DAYS (365) range
  *   - non-numeric / blank values fall back to default
  *
  * Authorization: admin-only (group middleware in routes.php enforces
@@ -106,7 +106,7 @@ final class GetAdminVendorMetricsController
 
     /**
      * Clamp + default the window param. Non-numeric or out-of-range
-     * inputs fall back to DEFAULT_WINDOW_DAYS rather than 400 — the
+     * inputs fall back to DEFAULT_WINDOW_DAYS rather than 400, the
      * metrics endpoint is read-only and degrades cleanly.
      */
     private function parseWindowDays(mixed $raw): int

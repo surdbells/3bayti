@@ -21,13 +21,13 @@ export const ORDER_STATUS_OPTIONS: readonly AxFilterOption[] = [
 ];
 
 /**
- * The "Active" chip on the admin Orders & Sales table — every status EXCEPT the
+ * The "Active" chip on the admin Orders & Sales table, every status EXCEPT the
  * three dead-end / unpaid ones (pending_payment, cancelled, failed). It's the
  * default view so the noise (abandoned unpaid, cancelled, failed) is hidden and
  * the admin lands on the real, live orders.
  *
  * Sent to GET /admin/orders as a CSV `status` list, which the API parses into
- * an `IN (...)` filter — the same mechanism the logistics board uses for
+ * an `IN (...)` filter, the same mechanism the logistics board uses for
  * "shipped,delivered". No API change required.
  */
 export const ACTIVE_ORDER_EXEMPT_STATUSES: readonly string[] = ['pending_payment', 'cancelled', 'failed'];
@@ -40,7 +40,7 @@ export const ACTIVE_ORDER_STATUSES: readonly string[] = ORDER_STATUS_OPTIONS
 export const ACTIVE_ORDER_STATUS_VALUE: string = ACTIVE_ORDER_STATUSES.join(',');
 
 /**
- * Fulfilment status set for the logistics / delivery board — the
+ * Fulfilment status set for the logistics / delivery board, the
  * SHIPPED->DELIVERED range (in-progress + completed shipments). The API
  * (Order::STATUS_*) has no `out_for_delivery` status, so the set is just
  * shipped + delivered. Pre-shipment (pending_payment/paid/fulfilling) and
@@ -58,7 +58,7 @@ export const LOGISTICS_STATUS_OPTIONS: readonly AxFilterOption[] =
   ORDER_STATUS_OPTIONS.filter((o) => FULFILMENT_STATUSES.includes(String(o.value)));
 
 /**
- * Statuses that count as a SALE — everything EXCEPT pending_payment. An order
+ * Statuses that count as a SALE, everything EXCEPT pending_payment. An order
  * still awaiting payment isn't a completed sale, so it must never appear on the
  * admin/sales report (or its Store-sales drill-downs). Sent as the default
  * `status` filter so the sales tables exclude unpaid orders.
@@ -68,14 +68,14 @@ export const SALES_STATUSES: readonly string[] = ORDER_STATUS_OPTIONS
   .filter((v) => v !== 'pending_payment');
 
 /**
- * Status dropdown for the sales tables — ORDER_STATUS_OPTIONS minus
+ * Status dropdown for the sales tables, ORDER_STATUS_OPTIONS minus
  * pending_payment, so an admin can't filter the sales report to unpaid orders.
  */
 export const SALES_STATUS_OPTIONS: readonly AxFilterOption[] =
   ORDER_STATUS_OPTIONS.filter((o) => o.value !== 'pending_payment');
 
 /**
- * Async option provider for a "Store" (vendor) filter — fetches the admin
+ * Async option provider for a "Store" (vendor) filter, fetches the admin
  * vendor list and maps it to {label,value}. Degrades to an empty list on
  * failure so the rest of the table stays usable.
  *
@@ -104,7 +104,7 @@ export function loadAdminVendorOptions(
 }
 
 /**
- * Order-type filter options for the merged Orders & Sales table — narrow to
+ * Order-type filter options for the merged Orders & Sales table, narrow to
  * product orders or gift-card sales. Maps to the API `type` param
  * ('product' excludes gift cards, 'gift_card' shows only them). No explicit
  * "All" entry: clearing the filter shows both.

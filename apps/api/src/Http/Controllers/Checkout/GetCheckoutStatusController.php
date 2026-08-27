@@ -33,7 +33,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   1. Noon explicitly bans IPs that poll their GET_ORDER endpoint
  *      aggressively (docs.noonpayments.com/test/evaluating-api).
  *      Mobile may poll us 1-2x/second for ~30 seconds; that would
- *      be 60 hits to Noon per checkout — a guaranteed IP ban.
+ *      be 60 hits to Noon per checkout, a guaranteed IP ban.
  *   2. The webhook receiver already calls Noon's GET_ORDER as
  *      the authoritative state-of-record, so v3's local state
  *      is correct by the time mobile polls.
@@ -93,7 +93,7 @@ final class GetCheckoutStatusController
 
         // Cross-tenant check: order exists but belongs to someone else.
         // Return 404 (not 403) to avoid leaking that the reference is
-        // valid — protects against an attacker enumerating references.
+        // valid, protects against an attacker enumerating references.
         if ($order === null || $order->getUser()->getId() !== $user->getId()) {
             throw HttpException::notFound('Order not found.');
         }
@@ -105,7 +105,7 @@ final class GetCheckoutStatusController
             || $status === Order::STATUS_SHIPPED
             || $status === Order::STATUS_DELIVERED;
 
-        // M3.5 Phase 4 — activate gift card on status poll if webhook was delayed.
+        // M3.5 Phase 4, activate gift card on status poll if webhook was delayed.
         // Idempotent: already-active cards are skipped inside activateIfPending().
         if ($paid) {
             try {

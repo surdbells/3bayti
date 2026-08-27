@@ -6,13 +6,13 @@ import { TranslatePipe } from '@ngx-translate/core';
 import type { Product } from '../catalog/product.model';
 
 /**
- * TopSellers — the best-sellers rail with a ranked treatment. Unlike a
+ * TopSellers, the best-sellers rail with a ranked treatment. Unlike a
  * plain product strip, each card carries its position (1, 2, 3 …): the
  * numbering is meaningful here because the row genuinely is a ranking
  * (most-loved first), not decoration.
  *
  * Reuses ProductCard for the card itself; adds an editorial rank numeral
- * above each. Hides nothing here — the parent omits the section when the
+ * above each. Hides nothing here, the parent omits the section when the
  * list is empty.
  */
 @Component({

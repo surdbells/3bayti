@@ -4,7 +4,7 @@ import { MobileNetworkAdapter } from '../http/mobile-network-adapter';
 import { ProductReview, ProductReviewPage } from '../../class/product-review';
 
 /**
- * ProductReviewService (mobile) — real product reviews for the PDP.
+ * ProductReviewService (mobile), real product reviews for the PDP.
  *
  * Route-keys (resolved by MobileNetworkAdapter via @3bayti/api-client,
  * see feature-flags.ts):
@@ -14,11 +14,11 @@ import { ProductReview, ProductReviewPage } from '../../class/product-review';
  * The :productId is the NUMERIC v3 product id. The PDP loads the product by
  * legacy id, but ProductSerializer::detailShape surfaces the v3 PK as the
  * top-level `id`, which transformProductDetailResponse maps onto
- * `single.product` — pass THAT here, not the legacy id.
+ * `single.product`, pass THAT here, not the legacy id.
  *
  * GET returns ReviewSerializer::publicShape rows + a {total,limit,offset}
  * meta. POST upserts (one review per user+product) and always lands the
- * review as PENDING moderation — it is not visible until a moderator
+ * review as PENDING moderation, it is not visible until a moderator
  * approves it (201 new / 200 edited).
  */
 @Injectable({ providedIn: 'root' })
@@ -49,7 +49,7 @@ export class ProductReviewService {
 
   /**
    * List approved reviews for a product (newest first), paginated.
-   * Public read — no auth token required.
+   * Public read, no auth token required.
    */
   async list(
     productId: number | string,

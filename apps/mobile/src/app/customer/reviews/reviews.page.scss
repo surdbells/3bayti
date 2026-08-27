@@ -1,5 +1,5 @@
 /* ============================================================================
-   Reviews page — M2 redesign
+   Reviews page, M2 redesign
    ============================================================================ */
 
 ion-content.page-bg {
@@ -92,7 +92,7 @@ ion-content.page-bg {
     font-size: 14px;
 
     &--filled {
-      color: #d6a800;                /* gold star — same accent literal
+      color: #d6a800;                /* gold star, same accent literal
                                         used elsewhere in the app */
     }
   }
@@ -101,7 +101,7 @@ ion-content.page-bg {
 /* ----- Empty state -------------------------------------------------- */
 
 /* M38/M47: layout, h2, p covered by global .empty-state. This page uses
-   a bare ax-icon (no .empty-icon-wrap bubble) — keep the bare ax-icon styling. */
+   a bare ax-icon (no .empty-icon-wrap bubble), keep the bare ax-icon styling. */
 .empty-state {
   --empty-state-padding: 60px 24px;
 

@@ -154,7 +154,7 @@ export class VendorOrderDetailComponent implements OnInit {
       },
     });
 
-    // Timeline is non-critical — a failure just hides the section. Response is
+    // Timeline is non-critical, a failure just hides the section. Response is
     // { data: [events], meta }; each event has { type, summary, occurred_at }.
     this.adapter.get_v3('GET /vendor/orders/:id/timeline', { params: { id: String(this.orderId) } }).subscribe({
       next: (res: any) => this.timeline.set(res?.data ?? res?.timeline ?? []),
@@ -162,14 +162,14 @@ export class VendorOrderDetailComponent implements OnInit {
     });
   }
 
-  /** Full customer name, or "—" when missing. */
+  /** Full customer name, or "-" when missing. */
   customerName(): string {
     const c = this.order()?.customer;
     if (!c) return '—';
     return `${c.first_name ?? ''} ${c.last_name ?? ''}`.trim() || '—';
   }
 
-  /** Recipient name from the shipping address, or "—" when missing. */
+  /** Recipient name from the shipping address, or "-" when missing. */
   addressName(a: OrderAddress | null | undefined): string {
     if (!a) return '—';
     return `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim() || '—';
@@ -205,7 +205,7 @@ export class VendorOrderDetailComponent implements OnInit {
 
   /**
    * The item's `extra_measurement` (a vendor-specific measurement beyond the
-   * profile) as display text — a JSON object becomes "Label: value, …"; free
+   * profile) as display text, a JSON object becomes "Label: value, …"; free
    * text is shown as-is. Empty string when not provided.
    */
   extraMeasurementText(item: OrderItem): string {
@@ -223,7 +223,7 @@ export class VendorOrderDetailComponent implements OnInit {
   /**
    * The customer's saved measurement profile(s), filtered to rows that
    * actually carry values. This is the authoritative set the customer keeps on
-   * their account — shown so the vendor can fulfil made-to-measure orders even
+   * their account, shown so the vendor can fulfil made-to-measure orders even
    * when the per-item snapshot wasn't captured (non-custom lines, or legacy
    * orders migrated without one).
    */
@@ -272,7 +272,7 @@ export class VendorOrderDetailComponent implements OnInit {
   }
 
   /**
-   * Total for the products from THIS vendor's store only — the sum of the
+   * Total for the products from THIS vendor's store only, the sum of the
    * vendor's own line items. The order's subtotal/total fields cover the whole
    * basket (other stores' items + delivery), which the vendor must not see.
    * The API already filters items[] to this vendor, so summing them is exact.

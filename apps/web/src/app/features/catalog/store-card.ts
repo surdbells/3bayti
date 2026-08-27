@@ -38,7 +38,7 @@ export interface FeaturedVendor {
 }
 
 /**
- * StoreCard — vendor card with a HERO cover image, matching the mobile
+ * StoreCard, vendor card with a HERO cover image, matching the mobile
  * vendor card: a cover image with a gradient scrim, a circular logo + name +
  * rating overlaid at the bottom, then a strip of product thumbnails and a
  * "View collection" link.
@@ -47,7 +47,7 @@ export interface FeaturedVendor {
  * stands in; when there are no products either, the cover shows a warm brand
  * gradient. Logo falls back to the name's initial.
  *
- * Not a single anchor — the cover, each thumbnail and the CTA are separate
+ * Not a single anchor, the cover, each thumbnail and the CTA are separate
  * <a>s (different destinations), which is the correct pattern for a card with
  * multiple navigation targets.
  */

@@ -20,14 +20,14 @@ interface SetupStep {
 }
 
 /**
- * Store setup checklist for the vendor dashboard — the guided-onboarding card
+ * Store setup checklist for the vendor dashboard, the guided-onboarding card
  * (Shopify/Stripe style) that walks a new seller through everything needed to
  * start selling, with a progress bar, per-step field counts, actions, and a
  * highlighted "next step".
  *
  * Each step maps to one settings page and is only "done" when that whole form
- * is complete — the store profile, the full business/tax section, and the
- * payout details — plus a first product. Completion is read live from the
+ * is complete, the store profile, the full business/tax section, and the
+ * payout details, plus a first product. Completion is read live from the
  * vendor's own endpoints; once every step is done the card collapses to a
  * dismissible banner (remembered in localStorage).
  */
@@ -75,7 +75,7 @@ export class StoreSetupProgressComponent implements OnInit {
   ngOnInit(): void {
     this.dismissed = localStorage.getItem(StoreSetupProgressComponent.DISMISS_KEY) === '1';
     if (this.dismissed) {
-      return; // Already completed + dismissed — don't fetch or render.
+      return; // Already completed + dismissed, don't fetch or render.
     }
 
     // Each call defaults to null on error (e.g. a section never filled in yet)

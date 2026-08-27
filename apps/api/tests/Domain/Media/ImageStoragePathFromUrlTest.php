@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * ImageStorageService::storagePathFromUrl (bug 2 orphan cleanup) — must
+ * ImageStorageService::storagePathFromUrl (bug 2 orphan cleanup), must
  * resolve our own upload URLs to storage paths and return null for
  * external/legacy URLs so we never delete files we don't own.
  */

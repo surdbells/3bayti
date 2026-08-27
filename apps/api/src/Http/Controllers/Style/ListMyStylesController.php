@@ -19,7 +19,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * GET /v3/me/styles — the authenticated customer's own submitted styles.
+ * GET /v3/me/styles, the authenticated customer's own submitted styles.
  *
  * Backs the "My Styles" tab of the mobile Style Hub. Unlike GET /v3/styles
  * (anonymous, type-filtered community/editorial), this endpoint is owner-
@@ -69,7 +69,7 @@ final class ListMyStylesController
         $result = $styleRepo->findByOwnerPaginated($user, $limit, $offset);
 
         // Bulk-load embedded products for the entire page in one query
-        // (vs N+1 if the serializer fetched per-style) — same as
+        // (vs N+1 if the serializer fetched per-style), same as
         // ListStylesController.
         $styleIds = array_map(static fn (Style $s) => (int) $s->getId(), $result['items']);
         $productsByStyleId = $styleRepo->loadProductsForStyles($styleIds);

@@ -15,7 +15,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Local email-OTP provider — generates, persists, and emails a
+ * Local email-OTP provider, generates, persists, and emails a
  * 6-digit code WITHOUT delegating to any CPaaS.
  *
  * Why local (vs. MessageCentral for SMS)
@@ -26,7 +26,7 @@ use Psr\Log\NullLogger;
  *
  *   send():
  *     1. Generate a cryptographically-random 6-digit code via
- *        random_int (NOT rand/mt_rand — those are predictable).
+ *        random_int (NOT rand/mt_rand, those are predictable).
  *     2. Hash it with password_hash() and store the hash as
  *        OtpAttempt.code_hash. The PLAINTEXT IS NEVER PERSISTED.
  *     3. Mint a local verification_id ('em-' + 16 random bytes hex)
@@ -37,7 +37,7 @@ use Psr\Log\NullLogger;
  *     5. Email the plaintext code via MailerInterface.
  *     6. Return the verification_id.
  *
- * Verification is NOT done here — it lives in OtpService::verify,
+ * Verification is NOT done here, it lives in OtpService::verify,
  * which loads the row, checks expiry/consumed/attempt-cap, and uses
  * password_verify() (constant-time) against code_hash. Keeping verify
  * in the service matches the SMS path's shape (service orchestrates,
@@ -57,7 +57,7 @@ use Psr\Log\NullLogger;
  */
 final class LocalEmailOtpProvider
 {
-    /** OTP lifetime — mirrors the SMS TTL (5 minutes). */
+    /** OTP lifetime, mirrors the SMS TTL (5 minutes). */
     private const TTL_SECONDS = 300;
 
     public function __construct(
@@ -73,7 +73,7 @@ final class LocalEmailOtpProvider
      * @param string  $email     Recipient address.
      * @param string  $purpose   One of OtpAttempt::ALL_PURPOSES.
      * @param string  $phone     Phone to record on the audit row (the
-     *                           user's registered phone — the table's
+     *                           user's registered phone, the table's
      *                           `phone` column is NOT NULL). Pass '' if
      *                           genuinely unknown.
      * @param User|null $user        Bound user when known.
@@ -118,7 +118,7 @@ final class LocalEmailOtpProvider
 
         // Render minimal text + HTML bodies inline. We deliberately
         // keep this self-contained (no template-renderer dependency)
-        // because the OTP email is a single short sentence — the
+        // because the OTP email is a single short sentence, the
         // order/cart renderers exist for rich multi-section emails.
         [$subject, $textBody, $htmlBody] = $this->renderBodies($code);
 

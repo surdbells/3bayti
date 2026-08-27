@@ -11,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * Photo evidence attached to an OrderReturnRequest (M3.2.X.18-A).
  *
- * Customer attaches photos when submitting a return request — these
+ * Customer attaches photos when submitting a return request, these
  * are what the admin reviews when deciding approve vs deny. Per
  * Q-Photos = Flysystem-local-for-v1, the binary content lives on
  * disk under apps/api/var/uploads/return-photos/ (relative to the
@@ -25,7 +25,7 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * Storage abstraction
  * ===================
- * storage_path is opaque to the API — it's whatever Flysystem path
+ * storage_path is opaque to the API, it's whatever Flysystem path
  * the upload pipeline assigned (typically something like
  * `return-photos/2026/05/{return-request-id}/{ulid}.jpg`). The serve
  * endpoint (GET /v3/returns/{id}/photos/{photoId}) authorizes the
@@ -38,7 +38,7 @@ use Doctrine\ORM\Mapping as ORM;
  * ===================
  * Parent OrderReturnRequest goes away (rare admin op) → CASCADE
  * removes photo rows. The binary blobs on disk are NOT auto-deleted
- * by this — operator playbook §2.N notes a periodic cleanup step
+ * by this, operator playbook §2.N notes a periodic cleanup step
  * for orphaned blobs. v1 acceptable as long as deletes are rare.
  */
 #[ORM\Entity(repositoryClass: OrderReturnRequestPhotoRepository::class)]
@@ -81,7 +81,7 @@ class OrderReturnRequestPhoto
 
     /**
      * Construct a photo record. The actual upload to Flysystem
-     * happens before this entity is created — by the time the
+     * happens before this entity is created, by the time the
      * constructor runs, the blob is on disk and storage_path is
      * known.
      *
@@ -126,7 +126,7 @@ class OrderReturnRequestPhoto
     }
 
     /**
-     * Bidirectional collection setter — called from
+     * Bidirectional collection setter, called from
      * OrderReturnRequest::addPhoto.
      */
     public function setReturnRequest(OrderReturnRequest $returnRequest): void

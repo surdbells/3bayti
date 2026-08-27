@@ -27,7 +27,7 @@
 .ms-quicklink-title { font-weight: 600; color: var(--ax-color-text-primary); font-size: 0.95rem; }
 .ms-quicklink-sub { font-size: 0.75rem; color: var(--ax-color-text-tertiary); }
 
-/* KYC document thumbnail — full document visible (contain), click to enlarge */
+/* KYC document thumbnail, full document visible (contain), click to enlarge */
 .ms-doc-thumb {
   position: relative;
   display: block;
@@ -79,7 +79,7 @@
   background: var(--ax-color-bg-subtle, #faf9f7);
 }
 
-/* Full-screen document viewer — above the sidenav (1030) + topbar (1040) so
+/* Full-screen document viewer, above the sidenav (1030) + topbar (1040) so
    it isn't clipped behind them; sits at modal level. */
 .ms-doc-viewer {
   position: fixed;

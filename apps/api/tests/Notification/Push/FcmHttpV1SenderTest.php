@@ -122,7 +122,7 @@ final class FcmHttpV1SenderTest extends TestCase
     public function sendOmitsEmptyDataSoFcmDoesNotReject(): void
     {
         // Regression: an empty data map serialized as "data":[] (a JSON array),
-        // which FCM v1 rejects with INVALID_ARGUMENT — so every admin broadcast
+        // which FCM v1 rejects with INVALID_ARGUMENT, so every admin broadcast
         // (which carries no data) failed on every token, while order pushes
         // (always non-empty data) succeeded.
         $sender = $this->sender([
@@ -137,7 +137,7 @@ final class FcmHttpV1SenderTest extends TestCase
         ));
 
         $send = $this->captured[1];
-        // The data key is dropped entirely when empty — never sent as `[]`.
+        // The data key is dropped entirely when empty, never sent as `[]`.
         self::assertStringNotContainsString('"data":[]', $send['body']);
         $payload = json_decode($send['body'], true);
         self::assertArrayNotHasKey('data', $payload['message']);

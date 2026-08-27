@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { FormGroup } from '@angular/forms';
 
 /**
- * mapApiErrors — translate an API error response into FormControl errors.
+ * mapApiErrors, translate an API error response into FormControl errors.
  *
  * Why
  * ---
@@ -54,7 +54,7 @@ export interface ApiErrorMapping {
 export interface MapApiErrorsResult {
   /** Codes from the API that did not have a mapping. */
   unmapped: string[];
-  /** True if the error was a network / non-HttpErrorResponse case —
+  /** True if the error was a network / non-HttpErrorResponse case -
    *  callers usually present a generic "network unreachable" toast. */
   isNetworkError: boolean;
 }
@@ -64,7 +64,7 @@ interface ApiErrorBody {
   code?: string;
   message?: string;
   errors?: Record<string, string[]>;
-  /* Seconds until the client may retry — present on OTP_RATE_LIMITED (429).
+  /* Seconds until the client may retry, present on OTP_RATE_LIMITED (429).
      Clients enter a lockout for this many seconds. */
   retry_after?: number;
   /* The API's native envelope nests the code under `error`; the BFF
@@ -114,7 +114,7 @@ export function mapApiErrors(
   form: FormGroup,
   map: Record<string, ApiErrorMapping>,
 ): MapApiErrorsResult {
-  /* Non-HTTP error — network failure, timeout, etc. Caller surfaces
+  /* Non-HTTP error, network failure, timeout, etc. Caller surfaces
      a generic toast. */
   if (!(err instanceof HttpErrorResponse)) {
     return { unmapped: [], isNetworkError: true };
@@ -148,7 +148,7 @@ export function mapApiErrors(
         control.markAsTouched();
       }
     }
-    /* After per-field handling, return — don't double-emit. */
+    /* After per-field handling, return, don't double-emit. */
     return { unmapped: [], isNetworkError: false };
   }
 

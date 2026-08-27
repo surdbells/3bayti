@@ -204,7 +204,7 @@ export class CustomersComponent implements OnInit {
     };
     if (query.search) q.search = query.search;
 
-    // Apply the filter panel — only send params the user actually set.
+    // Apply the filter panel, only send params the user actually set.
     const f = this.filters;
     if (f.status) q.status = f.status;
     if (f.email_verified) q.email_verified = f.email_verified;

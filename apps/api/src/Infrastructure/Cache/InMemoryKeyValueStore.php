@@ -22,7 +22,7 @@ namespace Bayti\Api\Infrastructure\Cache;
  * ---------
  * Stores values in a private array. Honors TTLs by stamping each
  * entry with an expiry timestamp and lazily checking on read. No
- * background reaper — expired entries linger in memory until next
+ * background reaper, expired entries linger in memory until next
  * read.
  *
  * Never throws (no backend to fail).
@@ -69,7 +69,7 @@ final class InMemoryKeyValueStore implements KeyValueStore
             return 1;
         }
 
-        // Existing key — increment its int value.
+        // Existing key, increment its int value.
         // Match Redis: non-numeric values would error in real Redis;
         // we mimic that to catch test-time bugs early.
         $current = $this->store[$key]['value'];

@@ -3,7 +3,7 @@
  *
  * Pre-fetches the admin analytics payload (GET /admin/analytics?days=30)
  * before the dashboard route activates, so the dashboard renders with its
- * KPIs and chart already populated — no post-navigation spinner flash.
+ * KPIs and chart already populated, no post-navigation spinner flash.
  *
  * Resilience: the resolver NEVER blocks navigation on an API error. On
  * failure it resolves `null`, and the component falls back to its own

@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Rich inputs & data viz primitives (Phase 5)
+   Abayti Design System, Rich inputs & data viz primitives (Phase 5)
    File upload, rich editor, rating, number stepper, activity feed.
    ========================================================================= */
 
@@ -288,7 +288,7 @@
   line-height: var(--ax-lh-relaxed);
   color: var(--ax-color-text-primary);
   /* Column flex so the ProseMirror surface below can stretch to fill the
-     whole box — otherwise it's only as tall as its content and clicks in the
+     whole box, otherwise it's only as tall as its content and clicks in the
      empty area don't place the caret. */
   display: flex;
   flex-direction: column;
@@ -303,7 +303,7 @@
   outline: none;
 }
 
-/* ProseMirror content styling — all scoped to .ax-editor-body */
+/* ProseMirror content styling, all scoped to .ax-editor-body */
 .ax-editor-body p { margin: 0 0 var(--ax-space-3); }
 .ax-editor-body h1,
 .ax-editor-body h2,
@@ -590,7 +590,7 @@
 
 
 /* ============== COPY TO CLIPBOARD TRIGGER ============== */
-/* Pure utility — the directive adds no markup of its own.
+/* Pure utility, the directive adds no markup of its own.
    Use with any button or icon element. */
 .ax-copy-feedback {
   display: inline-flex;

@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { CurrencyService } from './currency.service';
 
 /**
- * currencyInterceptor — appends `?currency=XXX` to all outbound
+ * currencyInterceptor, appends `?currency=XXX` to all outbound
  * catalog API calls when the visitor has chosen a non-AED display
  * currency (M3.2.W.3).
  *
@@ -19,7 +19,7 @@ import { CurrencyService } from './currency.service';
  * `source_amount`/`source_currency` to show the converted price.
  *
  * Non-catalog endpoints (auth, cart, orders, webhooks) are intentionally
- * left untouched — they always deal in AED.
+ * left untouched, they always deal in AED.
  */
 const CATALOG_PATH_PREFIXES = [
   '/v3/products',

@@ -9,7 +9,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * Body shape for POST /v3/admin/brands.
  *
- * Slug is optional — if not provided, generated from name. If
+ * Slug is optional, if not provided, generated from name. If
  * provided, taken as-authoritative (admin override).
  */
 final class CreateBrandInput
@@ -27,7 +27,7 @@ final class CreateBrandInput
      *
      * Validation: kebab-case lowercase ASCII. We don't accept the
      * uppercase variants because slug uniqueness checks would have
-     * to be case-insensitive — easier to enforce the canonical form
+     * to be case-insensitive, easier to enforce the canonical form
      * up front.
      */
     #[Assert\Length(max: 100)]
@@ -47,7 +47,7 @@ final class CreateBrandInput
         ?string $logo_url = null,
     ) {
         $this->name = trim($name);
-        // Slug arrives lowercase OR null. Trim defensive — empty
+        // Slug arrives lowercase OR null. Trim defensive, empty
         // strings should be null.
         $slug = $slug !== null ? trim($slug) : null;
         $this->slug = ($slug === '' || $slug === null) ? null : $slug;

@@ -34,7 +34,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Authorization: VendorAuthMiddleware enforces 'approved vendor' on
  * the route group. No further auth check needed in the controller.
  *
- * No audit emission — vendors viewing their own data is non-auditable
+ * No audit emission, vendors viewing their own data is non-auditable
  * (it's their data; emitting an audit trail for self-views would be
  * noise without forensic value).
  */
@@ -87,7 +87,7 @@ final class GetVendorSelfMetricsController
 
         $vendor = $vendorRepo->find($vendorId);
         if ($vendor === null) {
-            // Defensive — would only happen if a vendor row was
+            // Defensive, would only happen if a vendor row was
             // deleted between the findIdsByOwnerUser query and the
             // find call.
             throw HttpException::notFound('Vendor not found.');
@@ -102,7 +102,7 @@ final class GetVendorSelfMetricsController
     /**
      * Choose which vendor's metrics to return:
      *   - Caller supplied ?vendor_id=N → that ID, IF in their owned set
-     *     (otherwise 404 — opaque "not found", standard cross-tenant
+     *     (otherwise 404, opaque "not found", standard cross-tenant
      *     pattern)
      *   - Caller owns exactly one store → that one
      *   - Caller owns multiple stores AND no vendor_id supplied → 422

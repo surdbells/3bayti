@@ -25,7 +25,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * PUT /v3/admin/promo-codes/{id}
  *
- * Partial update — only fields present in the body (non-null) are
+ * Partial update, only fields present in the body (non-null) are
  * applied. Mirrors the UpdateBrandController convention.
  *
  * Code uniqueness:
@@ -38,9 +38,9 @@ use Psr\Http\Message\ServerRequestInterface;
  *     actually changed.
  *
  * Failure modes:
- *   - 404 — id not numeric or not found
- *   - 409 — new code conflicts with existing
- *   - 422 — entity-level validation (e.g. percentage > 100)
+ *   - 404, id not numeric or not found
+ *   - 409, new code conflicts with existing
+ *   - 422, entity-level validation (e.g. percentage > 100)
  */
 final class UpdatePromoCodeController
 {

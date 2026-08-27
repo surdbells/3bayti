@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.2.X.11-A — Cart abandonment reminder infrastructure: extend
+ * M3.2.X.11-A, Cart abandonment reminder infrastructure: extend
  * notification_logs to link cart-scoped notifications, and add the
  * marketing-opt-out flag to users.
  *
@@ -20,7 +20,7 @@ use Doctrine\Migrations\AbstractMigration;
  * The existing notification_logs table is order-centric: every row
  * carries order_id (nullable per its docblock anticipating "future
  * non-order notifications"). For cart abandonment reminders we need
- * a parallel association — the notification belongs to a cart, not
+ * a parallel association, the notification belongs to a cart, not
  * an order.
  *
  * Choice: add cart_id as a sibling column rather than overloading
@@ -28,7 +28,7 @@ use Doctrine\Migrations\AbstractMigration;
  * Rationale:
  *   - The polymorphic option breaks FK integrity (you can't have
  *     a single FK column point to two different tables)
- *   - Overloading order_id is a lie — a cart is not an order
+ *   - Overloading order_id is a lie, a cart is not an order
  *   - A sibling column is honest, queryable, and FK-enforceable
  *
  * ON DELETE SET NULL on the FK preserves the notification audit
@@ -40,7 +40,7 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * users.marketing_emails_opt_out
  * ===============================
- * Boolean DEFAULT FALSE — opt-IN by default, opt-OUT via the
+ * Boolean DEFAULT FALSE, opt-IN by default, opt-OUT via the
  * unsubscribe link.
  *
  * Q-OptOutHandling = A locked: minimum viable opt-out at the
@@ -49,7 +49,7 @@ use Doctrine\Migrations\AbstractMigration;
  * ship marketing emails without it.
  *
  * Transactional emails (order confirmations, shipping updates,
- * refunds, etc.) IGNORE this flag — those are required for the
+ * refunds, etc.) IGNORE this flag, those are required for the
  * service to function and aren't marketing under PDPL. The flag
  * only gates cart.abandoned.customer and future marketing-class
  * templates.

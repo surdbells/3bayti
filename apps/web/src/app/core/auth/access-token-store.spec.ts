@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { AccessTokenStore, AccessTokenSnapshot } from './access-token-store';
 
 /**
- * Tests for AccessTokenStore — the in-memory access-token cache.
+ * Tests for AccessTokenStore, the in-memory access-token cache.
  *
  * The store holds the current access-token snapshot in a signal. The
  * token is seeded on the client by AuthService.hydrate(); the store
@@ -84,8 +84,8 @@ describe('AccessTokenStore', () => {
     it('re-reads expiry on every set() — replacing with an expired snapshot flips to false', () => {
       /* hasValidToken is a `computed` that depends on the current
          signal value + Date.now() at evaluation. Angular's computed
-         cache doesn't recompute on pure time changes — only on
-         signal-graph changes — so the realistic transition is: a
+         cache doesn't recompute on pure time changes, only on
+         signal-graph changes, so the realistic transition is: a
          refresh sets a new (or expired) snapshot, dirtying the
          dependency and recomputing. That's what we test. */
       vi.useFakeTimers();

@@ -23,16 +23,16 @@ use Doctrine\ORM\Mapping as ORM;
  * THIS thing".
  *
  * Snapshotted fields:
- *   product_name_snapshot   — display name at purchase time
- *   product_image_snapshot  — primary image URL at purchase time
- *   unit_price              — price at purchase time
- *   subtotal                — unit_price * quantity at purchase time
- *   vendor_id               — vendor relationship FROZEN at purchase
+ *   product_name_snapshot  , display name at purchase time
+ *   product_image_snapshot , primary image URL at purchase time
+ *   unit_price             , price at purchase time
+ *   subtotal               , unit_price * quantity at purchase time
+ *   vendor_id              , vendor relationship FROZEN at purchase
  *                              (even though products.vendor_id is
  *                              technically mutable)
  *
  * NOT snapshotted (still references the catalog row):
- *   product_id              — FK to products(id), so we can navigate
+ *   product_id             , FK to products(id), so we can navigate
  *                              to the live product page for "buy
  *                              again", "leave review", etc.
  *
@@ -45,7 +45,7 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * Per-item status (not per-order) because each line might be from
  * a different vendor, and one vendor's rejection doesn't fail the
- * whole order — the others can still ship.
+ * whole order, the others can still ship.
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'order_items')]
@@ -265,7 +265,7 @@ class OrderItem
      *   refunded   → (terminal)
      *
      * Same-state transitions (e.g. preparing → preparing) are no-ops
-     * rather than errors — idempotent for retries and dual-tap UI.
+     * rather than errors, idempotent for retries and dual-tap UI.
      *
      * @param bool $adminOverride When true, skip transition validation but keep enum validation. Used by admin controllers that need to force a status for safety overrides (e.g. unstick a stuck order). Caller must audit the override.
      */

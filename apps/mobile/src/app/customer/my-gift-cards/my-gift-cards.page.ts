@@ -114,7 +114,7 @@ export class MyGiftCardsPage implements OnInit {
 
   ngOnInit() {
     // Loaded in ionViewWillEnter so the wallet refreshes on every entry (Ionic
-    // caches the page, so ngOnInit runs only once — otherwise a card just
+    // caches the page, so ngOnInit runs only once, otherwise a card just
     // purchased/redeemed elsewhere doesn't appear until a manual refresh).
   }
 
@@ -154,7 +154,7 @@ export class MyGiftCardsPage implements OnInit {
   }
 
   openCard(card: any) {
-    // Unpaid cards have no spendable code yet — tapping resumes payment
+    // Unpaid cards have no spendable code yet, tapping resumes payment
     // instead of opening the (empty) detail view.
     if (this.isUnpaid(card)) { this.completePayment(card); return; }
     this.skipReloadOnEnter = true;
@@ -169,7 +169,7 @@ export class MyGiftCardsPage implements OnInit {
    * Copy a card's code straight from the wallet list.
    *
    * stopPropagation matters: the code sits inside the card tile, whose own
-   * click opens the detail view — without it, copying would also navigate.
+   * click opens the detail view, without it, copying would also navigate.
    */
   async copyCode(card: any, event: Event): Promise<void> {
     event.stopPropagation();
@@ -180,7 +180,7 @@ export class MyGiftCardsPage implements OnInit {
       await navigator.clipboard.writeText(code);
       this.notify.success(this.i18n.t('gcd_code_copied'));
     } catch {
-      // Clipboard unavailable (older webview) — surface the code so the
+      // Clipboard unavailable (older webview), surface the code so the
       // customer can still read/select it.
       this.notify.info(code);
     }
@@ -197,7 +197,7 @@ export class MyGiftCardsPage implements OnInit {
     this.payingCardId = card.id;
     const toSuccess = () => {
       this.payingCardId = null;
-      // Same confirmation as a fresh purchase — the buyer sees the now-active
+      // Same confirmation as a fresh purchase, the buyer sees the now-active
       // card rather than being dropped back on the list.
       this.router.navigate(['/gift-card-success'], {
         replaceUrl: true,

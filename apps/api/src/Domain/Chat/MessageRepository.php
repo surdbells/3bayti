@@ -18,7 +18,7 @@ class MessageRepository extends EntityRepository
         $em->flush();
     }
 
-    /** Persist without flushing — for batching inside an existing UoW. */
+    /** Persist without flushing, for batching inside an existing UoW. */
     public function add(Message $message): void
     {
         $this->getEntityManager()->persist($message);
@@ -73,7 +73,7 @@ class MessageRepository extends EntityRepository
 
     /**
      * Every message in a conversation, oldest→newest, including blocked
-     * ones — for admin investigation only (no viewer filtering).
+     * ones, for admin investigation only (no viewer filtering).
      *
      * @return list<Message>
      */

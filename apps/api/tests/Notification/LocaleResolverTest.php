@@ -46,7 +46,7 @@ final class LocaleResolverTest extends TestCase
     }
 
     // -----------------------------------------------------------------
-    // normalizeToShortTag — direct unit coverage
+    // normalizeToShortTag, direct unit coverage
     // -----------------------------------------------------------------
 
     #[Test]
@@ -222,7 +222,7 @@ final class LocaleResolverTest extends TestCase
     }
 
     // -----------------------------------------------------------------
-    // Branch 3: Admin recipient match — locked to English
+    // Branch 3: Admin recipient match, locked to English
     // -----------------------------------------------------------------
 
     #[Test]
@@ -231,7 +231,7 @@ final class LocaleResolverTest extends TestCase
         // Q-VendorAdminLocale = A locked: admin emails always English
         // regardless of any other preference state.
         $order = $this->makeOrder(customerEmail: 'alice@example.com');
-        // Customer prefers Arabic — but admin is the recipient
+        // Customer prefers Arabic, but admin is the recipient
         $order->getUser()->setLocale('ar');
 
         $locale = $this->resolver->resolveForRecipient(
@@ -259,7 +259,7 @@ final class LocaleResolverTest extends TestCase
     }
 
     // -----------------------------------------------------------------
-    // Branch 4: Unknown recipient — fail safe to English
+    // Branch 4: Unknown recipient, fail safe to English
     // -----------------------------------------------------------------
 
     #[Test]

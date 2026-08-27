@@ -16,7 +16,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
 
 /**
- * POST /v3/admin/ota/bundles — upload + register an OTA web bundle from the
+ * POST /v3/admin/ota/bundles, upload + register an OTA web bundle from the
  * portal (no shell needed).
  *
  * multipart/form-data with the .zip in field "file"; the release metadata comes
@@ -33,7 +33,7 @@ final class UploadOtaBundleController
     use Responder;
 
     private const APP_ID = 'com.threebayti.app';
-    /** 60 MB — a web bundle is a few MB; this is a generous safety cap. */
+    /** 60 MB, a web bundle is a few MB; this is a generous safety cap. */
     private const MAX_BYTES = 60 * 1024 * 1024;
 
     public function __construct(
@@ -66,7 +66,7 @@ final class UploadOtaBundleController
         $signed = $sessionKey !== null;
 
         // Metadata validation. `platform=both` fans one upload out to android +
-        // ios — the web bundle (and its signed checksum/session key) is
+        // ios, the web bundle (and its signed checksum/session key) is
         // platform-agnostic, so one file publishes to both.
         $targets = $platform === 'both'
             ? OtaBundle::ALL_PLATFORMS
@@ -101,8 +101,8 @@ final class UploadOtaBundleController
         $bytes = (string) $upload->getStream();
         if ($signed) {
             // An encrypted bundle is ciphertext, not a readable .zip, and the
-            // plugin checks it against the encrypt-command checksum — which we
-            // can't derive — so the operator must supply it.
+            // plugin checks it against the encrypt-command checksum, which we
+            // can't derive, so the operator must supply it.
             if ($providedChecksum === '') {
                 throw HttpException::badRequest('Signed bundles require the checksum from `@capgo/cli encrypt` (send it as ?checksum=…).');
             }
@@ -116,7 +116,7 @@ final class UploadOtaBundleController
             $checksum = $providedChecksum !== '' ? $providedChecksum : hash('sha256', $bytes);
         }
 
-        // Duplicate guard for every target (atomic — reject before storing
+        // Duplicate guard for every target (atomic, reject before storing
         // anything if any platform already has this version).
         $repo = $this->em->getRepository(OtaBundle::class);
         foreach ($targets as $target) {

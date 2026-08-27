@@ -19,7 +19,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * Vendor size-chart CRUD — the store's published size guide
+ * Vendor size-chart CRUD, the store's published size guide
  * (one entry per size, with garment dimensions).
  *
  *   GET    /v3/vendor/measurements        list

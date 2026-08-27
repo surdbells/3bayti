@@ -26,7 +26,7 @@ import { TranslatePipe } from '@ngx-translate/core';
  * pre-gzip. Static-imported at the root, that's added to every initial
  * bundle. Lazy-loaded with `import('@zxcvbn-ts/core')`, the chunk only
  * downloads when the user starts typing a password on register or
- * reset-password — typically a fraction of all visitors.
+ * reset-password, typically a fraction of all visitors.
  *
  * SSR
  * ---
@@ -82,7 +82,7 @@ export async function loadPasswordScorer(): Promise<((password: string) => Zxcvb
 
   zxcvbnLoadPromise = (async () => {
     try {
-      /* Dynamic imports — these create separate JS chunks at build time. */
+      /* Dynamic imports, these create separate JS chunks at build time. */
       const [core, common, en] = await Promise.all([
         import('@zxcvbn-ts/core'),
         import('@zxcvbn-ts/language-common'),
@@ -109,7 +109,7 @@ export async function loadPasswordScorer(): Promise<((password: string) => Zxcvb
       return scorer;
     } catch (err) {
       /* If the chunk fails to load (offline, CDN issue), the meter
-         simply doesn't appear — graceful degradation. */
+         simply doesn't appear, graceful degradation. */
       if (typeof console !== 'undefined') {
         console.warn('[password-strength] zxcvbn-ts load failed', err);
       }
@@ -123,7 +123,7 @@ export async function loadPasswordScorer(): Promise<((password: string) => Zxcvb
 
 /**
  * Test-only: reset the cached instance so each test sees a fresh load
- * cycle. Not exported from the barrel — only the spec imports this.
+ * cycle. Not exported from the barrel, only the spec imports this.
  */
 export function _resetPasswordScorerForTest(): void {
   zxcvbnInstance = null;
@@ -232,7 +232,7 @@ export class PasswordStrengthComponent implements OnChanges {
       this._score.set(-1);
       return;
     }
-    /* Skip scoring on the server — zxcvbn would load and crunch even
+    /* Skip scoring on the server, zxcvbn would load and crunch even
        though the result is never displayed. Wait until the browser
        hydrates. */
     if (!isPlatformBrowser(this.platformId)) {
@@ -240,7 +240,7 @@ export class PasswordStrengthComponent implements OnChanges {
     }
     const scorer = await loadPasswordScorer();
     if (scorer === null) {
-      /* Library failed to load — give a conservative middle score so
+      /* Library failed to load, give a conservative middle score so
          the meter shows something. */
       this._score.set(2);
       return;

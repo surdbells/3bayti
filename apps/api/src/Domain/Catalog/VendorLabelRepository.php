@@ -9,7 +9,7 @@ use Doctrine\ORM\EntityRepository;
 /**
  * Repository for VendorLabel.
  *
- * Mirrors VendorRepository's structure — extends EntityRepository
+ * Mirrors VendorRepository's structure, extends EntityRepository
  * directly rather than ServiceEntityRepository because the rest of
  * the Catalog domain uses the simple base.
  *
@@ -39,12 +39,12 @@ class VendorLabelRepository extends EntityRepository
      * Why this exists
      * ===============
      * Same rationale as VendorRepository::findByLegacyId (added in
-     * M3.1.5a) — mobile call sites send legacy integer ids; v3 needs
+     * M3.1.5a), mobile call sites send legacy integer ids; v3 needs
      * to resolve them. Retires once mobile rebuilds against slug
      * semantics (M3.1.10+).
      *
      * Returns null if no label has that legacy id. Active filter is
-     * applied — inactive labels are 404 from this lookup.
+     * applied, inactive labels are 404 from this lookup.
      */
     public function findActiveByLegacyId(int $legacyId): ?VendorLabel
     {

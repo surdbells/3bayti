@@ -71,7 +71,7 @@ final class AuditContext
 
     /**
      * Claim a key. Returns true if THIS caller claimed it (and should record),
-     * false if it was already claimed (the caller should skip — someone else
+     * false if it was already claimed (the caller should skip, someone else
      * has it). Null keys are never deduped: they always "win".
      */
     public static function claim(?string $key): bool

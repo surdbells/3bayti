@@ -1,5 +1,5 @@
 /**
- * AxSkeletonBlockComponent — rectangular block placeholder.
+ * AxSkeletonBlockComponent, rectangular block placeholder.
  *
  * Used for image placeholders, card backgrounds, video frames, etc.
  *
@@ -35,7 +35,7 @@ export class AxSkeletonBlockComponent {
   /**
    * Height as a CSS value (e.g. '200px', '50vh').
    * If aspectRatio is also set, height takes precedence.
-   * If neither is set, the element will collapse to 0 height — use one or the other.
+   * If neither is set, the element will collapse to 0 height, use one or the other.
    */
   @Input() height?: string;
 

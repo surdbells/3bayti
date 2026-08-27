@@ -15,7 +15,7 @@ import type { Product } from '../catalog/product.model';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
- * /store/:slug — a single store's page.
+ * /store/:slug, a single store's page.
  *
  * Public storefront page. Layout:
  *   - Cover image banner (falls back to a gradient)
@@ -26,7 +26,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
  * ----
  *   - getBySlug(slug) for the header. A 404 (unknown / inactive slug)
  *     renders the inline not-found state (Q4.4) with a link back to
- *     /store — NOT a hard router error.
+ *     /store, NOT a hard router error.
  *   - listProducts(slug, {limit, offset}) for the collection, with a
  *     local accumulator + hasMore for load-more (the service keeps
  *     product lists stateless so two store tabs don't collide).
@@ -36,7 +36,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
  * model + VendorSerializer).
  *
  * SSR: prerendered for known vendor slugs at build time (see
- * app.routes.server.ts), runtime SSR for the long tail — same model
+ * app.routes.server.ts), runtime SSR for the long tail, same model
  * as /product/:slug. This is what makes the Y.4-D sitemap restoration
  * meaningful (crawlers hit real prerendered HTML, not a 404).
  */
@@ -206,7 +206,7 @@ export class StoreDetailPageComponent implements OnInit {
       return;
     }
 
-    /* Store loaded — fetch the first page of their collection. */
+    /* Store loaded, fetch the first page of their collection. */
     await this.onLoadMoreProducts();
   }
 

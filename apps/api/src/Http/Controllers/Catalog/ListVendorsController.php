@@ -17,7 +17,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * GET /v3/vendors  (public) — the store directory source.
+ * GET /v3/vendors  (public), the store directory source.
  *
  * Active vendors, directoryShape: a publicShape superset (so existing
  * consumers keep every field) PLUS a rating aggregate + up to 5 embedded
@@ -87,7 +87,7 @@ final class ListVendorsController
         /** @var ProductRepository $productRepo */
         $productRepo = $this->em->getRepository(Product::class);
 
-        // Per-vendor product fetch — N+1 bounded by `limit`, matching the
+        // Per-vendor product fetch, N+1 bounded by `limit`, matching the
         // Spotlight endpoint. Each card gets up to 5 newest in-stock products.
         $items = [];
         foreach ($rows as $row) {

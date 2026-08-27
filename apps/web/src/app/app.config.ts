@@ -7,7 +7,7 @@ import { provideAuth } from './core/auth/auth.providers';
 import { provideMonitoring } from './core/monitoring';
 
 /**
- * Root application config — provided once per app instance.
+ * Root application config, provided once per app instance.
  *
  * This is a pure client-side-rendered (CSR) SPA deployed as static assets
  * on Cloudflare Pages; there is no server hydration. The only server-side
@@ -23,7 +23,7 @@ import { provideMonitoring } from './core/monitoring';
  *   interceptor AND registers an APP_INITIALIZER that calls
  *   AuthService.hydrate() (hits /auth-proxy/me with the HttpOnly
  *   refresh cookie) so the first paint already reflects auth state.
- *   provideAuth() OWNS provideHttpClient — DO NOT add another
+ *   provideAuth() OWNS provideHttpClient, DO NOT add another
  *   provideHttpClient() call here, or the interceptor chain becomes
  *   undefined behaviour.
  *

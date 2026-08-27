@@ -29,7 +29,7 @@ import { I18nService } from '../../i18n.service';
  *                                       store_account_number }
  *   PATCH /v3/vendor/store/payment -> same (partial; only sent fields apply)
  *
- * This is where payouts land — the API exposes no payout *ledger* for
+ * This is where payouts land, the API exposes no payout *ledger* for
  * vendors, so this page configures destination bank details rather than
  * showing a statement.
  */

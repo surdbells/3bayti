@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Body: { "status": "<one of OrderItem::ITEM_STATUS_*>", "reason": "..." }
  *
- * Admins can force any item status — full enum including
+ * Admins can force any item status, full enum including
  * cancelled/returned/refunded which vendors can't set directly.
  * Transition validation is BYPASSED ($adminOverride=true).
  */

@@ -64,7 +64,7 @@ export interface Product {
 
 export interface Store {
   store_id: number;
-  // Vendor slug — the featured card opens the storefront by slug (legacy ids
+  // Vendor slug, the featured card opens the storefront by slug (legacy ids
   // discarded), so v3-native stores resolve too.
   store_slug?: string;
   store_name: string;
@@ -243,7 +243,7 @@ export class AccountPage implements OnInit, OnDestroy {
   // ── Gift card balance widget ──────────────────────────────────────
   activeGiftCards: any[] = [];
 
-  // Gift-card advertorial promo — dismissible, persisted in Preferences.
+  // Gift-card advertorial promo, dismissible, persisted in Preferences.
   giftPromoExpanded = false;
 
   get totalGiftCardBalance(): string {
@@ -258,7 +258,7 @@ export class AccountPage implements OnInit, OnDestroy {
           (c: any) => c.status === 'active' || c.status === 'partially_used'
         );
       },
-      error: () => { /* silent fail — widget just doesn't show */ },
+      error: () => { /* silent fail, widget just doesn't show */ },
     });
   }
 
@@ -290,7 +290,7 @@ export class AccountPage implements OnInit, OnDestroy {
       // so doing it here is what makes the vendor FAB appear for an approved
       // store (it re-derives is_vendor from roles + is_store_approved).
       this.refreshProfile();
-      // Load gift-card balance only after the token is available — the call
+      // Load gift-card balance only after the token is available, the call
       // is authed (GET /gift-cards/mine with single_user.token).
       this.loadGiftCardBalance();
       this.get_best_sellers();
@@ -310,7 +310,7 @@ export class AccountPage implements OnInit, OnDestroy {
     void this.pendingOrders.refresh();
   }
 
-  /** Reminder subtitle — singular vs plural, with the AED total. */
+  /** Reminder subtitle, singular vs plural, with the AED total. */
   get pendingBannerBody(): string {
     const c = this.pendingOrders.count();
     const amount = Math.round(this.pendingOrders.amount());
@@ -429,7 +429,7 @@ export class AccountPage implements OnInit, OnDestroy {
             Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
           }
         },
-        error: () => { /* silent — fallback avatar applies, flags keep cached value */ },
+        error: () => { /* silent, fallback avatar applies, flags keep cached value */ },
       });
   }
 
@@ -526,7 +526,7 @@ export class AccountPage implements OnInit, OnDestroy {
     this.best_seller.token = this.single_user.token;
     this.rqst_param_products_by_category.category = 0;
     // Direct v3 (GET /v3/products with sort=best_seller). Public catalog
-    // read — anonymous, so no authToken. transformBestSellersRequest drops
+    // read, anonymous, so no authToken. transformBestSellersRequest drops
     // the legacy {id, token} body, so only the sort query param carries over.
     // transformBestSellersResponse still applies via get_v3, so response.data
     // shape is unchanged.
@@ -545,7 +545,7 @@ export class AccountPage implements OnInit, OnDestroy {
 
   /**
    * Count of on-sale products, for the Discounted chip badge. Public catalog
-   * read (GET /v3/products?sale=true) with limit=1 — we only need meta.total,
+   * read (GET /v3/products?sale=true) with limit=1, we only need meta.total,
    * not the rows. Best-effort: a failure just leaves the badge hidden (0).
    */
   get_discounted_count() {
@@ -567,7 +567,7 @@ export class AccountPage implements OnInit, OnDestroy {
     this.best_seller.id = this.single_user.id;
     this.best_seller.token = this.single_user.token;
     this.rqst_param_products_by_category.category = 0;
-    // Direct v3 (GET /v3/products with sort=newest). Public catalog read —
+    // Direct v3 (GET /v3/products with sort=newest). Public catalog read -
     // anonymous, so no authToken. transformNewArrivalsRequest drops the
     // legacy {id, token} body, so only the sort query param carries over.
     // The response transform still applies via get_v3, so response.data
@@ -732,7 +732,7 @@ export class AccountPage implements OnInit, OnDestroy {
   load_cart() {
     this.rqst_param.id = this.single_user.id;
     this.rqst_param.token = this.single_user.token;
-    // Direct v3 (GET /v3/cart). Authed read — pass the user token as authToken.
+    // Direct v3 (GET /v3/cart). Authed read, pass the user token as authToken.
     // transformCartListResponse still applies via get_v3, preserving the legacy
     // v2 envelope: response.message carries the bill summary the strip reads.
     this.networkAdapter.get_v3('GET /cart', { authToken: this.single_user.token })
@@ -756,7 +756,7 @@ export class AccountPage implements OnInit, OnDestroy {
     this.get_featured.id = this.single_user.id;
     this.get_featured.token = this.single_user.token;
     this.get_featured.offset = this.get_featured.offset + this.get_featured.limit
-    // Paginated PUBLIC store directory (GET /v3/vendors) — same read as
+    // Paginated PUBLIC store directory (GET /v3/vendors), same read as
     // get_featured_products(), advancing offset for infinite scroll. Anonymous
     // catalog read (no authToken). Response shape unchanged (transform applies).
     this.networkAdapter.get_v3('GET /mobile/stores', {

@@ -8,51 +8,51 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Day 1 of the 10-day rollout — Product, ProductImage, ProductReview schema.
+ * Day 1 of the 10-day rollout, Product, ProductImage, ProductReview schema.
  *
  * Designed against the legacy production data discovered on 12 May 2026
  * (see docs/discovery/legacy-mysql-schema.md). Notes specific to legacy:
  *
- * legacy_product_id (kept) — int from legacy `products.product_id` (bigint
+ * legacy_product_id (kept), int from legacy `products.product_id` (bigint
  *     unsigned). Stored in int because PHP int is 64-bit on production
  *     and we don't expect overflow before retirement.
  *
- * vendor_id / category_id — FK to OUR vendors / categories. Migration script
+ * vendor_id / category_id, FK to OUR vendors / categories. Migration script
  *     translates legacy store_id / category_id via legacy_*_id columns.
  *
- * status enum — values from legacy: 'published', 'deleted', 'draft'. We
+ * status enum, values from legacy: 'published', 'deleted', 'draft'. We
  *     standardize to 'active', 'draft', 'soft_deleted' in v3. Migration
  *     does the value mapping. Storing as string column (not Postgres enum)
  *     to make adding new values trivial (e.g., 'paused', 'pending_review').
  *
- * primary_image_url — single image, the "lead" image shown in cards.
+ * primary_image_url, single image, the "lead" image shown in cards.
  *     Migrated from legacy `image_1`. We point this URL at the legacy
  *     server's image directory (https://api.3bayti.ae/vendors/products/<file>)
  *     since the legacy filesystem keeps serving images through M5.
  *
- * available_sizes (jsonb) — instead of 22 size_* boolean columns. Migration
+ * available_sizes (jsonb), instead of 22 size_* boolean columns. Migration
  *     reads the booleans and emits an array like ["S","M","L","52","53"].
  *     jsonb (not json) so we can index on contains-element queries:
  *         WHERE available_sizes @> '["M"]'::jsonb
  *
- * available_colors (jsonb) — array of strings. Legacy was a comma-separated
+ * available_colors (jsonb), array of strings. Legacy was a comma-separated
  *     varchar; migration splits it.
  *
- * images (jsonb) — array of image URLs for the gallery. Legacy `images`
+ * images (jsonb), array of image URLs for the gallery. Legacy `images`
  *     LONGTEXT is a JSON array of paths. Migration parses it and emits a
  *     proper jsonb column.
  *
- * Flags as individual booleans not jsonb — we want indexes on each
+ * Flags as individual booleans not jsonb, we want indexes on each
  *     (is_featured, is_new, is_hot, is_sale, try_on_enabled) for fast
  *     filtering like /v3/products?filter=featured.
  *
- * delivery_info (jsonb) — bundles legacy delivery_time, custom_delivery_time,
+ * delivery_info (jsonb), bundles legacy delivery_time, custom_delivery_time,
  *     delivery_note. Frontend renders if present.
  *
- * extra_msmt — kept as a comma-separated string for now per legacy; v3
+ * extra_msmt, kept as a comma-separated string for now per legacy; v3
  *     should redesign as a structured measurements_required array later.
  *
- * Stock model: we store quantity at product level (matches legacy schema —
+ * Stock model: we store quantity at product level (matches legacy schema -
  *     no per-size/color stock). When a vendor lists 5 sizes available, they
  *     mean "I have stock in any of these sizes"; the 'quantity' is the total
  *     across sizes.
@@ -71,7 +71,7 @@ use Doctrine\Migrations\AbstractMigration;
  * Reviews
  * -------
  * Reviews tie to product via product_id FK. Legacy `ec_reviews` has
- * product_name (string) and store_id, but NOT product_id — migration
+ * product_name (string) and store_id, but NOT product_id, migration
  * resolves product_name → product_id via lookup. If lookup fails, review
  * is logged + skipped (we have only 27 reviews so manual cleanup is fine).
  */
@@ -143,7 +143,7 @@ final class Version20260512000001 extends AbstractMigration
             )
         SQL);
 
-        // Indexes — designed for the /v3/products filter+sort hot paths
+        // Indexes, designed for the /v3/products filter+sort hot paths
         $this->addSql('CREATE INDEX products_vendor_idx ON products (vendor_id)');
         $this->addSql('CREATE INDEX products_category_idx ON products (category_id)');
         $this->addSql('CREATE INDEX products_status_idx ON products (status)');
@@ -155,12 +155,12 @@ final class Version20260512000001 extends AbstractMigration
         $this->addSql('CREATE INDEX products_featured_idx ON products (is_featured) WHERE is_active = TRUE AND is_featured = TRUE');
         $this->addSql('CREATE INDEX products_new_idx ON products (is_new) WHERE is_active = TRUE AND is_new = TRUE');
 
-        // jsonb sizes/colors — GIN for "find products available in size M"
+        // jsonb sizes/colors, GIN for "find products available in size M"
         $this->addSql('CREATE INDEX products_sizes_idx ON products USING GIN (available_sizes)');
         $this->addSql('CREATE INDEX products_colors_idx ON products USING GIN (available_colors)');
 
         // -----------------------------------------------------------
-        // product_images — separate table for richer per-image metadata
+        // product_images, separate table for richer per-image metadata
         //                  (legacy only had a JSON array; v3 supports per-
         //                  image alt text, dimensions, ordering)
         // -----------------------------------------------------------
@@ -179,7 +179,7 @@ final class Version20260512000001 extends AbstractMigration
         SQL);
 
         $this->addSql('CREATE INDEX product_images_product_idx ON product_images (product_id, display_order)');
-        // Postgres partial unique index — only one is_primary per product.
+        // Postgres partial unique index, only one is_primary per product.
         $this->addSql('CREATE UNIQUE INDEX product_images_primary_unique ON product_images (product_id) WHERE is_primary = TRUE');
 
         // -----------------------------------------------------------

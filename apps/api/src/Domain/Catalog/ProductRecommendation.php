@@ -15,14 +15,14 @@ use Doctrine\ORM\Mapping as ORM;
  * lookups at request time.
  *
  * Source values:
- *   'copurchase'        — Y is recommended because customers
+ *   'copurchase'       , Y is recommended because customers
  *                          who bought X also bought Y. Score
  *                          is the co-purchase count.
- *   'category'          — Y is in the same category as X.
+ *   'category'         , Y is in the same category as X.
  *                          Score is a small constant (e.g. 1.0)
  *                          to keep category fallback ranked
  *                          below co-purchase rows.
- *   'fallback_popular'  — Used only when X has no co-purchase
+ *   'fallback_popular' , Used only when X has no co-purchase
  *                          AND no category matches. Y is the
  *                          marketplace-wide most-popular product.
  *                          Score is the popularity count.
@@ -48,7 +48,7 @@ class ProductRecommendation
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'bigint')]
-    /** @phpstan-ignore-next-line property.unusedType — Doctrine hydrates via reflection */
+    /** @phpstan-ignore-next-line property.unusedType, Doctrine hydrates via reflection */
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: Product::class)]

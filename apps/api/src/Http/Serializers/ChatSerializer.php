@@ -112,7 +112,7 @@ final class ChatSerializer
     }
 
     /**
-     * Admin investigation view of a whole conversation — both parties named,
+     * Admin investigation view of a whole conversation, both parties named,
      * no viewer scoping. Pair with messageShape over findAllForConversation.
      *
      * @return array<string, mixed>

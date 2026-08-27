@@ -59,7 +59,7 @@ final class RequestIdMiddleware implements MiddlewareInterface
 
     /**
      * Strict UUID v4 pattern. We accept any UUID variant the client
-     * sends (v1/v4/v7) — what matters is the format, not the
+     * sends (v1/v4/v7), what matters is the format, not the
      * generation algorithm.
      */
     private const UUID_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
@@ -76,7 +76,7 @@ final class RequestIdMiddleware implements MiddlewareInterface
         $request = $request->withAttribute(self::ATTR_REQUEST_ID, $requestId);
 
         // Make it available to Monolog. We use a globally-accessible
-        // store rather than threading it through every logger call —
+        // store rather than threading it through every logger call -
         // Monolog's processor pattern picks it up automatically.
         // See LoggerFactory::buildRequestProcessor().
         RequestIdContext::set($requestId);
@@ -92,7 +92,7 @@ final class RequestIdMiddleware implements MiddlewareInterface
         } finally {
             // Clear the static after the request to avoid bleeding
             // between requests in the same FPM worker. Worth doing
-            // even though the next request will overwrite — defense
+            // even though the next request will overwrite, defense
             // in depth against weird re-entrancy bugs.
             RequestIdContext::clear();
             AuditContext::reset();
@@ -124,7 +124,7 @@ final class RequestIdMiddleware implements MiddlewareInterface
         $clientProvided = $request->getHeaderLine(self::HEADER_NAME);
 
         if ($clientProvided !== '' && preg_match(self::UUID_PATTERN, $clientProvided) === 1) {
-            // Lowercase to keep our logs consistent — UUIDs are
+            // Lowercase to keep our logs consistent, UUIDs are
             // case-insensitive but text-grep isn't.
             return strtolower($clientProvided);
         }
@@ -134,7 +134,7 @@ final class RequestIdMiddleware implements MiddlewareInterface
 
     /**
      * Generate a UUID v4. We do this manually rather than pulling
-     * ramsey/uuid for ONE function — a 6-line implementation is
+     * ramsey/uuid for ONE function, a 6-line implementation is
      * worth the saved dependency.
      */
     private static function generateUuidV4(): string

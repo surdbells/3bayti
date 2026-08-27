@@ -95,7 +95,7 @@ export class PluralComponent implements OnInit {
   }
 
   get_vendorOrderItems() {
-    // Vendor ORDER ITEMS — the previous code fetched the vendor's product
+    // Vendor ORDER ITEMS, the previous code fetched the vendor's product
     // CATALOG (GET /vendors/by-legacy-id/:id/products) and rendered products as
     // order items, so customer/qty/total/status were blank and the price object
     // rendered as "[object Object]". Fetch the admin cross-vendor orders scoped

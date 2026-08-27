@@ -4,12 +4,12 @@
 declare(strict_types=1);
 
 /**
- * 3bayti API — production migration runner.
+ * 3bayti API, production migration runner.
  *
  * Runs as a "predeploy job" in DigitalOcean App Platform: fires once
  * per release, BEFORE the new container takes traffic. If migrations
  * fail (non-zero exit), App Platform aborts the deploy and keeps the
- * old version serving — no downtime, no half-applied schema.
+ * old version serving, no downtime, no half-applied schema.
  *
  * What this DOES
  * --------------
@@ -71,7 +71,7 @@ $out('starting migration runner');
 
 // Build the same DI container the HTTP app uses, then pull out the
 // EntityManager. This guarantees we're using IDENTICAL config to
-// the running service — no chance of "tests pass with config A but
+// the running service, no chance of "tests pass with config A but
 // migrations run against config B".
 //
 // Bootstrap::createApp() also loads .env, so APP_ENV is only readable
@@ -127,7 +127,7 @@ $cli->setAutoExit(false); // we handle the exit code ourselves
 $migrateCommand = new MigrateCommand($migrationsFactory);
 $cli->add($migrateCommand);
 
-// Build the input — equivalent to:
+// Build the input, equivalent to:
 //   bin/console migrations:migrate --no-interaction --allow-no-migration
 //
 // --dry-run support: pass through if the user invoked us with it.
@@ -159,7 +159,7 @@ if ($exitCode !== 0) {
 $out('migrations applied successfully');
 
 // Generate Doctrine proxy classes. In production (APP_ENV=prod), our
-// config sets setAutoGenerateProxyClasses(false) — Doctrine refuses
+// config sets setAutoGenerateProxyClasses(false), Doctrine refuses
 // to write proxies on-demand at request time (perf optimization).
 // That means proxies must exist BEFORE the first request loads an
 // entity with a lazy-loaded relation. We do that here, after migration,
@@ -201,7 +201,7 @@ try {
         ));
     }
 } catch (\Throwable $e) {
-    // Don't fail the whole deploy on this — migrations succeeded,
+    // Don't fail the whole deploy on this, migrations succeeded,
     // and a missing proxy will surface as a 500 we can debug. But
     // log loudly so it's visible in deploy output.
     $out('WARNING: proxy generation failed: ' . $e->getMessage());

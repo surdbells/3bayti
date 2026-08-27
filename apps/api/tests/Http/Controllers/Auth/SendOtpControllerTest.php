@@ -56,7 +56,7 @@ final class SendOtpControllerTest extends HttpTestCase
 
         $body = $this->jsonBody($response);
         self::assertNotEmpty($body['verification_id']);
-        // Real OTP provider was hit — not a fake.
+        // Real OTP provider was hit, not a fake.
         self::assertStringStartsWith('inmem-', $body['verification_id']);
         self::assertNotEmpty($this->otpProvider->allIssued());
     }
@@ -79,7 +79,7 @@ final class SendOtpControllerTest extends HttpTestCase
         $body = $this->jsonBody($response);
         self::assertNotEmpty($body['verification_id']);
         self::assertStringStartsWith('fake-', $body['verification_id']);
-        // Real OTP provider was NOT hit — anti-enumeration policy.
+        // Real OTP provider was NOT hit, anti-enumeration policy.
         self::assertEmpty($this->otpProvider->allIssued());
     }
 

@@ -201,7 +201,7 @@ export class ManageStoreComponent implements OnInit {
   docViewer: { url: string; label: string; safeUrl: SafeResourceUrl } | null = null;
   openDoc(url: string | null | undefined, label: string) {
     if (!url) return;
-    // The doc is served inline (Content-Disposition: inline, framable) — view it
+    // The doc is served inline (Content-Disposition: inline, framable), view it
     // in-app: images as <img>, PDFs/others in a sanitized <iframe>.
     this.docViewer = { url, label, safeUrl: this.sanitizer.bypassSecurityTrustResourceUrl(url) };
   }
@@ -219,7 +219,7 @@ export class ManageStoreComponent implements OnInit {
     this.adapter.get_v3('GET /admin/vendors/:id/compliance', { params: { id: String(this.storeId) } })
       .subscribe({
         next: (r: any) => { if (r?.data) { this.compliance = r.data; this.applyComplianceDocUrls(); } },
-        error: () => { /* non-fatal — section just stays empty */ },
+        error: () => { /* non-fatal, section just stays empty */ },
       });
   }
 
@@ -305,7 +305,7 @@ export class ManageStoreComponent implements OnInit {
     // storeId here is the v3 vendor id (the /admin/stores/:id route param,
     // which get_store() resolves against GET /admin/vendors/:id). The
     // sub-screens historically treated their `id` param as a LEGACY store
-    // id and resolved it via /vendors/by-legacy-id — passing a v3 id there
+    // id and resolved it via /vendors/by-legacy-id, passing a v3 id there
     // silently loaded a DIFFERENT vendor. Send it as `vendor_id` so they
     // use it directly; `id` is kept only for backward-compatible links.
     this.router.navigate([path], {

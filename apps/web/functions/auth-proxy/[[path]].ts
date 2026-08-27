@@ -1,5 +1,5 @@
 /**
- * Auth-proxy — Cloudflare Pages Function.
+ * Auth-proxy, Cloudflare Pages Function.
  *
  * Handles `/auth-proxy/*` for the CSR storefront. This is the ONLY
  * server-side piece of the otherwise-static SPA: it owns the httpOnly
@@ -26,7 +26,7 @@
  *   POST /auth-proxy/send-otp      → /v3/auth/send-otp     (passthrough)
  *   POST /auth-proxy/reset         → /v3/auth/reset        (passthrough)
  *
- * Passwordless parity (#8) — mirrors the mobile v3 flows:
+ * Passwordless parity (#8), mirrors the mobile v3 flows:
  *   POST /auth-proxy/otp-login/send      → /v3/auth/otp-login/send      (passthrough → {verification_id})
  *   POST /auth-proxy/otp-login/verify    → /v3/auth/otp-login/verify    (authSuccessMap → cookie)
  *   POST /auth-proxy/register/initiate   → /v3/auth/register/initiate   (passthrough → {verification_id})
@@ -203,9 +203,9 @@ async function handleAuthProxy(req: Request): Promise<Response> {
     register: '/v3/auth/register',
     'send-otp': '/v3/auth/send-otp',
     reset: '/v3/auth/reset',
-    /* Passwordless parity (#8): no tokens issued at these steps — they
+    /* Passwordless parity (#8): no tokens issued at these steps, they
        hand back an opaque verification_id / registration_token, or an
-       availability flag — so they pass straight through unchanged. */
+       availability flag, so they pass straight through unchanged. */
     'otp-login/send': '/v3/auth/otp-login/send',
     'register/initiate': '/v3/auth/register/initiate',
     'register/verify-phone': '/v3/auth/register/verify-phone',

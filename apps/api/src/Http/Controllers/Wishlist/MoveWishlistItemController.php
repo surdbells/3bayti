@@ -22,7 +22,7 @@ use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * PATCH /v3/me/wishlist/{productId}  body { label_id }
- * — move a saved product to a label (or to uncategorized).
+ *, move a saved product to a label (or to uncategorized).
  *
  * label_id > 0  → file under that label (must belong to the user, 404
  *                 otherwise).

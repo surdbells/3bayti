@@ -8,7 +8,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * No-op SMS sender — logs the intended send but performs no network
+ * No-op SMS sender, logs the intended send but performs no network
  * call. Used in dev/test, and as the PRODUCTION DEFAULT until the
  * operator confirms + enables the real MessageCentral SMS endpoint.
  *
@@ -37,7 +37,7 @@ final class NullSmsSender implements SmsSenderInterface
         ]);
     }
 
-    /** No-op sender — never a real send, so callers don't mark a channel delivered. */
+    /** No-op sender, never a real send, so callers don't mark a channel delivered. */
     public function isEnabled(): bool
     {
         return false;

@@ -177,7 +177,7 @@ export class GiftCardsPage implements OnInit {
 
   loadThemes() {
     this.ui.loading_themes = true;
-    // PUBLIC endpoint — no authToken. res.data is a Record<theme, themeMeta>.
+    // PUBLIC endpoint, no authToken. res.data is a Record<theme, themeMeta>.
     this.network.get_v3('GET /gift-cards/themes').subscribe({
       next: (res: any) => {
         this.ui.loading_themes = false;
@@ -237,7 +237,7 @@ export class GiftCardsPage implements OnInit {
         this.notify.error(this.i18n.t('gc_error_schedule_future')); return;
       }
     }
-    // Recipient email/phone are OPTIONAL — leave both blank and the buyer
+    // Recipient email/phone are OPTIONAL, leave both blank and the buyer
     // simply shares the code themselves. They only become required when the
     // card is SCHEDULED for a later date (there'd be no one to deliver to).
     // Anything entered is still format-validated.
@@ -258,7 +258,7 @@ export class GiftCardsPage implements OnInit {
   }
 
   /**
-   * True once the buyer has named/contacted a recipient — which makes the card
+   * True once the buyer has named/contacted a recipient, which makes the card
    * a GIFT (spendable by that recipient once they redeem it), not a top-up the
    * buyer can spend from their own balance. Drives the hint under the
    * recipient fields so the rule isn't a surprise at checkout.
@@ -274,7 +274,7 @@ export class GiftCardsPage implements OnInit {
   /**
    * Validate the OPTIONAL recipient email + phone.
    *
-   * Both are optional by default — a buyer who leaves them blank just shares
+   * Both are optional by default, a buyer who leaves them blank just shares
    * the code themselves. Whatever IS entered must be well-formed. When the
    * card is SCHEDULED for a later date, at least one contact becomes required
    * (mirrors the server rule in PurchaseGiftCardController): without one there
@@ -317,11 +317,11 @@ export class GiftCardsPage implements OnInit {
    * available).
    *
    * We render OUR OWN in-app picker: `Contacts.getContacts()` reads the address
-   * book once (a direct ContentResolver/CNContactStore read — no Intent) and we
+   * book once (a direct ContentResolver/CNContactStore read, no Intent) and we
    * show it in a searchable ax-bottom-sheet; tapping a row fills the recipient
    * fields. This deliberately AVOIDS the native `pickContact()` ACTION_PICK
    * flow, which on Android pops a "Complete action with" app-chooser AND
-   * resolves with `{ contacts: [...] }` (NOT `{ contact }`) — that shape
+   * resolves with `{ contacts: [...] }` (NOT `{ contact }`), that shape
    * mismatch silently dropped the selection so the number never populated. The
    * in-app list opens straight to the contacts and fills reliably via our code.
    *
@@ -346,10 +346,10 @@ export class GiftCardsPage implements OnInit {
         return;
       }
 
-      // Open our in-app contact list directly — no native chooser, reliable fill.
+      // Open our in-app contact list directly, no native chooser, reliable fill.
       await this.openInAppContactsPicker(Contacts);
     } catch {
-      // Plugin missing / not synced — genuine manual-entry fallback.
+      // Plugin missing / not synced, genuine manual-entry fallback.
       this.notify.error(this.i18n.t('gc_contacts_pick_failed'));
     } finally {
       this.pickingContact = false;
@@ -376,7 +376,7 @@ export class GiftCardsPage implements OnInit {
   /**
    * Read the address book and open the in-app picker sheet. Contacts are
    * normalised to {name, phone, email} rows (only those with a phone OR email
-   * are kept — the rest can't be used as delivery targets).
+   * are kept, the rest can't be used as delivery targets).
    */
   private async openInAppContactsPicker(Contacts: any) {
     const res: any = await Contacts.getContacts({
@@ -401,7 +401,7 @@ export class GiftCardsPage implements OnInit {
   /**
    * Map a @capgo/capacitor-contacts Contact onto the shape the rest of this
    * page already consumes ({ name:{display}, phones:[{number}], emails:[{address}] }).
-   * Capgo's plugin (Capacitor-8 compatible — it replaces the Cap-7-only
+   * Capgo's plugin (Capacitor-8 compatible, it replaces the Cap-7-only
    * @capacitor-community/contacts) exposes fullName + phoneNumbers[].value +
    * emailAddresses[].value instead.
    */
@@ -508,7 +508,7 @@ export class GiftCardsPage implements OnInit {
     form.append('image', file, file.name);
 
     // Simple fetch for the upload since we don't have HttpClient injected here.
-    // Authed endpoint — set Authorization: Bearer <token>.
+    // Authed endpoint, set Authorization: Bearer <token>.
     try {
       const resp = await fetch(`${this.v3BaseUrl}/v3/gift-cards/photo`, {
         method: 'POST',

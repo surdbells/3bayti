@@ -14,7 +14,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** PUT /v3/admin/notification-templates/{id} — edit a template. */
+/** PUT /v3/admin/notification-templates/{id}, edit a template. */
 final class UpdateTemplateController
 {
     use Responder;

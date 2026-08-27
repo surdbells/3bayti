@@ -42,15 +42,15 @@ use Doctrine\ORM\Mapping as ORM;
  * Application-generated per attempt. Format convention:
  *   <order_reference>:<operation>:<attempt-suffix>
  * E.g. '3B-K2T9X1-AB42:INITIATE:1', '3B-K2T9X1-AB42:GET_ORDER:1'.
- * UNIQUE at the DB layer — duplicate operation submission produces
+ * UNIQUE at the DB layer, duplicate operation submission produces
  * a clear constraint-violation error rather than a silent double-call.
  *
  * Payload columns
  * ================
  * JSONB at the DB layer; stored as raw array in PHP. Captures the
  * full request + response for audit. Card numbers and CVVs do NOT
- * touch our server in the Hosted Checkout flow — Noon's hosted page
- * collects them — but we mask any potentially-sensitive field in the
+ * touch our server in the Hosted Checkout flow, Noon's hosted page
+ * collects them, but we mask any potentially-sensitive field in the
  * Noon adapter before storing.
  */
 #[ORM\Entity(repositoryClass: PaymentTransactionRepository::class)]

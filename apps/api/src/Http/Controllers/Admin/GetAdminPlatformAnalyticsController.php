@@ -21,15 +21,15 @@ use Psr\Http\Message\ServerRequestInterface;
  * Returns KPI totals + monthly series matching the portal admin
  * dashboard component's expected shape:
  *
- *   total_products       int   — live product count
- *   total_orders         int   — orders in window
- *   products_sold        int   — items sold in window
- *   return_orders        int   — returned/refunded orders in window
- *   total_products_stats int[] — 12-month product listing counts
- *   total_orders_stats   int[] — 12-month order counts
- *   products_sold_stats  int[] — 12-month items sold
- *   return_orders_stats  int[] — 12-month return counts
- *   data                 array — 20 most recent orders (lightweight)
+ *   total_products       int  , live product count
+ *   total_orders         int  , orders in window
+ *   products_sold        int  , items sold in window
+ *   return_orders        int  , returned/refunded orders in window
+ *   total_products_stats int[], 12-month product listing counts
+ *   total_orders_stats   int[], 12-month order counts
+ *   products_sold_stats  int[], 12-month items sold
+ *   return_orders_stats  int[], 12-month return counts
+ *   data                 array, 20 most recent orders (lightweight)
  *
  * Authorization: admin role enforced by route group middleware.
  */
@@ -94,7 +94,7 @@ final class GetAdminPlatformAnalyticsController
         $year    = (int) $now->format('Y');
 
         // Completed/paid status set as an inline SQL placeholder list, e.g.
-        // "?,?,?,?" — bound positionally alongside the other params.
+        // "?,?,?,?", bound positionally alongside the other params.
         $saleStatuses     = self::SALE_STATUSES;
         $salePlaceholders = implode(',', array_fill(0, count($saleStatuses), '?'));
 
@@ -199,8 +199,8 @@ final class GetAdminPlatformAnalyticsController
 
         // ── Recent orders (paginated, optional ?status= filter) ─────
         // Each row is per-order. An order can have many line items, so we
-        // surface the DOMINANT line — the item with the greatest quantity
-        // (ties broken by highest subtotal) — as the representative
+        // surface the DOMINANT line, the item with the greatest quantity
+        // (ties broken by highest subtotal), as the representative
         // product_name + store_name, and sum the quantity across ALL items
         // for the order's total units. This keeps one row per order while
         // still giving a meaningful product/store at a glance.
@@ -212,7 +212,7 @@ final class GetAdminPlatformAnalyticsController
         // Build WHERE clause + bound params shared by count + page queries.
         // Gift-card *purchase* orders (synthetic, no line items, linked via
         // gift_cards.purchase_order_reference) must never appear as recent
-        // sales, so the exclusion is ALWAYS present — the optional status
+        // sales, so the exclusion is ALWAYS present, the optional status
         // filter is ANDed on top.
         $giftCardExclusion =
             'NOT EXISTS ('
@@ -266,7 +266,7 @@ final class GetAdminPlatformAnalyticsController
             $params
         );
 
-        // Normalize status to the title-case label the badge expects — done
+        // Normalize status to the title-case label the badge expects, done
         // in exactly ONE place so the template binds against a stable form.
         foreach ($recentRows as &$row) {
             $row['status'] = self::STATUS_LABELS[$row['status']] ?? ucfirst((string) $row['status']);
@@ -274,7 +274,7 @@ final class GetAdminPlatformAnalyticsController
         unset($row);
 
         // ── Top-selling products (by units sold in window) ──────────
-        // Parity with legacy admin/common/top-selling.php — a ranked
+        // Parity with legacy admin/common/top-selling.php, a ranked
         // product list for the admin dashboard.
         $topProducts = $conn->fetchAllAssociative(
             "SELECT

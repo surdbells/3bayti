@@ -27,22 +27,22 @@ use PHPUnit\Framework\TestCase;
  * Strategy: hand-rolled in-memory repository fakes injected via the
  * direct-injection constructor parameters. No EM, no DB. This lets
  * the test exercise every validation-chain branch + the computation
- * logic without Doctrine plumbing — and matches locked pattern #4
+ * logic without Doctrine plumbing, and matches locked pattern #4
  * (test mocks: anonymous repos with by-reference sink arrays for
  * the redemption persistence path).
  *
  * Coverage per the 10-rule chain:
- *   Rule 1  — empty/whitespace code            → PROMO_NOT_FOUND
- *   Rule 2  — code not in catalog              → PROMO_NOT_FOUND
- *   Rule 3  — is_active = false                → PROMO_INACTIVE
- *   Rule 4  — valid_from in the future         → PROMO_NOT_YET_VALID
- *   Rule 5  — valid_until in the past          → PROMO_EXPIRED
- *   Rule 6  — currency mismatch                → PROMO_CURRENCY_MISMATCH
- *   Rule 7  — cart subtotal < min_subtotal     → PROMO_MIN_SUBTOTAL_NOT_MET
- *   Rule 8  — global redemption cap hit        → PROMO_GLOBAL_LIMIT_REACHED
- *   Rule 9  — per-user redemption cap hit      → PROMO_USER_LIMIT_REACHED
- *   Rule 10 — percentage compute + max cap     → happy path
- *   Rule 10 — fixed compute + subtotal clamp   → happy path
+ *   Rule 1 , empty/whitespace code            → PROMO_NOT_FOUND
+ *   Rule 2 , code not in catalog              → PROMO_NOT_FOUND
+ *   Rule 3 , is_active = false                → PROMO_INACTIVE
+ *   Rule 4 , valid_from in the future         → PROMO_NOT_YET_VALID
+ *   Rule 5 , valid_until in the past          → PROMO_EXPIRED
+ *   Rule 6 , currency mismatch                → PROMO_CURRENCY_MISMATCH
+ *   Rule 7 , cart subtotal < min_subtotal     → PROMO_MIN_SUBTOTAL_NOT_MET
+ *   Rule 8 , global redemption cap hit        → PROMO_GLOBAL_LIMIT_REACHED
+ *   Rule 9 , per-user redemption cap hit      → PROMO_USER_LIMIT_REACHED
+ *   Rule 10, percentage compute + max cap     → happy path
+ *   Rule 10, fixed compute + subtotal clamp   → happy path
  *
  * Plus the recordRedemption contract and the case-insensitive lookup
  * + whitespace-trimming behavior at the entrance.
@@ -230,7 +230,7 @@ final class PromoCodeResolverServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Rule 1 — empty / whitespace
+    // Rule 1, empty / whitespace
     // -------------------------------------------------------------------
 
     #[Test]
@@ -247,7 +247,7 @@ final class PromoCodeResolverServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Rule 2 — catalog miss
+    // Rule 2, catalog miss
     // -------------------------------------------------------------------
 
     #[Test]
@@ -271,7 +271,7 @@ final class PromoCodeResolverServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Rule 3 — inactive
+    // Rule 3, inactive
     // -------------------------------------------------------------------
 
     #[Test]
@@ -290,7 +290,7 @@ final class PromoCodeResolverServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Rules 4 + 5 — time-window
+    // Rules 4 + 5, time-window
     // -------------------------------------------------------------------
 
     #[Test]
@@ -328,7 +328,7 @@ final class PromoCodeResolverServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Rule 6 — currency mismatch
+    // Rule 6, currency mismatch
     // -------------------------------------------------------------------
 
     #[Test]
@@ -349,7 +349,7 @@ final class PromoCodeResolverServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Rule 7 — min subtotal
+    // Rule 7, min subtotal
     // -------------------------------------------------------------------
 
     #[Test]
@@ -382,7 +382,7 @@ final class PromoCodeResolverServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Rule 8 — global limit
+    // Rule 8, global limit
     // -------------------------------------------------------------------
 
     #[Test]
@@ -419,7 +419,7 @@ final class PromoCodeResolverServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Rule 9 — per-user limit
+    // Rule 9, per-user limit
     // -------------------------------------------------------------------
 
     #[Test]
@@ -441,7 +441,7 @@ final class PromoCodeResolverServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Rule 10 — discount computation
+    // Rule 10, discount computation
     // -------------------------------------------------------------------
 
     #[Test]
@@ -499,7 +499,7 @@ final class PromoCodeResolverServiceTest extends TestCase
         $promo = $this->promo('SAVE100', PromoCode::DISCOUNT_TYPE_FIXED_AMOUNT, '100.00');
         $resolver = $this->newResolver($this->repoForPromo($promo));
 
-        // 100 AED off, but cart is only 40 — clamp to 40 so the
+        // 100 AED off, but cart is only 40, clamp to 40 so the
         // recorded discount_amount is meaningful (40, not 100).
         $resolution = $resolver->resolveForCart($this->cart('40.00'), $this->user(), 'SAVE100');
 
@@ -507,14 +507,14 @@ final class PromoCodeResolverServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Vendor scope — vendor-owned coupons discount ONLY that vendor's items
+    // Vendor scope, vendor-owned coupons discount ONLY that vendor's items
     // -------------------------------------------------------------------
 
     #[Test]
     public function vendorCouponPercentageDiscountsOnlyThatVendorsSubtotal(): void
     {
         // 10% code owned by vendor 9. The whole cart is 300 but only 100 of
-        // it is vendor 9's — the discount is 10% of 100, not of 300.
+        // it is vendor 9's, the discount is 10% of 100, not of 300.
         $promo = $this->promo('STORE10', PromoCode::DISCOUNT_TYPE_PERCENTAGE, '10.00');
         $promo->setVendorId(9);
         $resolver = $this->newResolver($this->repoForPromo($promo));
@@ -571,7 +571,7 @@ final class PromoCodeResolverServiceTest extends TestCase
     public function vendorCouponMinSubtotalChecksVendorSubtotalNotWholeCart(): void
     {
         // min 200. The whole cart (500) clears it, but vendor 9's slice is
-        // only 150 — the gate uses the vendor slice, so it fails.
+        // only 150, the gate uses the vendor slice, so it fails.
         $promo = $this->promo('STORE10', PromoCode::DISCOUNT_TYPE_PERCENTAGE, '10.00');
         $promo->setVendorId(9);
         $promo->setMinSubtotal('200.00');
@@ -607,7 +607,7 @@ final class PromoCodeResolverServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Defaults — no limits, no time window, no min subtotal
+    // Defaults, no limits, no time window, no min subtotal
     // -------------------------------------------------------------------
 
     #[Test]
@@ -667,7 +667,7 @@ final class PromoCodeResolverServiceTest extends TestCase
     #[Test]
     public function recordRedemptionDoesNotThrowWhenNoRepositoryConfigured(): void
     {
-        // Constructed with neither EM nor injected repos — used in test
+        // Constructed with neither EM nor injected repos, used in test
         // contexts where the caller verifies the returned VO only.
         $resolver = new PromoCodeResolverService();
 
@@ -681,7 +681,7 @@ final class PromoCodeResolverServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Rule ordering — first failure wins
+    // Rule ordering, first failure wins
     // -------------------------------------------------------------------
 
     #[Test]

@@ -23,7 +23,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * POST /v3/admin/notification-broadcasts/{id}/resend
  *
  * Resend a past broadcast. Creates a NEW broadcast (referencing the source
- * via resent_from_broadcast_id) — the original history record is never
+ * via resent_from_broadcast_id), the original history record is never
  * modified. Body: mode = 'failed' (default, only the devices that failed)
  * or 'all' (every original recipient). Targets are re-resolved to CURRENT
  * active tokens, so dead tokens are skipped.

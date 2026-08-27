@@ -1,5 +1,5 @@
 /* ============================================================================
-   Search page — M2 redesign
+   Search page, M2 redesign
    ============================================================================ */
 
 ion-content.page-bg {
@@ -16,7 +16,7 @@ ion-content.page-bg {
   background: var(--ax-color-bg-canvas);
   border-bottom: 1px solid rgba(46, 36, 28, 0.06);
 
-  /* Visually hide the ax-text-field's label — placeholder is enough
+  /* Visually hide the ax-text-field's label, placeholder is enough
      visual cue for a search bar. Label remains accessible to screen
      readers (standard sr-only pattern, not display:none). */
   .ax-text-field__label {
@@ -49,7 +49,7 @@ ion-content.page-bg {
   contain: layout style;
 }
 
-/* Tappable vendor badge override — same visual as global .m6d-vendor-badge
+/* Tappable vendor badge override, same visual as global .m6d-vendor-badge
    but as a button with active-press feedback. */
 .m6d-vendor-badge.vendor-badge--tappable {
   cursor: pointer;

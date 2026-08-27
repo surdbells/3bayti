@@ -91,7 +91,7 @@ final class CurrencyConversionServiceTest extends TestCase
     #[Test]
     public function halfUpRoundingAt5(): void
     {
-        // 100.00 AED * 0.25180 = 25.18000 — clean
+        // 100.00 AED * 0.25180 = 25.18000, clean
         // 100.50 AED * 0.25180 = 25.30590 → 25.31 (HALF_UP boundary)
         $service = $this->makeService(rates: [
             $this->makeRate('AED', 'EUR', '0.25180000'),
@@ -212,7 +212,7 @@ final class CurrencyConversionServiceTest extends TestCase
 
         $result = $service->convert('100.00', Currency::USD);
 
-        // Conversion still works — sticky last-known rate
+        // Conversion still works, sticky last-known rate
         self::assertSame('27.23', $result['amount']);
         self::assertSame('USD', $result['currency']);
         self::assertTrue($result['converted']);

@@ -13,11 +13,11 @@ use Doctrine\ORM\Mapping as ORM;
  * message keeps its {{variables}} unresolved; they resolve at each send.
  *
  * Recurrence is intentionally simple + extensible: once | daily | weekly |
- * monthly. next_run_at is the single source of truth for "when next" —
+ * monthly. next_run_at is the single source of truth for "when next" -
  * the dispatcher claims a schedule whose next_run_at has passed, emits a
  * broadcast, then advances (skipping any missed occurrences so a lagging
  * cron never floods). audience_mode is 'dynamic' (resolve current audience
- * at each send) — the column is present for a future 'snapshot' mode.
+ * at each send), the column is present for a future 'snapshot' mode.
  */
 #[ORM\Entity(repositoryClass: NotificationScheduleRepository::class)]
 #[ORM\Table(name: 'notification_schedules')]

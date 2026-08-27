@@ -4,7 +4,7 @@
 declare(strict_types=1);
 
 /**
- * 3bayti API — catalog seed data
+ * 3bayti API, catalog seed data
  * ==============================
  *
  * Populates vendors, brands, and categories with fixtures for QA +
@@ -102,7 +102,7 @@ $brands = [
     ['slug' => 'brand-5', 'name' => 'Brand 5'],
 ];
 
-// Category tree — order matters: parents before children so the
+// Category tree, order matters: parents before children so the
 // path-computation chain works. The seeder validates this.
 $categories = [
     // Roots
@@ -194,7 +194,7 @@ foreach ($vendors as $fixture) {
         $em->persist($vendor);
         $vendorCreated++;
     } else {
-        // Update existing — keeps fixture file as source of truth.
+        // Update existing, keeps fixture file as source of truth.
         $existing->setName($fixture['name']);
         $existing->setContactEmail($fixture['contact_email']);
         $existing->setDescription($fixture['description'] ?? null);
@@ -240,7 +240,7 @@ $categoryUpdated = 0;
 
 // Two-pass: roots first (no parent dependency), then children. Within
 // each pass, the fixture order is preserved which is alphabetical
-// at each level — fine for display_order tie-breaking.
+// at each level, fine for display_order tie-breaking.
 // We use the slug-to-entity map to resolve parent_slug -> Category.
 $resolved = [];
 
@@ -268,7 +268,7 @@ foreach ($categories as $fixture) {
 }
 $em->flush();
 
-// Pass 2: children — multiple iterations to handle arbitrary depth.
+// Pass 2: children, multiple iterations to handle arbitrary depth.
 // We loop until no progress; defensive against tree-order surprises.
 $remaining = array_filter($categories, static fn ($f) => $f['parent_slug'] !== null);
 $maxPasses = 10;
@@ -282,7 +282,7 @@ while (!empty($remaining) && $pass < $maxPasses) {
         // Parent must be resolved already
         $parent = $resolved[$parentSlug] ?? $categoryRepo->findBySlug($parentSlug);
         if ($parent === null) {
-            // Try again next pass — its parent might not be seeded yet
+            // Try again next pass, its parent might not be seeded yet
             continue;
         }
 
@@ -317,7 +317,7 @@ while (!empty($remaining) && $pass < $maxPasses) {
     }
 
     if (!$progressed) {
-        // No fixture could be placed this pass — parent_slug refs
+        // No fixture could be placed this pass, parent_slug refs
         // are broken or out of order. Bail loudly.
         $orphans = array_column($remaining, 'slug');
         fwrite(STDERR, sprintf(

@@ -16,7 +16,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 /**
  * Register a self-hosted OTA web bundle in `ota_bundles` so devices polling
  * POST /v3/ota/updates can download it. Run from the deploy box as part of the
- * release workflow — there is no auth surface (a CLI on the server, not an HTTP
+ * release workflow, there is no auth surface (a CLI on the server, not an HTTP
  * endpoint).
  *
  * Typical release:
@@ -97,7 +97,7 @@ final class PublishOtaBundleCommand extends Command
             return Command::INVALID;
         }
 
-        // Duplicate guard — mirrors uniq_ota_bundle_version.
+        // Duplicate guard, mirrors uniq_ota_bundle_version.
         $existing = $this->em->getRepository(OtaBundle::class)->findOneBy([
             'appId' => $appId,
             'platform' => $platform,

@@ -29,15 +29,15 @@ import {
 } from '../../../shared/forms';
 import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
 
-/** Resend cooldown — matches the other OTP surfaces. */
+/** Resend cooldown, matches the other OTP surfaces. */
 const RESEND_COOLDOWN_SECONDS = 30;
 
 /**
- * Reset password page — /reset-password.
+ * Reset password page, /reset-password.
  *
  * Receives query params:
- *   verification_id  REQUIRED — from /forgot-password
- *   email            OPTIONAL — for display context
+ *   verification_id  REQUIRED, from /forgot-password
+ *   email            OPTIONAL, for display context
  *
  * Form
  * ----
@@ -54,7 +54,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
  *   2. On success the API issues tokens (auto-login). Navigate to '/'.
  *   3. On OTP_INVALID_CODE → inline error on the code field. This
  *      also fires for the anti-enumeration 'fake-' verification_id
- *      path — the user can't tell whether the email was registered.
+ *      path, the user can't tell whether the email was registered.
  *   4. On VALIDATION_FAILED → per-field errors via mapApiErrors.
  *   5. On any other code → toast.
  *
@@ -63,7 +63,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
  * Group-level validator that returns { passwordsMismatch: true } on
  * the confirm field when the two don't match. Attaches the error to
  * confirm_password (not new_password) so the inline error renders
- * under the confirm field — closer to where the user notices the
+ * under the confirm field, closer to where the user notices the
  * discrepancy.
  */
 @Component({
@@ -219,7 +219,7 @@ export class ResetPasswordComponent implements OnInit, OnDestroy {
    * (and Resend) for the retry_after window.
    */
   protected readonly lockedOut = signal(false);
-  /** Email or phone the code was sent to — shown for context only. */
+  /** Email or phone the code was sent to, shown for context only. */
   protected readonly destination = signal<string | null>(null);
   /** Channel + destination let us re-issue the reset code (resend). */
   private readonly channel = signal<'email' | 'phone' | null>(null);
@@ -407,7 +407,7 @@ function passwordsMatchValidator(group: AbstractControl): ValidationErrors | nul
   if (confirm.value === '' || newPass.value === '') return null; /* required handles emptiness */
 
   if (newPass.value !== confirm.value) {
-    /* Merge — don't clobber other errors. */
+    /* Merge, don't clobber other errors. */
     const existing = confirm.errors ?? {};
     confirm.setErrors({ ...existing, passwordsMismatch: true });
     return { passwordsMismatch: true };

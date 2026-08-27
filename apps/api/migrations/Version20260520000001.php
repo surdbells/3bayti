@@ -8,10 +8,10 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.2.Y.6-C — Wishlist: the `wishlist` table.
+ * M3.2.Y.6-C, Wishlist: the `wishlist` table.
  *
  * One row per (user, product) the user has saved. Net-new feature
- * (Y.6); products-only (Q6.4 — the read endpoint returns saved
+ * (Y.6); products-only (Q6.4, the read endpoint returns saved
  * products via the existing ProductSerializer list shape).
  *
  * Schema
@@ -21,12 +21,12 @@ use Doctrine\Migrations\AbstractMigration;
  *   product_id  BIGINT NOT NULL  → products(id) ON DELETE CASCADE
  *   created_at  TIMESTAMPTZ NOT NULL
  *
- * UNIQUE (user_id, product_id) — a product is saved at most once per
+ * UNIQUE (user_id, product_id), a product is saved at most once per
  *   user. This is what makes POST idempotent (Q6.3): the controller
  *   checks for an existing row and no-ops instead of inserting a
  *   duplicate (and the DB constraint is the backstop against races).
  *
- * INDEX (user_id, created_at) — the hot read path: "list a user's
+ * INDEX (user_id, created_at), the hot read path: "list a user's
  *   saved products, newest first", a single seek+range scan.
  *
  * FK CASCADE both ways:

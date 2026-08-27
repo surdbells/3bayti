@@ -72,7 +72,7 @@ class OrderRepository extends EntityRepository
      * Paginated list of a user's orders, most recent first.
      *
      * Eager-loads items + their snapshotted product details (no
-     * vendor join here — the listing UI doesn't show vendor; the
+     * vendor join here, the listing UI doesn't show vendor; the
      * detail page does).
      *
      * A single Order::STATUS_* value may be passed to scope the list to
@@ -172,17 +172,17 @@ class OrderRepository extends EntityRepository
      *     a paid order needs no reconciliation)
      *   - created_at < cutoff (we want orders old enough that the
      *     webhook delivery window should have passed)
-     *   - PRODUCT orders only — synthetic gift-card PURCHASE orders are
+     *   - PRODUCT orders only, synthetic gift-card PURCHASE orders are
      *     excluded (NOT EXISTS on gift_cards.purchase_order_reference,
      *     reusing excludeGiftCardPurchases). ReconcilePendingOrdersCommand
      *     marks orders paid/failed but does NOT activate gift cards, so a
-     *     gift-card funding order must not be reconciled here — it stays on
+     *     gift-card funding order must not be reconciled here, it stays on
      *     its own poll/complete-payment (webhook + activate) path.
      *   - ordered by created_at ASC (oldest first; reconcile the
      *     most-painful-to-the-customer ones first)
      *
      * Returns Order entities with their PaymentTransaction relation
-     * NOT eagerly loaded — the caller fetches the transaction's
+     * NOT eagerly loaded, the caller fetches the transaction's
      * provider_order_ref on-demand to keep this query lean even when
      * the table has many pending rows.
      *
@@ -201,7 +201,7 @@ class OrderRepository extends EntityRepository
             ->orderBy('o.createdAt', 'ASC')
             ->setMaxResults($batchLimit);
 
-        // Product orders only — never reconcile gift-card funding orders here.
+        // Product orders only, never reconcile gift-card funding orders here.
         $this->excludeGiftCardPurchases($qb);
 
         $result = $qb->getQuery()->getResult();
@@ -220,12 +220,12 @@ class OrderRepository extends EntityRepository
      *     (give the customer time to actually receive + use the item
      *     before asking for a review)
      *   - NO prior notification_logs row with template='order.review_prompt'
-     *     AND channel='push' for this order (channel-scoped idempotency —
+     *     AND channel='push' for this order (channel-scoped idempotency -
      *     exactly one review prompt per order)
      *
      * The opt-out check (users.marketing_push_opt_out) is enforced at
      * dispatch time inside PushNotificationService::orderReviewPrompt,
-     * NOT here — same split as the cart-abandonment finder: the finder
+     * NOT here, same split as the cart-abandonment finder: the finder
      * answers "is this order eligible to consider?", dispatch answers
      * "will this user receive it?".
      *
@@ -320,7 +320,7 @@ class OrderRepository extends EntityRepository
      * Gift-card purchases create a synthetic Order with no line items
      * (InitiateCheckoutController::initiateGiftCardPurchase), linked back to
      * the funded card via gift_cards.purchase_order_reference =
-     * orders.order_reference. Those orders are an internal payment vehicle —
+     * orders.order_reference. Those orders are an internal payment vehicle -
      * they must never appear on the admin Orders list, the logistics board,
      * or analytics recent-sales.
      *
@@ -347,7 +347,7 @@ class OrderRepository extends EntityRepository
      * gift-card back-reference subquery shape as excludeGiftCardPurchases:
      *
      *   'gift_card' → EXISTS     (only synthetic gift-card purchase orders)
-     *   'product'   → NOT EXISTS (only orders with no linked gift card —
+     *   'product'   → NOT EXISTS (only orders with no linked gift card -
      *                             i.e. real product orders)
      *   null / other → no filter (all orders).
      *
@@ -393,19 +393,19 @@ class OrderRepository extends EntityRepository
      * Admin-scoped paginated order list. Supports cross-cutting
      * filters that the customer + vendor surfaces don't expose:
      *   - status: a single Order::STATUS_* value, a list of values
-     *     (matched with IN — used by the logistics board to scope to the
+     *     (matched with IN, used by the logistics board to scope to the
      *     fulfilment set), or null for all
      *   - userId: filter to a single customer
      *   - vendorId: filter to orders containing at least one item
      *     from a specific vendor
      *   - type: 'product' (exclude gift-card orders) / 'gift_card' (only
-     *     gift-card sales) — drives the order-type filter on the merged
+     *     gift-card sales), drives the order-type filter on the merged
      *     Orders & Sales page. Overrides includeGiftCards.
      *
      * Synthetic gift-card purchase orders are excluded by default (see
      * excludeGiftCardPurchases) so they never pollute the logistics board.
      * Pass $includeGiftCards = true to surface them as sales in the merged
-     * admin Orders & Sales list — the serializer synthesizes a "Gift Card"
+     * admin Orders & Sales list, the serializer synthesizes a "Gift Card"
      * line for them. Note a vendorId filter still excludes gift-card orders
      * regardless (they have no vendor items to join on).
      *
@@ -564,7 +564,7 @@ class OrderRepository extends EntityRepository
         ?string $dateTo,
     ): void {
         // Vendors NEVER see orders still awaiting payment OR whose payment
-        // failed — neither is a real sale with a fulfilment obligation. Applied
+        // failed, neither is a real sale with a fulfilment obligation. Applied
         // unconditionally (not just kept out of the status-filter whitelist),
         // so the default unfiltered list hides them too.
         $qb->andWhere('o.status NOT IN (:nonSaleStatuses)')
@@ -627,7 +627,7 @@ class OrderRepository extends EntityRepository
             return [[], 0];
         }
 
-        // Page of distinct order ids first — paginate against orders only.
+        // Page of distinct order ids first, paginate against orders only.
         $idQb = $this->createQueryBuilder('o')
             ->select('DISTINCT o.id, o.createdAt')
             ->innerJoin('o.items', 'i')
@@ -644,7 +644,7 @@ class OrderRepository extends EntityRepository
         }
 
         // Hydrate the orders with all their items (incl. items from OTHER
-        // vendors — the controller filters those out at serialisation).
+        // vendors, the controller filters those out at serialisation).
         $orders = $this->createQueryBuilder('o')
             ->select('o', 'i')
             ->leftJoin('o.items', 'i')

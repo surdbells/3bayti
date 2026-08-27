@@ -39,7 +39,7 @@ import {
 /**
  * A user provisioned with a temporary password must replace it before doing
  * anything else. Returns a redirect to the forced change-password screen while
- * the flag is set — except when they're already there (so no loop).
+ * the flag is set, except when they're already there (so no loop).
  */
 function passwordChangeGate(router: Router, state: RouterStateSnapshot): UrlTree | null {
   if (mustChangePassword(readSession()) && !state.url.startsWith(CHANGE_PASSWORD_ROUTE)) {
@@ -90,15 +90,15 @@ export const adminGuard: CanActivateFn = (
  * wrong-role users), so this guard's only job is the granular per-permission
  * check that mirrors the API's PermissionGuard. It uses the SAME catalog keys
  * the backend enforces via `$perm->for('<key>')`, so a role-limited admin can
- * never navigate to a module they lack — matching what the API would 403.
+ * never navigate to a module they lack, matching what the API would 403.
  *
  * Super admins (session is_admin) short-circuit synchronously. For role-limited
  * sub-admins the effective permission set is fetched async from /me/profile, so
  * the guard waits for PermissionService to finish loading before deciding,
  * rather than racing the fetch and false-denying on first navigation.
  *
- * On a missing permission the user is redirected to the dashboard (/backend) —
- * a guaranteed-safe landing for any admin-tier user — instead of a dead end.
+ * On a missing permission the user is redirected to the dashboard (/backend) -
+ * a guaranteed-safe landing for any admin-tier user, instead of a dead end.
  */
 export function requirePermission(permission: string): CanActivateFn {
   return (): boolean | UrlTree | Observable<boolean | UrlTree> => {

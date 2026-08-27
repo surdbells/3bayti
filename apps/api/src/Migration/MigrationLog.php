@@ -13,7 +13,7 @@ use DateTimeImmutable;
  * Writes to BOTH:
  *  - stdout (so the operator running the script sees progress in real-time)
  *  - the `migration_log` Postgres table (so we have a forensic record
- *    of what was migrated, skipped, or failed — accessible after the
+ *    of what was migrated, skipped, or failed, accessible after the
  *    migration script finishes)
  *
  * Each entry has:
@@ -23,7 +23,7 @@ use DateTimeImmutable;
  *  - message: human description
  *  - context: arbitrary JSON for additional data
  *
- * Schema is created on first construction if it doesn't exist —
+ * Schema is created on first construction if it doesn't exist -
  * intentional because this is a one-shot tool and we don't want to
  * bloat the regular migrations directory with a logger table.
  */

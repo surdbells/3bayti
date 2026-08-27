@@ -18,7 +18,7 @@ import type { ProductDetail } from './product.model';
 /**
  * Reviews-section coverage for the PDP (H3.A). The Reviews section now
  * renders for EVERY product: the review list when reviews exist, or an
- * inviting empty state (#4) when none do — never a missing section.
+ * inviting empty state (#4) when none do, never a missing section.
  */
 function makeProduct(overrides: Partial<ProductDetail> = {}): ProductDetail {
   return {

@@ -16,7 +16,7 @@ namespace Bayti\Api\Domain\Order;
  *     message (controller surfaces as 422 with that code in the
  *     error envelope)
  *
- * Defensive checks return ok-without-items (rule 1 — window check)
+ * Defensive checks return ok-without-items (rule 1, window check)
  * because the per-item resolution hasn't happened yet at that point;
  * the resolvedItems list only fills in once Rule 2 passes.
  */

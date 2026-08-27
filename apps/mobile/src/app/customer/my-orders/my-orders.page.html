@@ -10,7 +10,7 @@
 </ion-header>
 
 <ion-content fullscreen="true" class="page-bg ion-padding">
-  <!-- Status filter chips — horizontal scroll row. Drives server-side
+  <!-- Status filter chips, horizontal scroll row. Drives server-side
        ?status= filtering; tapping refetches from offset 0. -->
   <div class="status-filters horizontal-scroll" role="tablist">
     @for (chip of statuses; track chip.value) {
@@ -26,7 +26,7 @@
     }
   </div>
 
-  <!-- Type filter chips — parallel to the status row. Drives server-side
+  <!-- Type filter chips, parallel to the status row. Drives server-side
        ?type= filtering (All / Products / Gift Cards); tapping refetches from
        offset 0. -->
   <div class="status-filters horizontal-scroll" role="tablist">
@@ -73,7 +73,7 @@
         </div>
 
         <!--
-          Items — ONE presentation at both sizes: a compact vertical row per
+          Items, ONE presentation at both sizes: a compact vertical row per
           item (thumb, name, qty, line price). Collapsed shows the first row
           only; expanding reveals the rest in place. This replaces the old
           thumbnail-strip/horizontal-card-scroller split, which changed shape
@@ -95,7 +95,7 @@
                 <span class="order-item__name">{{ item.product_name }}</span>
                 <span class="order-item__meta">
                   {{ 'label_qty' | translate }}: {{ item.quantity }}
-                  <!-- Gift cards have no fulfilment lifecycle — no status. -->
+                  <!-- Gift cards have no fulfilment lifecycle, no status. -->
                   @if (!isGiftCardItem(item) && item.status) {
                     <span class="order-item__status" [ngClass]="'order-item__status--' + item.status">
                       {{ item.status | uppercase }}
@@ -110,7 +110,7 @@
 
           <!--
             Quiet toggle: a text row, not a button competing with the primary
-            CTA — and only rendered when there is actually something hidden.
+            CTA, and only rendered when there is actually something hidden.
           -->
           @if (order.items.length > 1) {
             <button type="button" class="order-items__toggle" (click)="toggleItems(i)">

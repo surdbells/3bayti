@@ -17,7 +17,7 @@ import { CfImagePipe } from './cf-image.pipe';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 /**
- * HeroCarouselComponent — coverflow product carousel for the home-page
+ * HeroCarouselComponent, coverflow product carousel for the home-page
  * hero band.
  *
  * Visual model:
@@ -45,7 +45,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
  *     to the activeIndex signal: slotOf(i) = i - activeIndex (mod 5)
  *     wrapped to range [-2, 2]
  *   - The "wrap" is necessary because we always show 5 cards regardless
- *     of which one is active — at activeIndex=0, card 4 sits at slot
+ *     of which one is active, at activeIndex=0, card 4 sits at slot
  *     -1 (the left medium position) by wrapping
  *   - CSS transitions handle the animation between slots (no JS animation
  *     library)
@@ -221,14 +221,14 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 export class HeroCarouselComponent implements OnDestroy {
   /**
    * Products to render as carousel slides. Capped to MAX_SLIDES because
-   * coverflow only shows 5 at a time meaningfully — more wastes data
+   * coverflow only shows 5 at a time meaningfully, more wastes data
    * fetching for slots the user never sees.
    */
   @Input() set products(value: Product[] | null) {
     this._products.set(value ?? []);
   }
 
-  /** Loading state — true = render skeleton, false = render slides. */
+  /** Loading state, true = render skeleton, false = render slides. */
   @Input() loading: boolean = false;
 
   /* ----- Internal state -------------------------------------------- */
@@ -252,7 +252,7 @@ export class HeroCarouselComponent implements OnDestroy {
   /** The active slide index (0-based). Center card is slides()[activeIndex]. */
   readonly activeIndex = signal(0);
 
-  /** The visible slides — capped to MAX_SLIDES. */
+  /** The visible slides, capped to MAX_SLIDES. */
   readonly slides = computed(() => {
     return this._products().slice(0, this.MAX_SLIDES);
   });
@@ -300,8 +300,8 @@ export class HeroCarouselComponent implements OnDestroy {
    *   slide 0 → slot 0  (center)
    *   slide 1 → slot 1  (right medium)
    *   slide 2 → slot 2  (far right)
-   *   slide 3 → slot -2 (far left)  — wrapped from slot 3 = -2
-   *   slide 4 → slot -1 (left medium) — wrapped from slot 4 = -1
+   *   slide 3 → slot -2 (far left) , wrapped from slot 3 = -2
+   *   slide 4 → slot -1 (left medium), wrapped from slot 4 = -1
    */
   slotOf(i: number): number {
     const total = this.slides().length;

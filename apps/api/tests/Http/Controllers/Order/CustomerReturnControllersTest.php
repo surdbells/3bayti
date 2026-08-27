@@ -87,7 +87,7 @@ final class CustomerReturnControllersTest extends HttpTestCase
     }
 
     // =================================================================
-    // POST /v3/orders/{id}/returns — submit
+    // POST /v3/orders/{id}/returns, submit
     // =================================================================
 
     #[Test]
@@ -186,7 +186,7 @@ final class CustomerReturnControllersTest extends HttpTestCase
 
         $this->bindStandardEm(user: $user, order: $order);
 
-        // 6 photos — exceeds MAX_PHOTOS_PER_REQUEST=5
+        // 6 photos, exceeds MAX_PHOTOS_PER_REQUEST=5
         $photos = [];
         for ($i = 0; $i < 6; $i++) {
             $photos[] = $this->makeUpload(random_bytes(100), 'image/jpeg', "evidence{$i}.jpg");
@@ -293,7 +293,7 @@ final class CustomerReturnControllersTest extends HttpTestCase
         $user = $this->makeUser(id: 42);
         $order = $this->makeDeliveredOrder(user: $user, orderId: 100);
         $vendor = $this->makeVendor(101);
-        // Shipped (not delivered) — Rule 2 fails.
+        // Shipped (not delivered), Rule 2 fails.
         $product = $this->makeProduct($vendor);
         $item = new OrderItem(
             product: $product, vendor: $vendor,
@@ -328,7 +328,7 @@ final class CustomerReturnControllersTest extends HttpTestCase
     {
         $callingUser = $this->makeUser(id: 42);
         $otherUser = $this->makeUser(id: 99);
-        // Order belongs to otherUser — repo.findForUser($id, $callingUser) returns null.
+        // Order belongs to otherUser, repo.findForUser($id, $callingUser) returns null.
         $order = $this->makeDeliveredOrder(user: $otherUser, orderId: 100);
 
         $this->bindStandardEm(
@@ -361,7 +361,7 @@ final class CustomerReturnControllersTest extends HttpTestCase
     }
 
     // =================================================================
-    // GET /v3/orders/{id}/returns — list per order
+    // GET /v3/orders/{id}/returns, list per order
     // =================================================================
 
     #[Test]
@@ -408,7 +408,7 @@ final class CustomerReturnControllersTest extends HttpTestCase
     }
 
     // =================================================================
-    // GET /v3/returns/{id} — detail
+    // GET /v3/returns/{id}, detail
     // =================================================================
 
     #[Test]
@@ -512,7 +512,7 @@ final class CustomerReturnControllersTest extends HttpTestCase
     }
 
     // =================================================================
-    // GET /v3/returns/{id}/photos/{photoId} — serve
+    // GET /v3/returns/{id}/photos/{photoId}, serve
     // =================================================================
 
     #[Test]
@@ -572,7 +572,7 @@ final class CustomerReturnControllersTest extends HttpTestCase
         );
         $this->setEntityId($rr, 7);
 
-        // No need to actually write a photo blob — the auth gate
+        // No need to actually write a photo blob, the auth gate
         // fires before the file read.
         $this->bindStandardEm(
             user: $stranger,
@@ -637,7 +637,7 @@ final class CustomerReturnControllersTest extends HttpTestCase
                 public readonly ?OrderReturnRequest $returnRequestById,
                 public readonly mixed $captureCallback,
             ) {
-                // Intentionally skip parent EntityRepository ctor —
+                // Intentionally skip parent EntityRepository ctor -
                 // we override every method we need; $em + $class
                 // properties stay uninitialized but unaccessed.
             }
@@ -748,7 +748,7 @@ final class CustomerReturnControllersTest extends HttpTestCase
     /**
      * Build a multipart-shaped request for the submit endpoint.
      * Slim's body parser would populate parsedBody from form fields
-     * and uploadedFiles from the file parts — we set both directly
+     * and uploadedFiles from the file parts, we set both directly
      * for test ergonomics.
      *
      * @param array<string, mixed> $formFields

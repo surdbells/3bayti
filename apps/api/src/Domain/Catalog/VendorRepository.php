@@ -56,7 +56,7 @@ class VendorRepository extends EntityRepository
      *     pending vendors that the user has submitted but admin
      *     hasn't approved yet
      *
-     * NOT used by VendorAuthMiddleware — that one needs only approved
+     * NOT used by VendorAuthMiddleware, that one needs only approved
      * vendors via existsApprovedForOwnerUser below.
      *
      * @return list<Vendor>
@@ -103,7 +103,7 @@ class VendorRepository extends EntityRepository
     }
 
     /**
-     * Cheap existence check — does the user own AT LEAST ONE approved
+     * Cheap existence check, does the user own AT LEAST ONE approved
      * vendor? Used by VendorAuthMiddleware as the lifecycle gate.
      *
      * Uses COUNT-only query rather than fetching entities; the
@@ -134,13 +134,13 @@ class VendorRepository extends EntityRepository
      * from the legacy WP/CI schema). The migration script preserved
      * those ids in the `legacy_vendor_id` column on the vendors table.
      *
-     * This method serves the M3.1.5 mobile flip — mobile sends
+     * This method serves the M3.1.5 mobile flip, mobile sends
      * `store_id: 42` (a legacy id) and we resolve it to the v3 vendor.
      * Once mobile is rebuilt against v3 slug semantics (M3.1.10+), this
      * method can be removed and the by-legacy-id controllers retired.
      *
      * Returns null if no vendor has that legacy id. Inactive vendors
-     * are returned by this method — the controller layer decides
+     * are returned by this method, the controller layer decides
      * whether to expose them.
      */
     public function findByLegacyId(int $legacyId): ?Vendor
@@ -209,11 +209,11 @@ class VendorRepository extends EntityRepository
      *     (null = no status filter)
      *
      * Sort axes ('name_asc' default):
-     *   - 'name_asc' / 'name_desc' — alpha
-     *   - 'created_at_desc' / 'created_at_asc' — by Vendor.createdAt
+     *   - 'name_asc' / 'name_desc', alpha
+     *   - 'created_at_desc' / 'created_at_asc', by Vendor.createdAt
      *
      * NOTE: metric-based sorts (?sort=fulfillment_rate_desc) are NOT
-     * handled here — the controller paginates the full vendor list,
+     * handled here, the controller paginates the full vendor list,
      * computes metrics for the whole set, then sorts + slices in PHP.
      * Acceptable for current 3bayti scale (≤200 vendors); flagged as
      * an operator follow-up for cache-warming when scale demands.
@@ -231,7 +231,7 @@ class VendorRepository extends EntityRepository
             $qb->andWhere('v.status = :status')->setParameter('status', $status);
         }
 
-        // Sort routing — name + created_at only here; metric-based
+        // Sort routing, name + created_at only here; metric-based
         // sorts are handled in PHP by the caller (see method docblock).
         switch ($sort) {
             case 'name_desc':
@@ -268,7 +268,7 @@ class VendorRepository extends EntityRepository
      * Companion to findPaginatedForAdmin: returns ALL vendor IDs
      * matching the supplied status filter (no pagination). Used by
      * the metrics list endpoint when a metric-based sort is requested
-     * — the controller computes metrics for every vendor, sorts in
+     *, the controller computes metrics for every vendor, sorts in
      * PHP, then slices.
      *
      * @return list<int>
@@ -288,7 +288,7 @@ class VendorRepository extends EntityRepository
      *
      * Powers the apps/web home-page Designer Spotlight surface.
      * Strictly filters by BOTH is_active = true AND is_featured = true
-     * — a soft-deleted vendor that was previously flagged featured
+     *, a soft-deleted vendor that was previously flagged featured
      * must NOT leak onto the public Spotlight.
      *
      * Q-Sort = A (locked in M3.2.X.2 plan): alphabetical name ASC.
@@ -298,7 +298,7 @@ class VendorRepository extends EntityRepository
      *
      * Q-LimitClamp = A (locked): caller is expected to clamp the
      * limit to [1..12] before invoking. This repository does not
-     * re-clamp — that's the controller's responsibility per layered
+     * re-clamp, that's the controller's responsibility per layered
      * input-validation discipline.
      *
      * @return Vendor[]
@@ -338,11 +338,11 @@ class VendorRepository extends EntityRepository
      * Active + featured vendors with their aggregated rating stats.
      *
      * Returns a list of {vendor, rating, ratingCount} dicts where
-     *   - rating: float|null — average star of approved reviews
+     *   - rating: float|null, average star of approved reviews
      *     scoped to the vendor (NULL if vendor has zero approved
      *     reviews; matches the apps/web `FeaturedVendor.rating`
      *     contract semantics)
-     *   - ratingCount: int — number of approved reviews counted
+     *   - ratingCount: int, number of approved reviews counted
      *     in the aggregate
      *
      * Why a separate method (vs decorating findFeatured)
@@ -353,7 +353,7 @@ class VendorRepository extends EntityRepository
      *
      * findFeaturedWithStats is the variant explicitly for the
      * Designer Spotlight surface. Single query with LEFT JOIN +
-     * GROUP BY (no N+1) — at Spotlight scale (≤4 vendors per
+     * GROUP BY (no N+1), at Spotlight scale (≤4 vendors per
      * request) this is the right shape.
      *
      * SQL shape
@@ -420,7 +420,7 @@ class VendorRepository extends EntityRepository
     }
 
     /**
-     * Top verified vendors + rating aggregates — the Store Spotlight
+     * Top verified vendors + rating aggregates, the Store Spotlight
      * FALLBACK source (Stores H0.1).
      *
      * Structurally identical to {@see findFeaturedWithStats} but selects
@@ -476,7 +476,7 @@ class VendorRepository extends EntityRepository
 
     /**
      * All active vendors + rating aggregates, paginated + optionally
-     * name-filtered — the store DIRECTORY source (Stores H2.A).
+     * name-filtered, the store DIRECTORY source (Stores H2.A).
      *
      * Structurally identical to {@see findTopVerifiedWithStats} but without
      * the verified/featured constraint (the directory lists every active

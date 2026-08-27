@@ -9,7 +9,7 @@ import { expectNoA11yViolations } from './utils/a11y';
  * with a hero carousel + multiple product strips. These tests verify
  * the shipped HTML matches the smoke markers that web.yml's build
  * verification already asserts on, so a Playwright failure here
- * means web.yml deploy would also fail — same signal, different
+ * means web.yml deploy would also fail, same signal, different
  * surface (runtime vs build-time).
  *
  * Markers used (stable BEM class names from component templates):
@@ -29,16 +29,16 @@ test.describe('Home page', () => {
   test('loads with hero carousel and global app shell', async ({ page }, info) => {
     await page.goto('/');
 
-    // Global app shell — footer brand name proves the shell rendered.
+    // Global app shell, footer brand name proves the shell rendered.
     await expect(page.locator('.site-footer__brand-name')).toBeVisible();
 
-    // Primary content — hero carousel with at least one slide.
+    // Primary content, hero carousel with at least one slide.
     const slides = page.locator('.hero-carousel__slide');
     await expect(slides.first()).toBeVisible();
     const slideCount = await slides.count();
     expect(slideCount).toBeGreaterThanOrEqual(1);
 
-    // Capture visual snapshot — fully rendered home page
+    // Capture visual snapshot, fully rendered home page
     await snapshot(page, 'home-page-default', info);
 
     // M3.2.0-D: enforce WCAG AA. Allowlist absorbs known violations

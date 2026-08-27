@@ -8,14 +8,14 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.2.X.7-A — Add preferred_locale column to vendors.
+ * M3.2.X.7-A, Add preferred_locale column to vendors.
  *
  * Background
  * ==========
  * Email notification routing needs to know the recipient's preferred
  * language. For customers, the EXISTING users.locale column (added in
  * M1.7.0; docblocked as "Used to: Localise transactional emails (M3)")
- * is the source of truth — no new field needed.
+ * is the source of truth, no new field needed.
  *
  * Vendors, however, have NO existing locale column. This migration
  * adds vendors.preferred_locale to close that gap. Distinct from
@@ -55,7 +55,7 @@ use Doctrine\Migrations\AbstractMigration;
  * Constraint
  * ==========
  * CHECK constraint on the column enforces the valid locale set at
- * the DB level. Defense in depth — application code already
+ * the DB level. Defense in depth, application code already
  * validates via Vendor::SUPPORTED_LOCALES + the setter, but the
  * DB constraint catches direct SQL writes.
  *
@@ -92,11 +92,11 @@ final class Version20260518000001 extends AbstractMigration
                 CHECK (preferred_locale IS NULL OR preferred_locale IN ('en', 'ar'))
         SQL);
 
-        // No backfill — NULL is the intended initial state for all
+        // No backfill, NULL is the intended initial state for all
         // existing rows per Q-FallbackBehavior = A locked.
         //
         // Customer-side locale routing reuses the existing
-        // users.locale column (M1.7.0) — see migration docblock
+        // users.locale column (M1.7.0), see migration docblock
         // "What this migration is NOT doing" for rationale.
     }
 

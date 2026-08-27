@@ -15,10 +15,10 @@ use PHPUnit\Framework\TestCase;
  * Marketing templates are gated by User::isMarketingEmailsOptedOut()
  * at notification dispatch time. Transactional templates ignore that
  * flag. Misclassifying a transactional template as marketing would
- * cause it to be suppressed for opted-out users — a serious bug,
+ * cause it to be suppressed for opted-out users, a serious bug,
  * since transactional emails are required for the service to
  * function under PDPL. Misclassifying marketing as transactional
- * would send unwanted emails to opted-out users — a compliance
+ * would send unwanted emails to opted-out users, a compliance
  * violation. Both directions matter.
  */
 #[CoversClass(EmailTemplate::class)]

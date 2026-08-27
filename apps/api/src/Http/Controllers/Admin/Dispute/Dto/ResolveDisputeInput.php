@@ -17,7 +17,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *   - withdrawn        → customer dropped the claim
  *
  * resolution_note is REQUIRED for resolved_* and withdrawn statuses
- * (audit accountability — every resolution has a documented rationale).
+ * (audit accountability, every resolution has a documented rationale).
  * Optional for in_review.
  */
 final class ResolveDisputeInput

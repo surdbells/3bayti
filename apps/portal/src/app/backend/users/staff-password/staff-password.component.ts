@@ -10,7 +10,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { TranslatePipe } from '../../../translate.pipe';
 
 /**
- * /adminusers/:id/reset-password — set a new password for a staff member.
+ * /adminusers/:id/reset-password, set a new password for a staff member.
  *
  * Extracted from the users page's in-place "Reset password" drawer into a
  * routed sub-page (adminGuard). Loads the target's name for context, then

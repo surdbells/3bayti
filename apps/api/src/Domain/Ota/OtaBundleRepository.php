@@ -9,7 +9,7 @@ use Doctrine\ORM\EntityRepository;
 /**
  * @extends EntityRepository<OtaBundle>
  *
- * Resolved via $em->getRepository(OtaBundle::class) — the entity declares this
+ * Resolved via $em->getRepository(OtaBundle::class), the entity declares this
  * as its repositoryClass, so no explicit DI registration is needed.
  */
 class OtaBundleRepository extends EntityRepository
@@ -18,7 +18,7 @@ class OtaBundleRepository extends EntityRepository
      * The newest ACTIVE bundle for an app + platform + channel, or null.
      *
      * Ordered by created_at DESC (not by version) so that retiring a bad
-     * bundle — setting is_active=false — cleanly falls back to the previously
+     * bundle, setting is_active=false, cleanly falls back to the previously
      * published one. Semver comparison against the device's current/native
      * version is done by the caller (SQL can't order semver correctly).
      */

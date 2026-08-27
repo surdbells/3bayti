@@ -54,7 +54,7 @@ export class ImpersonationService {
     if (this.auth.stopImpersonation()) {
       window.location.assign('/backend');
     } else {
-      // Admin backup missing (e.g. cleared) — sign out to a clean state.
+      // Admin backup missing (e.g. cleared), sign out to a clean state.
       sessionStorage.clear();
       window.location.assign('/');
     }

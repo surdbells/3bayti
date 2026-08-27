@@ -24,7 +24,7 @@ use PHPUnit\Framework\Attributes\Test;
  *   3. non-numeric -> VendorRepository::findBySlug, active only (web)
  *
  * The repository's findApprovedForVendorPaginated returns vendor-scoped
- * (product_id NULL, status approved) migrated reviews — the controller just
+ * (product_id NULL, status approved) migrated reviews, the controller just
  * needs the resolved Vendor passed to it, which these tests assert.
  */
 #[CoversClass(ListVendorPublicReviewsController::class)]
@@ -66,7 +66,7 @@ final class ListVendorPublicReviewsControllerTest extends HttpTestCase
     public function fallsBackToLegacyIdWhenNumericFindMisses(): void
     {
         // Mobile passes the LEGACY store id; find(v3 PK) misses, so we
-        // resolve via findByLegacyId — this is the path that was broken.
+        // resolve via findByLegacyId, this is the path that was broken.
         $vendor = $this->makeVendor(900, 'legacy-store');
 
         $vendorRepo = $this->createMock(VendorRepository::class);

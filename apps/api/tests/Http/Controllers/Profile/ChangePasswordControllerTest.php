@@ -63,7 +63,7 @@ final class ChangePasswordControllerTest extends HttpTestCase
         self::assertSame(200, $response->getStatusCode());
         $body = $this->jsonBody($response);
 
-        // Fresh token pair returned — mirrors reset-confirm response shape.
+        // Fresh token pair returned, mirrors reset-confirm response shape.
         self::assertArrayHasKey('access_token', $body);
         self::assertArrayHasKey('access_token_expires_at', $body);
         self::assertArrayHasKey('refresh_token', $body);
@@ -76,7 +76,7 @@ final class ChangePasswordControllerTest extends HttpTestCase
         self::assertTrue(password_verify('NewPass4567', $user->getPasswordHash()));
         self::assertFalse(password_verify('OldPass123', $user->getPasswordHash()));
 
-        // password_changed_at bumped — see User::setPasswordHash.
+        // password_changed_at bumped, see User::setPasswordHash.
         self::assertNotNull($user->getPasswordChangedAt());
     }
 
@@ -261,7 +261,7 @@ final class ChangePasswordControllerTest extends HttpTestCase
         self::assertSame(422, $response->getStatusCode());
         $body = $this->jsonBody($response);
         self::assertSame('VALIDATION_FAILED', $body['error']['code']);
-        // Hash unchanged — no DB side effects on validation failure.
+        // Hash unchanged, no DB side effects on validation failure.
         self::assertSame($originalHash, $user->getPasswordHash());
     }
 

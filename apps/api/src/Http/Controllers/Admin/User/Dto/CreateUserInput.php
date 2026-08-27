@@ -14,14 +14,14 @@ use Symfony\Component\Validator\Constraints as Assert;
  * (POST /v3/auth/register), which creates phone-verified customer accounts
  * via OTP. Here an admin provisions a back-office account directly:
  *
- *  - No phone/OTP step — staff accounts are email-first and created active.
+ *  - No phone/OTP step, staff accounts are email-first and created active.
  *  - Roles are assigned explicitly from the admin form (finance / support /
  *    sub_admin). The customer/vendor flags are never set by this path.
  *  - Email uniqueness is enforced both here (friendly pre-flight) and by the
  *    DB UNIQUE constraint (race-safe).
  *
  * Password policy mirrors RegisterInput (NIST SP 800-63B 8-char minimum,
- * bcrypt 72-byte ceiling). Not trimmed — whitespace in passwords is valid.
+ * bcrypt 72-byte ceiling). Not trimmed, whitespace in passwords is valid.
  */
 final class CreateUserInput
 {

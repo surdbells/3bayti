@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Buttons
+   Abayti Design System, Buttons
    .ax-btn base + modifiers: --primary --secondary --ghost --danger --link
    Sizes: --sm (default) --md --lg --icon
    ========================================================================= */
@@ -109,7 +109,7 @@
 
 /* ---------- Variants ---------- */
 
-/* Primary — solid brand brown */
+/* Primary, solid brand brown */
 .ax-btn-primary {
   color: var(--ax-color-text-on-brand);
   background-color: var(--ax-color-bg-brand);
@@ -124,7 +124,7 @@
   border-color: var(--ax-color-bg-brand-active);
 }
 
-/* Secondary — neutral sand */
+/* Secondary, neutral sand */
 .ax-btn-secondary {
   color: var(--ax-color-text-primary);
   background-color: var(--ax-color-bg-muted);
@@ -167,7 +167,7 @@
   background-color: var(--ax-color-bg-brand-muted);
 }
 
-/* Ghost — no border, no bg until hover */
+/* Ghost, no border, no bg until hover */
 .ax-btn-ghost {
   color: var(--ax-color-text-primary);
   background-color: transparent;
@@ -180,7 +180,7 @@
   background-color: var(--ax-color-bg-sunken);
 }
 
-/* Link — looks like a link, behaves like a button */
+/* Link, looks like a link, behaves like a button */
 .ax-btn-link {
   color: var(--ax-color-text-link);
   background-color: transparent;
@@ -195,7 +195,7 @@
   text-underline-offset: 3px;
 }
 
-/* Danger — destructive action */
+/* Danger, destructive action */
 .ax-btn-danger {
   color: var(--ax-color-text-inverse);
   background-color: var(--ax-color-bg-danger);

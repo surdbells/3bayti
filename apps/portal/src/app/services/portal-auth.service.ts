@@ -4,7 +4,7 @@ import { PortalCrudAdapter } from './portal-crud-adapter';
 import { GlobalComponent } from '../global-component';
 
 /**
- * PortalAuthService — bridges v3 auth to the portal's SESSION format.
+ * PortalAuthService, bridges v3 auth to the portal's SESSION format.
  *
  * The portal stores the authenticated user in sessionStorage('SESSION')
  * as a base64-encoded JSON object (the "user session") with flat boolean
@@ -38,7 +38,7 @@ export interface PortalSession {
   id: number;
   token: string;          // access token (Bearer)
   refresh_token: string;
-  access_token_expires_at: string;   // ISO — drives the proactive refresh
+  access_token_expires_at: string;   // ISO, drives the proactive refresh
   refresh_token_expires_at: string;  // ISO
   first_name: string;
   last_name: string;
@@ -55,7 +55,7 @@ export interface PortalSession {
   _sub_admin: boolean;
   is_vendor: boolean;
   is_customer: boolean;
-  /** Provisioned with a temporary password — force a change before use. */
+  /** Provisioned with a temporary password, force a change before use. */
   must_change_password: boolean;
   /** True when an admin is impersonating this (vendor) account. */
   impersonating?: boolean;
@@ -81,7 +81,7 @@ export class PortalAuthService {
   }> {
     return this.adapter.post_v3('POST /auth/login', { email, password }).pipe(
       map((res: any) => {
-        // v3 API returns the payload directly at the top level — no
+        // v3 API returns the payload directly at the top level, no
         // response_code wrapper. Success is indicated by access_token
         // presence (HTTP 200; Angular HttpClient throws on non-2xx).
         if (res?.access_token) {
@@ -95,7 +95,7 @@ export class PortalAuthService {
             data: session,
           };
         }
-        // Unexpected 200 body without a token — treat as failure.
+        // Unexpected 200 body without a token, treat as failure.
         return {
           response_code: 400,
           status: 'failed',
@@ -149,7 +149,7 @@ export class PortalAuthService {
   /**
    * Swap the current admin session for an impersonation session built from the
    * /impersonate response, stashing the admin session so it can be restored on
-   * exit. The impersonated account is a vendor only — admin/staff flags are
+   * exit. The impersonated account is a vendor only, admin/staff flags are
    * forced off so the elevated console can't be reached while impersonating.
    */
   startImpersonation(res: any, label: string): void {

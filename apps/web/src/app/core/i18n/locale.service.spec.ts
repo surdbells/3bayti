@@ -188,7 +188,7 @@ describe('LocaleService', () => {
       const { service } = setupService({ document: doc });
 
       await service.initialize();
-      /* @ts-expect-error — passing intentionally invalid type to test runtime guard. */
+      /* @ts-expect-error, passing intentionally invalid type to test runtime guard. */
       await service.setLocale('zh');
 
       expect(service.current()).toBe('en');

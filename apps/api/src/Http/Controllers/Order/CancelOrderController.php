@@ -33,7 +33,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   1. User opens checkout webview, then bails before completing.
  *      Order is pending_payment; we let them cancel cleanly so it
  *      doesn't sit in the reconciliation cron's view forever.
- *   2. User wants to cancel a paid order — they see a 422 with a
+ *   2. User wants to cancel a paid order, they see a 422 with a
  *      message directing them to support. Mobile shows a "Contact
  *      support" CTA.
  *
@@ -86,7 +86,7 @@ final class CancelOrderController
 
         /** @var OrderRepository $orderRepo */
         $orderRepo = $this->em->getRepository(Order::class);
-        // Scope to the authenticated user — cross-user 404 (not 403)
+        // Scope to the authenticated user, cross-user 404 (not 403)
         $order = $orderRepo->findForUser($orderId, $user);
         if ($order === null) {
             throw HttpException::notFound('Order not found.');
@@ -98,7 +98,7 @@ final class CancelOrderController
                 actor: $user,
                 request: $request,
                 reason: $input->reason ?? '',
-                allowedFromAdmin: false, // customer path — only pending_payment is allowed
+                allowedFromAdmin: false, // customer path, only pending_payment is allowed
             );
         } catch (CancellationNotAllowedException $e) {
             throw new HttpException(
@@ -109,7 +109,7 @@ final class CancelOrderController
             );
         } catch (CancellationGatewayException $e) {
             // Shouldn't happen on customer path (no auto-refund) but
-            // defensive — translate to 502 just in case.
+            // defensive, translate to 502 just in case.
             throw new HttpException(
                 status: 502,
                 errorCode: 'cancellation_gateway_failed',

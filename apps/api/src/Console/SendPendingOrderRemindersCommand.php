@@ -27,7 +27,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * ===============
  * Customers reach the payment gateway and drop off (order stays
  * `pending_payment`), or their card is declined (order goes `failed`).
- * Both are recoverable — a timely reminder brings a share of them back to
+ * Both are recoverable, a timely reminder brings a share of them back to
  * a completed sale, the order equivalent of abandoned-cart recovery.
  *
  * What it does (each run)
@@ -35,12 +35,12 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *   1. Finds email-eligible + push-eligible order ids via
  *      PendingOrderReminderFinder (status pending_payment/failed, aged into
  *      the [minAge, maxAge] window, not already reminded on that channel).
- *   2. Emails each via OrderNotificationService::orderPaymentReminder — the
+ *   2. Emails each via OrderNotificationService::orderPaymentReminder, the
  *      service writes a notification_logs row (sent/failed/skipped) keyed to
  *      the order, which makes it ineligible on later runs.
  *   3. Pushes each via PushNotificationService::orderPaymentReminder and
  *      records a channel='push' notification_logs row via
- *      PushNotificationLogger — the independent push idempotency marker.
+ *      PushNotificationLogger, the independent push idempotency marker.
  *   4. Prints an ops summary and emits a structured batch log.
  *
  * The reminder copy adapts to the order's status: `failed` → retry prompt,
@@ -50,7 +50,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * =======================
  * One email + one push per order, each guarded by its own NOT EXISTS in the
  * finder, so re-running never double-nudges. Every order is processed in its
- * own try/catch — one failure never aborts the batch.
+ * own try/catch, one failure never aborts the batch.
  *
  * Scheduling (aaPanel cron)
  * =========================
@@ -137,10 +137,10 @@ final class SendPendingOrderRemindersCommand extends Command
             $dryRun ? ' [DRY RUN]' : '',
         ));
 
-        // Stage 1 — first reminder for freshly-abandoned/failed orders.
+        // Stage 1, first reminder for freshly-abandoned/failed orders.
         $emailIds = $this->finder->findEmailEligibleOrderIds($now, $minAge, $maxAge, $batchSize);
         $pushIds = $this->finder->findPushEligibleOrderIds($now, $minAge, $maxAge, $batchSize);
-        // Stage 2 — follow-up for orders whose first reminder went out ≥ followupAfter ago.
+        // Stage 2, follow-up for orders whose first reminder went out ≥ followupAfter ago.
         $emailFollowupIds = $this->finder->findEmailFollowupEligibleOrderIds($now, $followupAfter, $maxAge, $batchSize);
         $pushFollowupIds = $this->finder->findPushFollowupEligibleOrderIds($now, $followupAfter, $maxAge, $batchSize);
 
@@ -278,7 +278,7 @@ final class SendPendingOrderRemindersCommand extends Command
                 // no-ops when the customer has no active device.
                 $this->push->orderPaymentReminder($order, $this->reasonFor($order), $followup);
 
-                // Write a 'sent' marker regardless of token presence — like the
+                // Write a 'sent' marker regardless of token presence, like the
                 // cart push side, the row means 'we evaluated this order for a
                 // push reminder', so it isn't re-evaluated next run.
                 $this->pushLog->log(

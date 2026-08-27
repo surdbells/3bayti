@@ -24,7 +24,7 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import {DIAL_CODES, DialCode} from "../shared/dial-codes";
 
 /**
- * Password-reset page — rebuilt for the v3 TWO-OPTION reset flow.
+ * Password-reset page, rebuilt for the v3 TWO-OPTION reset flow.
  *
  * Step 1: channel toggle "Email | Phone".
  *   Email mode -> email input. Phone mode -> dial-code + phone input.

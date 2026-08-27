@@ -8,16 +8,16 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M1.6.1.C — audit log infrastructure
+ * M1.6.1.C, audit log infrastructure
  * ====================================
  *
- * Creates the `audit_log` table — single shared table for all
+ * Creates the `audit_log` table, single shared table for all
  * mutating-action records across the application.
  *
  * Why one shared table (not one-per-entity)
  * ------------------------------------------
  *   - Forensics queries are usually subject-agnostic ("what did this
- *     user touch in the last hour?") — a single table answers that
+ *     user touch in the last hour?"), a single table answers that
  *     in one query
  *   - Schema is identical: who, what, when, before/after. No reason
  *     to duplicate it per subject type
@@ -27,7 +27,7 @@ use Doctrine\Migrations\AbstractMigration;
  * --------------
  *
  *   user_id BIGINT NULL
- *     The actor — who initiated the change. Nullable for system-driven
+ *     The actor, who initiated the change. Nullable for system-driven
  *     events (cron jobs, M3 order auto-cancellations). The actor's
  *     row in users may be deleted later; we preserve the id but
  *     don't FK because audit must outlive the actor (compliance).
@@ -35,12 +35,12 @@ use Doctrine\Migrations\AbstractMigration;
  *   subject_type VARCHAR(50) NOT NULL
  *     Class basename of the entity that changed: 'User', 'Address',
  *     'Measurement', 'Order' (M3+). Not a FK because subjects are
- *     polymorphic — Postgres polymorphic FK is awkward; the type
+ *     polymorphic, Postgres polymorphic FK is awkward; the type
  *     column does the work.
  *
  *   subject_id BIGINT NOT NULL
  *     The primary key of the changed entity. Same lifecycle reasoning
- *     as user_id — no FK; the entity might be deleted later.
+ *     as user_id, no FK; the entity might be deleted later.
  *
  *   action VARCHAR(20) NOT NULL
  *     Short code: 'created' | 'updated' | 'deleted' | 'default'
@@ -59,12 +59,12 @@ use Doctrine\Migrations\AbstractMigration;
  *     literal string '[REDACTED]' before serialisation.
  *
  *   ip_address INET NULL
- *     Postgres has a native INET type — better than VARCHAR for
+ *     Postgres has a native INET type, better than VARCHAR for
  *     range queries ("any audit from this /24?"). Nullable for
  *     non-HTTP-initiated events.
  *
  *   user_agent TEXT NULL
- *     Browser UA string. Free-form, length-unbounded by intent —
+ *     Browser UA string. Free-form, length-unbounded by intent -
  *     UA strings can be long.
  *
  *   request_id VARCHAR(40) NULL
@@ -83,7 +83,7 @@ use Doctrine\Migrations\AbstractMigration;
  *   - (user_id, created_at DESC): "what has user X been doing
  *     recently"
  *
- * No index on (subject_type) alone — the (subject_type, subject_id)
+ * No index on (subject_type) alone, the (subject_type, subject_id)
  * composite covers single-type queries via leading-column rule.
  *
  * Retention
@@ -130,7 +130,7 @@ final class Version20260510000001 extends AbstractMigration
                 ON audit_log (subject_type, subject_id)
             SQL);
 
-        // Forensic query: "what has user U been doing?" — DESC because
+        // Forensic query: "what has user U been doing?", DESC because
         // we almost always want recent-first.
         $this->addSql(<<<SQL
             CREATE INDEX audit_log_user_created_idx

@@ -7,7 +7,7 @@ import { AxIconComponent } from '../icon';
 import { AxLoaderComponent } from '../loader';
 import { AxBottomSheetComponent } from '../bottom-sheet';
 
-/** Minimal label shape the sheet renders — a subset of WishlistLabel. */
+/** Minimal label shape the sheet renders, a subset of WishlistLabel. */
 export interface WishlistSheetLabel {
   id: number;
   name: string;
@@ -19,8 +19,8 @@ export interface WishlistSheetLabel {
  *
  * Previously this markup + list/loading state was copy-pasted into every page
  * that offers "add to closet" (best-sellers, category, search, product, …).
- * Centralising it here means the inline "Create new label" affordance — so a
- * user with no lists yet can make one without leaving the sheet — lives in one
+ * Centralising it here means the inline "Create new label" affordance, so a
+ * user with no lists yet can make one without leaving the sheet, lives in one
  * place instead of nine.
  *
  * The component is presentational: the parent owns the WishlistService calls.
@@ -56,7 +56,7 @@ export class AxWishlistSheetComponent {
   /** Existing labels to pick from. */
   @Input() labels: WishlistSheetLabel[] = [];
 
-  /** Labels still loading — shows a spinner instead of the list. */
+  /** Labels still loading, shows a spinner instead of the list. */
   @Input() loading = false;
 
   /** Parent toggles this true while POST /me/wishlist/labels is in flight. */

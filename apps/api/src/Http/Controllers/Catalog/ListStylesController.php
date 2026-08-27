@@ -19,8 +19,8 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Paginated listing of active styles. Supports type filtering:
  *
- *   ?type=community  (default) — user/community-generated styles
- *   ?type=editorial            — admin/editorial-curated styles
+ *   ?type=community  (default), user/community-generated styles
+ *   ?type=editorial           , admin/editorial-curated styles
  *   ?limit=10&offset=0
  *
  * Returns: { data: Style[], meta: PaginationMeta }
@@ -33,12 +33,12 @@ use Psr\Http\Message\ServerRequestInterface;
  *   - limit: 1-50 (defaults to 10, matching mobile's body)
  *   - offset: >= 0
  *
- * Read-only — admin/curators manage styles outside the v3 API (or via
+ * Read-only, admin/curators manage styles outside the v3 API (or via
  * a future admin endpoint). No user-facing create/edit/delete in
  * M3.1.5.5 per the locked decision (Q4).
  *
  * Unknown ?type values fall back to 'community' (rather than 400)
- * for resilience — mobile sends a static type string and a typo
+ * for resilience, mobile sends a static type string and a typo
  * shouldn't break the page.
  */
 final class ListStylesController

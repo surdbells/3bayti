@@ -24,7 +24,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Authorization vs identification
  * --------------------------------
  * If the address exists but belongs to a different user, we return
- * 404 — NOT 403. Returning 403 leaks the existence of the resource
+ * 404, NOT 403. Returning 403 leaks the existence of the resource
  * ("yes, address 47 exists, but you can't see it"). 404 is "no such
  * address that you can access," which is true from your perspective.
  *
@@ -68,7 +68,7 @@ final class GetAddressController
         }
 
         // Slim's route placeholder gives us the id as a string.
-        // Cast carefully — non-numeric ids should 404, not 500.
+        // Cast carefully, non-numeric ids should 404, not 500.
         $idRaw = $args['id'] ?? '';
         if (!ctype_digit((string) $idRaw)) {
             throw HttpException::notFound('Address not found.');

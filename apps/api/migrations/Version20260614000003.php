@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Vendor compliance (KYC) documents — the v3 home for the ID front/back +
+ * Vendor compliance (KYC) documents, the v3 home for the ID front/back +
  * trade-license documents the compliance page manages. Stored as text on
  * the vendor (base64 data URLs, parity with legacy users.id_front/…),
  * which keeps the sensitive documents in the DB rather than on the public

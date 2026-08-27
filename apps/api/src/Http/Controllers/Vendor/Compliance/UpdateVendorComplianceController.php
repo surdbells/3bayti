@@ -21,7 +21,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * PATCH /v3/vendor/compliance
  *
  * Submit/replace the authenticated vendor's KYC documents (front, back,
- * license_doc — base64 data URLs). Documents are stored as PRIVATE files
+ * license_doc, base64 data URLs). Documents are stored as PRIVATE files
  * (the vendor row holds only the path); compliance moves to 'submitted'.
  * Replaces the legacy /vendors/settings/update-compliance call AND the
  * incorrect use of the onboarding (vendor-creation) endpoint.
@@ -84,7 +84,7 @@ final class UpdateVendorComplianceController
         $vendor->submitCompliance($newFront, $newBack, $newLicense);
         $repo->save($vendor);
 
-        // Orphan cleanup — delete the files we just replaced.
+        // Orphan cleanup, delete the files we just replaced.
         if ($newFront !== null) {
             $this->docs->delete($oldFront);
         }
@@ -105,7 +105,7 @@ final class UpdateVendorComplianceController
 
     /**
      * Whether a document field carries a real new upload (a base64 data
-     * URL) — empty strings, placeholders, and short/echoed values are
+     * URL), empty strings, placeholders, and short/echoed values are
      * treated as "leave unchanged".
      */
     private function isProvided(array $body, string $key): bool

@@ -162,8 +162,8 @@ describe('transformV3LoginResponse', () => {
     it('returns input unchanged when shape already has id + token (string)', () => {
       // This is what NetworkService returns when MobileNetworkAdapter
       // falls through to legacy. The transform must preserve every
-      // field — including legacy-only ones like billing_*, avatar,
-      // location — so emergency rollback (flip target back to 'old')
+      // field, including legacy-only ones like billing_*, avatar,
+      // location, so emergency rollback (flip target back to 'old')
       // doesn't require touching this file too.
       const legacy: Record<string, unknown> = {
         id: 99,

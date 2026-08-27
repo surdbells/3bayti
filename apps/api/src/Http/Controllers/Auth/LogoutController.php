@@ -22,7 +22,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * POST /v3/auth/logout
  *
- * Authenticated endpoint. Revokes a single refresh token — the
+ * Authenticated endpoint. Revokes a single refresh token, the
  * one tied to the device/session being logged out.
  *
  * Auth model
@@ -35,7 +35,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * --------
  * We need the user identity (from access token) to ensure callers
  * can't revoke other users' refresh tokens. We need the refresh
- * token to know WHICH session to kill — a user can be logged in
+ * token to know WHICH session to kill, a user can be logged in
  * on multiple devices, each with its own refresh token. The body
  * carries the specific one.
  *
@@ -101,7 +101,7 @@ final class LogoutController
         $input = $this->validator->parse($request, LogoutInput::class);
 
         // Try to find the refresh token in DB. We don't fail-loud if
-        // any of these checks fail — logout is idempotent (see class
+        // any of these checks fail, logout is idempotent (see class
         // docblock).
         $claims = $this->jwt->verifyRefreshToken($input->refresh_token);
         if ($claims !== null) {

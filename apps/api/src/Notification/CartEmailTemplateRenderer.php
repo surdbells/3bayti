@@ -13,7 +13,7 @@ use Bayti\Api\Domain\User\User;
  *
  * Parallel to OrderEmailTemplateRenderer; takes a Cart instead
  * of an Order. The two classes don't share an interface because
- * the inputs are fundamentally different domain objects — a
+ * the inputs are fundamentally different domain objects, a
  * common interface would either be Order-shaped (broken for cart
  * use) or so generic it loses type safety. Consolidation can
  * happen later if a third notification context (e.g. wishlist
@@ -29,13 +29,13 @@ use Bayti\Api\Domain\User\User;
  *
  * Required $extra keys
  * ====================
- *   unsubscribe_url  — full https URL with signed token, built
+ *   unsubscribe_url , full https URL with signed token, built
  *                       by CartNotificationService (X.11-E) via
  *                       the UnsubscribeTokenIssuer (X.11-G)
  *
  * Optional $extra keys
  * ====================
- *   resume_url       — link back to the cart on the web/mobile
+ *   resume_url      , link back to the cart on the web/mobile
  *                       app. If omitted, no CTA button rendered.
  *                       Default is the cart-restoration URL
  *                       https://3bayti.ae/cart?cart_id=...
@@ -235,7 +235,7 @@ HTML;
         try {
             return $item->getProduct()->getName();
         } catch (\Throwable) {
-            // Defensive — the product reference could be missing in
+            // Defensive, the product reference could be missing in
             // tests or after a product hard-delete. Fall back to a
             // neutral label rather than throwing during email render.
             return 'item';

@@ -24,7 +24,7 @@
   animation: ax-conn-fade 220ms var(--ax-ease-out, ease-out);
 }
 
-/* Status accent — red while offline, green on recovery. */
+/* Status accent, red while offline, green on recovery. */
 .ax-conn-offline { border-left-color: var(--ax-color-bg-danger); }
 .ax-conn-online  { border-left-color: var(--ax-color-bg-success); }
 

@@ -51,7 +51,7 @@ use Psr\Log\LoggerInterface;
  *
  * Idempotency: each refund request generates a unique idempotency_key.
  * Re-issuing the same body produces a new refund (not deduped at HTTP
- * layer) — admins should be careful. The gateway itself may dedupe.
+ * layer), admins should be careful. The gateway itself may dedupe.
  */
 final class RefundOrderController
 {
@@ -278,7 +278,7 @@ final class RefundOrderController
             'actor_user_id' => $user->getId(),
         ]);
 
-        // M3.1.7-H — notify customer of the refund. Fire-and-forget;
+        // M3.1.7-H, notify customer of the refund. Fire-and-forget;
         // email failure must not block the response or the audit row.
         $this->notifications->orderRefunded($order, [
             'refund_amount' => $amount,

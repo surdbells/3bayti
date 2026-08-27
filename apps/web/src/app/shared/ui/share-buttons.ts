@@ -11,7 +11,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
- * ShareButtons — social share row for a single canonical URL.
+ * ShareButtons, social share row for a single canonical URL.
  *
  * Six channels (decision #5):
  *   WhatsApp · copy link · native share · Facebook · X · Telegram
@@ -229,7 +229,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 export class ShareButtonsComponent implements OnDestroy {
   /** Absolute URL to share (canonical PDP URL). */
   @Input({ required: true }) url!: string;
-  /** Share text / title — usually the product name. */
+  /** Share text / title, usually the product name. */
   @Input() title = '';
 
   private readonly platformId = inject(PLATFORM_ID);
@@ -275,7 +275,7 @@ export class ShareButtonsComponent implements OnDestroy {
       if (this.resetTimer) clearTimeout(this.resetTimer);
       this.resetTimer = setTimeout(() => this.copied.set(false), 2000);
     } catch {
-      /* Clipboard blocked (insecure context / denied) — no-op; the
+      /* Clipboard blocked (insecure context / denied), no-op; the
          network share buttons still work. */
     }
   }
@@ -288,7 +288,7 @@ export class ShareButtonsComponent implements OnDestroy {
         url: this.url,
       });
     } catch {
-      /* User cancelled (AbortError) or share failed — ignore. */
+      /* User cancelled (AbortError) or share failed, ignore. */
     }
   }
 

@@ -1,4 +1,4 @@
-/* HeroCarouselComponent — coverflow product carousel
+/* HeroCarouselComponent, coverflow product carousel
  * ====================================================
  * 5 portrait product cards rendered simultaneously, positioned via
  * absolute positioning + CSS transforms into 5 slots:
@@ -8,7 +8,7 @@
  *   slot +1 (right)     : medium
  *   slot +2 (far right) : small, dim
  *
- * Aspect ratio 2:3 — portrait, full product visibility, addresses
+ * Aspect ratio 2:3, portrait, full product visibility, addresses
  * the W3 round-2 feedback that horizontal cinematic slides cropped
  * the products.
  *
@@ -21,7 +21,7 @@
   width: 100%;
   /* The carousel area is sized so the center card (largest) fits with
      room to breathe. Heights tuned to keep the band proportional to
-     the typical desktop viewport — tall enough to feel cinematic, not
+     the typical desktop viewport, tall enough to feel cinematic, not
      so tall it dominates. */
   height: 520px;
   overflow: hidden;
@@ -98,7 +98,7 @@
   border-radius: 16px;
   overflow: hidden;
   pointer-events: none;
-  /* z-index follows slot — center is on top, neighbors next, far slots
+  /* z-index follows slot, center is on top, neighbors next, far slots
      bottom. Set per-slot below. */
 }
 
@@ -108,7 +108,7 @@
   }
 }
 
-/* Slot 0 — center, biggest, highlighted, on top.
+/* Slot 0, center, biggest, highlighted, on top.
  * Uses --shadow-carousel-center which is slightly stronger than the
  * regular card-hover shadow (this is the page hero, after all) but
  * still soft & subtle compared to the previous "Pronounced" treatment.
@@ -121,7 +121,7 @@
   box-shadow: var(--shadow-carousel-center);
 }
 
-/* Slots -1 and +1 — medium, flanking the center.
+/* Slots -1 and +1, medium, flanking the center.
  * Use the regular card-hover shadow so they read as "secondary" cards
  * next to the carousel-center primary. */
 .hero-carousel__slide.is-near {
@@ -150,8 +150,8 @@
   }
 }
 
-/* Slots -2 and +2 — far edges, small, dimmed.
- * Use the resting card shadow — these are the most distant cards in
+/* Slots -2 and +2, far edges, small, dimmed.
+ * Use the resting card shadow, these are the most distant cards in
  * the coverflow stack. */
 .hero-carousel__slide.is-far {
   z-index: 1;

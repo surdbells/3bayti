@@ -1,5 +1,5 @@
 /* =============================================================================
-   Checkout shared styles — used by /checkout/address, /review, /payment
+   Checkout shared styles, used by /checkout/address, /review, /payment
    ============================================================================= */
 
 .checkout-page {
@@ -667,7 +667,7 @@
   margin-bottom: 16px;
 }
 
-/* AED settlement notice — shown when a non-AED display currency is
+/* AED settlement notice, shown when a non-AED display currency is
    active. Visually subtle; role="note" ensures screen readers catch it. */
 .checkout-aed-notice {
   margin: 0;
@@ -718,7 +718,7 @@
   color: var(--color-warning-text, #92400e);
 }
 
-/* Gift card applied (Phase E5) — review page */
+/* Gift card applied (Phase E5), review page */
 .review-giftcard-applied {
   margin-block-start: 0.75rem;
   padding: 0.85rem 1rem;
@@ -737,7 +737,7 @@
   margin: 0.6rem 0 0;
 }
 
-/* Gift wallet — one-tap aggregate balance (review page) */
+/* Gift wallet, one-tap aggregate balance (review page) */
 .review-giftwallet {
   display: flex;
   flex-wrap: wrap;
@@ -771,7 +771,7 @@
 }
 
 /* =============================================================================
-   Review page — two-column layout (sticky summary + mobile sticky CTA)
+   Review page, two-column layout (sticky summary + mobile sticky CTA)
    Left: delivery + items. Right: promo, gift card, totals, place order.
    The right column sticks on desktop; on mobile the actions detach into a
    fixed bottom bar so Place Order is always reachable.
@@ -825,7 +825,7 @@
   gap: 12px;
 }
 
-/* Total recap — hidden on desktop (the totals card already shows it);
+/* Total recap, hidden on desktop (the totals card already shows it);
    shown inside the fixed bar on mobile. */
 .review-actions__recap {
   display: none;

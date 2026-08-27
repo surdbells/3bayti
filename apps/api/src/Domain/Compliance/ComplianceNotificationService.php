@@ -17,7 +17,7 @@ use Psr\Log\NullLogger;
  * Notifies a vendor of an admin's KYC compliance decision through two
  * channels: the in-app feed (a NotificationLog row with a '.vendor'
  * template, so it surfaces in the top-bar bell) and a transactional email.
- * Email failures never block the review action — they are logged.
+ * Email failures never block the review action, they are logged.
  */
 class ComplianceNotificationService
 {
@@ -46,7 +46,7 @@ class ComplianceNotificationService
         try {
             $email = $vendor->getContactEmail();
         } catch (\Error) {
-            return; // contactEmail uninitialised — nothing to notify
+            return; // contactEmail uninitialised, nothing to notify
         }
         if ($email === '') {
             return;

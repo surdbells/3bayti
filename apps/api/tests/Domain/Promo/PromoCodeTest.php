@@ -14,7 +14,7 @@ use PHPUnit\Framework\TestCase;
 /**
  * Entity behaviour tests for PromoCode (M3.2.X.8-A).
  *
- * No database — these exercise pure PHP logic: constructor validation,
+ * No database, these exercise pure PHP logic: constructor validation,
  * code normalization, setter guards, time-window predicate.
  *
  * Schema-level constraints (CHECK, UNIQUE on UPPER(code), FK behavior)

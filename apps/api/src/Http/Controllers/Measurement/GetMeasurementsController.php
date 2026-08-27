@@ -26,7 +26,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   /category/{id}        → that specific category's set
  *
  * If no measurement set exists for the requested key, returns 200
- * with `{"measurements": null}`. We deliberately don't 404 here —
+ * with `{"measurements": null}`. We deliberately don't 404 here -
  * the URL "your default measurements" always exists conceptually,
  * even if no row has been written yet. The frontend uses null to
  * decide whether to show an empty form vs a populated one, which

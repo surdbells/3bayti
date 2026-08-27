@@ -17,10 +17,10 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * DELETE /v3/me/wishlist/labels/{id} — delete a label.
+ * DELETE /v3/me/wishlist/labels/{id}, delete a label.
  *
  * Idempotent: 204 whether or not the label existed. Saved products
- * filed under it are NOT removed — the FK is ON DELETE SET NULL, so
+ * filed under it are NOT removed, the FK is ON DELETE SET NULL, so
  * they fall back to uncategorized. (We must clear the in-memory
  * relation on any loaded Wishlist rows too; but since we don't load
  * them here, the DB-level SET NULL handles it on the next read.)

@@ -19,7 +19,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** PUT /v3/vendor/coupons/{id} — Update a vendor-owned promo code (partial). */
+/** PUT /v3/vendor/coupons/{id}, Update a vendor-owned promo code (partial). */
 final class UpdateVendorCouponController
 {
     use Responder;

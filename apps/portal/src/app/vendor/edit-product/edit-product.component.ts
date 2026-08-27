@@ -7,7 +7,7 @@ import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.comp
 import { ProductFormComponent } from '../../shared/product-form/product-form.component';
 
 /**
- * Vendor "edit product" page — a thin shell wrapper around the shared
+ * Vendor "edit product" page, a thin shell wrapper around the shared
  * <app-product-form> in edit mode. Reads the product id from ?id.
  */
 @Component({

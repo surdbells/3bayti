@@ -59,7 +59,7 @@ final class JwtServiceTest extends TestCase
         new JwtSettings(
             signingSecret: str_repeat('x', 32),
             accessTtlSeconds: 900,
-            refreshTtlSeconds: 600, // shorter — invalid
+            refreshTtlSeconds: 600, // shorter, invalid
         );
     }
 
@@ -173,7 +173,7 @@ final class JwtServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Verification — happy path
+    // Verification, happy path
     // -------------------------------------------------------------------
 
     #[Test]
@@ -204,13 +204,13 @@ final class JwtServiceTest extends TestCase
         self::assertSame(JwtService::AUDIENCE_REFRESH, $claims->audience);
         self::assertTrue($claims->isRefreshToken());
         self::assertFalse($claims->isAccessToken());
-        // Refresh tokens stay minimal — no roles, no email.
+        // Refresh tokens stay minimal, no roles, no email.
         self::assertSame([], $claims->roles);
         self::assertNull($claims->email);
     }
 
     // -------------------------------------------------------------------
-    // Verification — failure modes
+    // Verification, failure modes
     // -------------------------------------------------------------------
 
     #[Test]
@@ -294,7 +294,7 @@ final class JwtServiceTest extends TestCase
     #[Test]
     public function verifyRejectsTokenMissingRequiredClaims(): void
     {
-        // A token with only some standard claims — missing jti.
+        // A token with only some standard claims, missing jti.
         $payload = [
             'iss' => $this->settings->issuer,
             'sub' => '1',
@@ -329,7 +329,7 @@ final class JwtServiceTest extends TestCase
     {
         // Even though attackers can't forge a valid signature without
         // the secret, a defense-in-depth check filters role values to
-        // a known set — protecting against future bugs that might
+        // a known set, protecting against future bugs that might
         // cause unexpected values to slip in.
         $payload = [
             'iss' => $this->settings->issuer,
@@ -369,7 +369,7 @@ final class JwtServiceTest extends TestCase
     #[Test]
     public function registrationTokenIsNotAcceptedAsAccessToken(): void
     {
-        // Distinct audience — a registration token must NOT authenticate
+        // Distinct audience, a registration token must NOT authenticate
         // as a session token, and an access token must NOT pass the
         // registration verifier.
         $regToken = $this->jwt->issueRegistrationToken('+971501234567', 'AE');

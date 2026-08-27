@@ -7,7 +7,7 @@ namespace Bayti\Api\Domain\Chat;
 /**
  * Outcome of an attempt to send a chat message. A delivered message has
  * been persisted and recorded on the conversation; a blocked message has
- * been persisted (for audit) but NOT delivered — the recipient never sees
+ * been persisted (for audit) but NOT delivered, the recipient never sees
  * it and their unread counter is untouched.
  */
 final class SendResult

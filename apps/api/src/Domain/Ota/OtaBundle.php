@@ -9,7 +9,7 @@ use DateTimeZone;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * A published OTA (over-the-air) web bundle — one zipped Angular `www` build
+ * A published OTA (over-the-air) web bundle, one zipped Angular `www` build
  * that the @capgo/capacitor-updater plugin can download and apply on top of an
  * installed native shell, without an app-store release.
  *
@@ -18,7 +18,7 @@ use Doctrine\ORM\Mapping as ORM;
  * compatible with the device's native build, and only when its {@see $version}
  * is newer than the device's current bundle.
  *
- * OTA ships JS/CSS only — never native code. A change needing a new native
+ * OTA ships JS/CSS only, never native code. A change needing a new native
  * capability must go through the store with a native version bump; the
  * `min_native_version` gate keeps such a bundle off older shells.
  */
@@ -64,7 +64,7 @@ class OtaBundle
      * Integrity checksum the plugin verifies the download against. For a PLAIN
      * bundle this is the SHA256 of the .zip (64 hex); for a SIGNED bundle it's
      * the RSA-encrypted checksum from `@capgo/cli bundle encrypt` (512 hex for
-     * RSA-2048, more for larger keys) — hence the generous length.
+     * RSA-2048, more for larger keys), hence the generous length.
      */
     #[ORM\Column(type: 'string', length: 2048)]
     private string $checksum;
@@ -74,7 +74,7 @@ class OtaBundle
     private string $minNativeVersion;
 
     /**
-     * The ivSessionKey from `@capgo/cli bundle encrypt` — non-null only for
+     * The ivSessionKey from `@capgo/cli bundle encrypt`, non-null only for
      * signed/encrypted bundles. It's an RSA-wrapped AES key (~370 chars for
      * RSA-2048, more for larger keys), so it needs room well beyond 255.
      */

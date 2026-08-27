@@ -18,7 +18,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
- * v3 vendor compliance (KYC) — documents are stored as PRIVATE files (the
+ * v3 vendor compliance (KYC), documents are stored as PRIVATE files (the
  * vendor row holds the path); GET reads them back as data URLs, PATCH
  * stores new uploads and marks 'submitted'.
  */

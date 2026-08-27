@@ -35,13 +35,13 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Returns: { data: Product[], meta: PaginationMeta }
  *
- * Slug-based filters (vendor, category) resolve to id internally — this
+ * Slug-based filters (vendor, category) resolve to id internally, this
  * keeps the public URL contract slug-based (SEO-friendly) while the SQL
  * uses indexed id lookups.
  *
  * Pagination caps:
  *   - limit: 1-100 (defaults to 24)
- *   - offset: >= 0 (no upper bound, but very large offsets are slow —
+ *   - offset: >= 0 (no upper bound, but very large offsets are slow -
  *     callers should switch to category/vendor filters for deeper browsing)
  *
  * Sorting defaults to 'newest' (created_at DESC) which matches the
@@ -111,7 +111,7 @@ final class ListProductsController
             'isNew' => $this->parseBool($query['new'] ?? null),
             'isSale' => $this->parseBool($query['sale'] ?? null),
             'sort' => $this->parseSort($query['sort'] ?? null),
-            // M-EXPLORE — seeded random order for the EXPLORE feed
+            // M-EXPLORE, seeded random order for the EXPLORE feed
             // (mobile route key GET /mobile/explore-listing → /v3/products).
             // When `seed` is present the repository orders products by a
             // deterministic per-seed shuffle (md5(seed || '-' || id)) that
@@ -120,7 +120,7 @@ final class ListProductsController
             // falls back to the normal `sort` order (default 'newest'). The
             // seed overrides `sort` in the repository when non-null.
             'seed' => $this->parseSeed($query['seed'] ?? null),
-            // M3.1.5.5d — fulltext search via PostgreSQL tsvector.
+            // M3.1.5.5d, fulltext search via PostgreSQL tsvector.
             // When `q` is present and non-empty, the repository adds
             // a TSMATCH WHERE clause against the products.search_tsv
             // generated column. See ProductRepository::findActivePaginated
@@ -131,7 +131,7 @@ final class ListProductsController
             'searchQuery' => $this->parseSearchQuery($query['q'] ?? null),
             // M3.2.X.10 refinements (sizes / colors). The repository's
             // findActivePaginated already applies these via JSONB_EXISTS_ANY,
-            // but this controller previously omitted them — so ?colors=black
+            // but this controller previously omitted them, so ?colors=black
             // / ?sizes=M were silently ignored. Parse them with the same
             // CSV-or-array logic the facets endpoint uses (delegated to the
             // shared ProductFilterParser) so listings and facet counts agree.
@@ -166,7 +166,7 @@ final class ListProductsController
      * Resolve the vendor filter from the query string.
      *
      * Returns:
-     *   - int $id if the filter matched a vendor (active or not — the
+     *   - int $id if the filter matched a vendor (active or not, the
      *     domain layer filters inactive separately)
      *   - null if no vendor filter was supplied
      *   - FILTER_NOT_FOUND if a filter was supplied but didn't match
@@ -203,7 +203,7 @@ final class ListProductsController
 
     /**
      * Resolve the category filter from the query string. Same semantics
-     * as resolveVendorId — slug wins over legacy id, sentinel for the
+     * as resolveVendorId, slug wins over legacy id, sentinel for the
      * not-found case.
      *
      * @param array<string, mixed> $query
@@ -236,7 +236,7 @@ final class ListProductsController
      *
      * Labels are per-vendor; the URL design pairs them with a vendor
      * context (?vendor=foo&label=eid-collection). Standalone label
-     * lookup (no vendor context) still works — slug is unique per
+     * lookup (no vendor context) still works, slug is unique per
      * vendor, so the same slug across two vendors WOULD ambiguate.
      * Locked: standalone label slug uses findActiveBySlug which
      * scopes to vendor; if no vendor was provided, we fall back to
@@ -246,7 +246,7 @@ final class ListProductsController
      * rqst_param body); the legacy variant resolves to v3 via
      * VendorLabelRepository::findActiveByLegacyId.
      *
-     * Same precedence as the vendor/category resolvers — slug wins
+     * Same precedence as the vendor/category resolvers, slug wins
      * over legacy id when both are present.
      *
      * @param array<string, mixed> $query
@@ -256,7 +256,7 @@ final class ListProductsController
         if (!empty($query['label'])) {
             /** @var VendorLabelRepository $labelRepo */
             $labelRepo = $this->em->getRepository(VendorLabel::class);
-            // findOneBy + slug+isActive (no vendor scope) — see
+            // findOneBy + slug+isActive (no vendor scope), see
             // method docblock for the edge-case discussion.
             $label = $labelRepo->findOneBy([
                 'slug' => (string) $query['label'],
@@ -324,7 +324,7 @@ final class ListProductsController
      *   - any numeric input             => a bounded NON-NEGATIVE int
      *
      * The value is only ever used as text fed into md5() to derive a
-     * per-seed shuffle, so its exact magnitude is irrelevant — but we
+     * per-seed shuffle, so its exact magnitude is irrelevant, but we
      * normalise defensively: take the absolute value (so a leading '-'
      * can't sneak in), floor to an int, and clamp to 0 .. SEED_MAX so a
      * URL-bombed 10^300 value can't bloat the bound parameter. Two callers
@@ -355,7 +355,7 @@ final class ListProductsController
     }
 
     /**
-     * Upper bound for a normalised `seed`. 2^31 - 1 — comfortably wide
+     * Upper bound for a normalised `seed`. 2^31 - 1, comfortably wide
      * enough for daily/session rotation while keeping the bound param a
      * small, tidy integer.
      */
@@ -367,7 +367,7 @@ final class ListProductsController
      * Returns null for absent, empty, or whitespace-only input so the
      * repository's hasSearch check can skip the TSMATCH clause.
      *
-     * Trims to 200 chars defensively — websearch_to_tsquery handles
+     * Trims to 200 chars defensively, websearch_to_tsquery handles
      * arbitrary punctuation gracefully but very long inputs would
      * waste time tokenising. 200 chars covers any reasonable user
      * query and protects against accidental URL bombing.

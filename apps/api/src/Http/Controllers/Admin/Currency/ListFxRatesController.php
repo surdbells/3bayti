@@ -24,7 +24,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Auth: admin only (route group wires AdminAuthMiddleware).
  *
  * Used by the admin UI's currency-management view. Pairs with
- * the X.4-C audit log surface — operators can see who changed
+ * the X.4-C audit log surface, operators can see who changed
  * what when via the audit_log table filtered on
  * subject_type='FxRate'.
  *

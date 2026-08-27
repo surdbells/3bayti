@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Body: { "status": "<one of Order::STATUS_*>", "reason": "..." }
  *
- * The reason is REQUIRED for admin overrides — every override
+ * The reason is REQUIRED for admin overrides, every override
  * must justify itself in the audit log. Free-text up to 1000
  * chars; the admin UI should encourage thoughtful entries.
  */

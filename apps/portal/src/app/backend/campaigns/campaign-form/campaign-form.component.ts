@@ -264,7 +264,7 @@ export class CampaignFormComponent implements OnInit, OnDestroy {
   /**
    * Resolve a product's thumbnail URL across the shapes the API emits.
    * GET /v3/products (listShape) returns `primary_image` as an OBJECT
-   * ({ url, alt, width, height }), NOT a string — binding that object
+   * ({ url, alt, width, height }), NOT a string, binding that object
    * straight to [src] yields "[object Object]" and a broken image. The
    * vendor-manage shape uses a flat `image` string, and detail/list
    * shapes also carry an `images[]` gallery. Dig out a plain URL from

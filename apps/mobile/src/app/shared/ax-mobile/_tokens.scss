@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Mobile Design System — Tokens
+   Abayti Mobile Design System, Tokens
    --------------------------------------------------------------------------
    Single source of truth for all visual properties. Components and pages
    must reference SEMANTIC tokens (e.g. --ax-color-bg-brand), never raw
@@ -12,7 +12,7 @@
      - Mobile elevates `brown-500` (#906952) to the visual primary
        (vendor uses beige-300 as primary surface, brown-500 as text/CTA).
      - Layout tokens (sidenav width, topbar height, page-max-width) are
-       absent — mobile uses Ionic shell, not the dashboard shell pattern.
+       absent, mobile uses Ionic shell, not the dashboard shell pattern.
      - All other tokens (palette, type, spacing, radius, shadows, motion,
        z-index, breakpoints) match vendor 1:1.
 
@@ -23,11 +23,11 @@
 
 :root {
   /* -----------------------------------------------------------------------
-     PALETTE — raw values. Never reference these directly in components.
+     PALETTE, raw values. Never reference these directly in components.
      Always go through a semantic token below.
      ----------------------------------------------------------------------- */
 
-  /* Brand — beige (light brand surface, used for backgrounds/badges) */
+  /* Brand, beige (light brand surface, used for backgrounds/badges) */
   --ax-palette-beige-50:  #fbf7f1;
   --ax-palette-beige-100: #f5ede0;
   --ax-palette-beige-200: #efe2cf;
@@ -36,7 +36,7 @@
   --ax-palette-beige-500: #c9ae85;
   --ax-palette-beige-600: #b89567;
 
-  /* Brand — warm brown (PRIMARY in mobile — buttons, headings, CTAs) */
+  /* Brand, warm brown (PRIMARY in mobile, buttons, headings, CTAs) */
   --ax-palette-brown-50:  #f7f1ec;
   --ax-palette-brown-100: #ead9ca;
   --ax-palette-brown-200: #d5b49e;
@@ -48,7 +48,7 @@
   --ax-palette-brown-800: #4a3429;
   --ax-palette-brown-900: #2f2119;
 
-  /* Espresso — deepest neutrals for dark surfaces */
+  /* Espresso, deepest neutrals for dark surfaces */
   --ax-palette-espresso-50:  #f6f4f1;
   --ax-palette-espresso-100: #ebe7e1;
   --ax-palette-espresso-200: #c7bfb4;
@@ -60,7 +60,7 @@
   --ax-palette-espresso-800: #1c1916;
   --ax-palette-espresso-900: #120f0d;
 
-  /* Neutral — warm grey, tinted toward the brand */
+  /* Neutral, warm grey, tinted toward the brand */
   --ax-palette-neutral-0:   #ffffff;
   --ax-palette-neutral-50:  #faf8f5;
   --ax-palette-neutral-100: #f1ede7;
@@ -73,7 +73,7 @@
   --ax-palette-neutral-800: #2a2722;
   --ax-palette-neutral-900: #1a1814;
 
-  /* Gold — accent for premium highlights */
+  /* Gold, accent for premium highlights */
   --ax-palette-gold-100: #f6eed9;
   --ax-palette-gold-200: #ead6a0;
   --ax-palette-gold-300: #dcbb5c;   /* dark-mode accent (brighter than -400 on dark bg) */
@@ -107,7 +107,7 @@
 
 
   /* -----------------------------------------------------------------------
-     SEMANTIC TOKENS — LIGHT MODE (default)
+     SEMANTIC TOKENS, LIGHT MODE (default)
      These are the only tokens components and utilities should reference.
      ----------------------------------------------------------------------- */
 
@@ -119,7 +119,7 @@
   --ax-color-bg-muted:     var(--ax-palette-neutral-100);  /* hover states on surface */
   --ax-color-bg-overlay:   rgba(28, 25, 22, 0.48);         /* modal backdrop */
 
-  /* Brand backgrounds — PRIMARY = brown */
+  /* Brand backgrounds, PRIMARY = brown */
   --ax-color-bg-brand:          var(--ax-palette-brown-500);
   --ax-color-bg-brand-hover:    var(--ax-palette-brown-600);
   --ax-color-bg-brand-active:   var(--ax-palette-brown-700);
@@ -145,19 +145,19 @@
   --ax-color-border-brand:   var(--ax-palette-brown-500);
   --ax-color-border-focus:   var(--ax-palette-brown-500);
 
-  /* Status — foreground */
+  /* Status, foreground */
   --ax-color-text-success: var(--ax-palette-success-600);
   --ax-color-text-warning: var(--ax-palette-warning-500);
   --ax-color-text-danger:  var(--ax-palette-danger-600);
   --ax-color-text-info:    var(--ax-palette-info-500);
 
-  /* Status — backgrounds (solid) */
+  /* Status, backgrounds (solid) */
   --ax-color-bg-success: var(--ax-palette-success-500);
   --ax-color-bg-warning: var(--ax-palette-warning-400);
   --ax-color-bg-danger:  var(--ax-palette-danger-500);
   --ax-color-bg-info:    var(--ax-palette-info-500);
 
-  /* Status — backgrounds (subtle, for badges/alerts) */
+  /* Status, backgrounds (subtle, for badges/alerts) */
   --ax-color-bg-success-subtle: var(--ax-palette-success-100);
   --ax-color-bg-warning-subtle: var(--ax-palette-warning-100);
   --ax-color-bg-danger-subtle:  var(--ax-palette-danger-100);
@@ -168,7 +168,7 @@
   --ax-color-bg-gold-subtle: var(--ax-palette-gold-100);
   --ax-color-text-gold:      var(--ax-palette-gold-500);
 
-  /* Surface variants — distinct from canvas/surface so themed differently in dark.
+  /* Surface variants, distinct from canvas/surface so themed differently in dark.
      Toolbar/header: warm beige in light, espresso in dark.
      Placeholder: warm cream in light, dark espresso in dark. */
   --ax-color-bg-toolbar:     var(--ax-palette-beige-200);
@@ -189,7 +189,7 @@
   --ax-fs-3xs:  0.6875rem;   /* 11px */
   --ax-fs-2xs:  0.75rem;     /* 12px */
   --ax-fs-xs:   0.8125rem;   /* 13px */
-  --ax-fs-sm:   0.875rem;    /* 14px — default body */
+  --ax-fs-sm:   0.875rem;    /* 14px, default body */
   --ax-fs-md:   0.9375rem;   /* 15px */
   --ax-fs-base: 1rem;        /* 16px */
   --ax-fs-lg:   1.125rem;    /* 18px */
@@ -218,7 +218,7 @@
 
 
   /* -----------------------------------------------------------------------
-     SPACING — 4px base, geometric scale
+     SPACING, 4px base, geometric scale
      ----------------------------------------------------------------------- */
   --ax-space-0:  0;
   --ax-space-px: 1px;
@@ -238,7 +238,7 @@
 
 
   /* -----------------------------------------------------------------------
-     RADIUS — soft, slightly generous for a premium feel
+     RADIUS, soft, slightly generous for a premium feel
      ----------------------------------------------------------------------- */
   --ax-radius-none: 0;
   --ax-radius-xs:   0.25rem;
@@ -253,7 +253,7 @@
 
 
   /* -----------------------------------------------------------------------
-     SHADOWS — warm, soft, premium. Avoid harsh black.
+     SHADOWS, warm, soft, premium. Avoid harsh black.
      ----------------------------------------------------------------------- */
   --ax-shadow-none: none;
   --ax-shadow-xs:   0 1px 2px rgba(46, 36, 28, 0.05);
@@ -285,7 +285,7 @@
 
 
   /* -----------------------------------------------------------------------
-     LAYOUT — mobile-specific
+     LAYOUT, mobile-specific
      Vendor uses sidenav/topbar dimensions; mobile relies on Ionic shell
      for header / tab-bar so those don't apply here.
      ----------------------------------------------------------------------- */
@@ -324,7 +324,7 @@
 
 
   /* -----------------------------------------------------------------------
-     BREAKPOINTS (for JS reference — CSS uses @media directly)
+     BREAKPOINTS (for JS reference, CSS uses @media directly)
      Mobile-first: most layouts target the phone form factor (≤ 480px),
      with tablet upgrades at 768.
      ----------------------------------------------------------------------- */
@@ -345,7 +345,7 @@
         (i.e. <html> does not have [data-ax-theme='light'])
 
    The :not([data-ax-theme='light']) guard preserves a user's manual light-
-   mode override even when the OS reports dark — useful if a later milestone
+   mode override even when the OS reports dark, useful if a later milestone
    adds a settings toggle. Today the only consumer is the OS media query,
    but the structure is ready for that.
 
@@ -384,13 +384,13 @@
   --ax-color-border-brand:   var(--ax-palette-brown-400);
   --ax-color-border-focus:   var(--ax-palette-beige-400);
 
-  /* Status — foreground (lighten so text stays legible on dark surfaces) */
+  /* Status, foreground (lighten so text stays legible on dark surfaces) */
   --ax-color-text-success: var(--ax-palette-success-400);
   --ax-color-text-warning: var(--ax-palette-warning-300);
   --ax-color-text-danger:  var(--ax-palette-danger-400);
   --ax-color-text-info:    var(--ax-palette-info-400);
 
-  /* Status — backgrounds (subtle, for badges/alerts on dark surfaces).
+  /* Status, backgrounds (subtle, for badges/alerts on dark surfaces).
      The light-mode subtle values (success-100 etc) would be near-white
      and unusable in dark mode, so we re-target to the dark-surface
      variants. The solid bg-success / bg-danger keep their light values
@@ -400,12 +400,12 @@
   --ax-color-bg-danger-subtle:  var(--ax-palette-danger-700);
   --ax-color-bg-info-subtle:    var(--ax-palette-info-700);
 
-  /* Gold accent — brighten so it pops on dark surfaces */
+  /* Gold accent, brighten so it pops on dark surfaces */
   --ax-color-bg-gold:        var(--ax-palette-gold-300);
   --ax-color-bg-gold-subtle: var(--ax-palette-gold-700);
   --ax-color-text-gold:      var(--ax-palette-gold-300);
 
-  /* Surface variants — flip from warm light to dark espresso. */
+  /* Surface variants, flip from warm light to dark espresso. */
   --ax-color-bg-toolbar:     var(--ax-palette-espresso-700);
   --ax-color-bg-placeholder: var(--ax-palette-espresso-600);
 

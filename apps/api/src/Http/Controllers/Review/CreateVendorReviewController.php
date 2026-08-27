@@ -20,7 +20,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * POST /v3/vendors/{vendorId}/reviews — review a STORE (authenticated).
+ * POST /v3/vendors/{vendorId}/reviews, review a STORE (authenticated).
  *
  * A store review has no product (product IS NULL); it rates the vendor.
  * Upsert (one store-review per user+vendor): re-reviewing edits the row

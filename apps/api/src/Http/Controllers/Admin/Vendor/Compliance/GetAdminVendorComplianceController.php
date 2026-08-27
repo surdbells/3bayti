@@ -83,7 +83,7 @@ final class GetAdminVendorComplianceController
         }
         // A legacy migrated row may already hold a directly-loadable URL; use it
         // as-is (the signed private-storage endpoint only serves stored paths,
-        // inline data URLs, and raw base64 — not remote URLs).
+        // inline data URLs, and raw base64, not remote URLs).
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             return $path;
         }

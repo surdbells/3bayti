@@ -10,8 +10,8 @@ use Bayti\Api\Domain\Order\OrderItem;
 
 /**
  * Builds the first, system-generated message of an order conversation: a
- * complete snapshot of the purchased item — product, variant, custom
- * measurements, pricing, order totals and the shipping details — in English
+ * complete snapshot of the purchased item, product, variant, custom
+ * measurements, pricing, order totals and the shipping details, in English
  * and Arabic. This is informational and authored by the platform, so it is
  * never run through PII moderation (the address legitimately belongs to the
  * order).

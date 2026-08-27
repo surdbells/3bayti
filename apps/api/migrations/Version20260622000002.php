@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Admin gift-card surface (M5) — add audit fields to the gift-card
+ * Admin gift-card surface (M5), add audit fields to the gift-card
  * transaction ledger so manual admin entries (adjust / void / issue)
  * carry the WHY and the WHO.
  *

@@ -8,7 +8,7 @@ type BannerState = 'hidden' | 'offline' | 'reconnected';
 
 /**
  * Global connection-status banner. Mounted once at the app root, so it covers
- * every surface — admin, vendor, and the sign-in screen — from a single place.
+ * every surface, admin, vendor, and the sign-in screen, from a single place.
  *
  * Behaviour:
  *  - Goes offline  → a persistent alert stays until the connection returns.

@@ -18,12 +18,12 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * POST /v3/me/styles — a customer submits a style (a curated look of up
+ * POST /v3/me/styles, a customer submits a style (a curated look of up
  * to 4 products). Replaces legacy /customer/create_style.
  *
  * The style is created as TYPE_COMMUNITY, owned by the authenticated
  * user (created_by_user) and active (matching legacy behaviour, where
- * customer styles published immediately) — but now attributable, so it
+ * customer styles published immediately), but now attributable, so it
  * can be moderated/removed on abuse. total_price is the sum of the
  * products' effective prices. The legacy `category` field has no
  * equivalent in the v3 Style model and is ignored.

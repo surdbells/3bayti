@@ -53,7 +53,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * intersection exists → 404. Prevents vendors from browsing other
  * vendors' orders by trying random ids.
  *
- * No audit emission — vendors viewing their own data is non-auditable
+ * No audit emission, vendors viewing their own data is non-auditable
  * (same posture as the X.14-C metrics self-serve endpoint).
  */
 final class GetVendorOrderTimelineController
@@ -98,7 +98,7 @@ final class GetVendorOrderTimelineController
         $vendorRepo = $this->em->getRepository(Vendor::class);
         $userVendorIds = $vendorRepo->findIdsByOwnerUser($user);
         if ($userVendorIds === []) {
-            // Defensive — VendorAuthMiddleware should have rejected
+            // Defensive, VendorAuthMiddleware should have rejected
             // upstream when the user has no approved stores.
             throw HttpException::forbidden('No approved vendor account.');
         }
@@ -111,7 +111,7 @@ final class GetVendorOrderTimelineController
         $orders = $this->em->getRepository(Order::class);
         // Verify the caller has at least one item in the order across
         // any of their owned vendors. We pass the full owned set,
-        // not just the chosen vendor — a vendor user must be able to
+        // not just the chosen vendor, a vendor user must be able to
         // SEE that an order touches their store before drilling
         // into a specific store's timeline view. The vendorIdFilter
         // is what narrows the events; this check just gates access.

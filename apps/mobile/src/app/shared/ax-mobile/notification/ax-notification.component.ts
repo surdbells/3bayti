@@ -1,5 +1,5 @@
 /**
- * AxNotificationComponent — single notification card.
+ * AxNotificationComponent, single notification card.
  *
  * Pure presentation. State is owned by AxNotificationService and the
  * stack is managed by AxNotificationHostComponent. This component only

@@ -17,7 +17,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * DELETE /v3/me/reviews/{id} — remove one of the authenticated user's
+ * DELETE /v3/me/reviews/{id}, remove one of the authenticated user's
  * own reviews. 404 if it doesn't exist OR isn't theirs (no existence
  * leak); idempotent in spirit (a missing review is "already gone").
  */

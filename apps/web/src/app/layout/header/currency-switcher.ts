@@ -16,7 +16,7 @@ import {
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
- * CurrencySwitcherComponent — a compact dropdown in the site header
+ * CurrencySwitcherComponent, a compact dropdown in the site header
  * that lets the visitor choose their preferred display currency.
  *
  * Lives beside app-locale-switcher; same pill-button visual treatment

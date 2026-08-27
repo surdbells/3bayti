@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.2.X.8-A — Create promo_codes + promo_redemptions tables, plus
+ * M3.2.X.8-A, Create promo_codes + promo_redemptions tables, plus
  * the inverse FK on orders.
  *
  * Background
@@ -21,9 +21,9 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * This migration ships three table-level operations:
  *
- *   1. CREATE TABLE promo_codes — admin-managed catalog of codes
- *   2. CREATE TABLE promo_redemptions — one row per successful redemption
- *   3. ALTER TABLE orders ADD COLUMN promo_redemption_id — nullable FK
+ *   1. CREATE TABLE promo_codes, admin-managed catalog of codes
+ *   2. CREATE TABLE promo_redemptions, one row per successful redemption
+ *   3. ALTER TABLE orders ADD COLUMN promo_redemption_id, nullable FK
  *      back into promo_redemptions for serializer reverse-lookup
  *
  * Schema design choices
@@ -32,18 +32,18 @@ use Doctrine\Migrations\AbstractMigration;
  * promo_codes.code stored UPPER form + functional unique index
  *   We normalize at the application layer (PromoCode::normalizeCode
  *   trims + upper-cases). The DB-level functional UNIQUE index on
- *   UPPER(code) is defense in depth — direct SQL writes can't bypass
+ *   UPPER(code) is defense in depth, direct SQL writes can't bypass
  *   the case-insensitive uniqueness guarantee.
  *
  * CHECK constraints
- *   - discount_type IN ('percentage', 'fixed_amount') — Q-DiscountTypes
+ *   - discount_type IN ('percentage', 'fixed_amount'), Q-DiscountTypes
  *     = A locked. New types in future phases will ALTER the constraint.
- *   - discount_value >= 0 — application asserts the same; DB catches
+ *   - discount_value >= 0, application asserts the same; DB catches
  *     direct SQL writes.
- *   - usage_limit_global / usage_limit_per_user >= 0 — same pattern.
+ *   - usage_limit_global / usage_limit_per_user >= 0, same pattern.
  *
  * NO Postgres ENUM types
- *   Same rationale as notification_logs.status — VARCHAR + CHECK
+ *   Same rationale as notification_logs.status, VARCHAR + CHECK
  *   constraint avoids the ALTER TYPE friction of true Postgres enums
  *   when we add discount types in a future phase.
  *
@@ -80,7 +80,7 @@ use Doctrine\Migrations\AbstractMigration;
  * -----------
  * Existing orders have NO promo applied (the client-supplied discount
  * model never wrote into promo_redemptions; it only set orders.discount).
- * Their promo_redemption_id stays NULL — the serializer treats that as
+ * Their promo_redemption_id stays NULL, the serializer treats that as
  * "no applied_promo block" in the response. The historical discount
  * attribution is lost, but it was never captured in the first place
  * (the legacy field is just a number with no provenance), so there's
@@ -89,7 +89,7 @@ use Doctrine\Migrations\AbstractMigration;
  * Rollback safety
  * ---------------
  * down() drops both new tables (cascades indexes/FKs) and drops the
- * column on orders. Any redemption rows are lost on rollback —
+ * column on orders. Any redemption rows are lost on rollback -
  * acceptable because rollback is exceptional and the legacy raw-
  * discount path on Order::discount is preserved (the column itself
  * is NOT touched; only promo_redemption_id is added/dropped).
@@ -97,16 +97,16 @@ use Doctrine\Migrations\AbstractMigration;
  * Indexes
  * -------
  * promo_codes:
- *   - UNIQUE on UPPER(code) — case-insensitive lookup
- *   - (is_active, valid_until) — admin "list currently-valid codes"
+ *   - UNIQUE on UPPER(code), case-insensitive lookup
+ *   - (is_active, valid_until), admin "list currently-valid codes"
  *
  * promo_redemptions:
- *   - UNIQUE on order_id — one-promo-per-order enforcement
- *   - (promo_code_id) — usage_limit_global counting hot path
- *   - (user_id, promo_code_id) — usage_limit_per_user counting hot path
+ *   - UNIQUE on order_id, one-promo-per-order enforcement
+ *   - (promo_code_id), usage_limit_global counting hot path
+ *   - (user_id, promo_code_id), usage_limit_per_user counting hot path
  *
  * orders:
- *   - (promo_redemption_id) — reverse lookup from order to redemption
+ *   - (promo_redemption_id), reverse lookup from order to redemption
  */
 final class Version20260518000002 extends AbstractMigration
 {
@@ -151,7 +151,7 @@ final class Version20260518000002 extends AbstractMigration
                 ON promo_codes (UPPER(code))
         SQL);
 
-        // CHECK constraints — defense in depth against direct SQL writes.
+        // CHECK constraints, defense in depth against direct SQL writes.
         $this->addSql(<<<'SQL'
             ALTER TABLE promo_codes
                 ADD CONSTRAINT chk_promo_codes_discount_type

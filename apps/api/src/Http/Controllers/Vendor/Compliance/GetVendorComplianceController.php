@@ -74,7 +74,7 @@ final class GetVendorComplianceController
         if ($path === null || $path === '') {
             return null;
         }
-        // A legacy migrated row may already hold a directly-loadable URL — use
+        // A legacy migrated row may already hold a directly-loadable URL, use
         // it verbatim rather than routing through the private-storage endpoint.
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             return $path;

@@ -1,5 +1,5 @@
 /**
- * AxSkeletonCircleComponent — round placeholder for avatars and badges.
+ * AxSkeletonCircleComponent, round placeholder for avatars and badges.
  *
  * Usage:
  *

@@ -60,7 +60,7 @@ final class LogoutAllControllerTest extends HttpTestCase
     #[Test]
     public function returns204EvenWhenUserHasNoActiveTokens(): void
     {
-        // revokeAllForUser returns 0 — still success, idempotent.
+        // revokeAllForUser returns 0, still success, idempotent.
         $user = $this->makeUser(id: 7);
         $jwt = $this->app->getContainer()->get(JwtService::class);
         $pair = $jwt->issueTokenPair($user);

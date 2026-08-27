@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Notification;
 
 /**
- * Result of OrderEmailTemplateRenderer::render — the three strings
+ * Result of OrderEmailTemplateRenderer::render, the three strings
  * a MailerInterface::send call needs (subject + text body + html body).
  */
 final class RenderedEmail

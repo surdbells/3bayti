@@ -11,7 +11,7 @@ import { LocaleService, LOCALE_LABELS, LOCALES, Locale } from '../../core/i18n';
  * Why a toggle rather than a dropdown
  * -----------------------------------
  * With only two locales a dropdown is more clicks than a toggle. If
- * we add a third locale in M4+ we'll swap this for a popover menu —
+ * we add a third locale in M4+ we'll swap this for a popover menu -
  * which is one change to this component, not the rest of the app.
  *
  * Accessibility
@@ -72,7 +72,7 @@ export class LocaleSwitcherComponent {
   private readonly locale = inject(LocaleService);
 
   /**
-   * The OTHER locale — the one we'd switch to if clicked.
+   * The OTHER locale, the one we'd switch to if clicked.
    * For two locales this is just "the one that isn't current".
    */
   private nextLocale(): Locale {
@@ -85,7 +85,7 @@ export class LocaleSwitcherComponent {
   }
 
   /**
-   * Label to display on the button — shows the language you'd
+   * Label to display on the button, shows the language you'd
    * switch TO. So when current is EN we show "العربية"; when
    * current is AR we show "English".
    */

@@ -7,7 +7,7 @@ import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.comp
 import { ProductFormComponent } from '../../shared/product-form/product-form.component';
 
 /**
- * Vendor "create product" page — a thin shell wrapper around the shared
+ * Vendor "create product" page, a thin shell wrapper around the shared
  * <app-product-form>. (Admins reach product creation through the admin
  * product screen, which uses the same form in adminMode.)
  */

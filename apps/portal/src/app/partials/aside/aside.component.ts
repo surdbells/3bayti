@@ -36,7 +36,7 @@ export class AsideComponent implements OnInit {
   };
 
   /**
-   * Accordion state — the id of the single section that is currently open.
+   * Accordion state, the id of the single section that is currently open.
    * Exactly one section is open at a time; on load it defaults to the section
    * that contains the active route (falling back to the first section).
    */
@@ -66,7 +66,7 @@ export class AsideComponent implements OnInit {
 
   /**
    * Accordion toggle: open the clicked section and close the rest. Keeps one
-   * section open at all times — re-clicking the open header leaves it open.
+   * section open at all times, re-clicking the open header leaves it open.
    */
   toggleSection(key: string): void {
     this.openSection = key;

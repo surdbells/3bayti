@@ -9,7 +9,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * Input for POST /v3/auth/register.
  *
- * Minimum-viable registration — collects only the fields required
+ * Minimum-viable registration, collects only the fields required
  * to create the User row + send an OTP. Names are optional and
  * filled in later via /v3/account/profile.
  *
@@ -24,7 +24,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * chosen secret" minimum (which it sets at 8 chars, with the
  * caveat that systems should support up to 64+ char passphrases).
  *
- * No max — bcrypt handles up to 72 bytes natively, and we hash
+ * No max, bcrypt handles up to 72 bytes natively, and we hash
  * with PASSWORD_BCRYPT (PASSWORD_DEFAULT in PHP 8.x). Anything
  * beyond 72 bytes is silently truncated by bcrypt; that's a known
  * limitation, not a security flaw, and one we accept for legacy
@@ -38,7 +38,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Phone format normalisation
  * --------------------------
- * Same as ValidatePhoneInput — strips spaces/hyphens/parens before
+ * Same as ValidatePhoneInput, strips spaces/hyphens/parens before
  * the Regex check.
  */
 final class RegisterInput
@@ -86,7 +86,7 @@ final class RegisterInput
     ) {
         $this->email = trim($email);
         $this->phone = preg_replace('/[\s\-()]/', '', $phone) ?? '';
-        $this->password = $password; // Do NOT trim — passwords with whitespace are valid.
+        $this->password = $password; // Do NOT trim, passwords with whitespace are valid.
         $this->country_code = strtoupper(trim($country_code));
         $this->first_name = $first_name !== null ? trim($first_name) : null;
         $this->last_name = $last_name !== null ? trim($last_name) : null;

@@ -101,7 +101,7 @@ final class ResetController
         // Anti-enumeration: fake vid for unknown / inactive / unverified.
         // We also require the email to be present + the user's email be
         // verified is NOT required (a half-verified phone-first account
-        // can still reset via email it owns) — but the account must be
+        // can still reset via email it owns), but the account must be
         // active and have completed registration (phone verified).
         if ($user === null || !$user->isActive() || !$user->isPhoneVerified() || $email === null) {
             return $this->fakeVid();

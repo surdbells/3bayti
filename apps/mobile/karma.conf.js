@@ -24,7 +24,7 @@ module.exports = function (config) {
     jasmineHtmlReporter: {
       suppressAll: true // removes the duplicated traces
     },
-    // M3.2.Z.5-A — headless launcher for CI / sandboxed environments.
+    // M3.2.Z.5-A, headless launcher for CI / sandboxed environments.
     // `ng test --browsers=ChromeHeadlessNoSandbox` runs the full suite
     // without a display. --no-sandbox is required inside containers
     // where the sandbox can't be set up; --disable-gpu/--disable-dev-shm

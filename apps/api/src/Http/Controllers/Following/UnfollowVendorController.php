@@ -18,7 +18,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * DELETE /v3/me/following/{vendorId} — unfollow a vendor.
+ * DELETE /v3/me/following/{vendorId}, unfollow a vendor.
  *
  * Idempotent: returns 204 whether or not the user was actually
  * following. "Make me not follow this vendor" is the goal; if it's

@@ -13,7 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * Domain shape
  * ============
- * Labels are per-vendor named groupings of products — examples:
+ * Labels are per-vendor named groupings of products, examples:
  * "Eid Collection", "New In", "Hand-embroidered". A product belongs
  * to at most one label (single-label-per-product is enforced by the
  * `products.label_id` NULLABLE INT column; see migration
@@ -40,7 +40,7 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * Display ordering
  * ================
- * display_order SMALLINT NULL. NULL means "no explicit order — sort
+ * display_order SMALLINT NULL. NULL means "no explicit order, sort
  * by name". When the vendor explicitly orders labels via admin UI,
  * smaller values appear first. Same semantics as the existing
  * categories.display_order field for consistency.
@@ -83,7 +83,7 @@ class VendorLabel
     private string $name;
 
     /**
-     * Display order. NULL means "no explicit order — sort by name".
+     * Display order. NULL means "no explicit order, sort by name".
      * Smaller values appear first.
      */
     #[ORM\Column(name: 'display_order', type: 'smallint', nullable: true)]

@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Extra primitives for the dashboard PoC
+   Abayti Design System, Extra primitives for the dashboard PoC
    .ax-stat-card, .ax-segment, .ax-table
    ========================================================================= */
 
@@ -105,7 +105,7 @@
   pointer-events: none;
 }
 
-/* Brand variant — a single card can be elevated to hero treatment */
+/* Brand variant, a single card can be elevated to hero treatment */
 .ax-stat-card-brand {
   background: linear-gradient(135deg, var(--ax-palette-brown-500) 0%, var(--ax-palette-brown-700) 100%);
   border-color: transparent;
@@ -281,7 +281,7 @@
 
 
 /* ============== DROPDOWN (menu) ============== */
-/* Presentation only — toggle behavior wired by AxDropdownDirective in Phase 3.
+/* Presentation only, toggle behavior wired by AxDropdownDirective in Phase 3.
    Phase 1 uses minimal JS / native <details>/click for the topbar menu. */
 .ax-dropdown {
   position: relative;
@@ -289,7 +289,7 @@
 }
 
 .ax-dropdown-menu {
-  /* Visual chrome — applies whether the menu is a child of .ax-dropdown
+  /* Visual chrome, applies whether the menu is a child of .ax-dropdown
      or attached to a CDK overlay pane (via panelClass). */
   z-index: var(--ax-z-dropdown);
   min-width: 14rem;
@@ -398,7 +398,7 @@
 
 
 /* =========================================================================
-   FILTER BAR — admin list filters (shared by Stores + Customers)
+   FILTER BAR, admin list filters (shared by Stores + Customers)
    A tidy, responsive grid of labelled native controls inside an .ax-card.
    ========================================================================= */
 .ax-filter-grid {

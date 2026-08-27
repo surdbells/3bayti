@@ -108,7 +108,7 @@ export class AxRatingComponent implements ControlValueAccessor {
     return Array.from({ length: this.max }, (_, i) => i);
   }
 
-  /** The value being rendered — hover value takes precedence while user is hovering. */
+  /** The value being rendered, hover value takes precedence while user is hovering. */
   get displayValue(): number {
     return this.hoverValue ?? this.value;
   }

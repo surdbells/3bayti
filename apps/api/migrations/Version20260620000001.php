@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Email-OTP support — extend user_otp_attempts for a locally-generated,
+ * Email-OTP support, extend user_otp_attempts for a locally-generated,
  * locally-verified email channel alongside the existing
  * MessageCentral-delegated SMS channel.
  *
@@ -22,7 +22,7 @@ use Doctrine\Migrations\AbstractMigration;
  *   - code_hash VARCHAR(255) NULL
  *       password_hash() of the 6-digit code, for the email channel
  *       ONLY. Null for SMS (MessageCentral holds the code). The
- *       PLAINTEXT code is never stored — we compare with
+ *       PLAINTEXT code is never stored, we compare with
  *       password_verify() at verify time.
  *
  *   - email VARCHAR(255) NULL

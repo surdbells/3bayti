@@ -9,7 +9,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/gift-cards/themes
  *
- * Public endpoint — no auth required. Returns all 6 themes with
+ * Public endpoint, no auth required. Returns all 6 themes with
  * design metadata (colours, labels, photo support flag) and the
  * denomination presets. The mobile app calls this on the gift card
  * browse screen to build the theme selector UI.

@@ -46,7 +46,7 @@ enum EmailTemplate: string
     case ORDER_REFUNDED_CUSTOMER = 'order.refunded.customer';
 
     // Generic order status-change (admin override to a status with no
-    // dedicated customer template — e.g. paid, fulfilling, shipped,
+    // dedicated customer template, e.g. paid, fulfilling, shipped,
     // delivered at the order level). EN + AR.
     case ORDER_STATUS_CHANGED_CUSTOMER = 'order.status_changed.customer';
 
@@ -57,12 +57,12 @@ enum EmailTemplate: string
     // Admin-facing (critical events for ops monitoring)
     case DISPUTE_OPENED_ADMIN = 'dispute.opened.admin';
 
-    // Admin-facing — an admin manually overrode an order/item status.
+    // Admin-facing, an admin manually overrode an order/item status.
     // Surfaces in the admin notification bell + emails ops. English only
     // (Q-VendorAdminLocale = A locked).
     case ORDER_STATUS_CHANGED_ADMIN = 'order.status_changed.admin';
 
-    // M3.2.X.18-G — Return request flow
+    // M3.2.X.18-G, Return request flow
     // Customer: 6 lifecycle events. Each has EN + AR variants
     //   dispatched by the renderer based on User.locale.
     case RETURN_SUBMITTED_CUSTOMER = 'return.submitted.customer';
@@ -72,18 +72,18 @@ enum EmailTemplate: string
     case RETURN_RECEIVED_BY_VENDOR_CUSTOMER = 'return.received_by_vendor.customer';
     case RETURN_REFUNDED_CUSTOMER = 'return.refunded.customer';
 
-    // Vendor: 1 event — heads-up that goods will be returned.
+    // Vendor: 1 event, heads-up that goods will be returned.
     //   Uses vendor's preferred locale (EN/AR per Q-VendorAdminLocale).
     case RETURN_SUBMITTED_VENDOR = 'return.submitted.vendor';
 
-    // Admin: 1 event — copy on every new submission for queue oversight.
+    // Admin: 1 event, copy on every new submission for queue oversight.
     //   ALWAYS English per Q-VendorAdminLocale = A locked.
     case RETURN_SUBMITTED_ADMIN = 'return.submitted.admin';
 
-    // M3.2.X.11 — Cart abandonment recovery (marketing class)
+    // M3.2.X.11, Cart abandonment recovery (marketing class)
     // Sent to customers whose active cart has been idle past the
     // configured threshold (default 24h). Gated by the user's
-    // marketing_emails_opt_out flag — transactional templates above
+    // marketing_emails_opt_out flag, transactional templates above
     // ignore that flag, marketing templates honour it.
     case CART_ABANDONED_CUSTOMER = 'cart.abandoned.customer';
 

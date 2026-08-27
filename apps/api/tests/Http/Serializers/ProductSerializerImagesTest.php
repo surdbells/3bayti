@@ -13,7 +13,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * listShape must carry the FULL image gallery (not only primary_image) so
- * list-driven carousels — notably the mobile explore page — can swipe/dot over
+ * list-driven carousels, notably the mobile explore page, can swipe/dot over
  * every image of a product. Regression guard for the explore "single image" bug.
  *
  * @see ProductSerializer::listShape()

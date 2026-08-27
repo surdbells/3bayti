@@ -7,7 +7,7 @@ import { Injectable } from '@angular/core';
  * =======================
  * Q7=B in the M3.1.6 plan: server-side carts for authenticated users,
  * device-local carts for guests, with merge-on-sign-in. The guest
- * experience is critical for conversion — forcing users to register
+ * experience is critical for conversion, forcing users to register
  * before they can save items to a cart is a common e-commerce drop-
  * off point. This service implements the guest side; the v3 backend's
  * POST /v3/cart/merge handles the merge moment.
@@ -17,7 +17,7 @@ import { Injectable } from '@angular/core';
  * Preferences is a simple key-value store designed for small primitive
  * values (settings, tokens). Carts can grow to dozens of items each
  * with multi-field shapes (variant, custom-tailoring, notes). IndexedDB:
- *   1. Handles structured records natively — no JSON.stringify/parse
+ *   1. Handles structured records natively, no JSON.stringify/parse
  *      round-trips for every operation
  *   2. Has no platform-specific size cap (Preferences on iOS is
  *      limited to ~64KB per key; a large cart could overflow)
@@ -32,7 +32,7 @@ import { Injectable } from '@angular/core';
  * ======
  * Database: '3bayti_local_cart' v1
  * Object stores:
- *   'items' — keyPath 'localId', autoIncrement.
+ *   'items', keyPath 'localId', autoIncrement.
  *             Records: { localId, product_id, quantity, ... full
  *             item shape matching what v3 POST /cart/items expects
  *             for merge }
@@ -67,7 +67,7 @@ import { Injectable } from '@angular/core';
  */
 
 export type LocalCartItem = {
-  // Internal stable identifier — IndexedDB autoIncrement keypath.
+  // Internal stable identifier, IndexedDB autoIncrement keypath.
   // Set by addItem; clients shouldn't construct items with this set.
   localId?: number;
 
@@ -83,7 +83,7 @@ export type LocalCartItem = {
 
   // Display-only fields (echoed back from the product page; used to
   // render the guest cart UI without round-trip). v3 ignores these
-  // during merge — server derives from product_id + user.
+  // during merge, server derives from product_id + user.
   product_name: string;
   product_image: string;
   unit_price: string;
@@ -103,7 +103,7 @@ const STORE_ITEMS = 'items';
  *     Safari versions)
  *   - Schema upgrade conflict (multi-tab race condition)
  *
- * Note: not memoized — called per operation. IndexedDB's connection
+ * Note: not memoized, called per operation. IndexedDB's connection
  * pool is light-weight enough that pooling here is premature
  * optimization; if profiling shows it matters, add a connection cache.
  */
@@ -137,7 +137,7 @@ function isSameLine(a: LocalCartItem, b: LocalCartItem): boolean {
     a.is_custom === b.is_custom &&
     a.measurement === b.measurement &&
     a.extra_measurement === b.extra_measurement
-    // Note intentionally NOT in the dedup key — two adds of the same
+    // Note intentionally NOT in the dedup key, two adds of the same
     // variant with different notes still merge; the second note wins.
     // Matches v3's server-side behaviour.
   );
@@ -186,7 +186,7 @@ export class LocalCartService {
    * Quantity is clamped to MAX_QTY_PER_LINE.
    *
    * Defensive: invalid product_id or non-positive quantity is a no-op
-   * (no throw — UI typically calls this from user interaction; better
+   * (no throw, UI typically calls this from user interaction; better
    * to silently drop bad input than crash the page).
    */
   async add(item: LocalCartItem): Promise<void> {
@@ -245,7 +245,7 @@ export class LocalCartService {
   }
 
   /**
-   * Remove a line by localId. Idempotent — removing a non-existent
+   * Remove a line by localId. Idempotent, removing a non-existent
    * localId is a no-op.
    */
   async remove(localId: number): Promise<void> {
@@ -261,7 +261,7 @@ export class LocalCartService {
 
   /**
    * Wipe all items. Used by:
-   *   1. Sign-in flow after successful POST /v3/cart/merge — local
+   *   1. Sign-in flow after successful POST /v3/cart/merge, local
    *      cart's content is now reflected server-side
    *   2. Explicit user 'empty cart' action
    *   3. Test setup/teardown

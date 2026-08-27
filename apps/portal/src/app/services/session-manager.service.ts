@@ -5,16 +5,16 @@ import { PortalCrudAdapter } from './portal-crud-adapter';
 import { GlobalComponent } from '../global-component';
 
 /**
- * SessionManager — keeps a signed-in portal session alive while the user is
+ * SessionManager, keeps a signed-in portal session alive while the user is
  * working, and ends it gracefully (with a warning) only when they've gone
  * idle. Two jobs:
  *
- *  1. Proactive silent refresh — before the short-lived access token expires,
+ *  1. Proactive silent refresh, before the short-lived access token expires,
  *     swap it for a fresh one using the refresh token, in the background. So a
  *     navigation never lands on an expired token → the user is never bounced
  *     to login mid-session (the bug this fixes).
  *
- *  2. Idle guard — track real activity; after IDLE_LIMIT of no interaction,
+ *  2. Idle guard, track real activity; after IDLE_LIMIT of no interaction,
  *     show a countdown modal ("Stay signed in?"). "Stay" refreshes + resets;
  *     if the countdown runs out, sign out cleanly. Nothing ends a session
  *     abruptly while the user is active.
@@ -74,7 +74,7 @@ export class SessionManager {
     this.warningVisible.set(false);
   }
 
-  /** "Stay signed in" — dismiss the warning, reset idle, refresh now. */
+  /** "Stay signed in", dismiss the warning, reset idle, refresh now. */
   stayActive(): void {
     this.lastActivity = Date.now();
     this.warningVisible.set(false);
@@ -91,7 +91,7 @@ export class SessionManager {
 
   // ── Internals ────────────────────────────────────────────────────────
   private onActivity(): void {
-    // Ignore activity while the warning modal is up — the user must make an
+    // Ignore activity while the warning modal is up, the user must make an
     // explicit choice there. Otherwise a stray mousemove would silently keep
     // an abandoned session alive.
     if (this.warningVisible()) return;
@@ -108,7 +108,7 @@ export class SessionManager {
       return;
     }
 
-    // Active — keep the access token fresh so navigation never 401s.
+    // Active, keep the access token fresh so navigation never 401s.
     const expiresInMs = this.accessExpiresInMs();
     if (expiresInMs !== null && expiresInMs <= this.REFRESH_LEAD_MS) {
       this.silentRefresh();

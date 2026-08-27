@@ -21,7 +21,7 @@ export type SocialIdTokenResult =
   | { ok: false; reason: 'cancelled' | 'unavailable' | 'popup-blocked' | 'failed' };
 
 /**
- * SocialAuthService — thin wrapper over Firebase Auth popups.
+ * SocialAuthService, thin wrapper over Firebase Auth popups.
  *
  * Responsibilities
  * ----------------
@@ -46,7 +46,7 @@ export type SocialIdTokenResult =
  */
 @Injectable({ providedIn: 'root' })
 export class SocialAuthService {
-  /** True when a Firebase config is present — gate the UI buttons on this. */
+  /** True when a Firebase config is present, gate the UI buttons on this. */
   readonly isAvailable = isFirebaseConfigured();
 
   /** Google popup → Firebase ID token. */
@@ -54,7 +54,7 @@ export class SocialAuthService {
     return this.runPopup(() => {
       const provider = new GoogleAuthProvider();
       /* Always show the account chooser rather than silently reusing the
-         last Google session — matches user expectation for "Continue with". */
+         last Google session, matches user expectation for "Continue with". */
       provider.setCustomParameters({ prompt: 'select_account' });
       return provider;
     });

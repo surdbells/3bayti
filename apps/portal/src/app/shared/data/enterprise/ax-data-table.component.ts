@@ -1,5 +1,5 @@
 /**
- * Enterprise data table — config-driven host component.
+ * Enterprise data table, config-driven host component.
  *
  * Wires together:
  *   - an AxDataSource<T> (client or server)            → data + loading/error

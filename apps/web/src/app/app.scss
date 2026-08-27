@@ -11,7 +11,7 @@
    transparent and should instead OVERLAY the hero so the nav truly floats.
 
    We detect the home route via the header's stable `.is-home` class (which,
-   unlike `.is-transparent`, does NOT toggle on scroll — so the overlap
+   unlike `.is-transparent`, does NOT toggle on scroll, so the overlap
    persists while scrolling and only the header's appearance changes) and pull
    the routed outlet up under the sticky header by its own height, then let the
    hero add matching top padding so its content still clears the bar.

@@ -1,5 +1,5 @@
 /* ========================================
-   PAGE-LOCAL TOKEN MAP — points to M2
+   PAGE-LOCAL TOKEN MAP, points to M2
    ========================================
    These page-scoped CSS vars exist for backward compat with the
    ~49 `var(--brand-*)` / `var(--text-*)` / `var(--radius-*)` refs
@@ -72,8 +72,8 @@
   --background: var(--brand-cream);
 }
 
-/* Reserve image-area height upfront — even before `images` data
-   arrives — to prevent layout shift when slides populate.
+/* Reserve image-area height upfront, even before `images` data
+   arrives, to prevent layout shift when slides populate.
    Same aspect-ratio (4:5) and gradient as .img-wrap so the
    transition between empty placeholder and rendered slides is
    visually seamless. */
@@ -129,7 +129,7 @@ swiper-slide,
   position: relative;
   width: 100%;
   height: 100%;
-  /* aspect-ratio kept here too — .slides-wrapper has the same
+  /* aspect-ratio kept here too, .slides-wrapper has the same
      ratio set as a fallback for the empty/loading state, but
      .img-wrap needs its own intrinsic height because .hero
      parent has no explicit height (flex shrink-fits to content
@@ -287,7 +287,7 @@ swiper-slide,
 }
 
 /* ========================================
-   INFO TABS — premium pill toggle
+   INFO TABS, premium pill toggle
    ========================================
    Rounded pill container with two segments. The ACTIVE segment is a
    solid filled brand/olive pill; the inactive one is transparent.
@@ -1207,7 +1207,7 @@ swiper-slide,
     transform: scale(0.92);
   }
 
-  /* RTL: flip to top-right (defensive — i18n service currently
+  /* RTL: flip to top-right (defensive, i18n service currently
      doesn't apply dir='rtl' but ready when it does) */
   :host-context([dir="rtl"]) & {
     left: auto;
@@ -1445,7 +1445,7 @@ swiper-slide,
   }
 }
 
-/* Expand affordance on the PDP hero — bottom-right, above the card lip,
+/* Expand affordance on the PDP hero, bottom-right, above the card lip,
    animated to draw attention (default: pulse + radiating ring). */
 .expand-hint {
   position: absolute;

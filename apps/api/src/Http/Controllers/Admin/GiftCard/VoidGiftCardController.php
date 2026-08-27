@@ -30,7 +30,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Idempotent-safe: voiding an already-voided card is a no-op that
  * returns 200 with already_voided=true (no second ledger row, no audit
- * override) rather than an error — re-issuing the same request is safe.
+ * override) rather than an error, re-issuing the same request is safe.
  */
 final class VoidGiftCardController
 {

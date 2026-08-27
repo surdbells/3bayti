@@ -8,7 +8,7 @@ namespace Bayti\Api\Domain\Compliance;
  * Signs short-lived URLs for serving private KYC documents.
  *
  * SPA clients display these documents in an <img>/anchor, which cannot carry
- * an Authorization header — so instead of running auth middleware on the serve
+ * an Authorization header, so instead of running auth middleware on the serve
  * endpoint, we mint a short-lived HMAC signature bound to the vendor id, the
  * document field, and an expiry. The serve endpoint recomputes and verifies
  * it. Signed URLs are produced ONLY inside the already-authenticated
@@ -18,7 +18,7 @@ namespace Bayti\Api\Domain\Compliance;
 final class ComplianceDocumentSigner
 {
     /** Default validity window for a minted URL. */
-    private const DEFAULT_TTL = 1800; // 30 minutes — forgiving review window
+    private const DEFAULT_TTL = 1800; // 30 minutes, forgiving review window
 
     /** The document fields that can be served. */
     public const FIELDS = ['front', 'back', 'license_doc'];

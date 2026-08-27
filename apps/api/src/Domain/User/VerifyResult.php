@@ -8,7 +8,7 @@ namespace Bayti\Api\Domain\User;
  * Outcomes of OtpService::verify().
  *
  * Caller should treat all non-Success values as a generic auth
- * failure to the user — distinguishing 'wrong code' from 'expired'
+ * failure to the user, distinguishing 'wrong code' from 'expired'
  * publicly leaks timing/state info to attackers. The values are
  * still useful for internal logging and analytics.
  */

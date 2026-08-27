@@ -45,7 +45,7 @@ export class MeasurementsComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
   private readonly navHistory = inject(NavigationHistoryService);
 
-  // Enterprise table (client mode — full set returned in one call)
+  // Enterprise table (client mode, full set returned in one call)
   readonly dataSource = new AxClientDataSource<Measurements>([
     { key: 'size', label: 'Size', sortable: true, sticky: 'left', width: '8rem' },
     { key: 'bust', label: 'Bust', align: 'center' },

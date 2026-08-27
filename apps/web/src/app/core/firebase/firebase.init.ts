@@ -3,11 +3,11 @@ import { getAuth, type Auth } from 'firebase/auth';
 import { environment } from '../../../environments/environment';
 
 /**
- * firebase.init — lazy, guarded Firebase Auth bootstrap.
+ * firebase.init, lazy, guarded Firebase Auth bootstrap.
  *
  * Powers Google + Apple social sign-in (SocialAuthService). Firebase is
  * initialised ONLY when `environment.firebase.apiKey` is non-empty, so an
- * un-configured build (the default — apiKey '') never touches the firebase
+ * un-configured build (the default, apiKey '') never touches the firebase
  * SDK and never crashes the app. Consumers MUST treat a `null` Auth as
  * "social sign-in unavailable" and hide the buttons.
  *
@@ -16,7 +16,7 @@ import { environment } from '../../../environments/environment';
  * initializeApp() + getAuth() are only run on first call to getFirebaseAuth(),
  * not at module load. That keeps the firebase SDK out of the critical path for
  * the (common) anonymous-browsing case and avoids any work during the
- * APP_INITIALIZER hydrate. The result is memoised — initializeApp must run at
+ * APP_INITIALIZER hydrate. The result is memoised, initializeApp must run at
  * most once per page.
  *
  * SSR / non-browser safety
@@ -55,7 +55,7 @@ export function getFirebaseAuth(): Auth | null {
     });
     cachedAuth = getAuth(app);
   } catch (err) {
-    /* A malformed config shouldn't take the whole app down — degrade to
+    /* A malformed config shouldn't take the whole app down, degrade to
        "social sign-in unavailable". */
     if (typeof console !== 'undefined') {
       console.warn('[firebase.init] initialisation failed; social sign-in disabled', err);

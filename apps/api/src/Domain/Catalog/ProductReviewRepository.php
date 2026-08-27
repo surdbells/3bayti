@@ -113,7 +113,7 @@ class ProductReviewRepository extends EntityRepository
 
     /**
      * The store review this user has already left for this vendor
-     * (a review with NO product — i.e. about the store itself), or null.
+     * (a review with NO product, i.e. about the store itself), or null.
      * Store-review upsert key (one per user+vendor).
      */
     public function findStoreReviewForUserAndVendor(User $user, Vendor $vendor): ?ProductReview

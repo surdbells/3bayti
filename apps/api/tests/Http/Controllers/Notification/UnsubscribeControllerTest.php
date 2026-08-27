@@ -18,7 +18,7 @@ use Psr\Http\Message\ResponseInterface;
 /**
  * HTTP-level tests for the M3.2.X.11-G unsubscribe endpoint.
  *
- * Public endpoint — no Authorization header, no JWT in the
+ * Public endpoint, no Authorization header, no JWT in the
  * usual access-token sense. The signed unsubscribe token in
  * the query string is the only auth.
  *
@@ -31,7 +31,7 @@ use Psr\Http\Message\ResponseInterface;
  *   3. Valid token + user not found → 400, same generic page
  *       (no enumeration leak)
  *   4. Valid token + user already opted out → 200, success page
- *       (idempotent — no second flush)
+ *       (idempotent, no second flush)
  *   5. Valid token + user opts out for the first time → 200,
  *       opt_out flag set, em->flush called, success page
  *   6. Persistence failure → 500, transient error page

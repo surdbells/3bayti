@@ -27,7 +27,7 @@ function makeProduct(id: number): Product {
 }
 
 function setup(): { service: WishlistService; controller: HttpTestingController } {
-  /* Minimal AuthService stub — the service injects it only for its
+  /* Minimal AuthService stub, the service injects it only for its
      reset-on-signout effect; treat the user as authed throughout. */
   const authStub = { isAuthenticated: signal(true) };
   TestBed.configureTestingModule({

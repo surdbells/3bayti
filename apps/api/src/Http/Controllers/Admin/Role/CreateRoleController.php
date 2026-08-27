@@ -12,7 +12,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 
-/** POST /v3/admin/roles — body { name, description?, permissions: [keys] }. */
+/** POST /v3/admin/roles, body { name, description?, permissions: [keys] }. */
 final class CreateRoleController
 {
     use Responder;

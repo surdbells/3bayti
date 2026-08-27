@@ -38,7 +38,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * The web client takes the returned "url" and passes it as
  * `recipient_photo_url` to POST /v3/gift-cards/purchase (luxury theme
- * only — the entity + purchase controller reject a photo on any other
+ * only, the entity + purchase controller reject a photo on any other
  * theme). The stored image is public-by-URL so the recipient can render
  * it on the card; the ULID filename keeps the URL unguessable.
  */
@@ -75,7 +75,7 @@ final class UploadGiftCardPhotoController
         try {
             $stored = $this->imageStorage->storeGiftCardPhoto($upload, $user->getId() ?? 0);
         } catch (\InvalidArgumentException $e) {
-            // Mime / size / upload-error problems are client errors — surface
+            // Mime / size / upload-error problems are client errors, surface
             // the storage service's message as a clean 400 rather than a 500.
             throw HttpException::badRequest($e->getMessage());
         }

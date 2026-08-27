@@ -194,7 +194,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   ngAfterViewInit() {
     // The swiper lives inside @if(!product_missing) (a structural directive),
     // so its ViewChild only resolves AFTER the view renders. Init it here, not
-    // in ngOnInit — a static ref there is undefined and throws, which used to
+    // in ngOnInit, a static ref there is undefined and throws, which used to
     // abort the rest of ngOnInit (including the product load + footer).
     this.initSwiper();
   }
@@ -231,7 +231,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     this.resetLbDrag();
     this.lightboxOpen.set(true);
     this.cdr.markForCheck();
-    // The overlay renders via @if — init its swiper once the view paints.
+    // The overlay renders via @if, init its swiper once the view paints.
     setTimeout(() => this.initLightboxSwiper(this.lightboxIndex()), 0);
   }
 
@@ -334,7 +334,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   apiSizes = {};
   chosenSize: string | null = null;
 
-  /** PDP info tabs — 'description' (default) vs 'reviews'. */
+  /** PDP info tabs, 'description' (default) vs 'reviews'. */
   activeTab: 'description' | 'reviews' = 'description';
 
   /** Switch the active PDP info tab (Description / Reviews). */
@@ -347,7 +347,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   // ========================================
-  // Reviews — READ side
+  // Reviews, READ side
   // ========================================
 
   /** How many reviews to fetch per page (initial + each "load more"). */
@@ -417,7 +417,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** Star fill states for an aggregate or per-review rating (rounds to the
-   *  nearest whole star — the icon set has no half-star glyph). */
+   *  nearest whole star, the icon set has no half-star glyph). */
   starStates(rating: number): Array<'full' | 'empty'> {
     const filled = Math.round(rating);
     const out: Array<'full' | 'empty'> = [];
@@ -443,14 +443,14 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   // ========================================
-  // Reviews — WRITE side
+  // Reviews, WRITE side
   // ========================================
 
   isReviewSheetOpen = false;
   reviewSubmitting = false;
   reviewForm = { star: 0, title: '', comment: '' };
 
-  /** Open the "Write a review" sheet — auth-gated (guests prompted to sign in). */
+  /** Open the "Write a review" sheet, auth-gated (guests prompted to sign in). */
   openReviewSheet(): void {
     if (this.isGuest || !this.single_user.token) {
       this.error_notification(this.i18n.t('review_sign_in_to_review'));
@@ -517,7 +517,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     token: "",
     product: 0,
     store: 0,
-    // Vendor slug — the size guide is fetched by slug (legacy ids discarded).
+    // Vendor slug, the size guide is fetched by slug (legacy ids discarded).
     vendor_slug: "",
     store_name: "",
     category_id: "",
@@ -581,7 +581,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** True for BAGS / ACCESSORIES products, which have no size/color/size-chart.
    *  The v3 detail transform hardcodes category_id to 0, so we can't guard on
-   *  it; category_slug (e.g. "bags-4", "accessories-5") is populated instead —
+   *  it; category_slug (e.g. "bags-4", "accessories-5") is populated instead -
    *  strip the trailing "-<id>" and match the category name. */
   get isBagOrAccessory(): boolean {
     const c = String(this.single?.category_slug ?? "").toLowerCase().replace(/-\d+$/, "");
@@ -589,7 +589,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** Categories where size + colour are OPTIONAL even when the vendor DID set
-   *  them — mirrors the server's isSizeOptionalCategory()
+   *  them, mirrors the server's isSizeOptionalCategory()
    *  (bags/accessories/kaftans/mukhawars). Bags/accessories carry no
    *  size/colour at all; mukhawars/kaftans may, but must never FORCE the
    *  choice. Guarded on category_slug because v3's detail transform zeroes
@@ -599,7 +599,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     return c === "bags" || c === "accessories" || c === "kaftans" || c === "mukhawars";
   }
 
-  /** True only when the vendor actually enabled at least one ready size —
+  /** True only when the vendor actually enabled at least one ready size -
    *  mirrors app-size-chips, which renders only the truthy apiSizes keys. A
    *  product with NO sizes set must never force a size (it would silently kill
    *  the sale). */
@@ -615,14 +615,14 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** True when the shopper has picked the made-to-measure CUSTOM chip. "Custom"
-   *  is a per-SELECTION state (like the web PDP), not a product-level flag — a
+   *  is a per-SELECTION state (like the web PDP), not a product-level flag, a
    *  product can offer S/M/L AND Custom, and only picking Custom collects body
    *  measurements. */
   get isCustomSelected(): boolean {
     return String(this.add_cart.size ?? '').toUpperCase() === 'CUSTOM';
   }
 
-  /** True only when the vendor set at least one colour — mirrors the colour
+  /** True only when the vendor set at least one colour, mirrors the colour
    *  pills (rendered only when colors.length > 0). No colours -> never force a
    *  colour. */
   get hasColors(): boolean {
@@ -871,7 +871,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   async getObject() {
     const ret: any = await Preferences.get({ key: 'user' });
     if (ret.value == null) {
-      // Guest mode — show the product and prices. Authenticated-only
+      // Guest mode, show the product and prices. Authenticated-only
       // features (add to cart, measurement save, wishlist add) are gated
       // behind a friendly sign-in / sign-up prompt.
       this.isGuest = true;
@@ -899,7 +899,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     // param (transformSingleProductRequest); replicate that here. The
     // response transform (transformProductDetailResponse) still applies
     // via get_v3, so response.data keeps the legacy detail shape. Public
-    // catalog read — no authToken.
+    // catalog read, no authToken.
     this.networkAdapter.get_v3('GET /mobile/single-product', {
       pathParams: { id: String(this.rqst_param.product) },
     })
@@ -908,7 +908,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
           if (response.response_code === 200 && response.status === "success") {
             this.single = response.data;
             // Clear the loading / not-found gates IMMEDIATELY on a successful
-            // response — BEFORE the size/measurement processing below — so a
+            // response, BEFORE the size/measurement processing below, so a
             // throw anywhere in that processing can never leave the skeleton
             // stuck on and hide the product card + footer (price / add-to-cart).
             this.ui_controls.is_loading = false;
@@ -920,7 +920,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
               : [];
             // v3's transformProductDetailResponse emits `images` as a
             // comma-joined string (imagesAsCsvString); split it into the URL
-            // array the gallery @for iterates — same handling as `colors` above.
+            // array the gallery @for iterates, same handling as `colors` above.
             // Without this, @for(image of images) iterates the string's chars.
             this.images = response.data.images
               ? String(response.data.images).split(',').map((s: string) => s.trim()).filter(Boolean)
@@ -1026,7 +1026,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
 
   get_store_measurement() {
     // PUBLIC customer read of the store's published size guide, resolved by
-    // SLUG (GET /v3/vendors/{slug}/size-chart). No authToken — shoppers view it.
+    // SLUG (GET /v3/vendors/{slug}/size-chart). No authToken, shoppers view it.
     //
     // Legacy ids are discarded: a newly onboarded (v3-native) store has no
     // legacy id, so the old by-legacy-id fetch returned nothing and the size
@@ -1083,7 +1083,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     }
     this.rqst_param.id = this.single_user.id;
     this.rqst_param.token = this.single_user.token;
-    // Direct v3 (GET /v3/cart). Authed — authToken required. The
+    // Direct v3 (GET /v3/cart). Authed, authToken required. The
     // transformCartListResponse response transform still applies via
     // get_v3, so response.data is the v3 {items, bill, ...} shape (NOT
     // the legacy array). Handle both shapes defensively, mirroring
@@ -1141,7 +1141,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     // Made-to-measure (Custom size) products need the customer's BODY
-    // measurements — this is the size_custom rule, independent of
+    // measurements, this is the size_custom rule, independent of
     // require_extra_msmt, since not every custom product also asks for a
     // vendor-specific extra measurement. If nothing was auto-loaded from the
     // customer's profile (get_measurement on load), open the sheet so they
@@ -1154,7 +1154,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
 
     // Made-to-measure products (require_extra_msmt) need the vendor's extra
     // measurement. The server rejects an empty value with a generic "one or
-    // more fields failed validation" — opaque, and for a ready-to-wear
+    // more fields failed validation", opaque, and for a ready-to-wear
     // mukhawar the measurement sheet's trigger isn't even shown, so the sale
     // is silently blocked. Catch it here with a clear prompt and open the
     // measurement sheet so the customer can supply it.
@@ -1178,15 +1178,15 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    // Direct v3 (POST /v3/cart/items). Authed — authToken required. Build
+    // Direct v3 (POST /v3/cart/items). Authed, authToken required. Build
     // the body EXPLICITLY per AddCartItemInput (product_id, quantity, size,
     // color, is_custom, measurement, extra_measurement, note). The server
-    // derives everything else (price, store, customer, product snapshot) —
+    // derives everything else (price, store, customer, product snapshot) -
     // the legacy display fields on `add_cart` are intentionally NOT sent.
     // extra_measurement is included for made-to-measure products
     // (require_extra_msmt); the server rejects an empty value for those.
     // The transformAddCartResponse response transform applies via post_v3,
-    // so response.data = {success, count, cart} — handled below.
+    // so response.data = {success, count, cart}, handled below.
     const cartBody = {
       product_id: this.add_cart.product_id,
       quantity: this.add_cart.quantity,
@@ -1218,9 +1218,9 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
                 : this.i18n.t('text_added_to_cart');
             this.success_notification(successText);
             this.ui_controls.is_adding_to_cart = false;
-            this.itemExists = true; // flip the CTA to "Already in cart — View"
+            this.itemExists = true; // flip the CTA to "Already in cart, View"
             // Stay on the PDP (mirror web). Update the reactive cart-count
-            // badge — the transformAddCartResponse transform exposes the new
+            // badge, the transformAddCartResponse transform exposes the new
             // total as response.data.count; publish it via the shared
             // CartCountService (replaces the write-only Preferences('count')).
             const newCount =
@@ -1230,7 +1230,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
             if (newCount !== undefined) {
               this.cartCount.setCount(Number(newCount));
             } else {
-              // No authoritative count in the response — bump optimistically
+              // No authoritative count in the response, bump optimistically
               // and reconcile from the server.
               this.cartCount.bump(this.add_cart.quantity);
               void this.cartCount.refresh();
@@ -1275,7 +1275,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
       this.ui_controls.is_loading_measurement = true;
       this.cdr.markForCheck();
 
-      // Direct v3 (PUT /v3/me/measurements/default) — SAME as
+      // Direct v3 (PUT /v3/me/measurements/default), SAME as
       // measurements.page.ts. v3 wants a numeric `values` map (cm, 0-500);
       // send only the fields the user filled. `update` fields are already
       // numbers here, so coerce + filter to positive values.

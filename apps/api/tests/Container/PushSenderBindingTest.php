@@ -22,7 +22,7 @@ use Psr\Container\ContainerInterface;
  * env vars without loading the full di.php.
  *
  * If config/di.php's push factory or loadFcmServiceAccount() changes,
- * this test must be updated to match — a deliberate touch-point so
+ * this test must be updated to match, a deliberate touch-point so
  * divergence is caught.
  *
  * @see config/di.php

@@ -94,7 +94,7 @@ final class VendorAuthMiddlewareTest extends HttpTestCase
     public function returns403WhenUserIsNotVendor(): void
     {
         $user = $this->makeUser(id: 42);
-        // user is plain customer by default — is_vendor=false
+        // user is plain customer by default, is_vendor=false
 
         $request = (new ServerRequestFactory())
             ->createServerRequest('GET', '/v3/vendor/orders')
@@ -157,7 +157,7 @@ final class VendorAuthMiddlewareTest extends HttpTestCase
     #[Test]
     public function returns403WithVendorNotApprovedWhenAllStoresSuspended(): void
     {
-        // Same as pending — suspended-only vendors should be blocked.
+        // Same as pending, suspended-only vendors should be blocked.
         // existsApprovedForOwnerUser returns false for any user with
         // zero approved stores, regardless of why.
         $user = $this->makeUser(id: 11);
@@ -200,7 +200,7 @@ final class VendorAuthMiddlewareTest extends HttpTestCase
     {
         // Edge case: User has is_vendor=true (somehow set by admin) but
         // owns zero Vendor entities. existsApprovedForOwnerUser returns
-        // false. Middleware blocks them with VENDOR_NOT_APPROVED — they
+        // false. Middleware blocks them with VENDOR_NOT_APPROVED, they
         // need to either submit onboarding (sub-phase D) or contact
         // admin to fix the role flag.
         $user = $this->makeUser(id: 13);
@@ -224,11 +224,11 @@ final class VendorAuthMiddlewareTest extends HttpTestCase
         // A plain customer (is_vendor=false) hits the vendor endpoint.
         // Even though the EM mock would say hasApproved=true (which
         // shouldn't happen for a non-vendor), the role check fires
-        // FIRST and returns the vendor_required code — not
+        // FIRST and returns the vendor_required code, not
         // VENDOR_NOT_APPROVED. Order of operations matters for the
         // error message clarity.
         $user = $this->makeUser(id: 14);
-        // No setRoles(vendor: true) — user is plain customer
+        // No setRoles(vendor: true), user is plain customer
 
         $request = (new ServerRequestFactory())
             ->createServerRequest('GET', '/v3/vendor/orders')

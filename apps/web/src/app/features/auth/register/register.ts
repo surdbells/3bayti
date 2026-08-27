@@ -34,7 +34,7 @@ import { SocialAuthButtonsComponent } from '../social-auth-buttons/social-auth-b
 const RESEND_COOLDOWN_SECONDS = 30;
 
 /**
- * Register page — /register. PHONE-FIRST 4-step flow (web parity with the
+ * Register page, /register. PHONE-FIRST 4-step flow (web parity with the
  * mobile v3 registration, issue #8). Replaces the legacy single-form
  * register → verify-phone hand-off.
  *
@@ -55,7 +55,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
  *     AuthService.registerConfirmEmail({ verification_id, code }) → token-pair
  *     → applyAuthState (auto-login) → navigate. Resend re-calls submit.
  *
- * country_code is derived from the phone input's E.164 dial code — we don't
+ * country_code is derived from the phone input's E.164 dial code, we don't
  * ask separately.
  */
 @Component({
@@ -675,7 +675,7 @@ export class RegisterComponent implements OnDestroy {
         code: this.otpForm.controls.code.value,
       });
       /* Auto-logged-in via the token-pair envelope. AuthService has
-         applied state — navigate home. */
+         applied state, navigate home. */
       await this.router.navigateByUrl('/');
     } catch (err) {
       this.surfaceError(err, this.otpForm, REGISTER_OTP_ERROR_MAP);

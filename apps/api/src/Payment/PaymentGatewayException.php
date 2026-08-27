@@ -15,25 +15,25 @@ use Throwable;
  * Subkinds carry signal in $kind so the calling controller
  * can decide between retry / give-up / user-visible-error:
  *
- *   - 'network'        — couldn't even reach the gateway (timeout,
+ *   - 'network'       , couldn't even reach the gateway (timeout,
  *                        DNS, connection refused). Safe to retry.
- *   - 'timeout'        — gateway accepted the request but didn't
- *                        respond in time. Order state UNKNOWN —
+ *   - 'timeout'       , gateway accepted the request but didn't
+ *                        respond in time. Order state UNKNOWN -
  *                        must call retrieve-order to clarify.
- *   - 'auth'           — credentials rejected. Config bug, not
+ *   - 'auth'          , credentials rejected. Config bug, not
  *                        a runtime error; surface to ops.
- *   - 'malformed'      — gateway returned a body we couldn't
+ *   - 'malformed'     , gateway returned a body we couldn't
  *                        parse. Treat as 'unknown' for order
  *                        state; alert ops.
- *   - 'upstream'       — gateway returned a 4xx/5xx with a
+ *   - 'upstream'      , gateway returned a 4xx/5xx with a
  *                        recognisable error body. $providerCode
  *                        carries the gateway's own code (e.g.
  *                        Noon resultCode).
- *   - 'duplicate_ref'  — provider rejected because the merchant
+ *   - 'duplicate_ref' , provider rejected because the merchant
  *                        reference is already in use. Caller
  *                        should call retrieve-order on the
  *                        existing ref to discover the real status.
- *   - 'rate_limited'   — 429 from gateway. Per recon, Noon will
+ *   - 'rate_limited'  , 429 from gateway. Per recon, Noon will
  *                        outright ban an IP that abuses GET_ORDER
  *                        polling, so callers MUST back off.
  */

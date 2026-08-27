@@ -21,7 +21,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 
 /**
- * GET /v3/vendor/products/{id} — vendor single-product detail (any status),
+ * GET /v3/vendor/products/{id}, vendor single-product detail (any status),
  * owner-scoped. Backs the preview drawer.
  */
 #[CoversClass(GetVendorOwnProductController::class)]

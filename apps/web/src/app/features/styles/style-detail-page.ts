@@ -15,7 +15,7 @@ import { StyleService } from './style.service';
 import type { Style, StyleProduct } from './style.model';
 
 /**
- * /styles/:slug — a single style's page.
+ * /styles/:slug, a single style's page.
  *
  * Public storefront page. Layout:
  *   - Cover banner (style cover_image_url; falls back to a gradient).
@@ -204,7 +204,7 @@ export class StyleDetailPageComponent implements OnInit {
          id-bearing object (the rest of Product is unused server-side). */
       await this.wishlist.add({ id: p.id } as { id: number } as never);
     } catch {
-      /* Swallow — the heart simply won't flip; no destructive failure. */
+      /* Swallow, the heart simply won't flip; no destructive failure. */
     }
   }
 

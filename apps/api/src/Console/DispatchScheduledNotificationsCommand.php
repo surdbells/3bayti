@@ -23,7 +23,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *
  * For each schedule whose next_run_at has passed, creates a QUEUED broadcast
  * (which notifications:dispatch-broadcasts then sends, resolving variables +
- * the current audience at that moment — dynamic audience), then advances the
+ * the current audience at that moment, dynamic audience), then advances the
  * schedule to its next occurrence (or completes it). Run every minute:
  *
  *   * * * * *  cd /path/to/api && php bin/console notifications:dispatch-scheduled >> var/log/notif.log 2>&1

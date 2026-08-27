@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Phone-first registration step 4 (final): the user submits the
  * email-OTP code against the verification_id returned by
  * /register/submit. On success the account's email is marked verified
- * and a full session (token pair + user) is issued — same response
+ * and a full session (token pair + user) is issued, same response
  * shape as /v3/auth/confirm.
  *
  * The email-OTP code is a locally-generated 6-digit value; the DTO

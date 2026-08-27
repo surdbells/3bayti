@@ -145,7 +145,7 @@ describe('AccountPasswordPageComponent', () => {
     submit(fixture);
     await flush();
     fixture.detectChanges();
-    /* No navigation, no generic toast — the error is on the field. */
+    /* No navigation, no generic toast, the error is on the field. */
     expect(navSpy).not.toHaveBeenCalled();
     expect(toast.calls.some(c => c.kind === 'success')).toBe(false);
   });

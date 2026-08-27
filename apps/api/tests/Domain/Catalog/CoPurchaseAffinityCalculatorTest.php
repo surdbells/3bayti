@@ -61,7 +61,7 @@ final class CoPurchaseAffinityCalculatorTest extends TestCase
     public function sqlExcludesRejectedAndRefundedTwice(): void
     {
         // The SQL self-joins order_items so BOTH sides (a + b) must
-        // filter out rejected + refunded — that's 2 NOT IN clauses
+        // filter out rejected + refunded, that's 2 NOT IN clauses
         // with the same status list.
         $captured = $this->captureSql();
         $calc = new CoPurchaseAffinityCalculator($captured['em'], new InMemoryLogger());
@@ -123,7 +123,7 @@ final class CoPurchaseAffinityCalculatorTest extends TestCase
     public function sqlOrdersDeterministically(): void
     {
         // Within a source product, pairs ordered by count DESC
-        // with target_product_id ASC tiebreaker — deterministic
+        // with target_product_id ASC tiebreaker, deterministic
         // ordering across runs.
         $captured = $this->captureSql();
         $calc = new CoPurchaseAffinityCalculator($captured['em'], new InMemoryLogger());

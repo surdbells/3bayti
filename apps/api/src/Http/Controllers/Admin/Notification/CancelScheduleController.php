@@ -13,7 +13,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** POST /v3/admin/notification-schedules/{id}/cancel — stop future runs. Past
+/** POST /v3/admin/notification-schedules/{id}/cancel, stop future runs. Past
  *  occurrences (broadcasts) are kept for history. */
 final class CancelScheduleController
 {

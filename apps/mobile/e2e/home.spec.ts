@@ -28,7 +28,7 @@ test.describe('Mobile entry — first-time user', () => {
     await page.waitForLoadState('networkidle');
 
     // The intro page is part of the public bundle. We don't pin to
-    // specific marketing copy — just verify the route resolved.
+    // specific marketing copy, just verify the route resolved.
     expect(page.url()).toContain('/intro');
   });
 });
@@ -39,7 +39,7 @@ test.describe('Mobile entry — returning user', () => {
     await mockPreferences(page, { intro_seen: 'true' });
 
     // The app may route directly into the catalog tab or login depending
-    // on auth state. Either is acceptable here — we just verify the
+    // on auth state. Either is acceptable here, we just verify the
     // user is NOT bounced to /intro.
     await page.goto('/');
     await page.waitForLoadState('networkidle');
@@ -66,7 +66,7 @@ test.describe('Mobile app shell', () => {
         !e.toLowerCase().includes('deprecat') &&
         !e.includes('Failed to load resource') &&
         // Capacitor in web preview logs warnings about missing native
-        // bridges — expected, not a regression.
+        // bridges, expected, not a regression.
         !e.toLowerCase().includes('capacitor') &&
         !e.toLowerCase().includes('not implemented on web'),
     );

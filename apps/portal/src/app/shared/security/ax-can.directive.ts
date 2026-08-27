@@ -3,7 +3,7 @@ import { PermissionService } from '../../services/permission.service';
 
 /**
  * Structural directive that renders its element only if the current user holds
- * the required permission(s). Reactive — elements appear once permissions load.
+ * the required permission(s). Reactive, elements appear once permissions load.
  *
  *   <button *axCan="'orders.refund'">Refund</button>
  *   <a *axCan="['payouts.process','payouts.view']; mode 'any'">Payouts</a>

@@ -21,7 +21,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Public product detail keyed by the v3 primary key. The storefront now
  * navigates entirely by v3 id (legacy ids are no longer referenced), so
- * this is the canonical numeric detail endpoint — it resolves BOTH
+ * this is the canonical numeric detail endpoint, it resolves BOTH
  * legacy-migrated products and v3-native products (which have no
  * legacy_product_id and so 404'd on the by-legacy-id shim). The response
  * shape is identical to {@see GetProductController} / by-legacy-id.

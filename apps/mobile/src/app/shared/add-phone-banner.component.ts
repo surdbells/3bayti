@@ -18,11 +18,11 @@ let dismissed = false;
  *
  * Shows for a signed-in user who has NO phone on file and hasn't verified one
  * (the phone-after-social case: Google/Apple sign-ups arrive with phone === ''
- * and is_phone_verified === false — both live on the cached `user` blob written
+ * and is_phone_verified === false, both live on the cached `user` blob written
  * at login by transformV3LoginResponse). Tapping it opens the profile page's
  * existing add/change-phone OTP flow via ?addPhone=1.
  *
- * Renders nothing for guests, for users with a phone, or once dismissed — so
+ * Renders nothing for guests, for users with a phone, or once dismissed, so
  * it's safe to drop at the top of any page. Re-reads the blob on every
  * navigation so it disappears as soon as a number is added.
  */

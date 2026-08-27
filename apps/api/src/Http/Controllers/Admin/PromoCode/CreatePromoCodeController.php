@@ -39,7 +39,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *     check on discount_type, etc.)
  *   - PromoCode constructor + setters: range checks (percentage
  *     must be 0 < v <= 100; money strings DECIMAL(10,2); etc.)
- *     — these throw InvalidArgumentException which the controller
+ *    , these throw InvalidArgumentException which the controller
  *     wraps to 422 with a friendly error code.
  *
  * Returns 201 Created with the admin shape.
@@ -76,7 +76,7 @@ final class CreatePromoCodeController
         $repo = $this->em->getRepository(PromoCode::class);
 
         // Pre-flight uniqueness check. Race-safe via the DB UNIQUE
-        // index — this 409 is just the friendly path.
+        // index, this 409 is just the friendly path.
         if ($repo->findByNormalizedCode($input->code) !== null) {
             throw HttpException::conflict(
                 'promo_code_taken',
@@ -114,7 +114,7 @@ final class CreatePromoCodeController
             }
             $promo->setActive($input->is_active);
         } catch (\InvalidArgumentException $e) {
-            // Domain-layer validation (range checks etc.) — surface as
+            // Domain-layer validation (range checks etc.), surface as
             // 422 with the entity's own message so admin UI can render.
             throw HttpException::validation(['_root' => [$e->getMessage()]]);
         }

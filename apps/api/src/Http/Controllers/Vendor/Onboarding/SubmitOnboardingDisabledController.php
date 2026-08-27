@@ -10,7 +10,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * POST /v3/vendor/onboarding/submit — DISABLED (410 Gone).
+ * POST /v3/vendor/onboarding/submit, DISABLED (410 Gone).
  *
  * Self-serve vendor creation is closed. Sellers now APPLY via the public
  * POST /v3/vendor-applications endpoint and an admin approves the

@@ -1,4 +1,4 @@
-/* Verify phone — extends the shared auth-card via deliberate copy of
+/* Verify phone, extends the shared auth-card via deliberate copy of
    login.scss. See register.scss for the rationale (component-scoped
    styles + Angular's isolation make @use complicated; @import the
    neighbour's file keeps each page self-contained). */

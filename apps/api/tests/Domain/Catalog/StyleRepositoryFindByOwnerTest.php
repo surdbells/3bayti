@@ -18,7 +18,7 @@ use PHPUnit\Framework\TestCase;
 /**
  * "My Styles" ownership gating: findByOwnerPaginated must surface only the
  * styles the authenticated user created (created_by_user) AND that are
- * active — NOT filter by style_type (community vs editorial).
+ * active, NOT filter by style_type (community vs editorial).
  *
  * Same DQL-capture approach as ProductRepositoryActiveVendorGatingTest: CI
  * has no PostgreSQL, so we drive the repository through a mocked
@@ -35,21 +35,21 @@ final class StyleRepositoryFindByOwnerTest extends TestCase
     {
         $dql = $this->captureFindByOwnerDql();
 
-        // Owner gating — only the creator's styles.
+        // Owner gating, only the creator's styles.
         self::assertMatchesRegularExpression(
             '/s\.createdByUser\s*=\s*:user/i',
             $dql,
             'findByOwnerPaginated must require s.createdByUser = :user.',
         );
 
-        // Active gating — soft-deleted/inactive styles excluded.
+        // Active gating, soft-deleted/inactive styles excluded.
         self::assertMatchesRegularExpression(
             '/s\.isActive\s*=\s*true/i',
             $dql,
             'findByOwnerPaginated must require s.isActive = true.',
         );
 
-        // Must NOT filter by style_type — My Styles spans community AND
+        // Must NOT filter by style_type, My Styles spans community AND
         // editorial styles the user submitted.
         self::assertDoesNotMatchRegularExpression(
             '/s\.styleType/i',

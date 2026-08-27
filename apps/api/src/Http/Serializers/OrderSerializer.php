@@ -16,23 +16,23 @@ use Bayti\Api\Domain\User\User;
  *
  * Three shapes:
  *
- *   - listShape — used by GET /v3/orders (lightweight, no items
+ *   - listShape, used by GET /v3/orders (lightweight, no items
  *     drilldown). Matches the my-orders.page binding shape
  *     (per Phase 0 audit):
  *       order.id, order.date, order.status, order.total,
  *       order.items[] (with price, product_image, product_name,
  *       quantity, status, store)
  *
- *   - detailShape — used by GET /v3/orders/{id} (full order with
+ *   - detailShape, used by GET /v3/orders/{id} (full order with
  *     embedded items + billing + shipping addresses).
  *
- *   - itemShape — single OrderItem; used internally + reused
+ *   - itemShape, single OrderItem; used internally + reused
  *     across list and detail.
  */
 final class OrderSerializer
 {
     /**
-     * Lightweight list shape — matches mobile's my-orders page
+     * Lightweight list shape, matches mobile's my-orders page
      * binding (order.id / order.date / order.status / order.total /
      * order.items[]). 'date' is the order's created_at (ISO-8601).
      *
@@ -44,8 +44,8 @@ final class OrderSerializer
      * is omitted entirely (back-compat with existing callers and
      * to avoid forcing N+1 queries on list endpoints).
      *
-     * Each summary is intentionally lightweight — id, status,
-     * reason, requested_at, item_count — enough for a "Returns"
+     * Each summary is intentionally lightweight, id, status,
+     * reason, requested_at, item_count, enough for a "Returns"
      * badge on the order card; clients drill down via
      * GET /v3/returns/{id} when needed.
      *
@@ -105,7 +105,7 @@ final class OrderSerializer
                 'phone' => $order->getUser()->getPhone(),
             ],
             'items' => $items,
-            // M3.2.X.8-F — applied_promo block reads from the persisted
+            // M3.2.X.8-F, applied_promo block reads from the persisted
             // PromoRedemption row. Null when no promo was applied. The
             // snapshot fields (code, type, value) are intentionally
             // taken from PromoRedemption's *_snapshot columns rather
@@ -124,7 +124,7 @@ final class OrderSerializer
     }
 
     /**
-     * Detail shape — adds billing + shipping address blocks. Also
+     * Detail shape, adds billing + shipping address blocks. Also
      * supports the optional 'returns' summary list (M3.2.X.18-H);
      * see listShape() docblock for details.
      *
@@ -140,7 +140,7 @@ final class OrderSerializer
     }
 
     /**
-     * Admin list row — the standard list shape plus the customer
+     * Admin list row, the standard list shape plus the customer
      * (account holder) block. Admin-only: vendors deliberately do not
      * receive customer contact in their order list. The caller eagerly
      * loads o.user (OrderRepository::paginatedForAdmin) so this does not
@@ -180,7 +180,7 @@ final class OrderSerializer
     }
 
     /**
-     * Admin order detail — detail shape plus the customer block, so the
+     * Admin order detail, detail shape plus the customer block, so the
      * order-management screen can show the account holder alongside the
      * shipping recipient.
      *
@@ -247,7 +247,7 @@ final class OrderSerializer
             'id' => $item->getId() ?? 0,
             'product_id' => $product->getId() ?? 0,
             'vendor_id' => $vendorId,
-            // Vendor slug — mobile order pages open the storefront by slug
+            // Vendor slug, mobile order pages open the storefront by slug
             // (legacy ids discarded), works for v3-native stores too.
             'vendor_slug' => $vendor->getSlug(),
             'vendor_name' => $vendor->getName(),
@@ -293,7 +293,7 @@ final class OrderSerializer
      *   is_custom     false
      *   item_status   order status     (mobile reads this as the line status)
      *
-     * unit_price / subtotal use the order SUBTOTAL — for a gift-card
+     * unit_price / subtotal use the order SUBTOTAL, for a gift-card
      * purchase the subtotal equals the denomination (delivery_fee and
      * discount are both '0.00' on these synthetic orders).
      *
@@ -371,7 +371,7 @@ final class OrderSerializer
     }
 
     /**
-     * M3.2.X.8-F — promo block built from the persisted PromoRedemption.
+     * M3.2.X.8-F, promo block built from the persisted PromoRedemption.
      *
      * Reads from the snapshot columns (codeSnapshot,
      * discountTypeSnapshot, discountValueSnapshot) so that a later
@@ -382,7 +382,7 @@ final class OrderSerializer
      *
      * discount_amount is the server-computed amount that was actually
      * applied to this specific order (NOT discount_value, which is
-     * the promo's policy figure — 10% or 50 AED — that becomes a
+     * the promo's policy figure, 10% or 50 AED, that becomes a
      * concrete dirham amount only when multiplied by THIS cart's
      * subtotal).
      *
@@ -418,14 +418,14 @@ final class OrderSerializer
      * Each summary intentionally exposes only the fields a "Returns"
      * badge on the order card needs:
      *
-     *   id              — for the drilldown URL
-     *   reference       — "RET-{id}" for human display
-     *   status          — drives the badge color in the UI
-     *   reason          — short reason code (so the card can show e.g.
+     *   id             , for the drilldown URL
+     *   reference      , "RET-{id}" for human display
+     *   status         , drives the badge color in the UI
+     *   reason         , short reason code (so the card can show e.g.
      *                     "Defective" without a separate fetch)
-     *   requested_at    — for sort + relative-time display
-     *   item_count      — how many items are being returned
-     *   is_terminal     — UI hint to dim the badge for resolved returns
+     *   requested_at   , for sort + relative-time display
+     *   item_count     , how many items are being returned
+     *   is_terminal    , UI hint to dim the badge for resolved returns
      *
      * Full detail is fetched via GET /v3/returns/{id} when the user
      * taps the badge.

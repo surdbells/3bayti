@@ -19,7 +19,7 @@ declare(strict_types=1);
  * preserved on first insert.
  *
  * Depends on migrate-wishlist-labels having run first (for label_id
- * resolution) — though labels are optional, so wishlist still migrates
+ * resolution), though labels are optional, so wishlist still migrates
  * with label_id NULL if labels weren't migrated.
  *
  * Idempotent, transactional, re-runnable while legacy stays live.

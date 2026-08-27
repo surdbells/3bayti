@@ -20,7 +20,7 @@ interface RecentOrder {
 
 /**
  * Per-product sales for the vendor's own product. Reads
- * GET /vendor/products/:id/sales — summary KPIs, a daily revenue/units
+ * GET /vendor/products/:id/sales, summary KPIs, a daily revenue/units
  * series (rendered as a lightweight SVG bar chart), and recent orders.
  */
 @Component({

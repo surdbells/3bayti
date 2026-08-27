@@ -97,7 +97,7 @@ final class LoginControllerTest extends HttpTestCase
     }
 
     // -------------------------------------------------------------------
-    // Failure modes — all return 401 with AUTH_INVALID_CREDENTIALS
+    // Failure modes, all return 401 with AUTH_INVALID_CREDENTIALS
     // -------------------------------------------------------------------
 
     #[Test]

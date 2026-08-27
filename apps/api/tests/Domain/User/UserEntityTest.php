@@ -17,7 +17,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Entity behaviour tests. No database — these exercise pure PHP
+ * Entity behaviour tests. No database, these exercise pure PHP
  * logic in the entity classes (constructors, mutators, computed
  * properties).
  *
@@ -55,7 +55,7 @@ final class UserEntityTest extends TestCase
         $user->setPendingPhone('+971500000002');
 
         // The pending-phone model must NOT change (or un-verify) the active
-        // phone until the OTP is confirmed — an abandoned change keeps it.
+        // phone until the OTP is confirmed, an abandoned change keeps it.
         self::assertSame('+971500000001', $user->getPhone());
         self::assertTrue($user->isPhoneVerified());
         self::assertSame('+971500000002', $user->getPendingPhone());
@@ -95,7 +95,7 @@ final class UserEntityTest extends TestCase
     public function setRolesUpdatesOnlyProvidedFlags(): void
     {
         $user = $this->makeUser();
-        // Set vendor true; don't pass others — they keep their defaults.
+        // Set vendor true; don't pass others, they keep their defaults.
         $user->setRoles(vendor: true);
 
         self::assertTrue($user->isCustomer()); // unchanged from default
@@ -326,7 +326,7 @@ final class UserEntityTest extends TestCase
         $token->revoke('logout');
         $firstRevokedAt = $token->getRevokedAt();
 
-        // Trying again — should not change the timestamp.
+        // Trying again, should not change the timestamp.
         $token->revoke('logout_all');
         self::assertSame($firstRevokedAt, $token->getRevokedAt());
         self::assertSame('logout', $token->getRevokedReason());
@@ -482,7 +482,7 @@ final class UserEntityTest extends TestCase
         $loc = new UserLocation($user);
 
         // Everything optional defaults to null/false. permission_granted
-        // is the only non-null default, and it starts false — the client
+        // is the only non-null default, and it starts false, the client
         // must explicitly grant.
         self::assertSame($user, $loc->getUser());
         self::assertNull($loc->getLatitude());
@@ -574,7 +574,7 @@ final class UserEntityTest extends TestCase
         self::assertFalse($loc->isPermissionGranted());
         self::assertNull($loc->getLatitude());
         self::assertNull($loc->getLongitude());
-        // lastCapturedAt stays null — no coordinates were captured.
+        // lastCapturedAt stays null, no coordinates were captured.
         self::assertNull($loc->getLastCapturedAt());
     }
 
@@ -584,7 +584,7 @@ final class UserEntityTest extends TestCase
         $user = $this->makeUser();
         $loc = new UserLocation($user);
 
-        // Pass only latitude — should be ignored (paired field).
+        // Pass only latitude, should be ignored (paired field).
         // The controller should reject this at validation, but the
         // entity defensively treats partial coords as "neither".
         $loc->update(latitude: 25.0);

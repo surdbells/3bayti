@@ -4,14 +4,14 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { ToastService, Toast } from './toast.service';
 
 /**
- * Toast container — renders the current toast stack as a fixed overlay.
+ * Toast container, renders the current toast stack as a fixed overlay.
  *
  * Mount once at the app shell (app.html). The component listens to
  * ToastService and renders whatever's there.
  *
  * Positioning
  * -----------
- * Top-right on LTR pages, top-left on RTL pages — handled by
+ * Top-right on LTR pages, top-left on RTL pages, handled by
  * inset-inline-start (CSS logical property that flips with `dir`).
  *
  * Accessibility
@@ -19,7 +19,7 @@ import { ToastService, Toast } from './toast.service';
  * The container is a role="region" with aria-live="polite" so screen
  * readers announce new toasts without interrupting the user mid-task.
  * Critical errors that demand attention should use aria-live="assertive"
- * — but for Y.1's "session expired"-class messages, polite is fine.
+ *, but for Y.1's "session expired"-class messages, polite is fine.
  *
  * Each toast has a close button with an aria-label so it's reachable
  * by keyboard.

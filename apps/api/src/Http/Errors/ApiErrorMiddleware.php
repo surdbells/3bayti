@@ -14,7 +14,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Outermost middleware — catches everything and renders the standard
+ * Outermost middleware, catches everything and renders the standard
  * `{error: {code, message, details}}` envelope.
  *
  * Behaviour
@@ -39,7 +39,7 @@ use Psr\Log\NullLogger;
  * -----------------
  * Never send exception messages to the client unless they came from
  * a HttpException (which is explicitly safe-to-show). The catch-all
- * branch returns a generic 500 — internal exceptions can leak SQL,
+ * branch returns a generic 500, internal exceptions can leak SQL,
  * file paths, env vars etc. that we DO NOT want a user to see.
  */
 final class ApiErrorMiddleware implements MiddlewareInterface
@@ -57,9 +57,9 @@ final class ApiErrorMiddleware implements MiddlewareInterface
             return $handler->handle($request);
         } catch (OtpRateLimitException $e) {
             // Shared OTP 429 contract. Mapped HERE (not per-controller)
-            // so EVERY OTP path — otp-login, register/initiate, register
+            // so EVERY OTP path, otp-login, register/initiate, register
             // email-OTP, send-otp resend, password reset, validate-phone
-            // — inherits it, including the verify-side per-code cap which
+            //, inherits it, including the verify-side per-code cap which
             // no controller catches. Body is the flat shape the clients
             // read:  { "error_code": "OTP_RATE_LIMITED", "retry_after": N }
             return $this->renderOtpRateLimited($e);
@@ -98,7 +98,7 @@ final class ApiErrorMiddleware implements MiddlewareInterface
      * (SENTRY_DSN unset in env).
      *
      * Wrapped in try/catch because we never want Sentry to break a
-     * request — if Sentry's HTTP transport fails, we silently move on
+     * request, if Sentry's HTTP transport fails, we silently move on
      * rather than throw a new exception from inside the error handler.
      * The original error is still rendered to the client.
      */
@@ -117,7 +117,7 @@ final class ApiErrorMiddleware implements MiddlewareInterface
                     'original_error' => $e->getMessage(),
                 ]);
             } catch (\Throwable) {
-                // Truly unrecoverable — give up silently.
+                // Truly unrecoverable, give up silently.
             }
         }
     }
@@ -133,7 +133,7 @@ final class ApiErrorMiddleware implements MiddlewareInterface
      * set the standard Retry-After HTTP header for good measure.
      *
      * This is an EXPECTED 4xx (abuse throttle, not our bug) so it is NOT
-     * sent to Sentry — same policy as 4xx HttpExceptions.
+     * sent to Sentry, same policy as 4xx HttpExceptions.
      */
     private function renderOtpRateLimited(OtpRateLimitException $e): ResponseInterface
     {

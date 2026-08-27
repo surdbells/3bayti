@@ -7,7 +7,7 @@ namespace Bayti\Api\Domain\Catalog;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * A vendor's published size-chart row — the garment dimensions for one
+ * A vendor's published size-chart row, the garment dimensions for one
  * size in this store's size guide (e.g. store size "M" → bust 92, waist
  * 76, ...).
  *

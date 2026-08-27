@@ -29,7 +29,7 @@ use PHPUnit\Framework\TestCase;
  *   - getVendorIds() deduplication across items
  *   - Bidirectional collection wiring (addItem / addPhoto)
  *
- * Direct-construction tests — no DB, no DI. Entities are constructed
+ * Direct-construction tests, no DB, no DI. Entities are constructed
  * via their real constructors; ids set via reflection where needed
  * (matches the established pattern in LocaleResolverTest +
  * OrderSerializerPromoTest).
@@ -41,7 +41,7 @@ use PHPUnit\Framework\TestCase;
 final class OrderReturnRequestTest extends TestCase
 {
     // =================================================================
-    // OrderReturnRequest — construction + reason validation
+    // OrderReturnRequest, construction + reason validation
     // =================================================================
 
     #[Test]
@@ -129,7 +129,7 @@ final class OrderReturnRequestTest extends TestCase
     #[Test]
     public function allSevenReasonConstantsAreValid(): void
     {
-        // Defensive — protects against typo regressions in the constant list.
+        // Defensive, protects against typo regressions in the constant list.
         self::assertCount(7, OrderReturnRequest::ALL_REASONS);
         foreach (OrderReturnRequest::ALL_REASONS as $reason) {
             $notes = $reason === OrderReturnRequest::REASON_OTHER ? 'some explanation' : null;
@@ -144,7 +144,7 @@ final class OrderReturnRequestTest extends TestCase
     }
 
     // =================================================================
-    // OrderReturnRequest — state machine (legal transitions)
+    // OrderReturnRequest, state machine (legal transitions)
     // =================================================================
 
     #[Test]
@@ -267,7 +267,7 @@ final class OrderReturnRequestTest extends TestCase
     }
 
     // =================================================================
-    // OrderReturnRequest — state machine (illegal transitions)
+    // OrderReturnRequest, state machine (illegal transitions)
     // =================================================================
 
     #[Test]
@@ -296,7 +296,7 @@ final class OrderReturnRequestTest extends TestCase
     public function markPickedUpFromPendingIsRejected(): void
     {
         $request = $this->makePendingRequest();
-        // Skip approval — try to go straight to picked_up.
+        // Skip approval, try to go straight to picked_up.
 
         $this->expectException(\DomainException::class);
         $this->expectExceptionMessage("Cannot mark picked-up from status 'pending'");
@@ -367,7 +367,7 @@ final class OrderReturnRequestTest extends TestCase
     }
 
     // =================================================================
-    // OrderReturnRequest — getVendorIds dedup
+    // OrderReturnRequest, getVendorIds dedup
     // =================================================================
 
     #[Test]
@@ -448,7 +448,7 @@ final class OrderReturnRequestTest extends TestCase
     #[Test]
     public function returnItemAllowsFullQuantity(): void
     {
-        // Customer bought 3, returning all 3 — boundary case.
+        // Customer bought 3, returning all 3, boundary case.
         $orderItem = $this->makeOrderItem($this->makeOrder(), $this->makeVendor(101), qty: 3, unitPrice: '10.00');
         $returnItem = new OrderReturnRequestItem($orderItem, 3);
         self::assertSame(3, $returnItem->getQuantity());

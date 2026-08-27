@@ -50,7 +50,7 @@ export class I18nTitleStrategy extends TitleStrategy {
  * Phase 1: home + a dev-only component preview + categories index.
  * Phase 2 adds: /category/:slug ✓ + /product/:slug + /designer + /designer/:slug.
  * Y.1 (auth): /login + /register + /verify-phone + /forgot-password +
- *             /reset-password — all gated by guestActivateGuard so
+ *             /reset-password, all gated by guestActivateGuard so
  *             signed-in users get redirected away.
  *
  * This is a client-side-rendered SPA (deployed as static assets on
@@ -65,7 +65,7 @@ export const routes: Routes = [
     title: 'routeTitles.home',
   },
   {
-    /* Categories index — `/category`. Lazy-loaded; fetches the live
+    /* Categories index, `/category`. Lazy-loaded; fetches the live
        category list client-side on load. */
     path: 'category',
     loadComponent: () =>
@@ -73,7 +73,7 @@ export const routes: Routes = [
     title: 'routeTitles.categories',
   },
   {
-    /* Category detail — `/category/:slug`. Renders category metadata +
+    /* Category detail, `/category/:slug`. Renders category metadata +
        a filterable product grid with ItemList JSON-LD. */
     path: 'category/:slug',
     loadComponent: () =>
@@ -84,7 +84,7 @@ export const routes: Routes = [
     title: 'routeTitles.categories',
   },
   {
-    /* Product detail — `/product/:slug`. The PDP. Renders the product
+    /* Product detail, `/product/:slug`. The PDP. Renders the product
        with Product + Breadcrumb JSON-LD; data is fetched client-side
        for the current slug. */
     path: 'product/:slug',
@@ -95,7 +95,7 @@ export const routes: Routes = [
     title: 'routeTitles.product',
   },
   {
-    /* Stores directory — `/stores`. Public storefront page:
+    /* Stores directory, `/stores`. Public storefront page:
        featured stores + paginated A-Z grid of all active stores.
        Backed by /v3/vendors + /v3/featured-vendors. (Formerly /designer.) */
     path: 'stores',
@@ -104,7 +104,7 @@ export const routes: Routes = [
     title: 'routeTitles.stores',
   },
   {
-    /* Store reviews — `/stores/:slug/reviews`. The store's public
+    /* Store reviews, `/stores/:slug/reviews`. The store's public
        (approved) reviews list. Target of store-card.ts's vendorReviewsUrl().
        Registered before `stores/:slug` so the more specific path wins. */
     path: 'stores/:slug/reviews',
@@ -113,19 +113,19 @@ export const routes: Routes = [
     title: 'routeTitles.storeReviews',
   },
   {
-    /* Store detail — `/stores/:slug`. Store header + their product grid.
+    /* Store detail, `/stores/:slug`. Store header + their product grid.
        (Formerly /designer/:slug.) */
     path: 'stores/:slug',
     loadComponent: () =>
       import('./features/stores/store-detail-page').then(m => m.StoreDetailPageComponent),
     title: 'routeTitles.storeDetail',
   },
-  /* Legacy /designer URLs (pre-rename — indexed + bookmarked) → /stores.
+  /* Legacy /designer URLs (pre-rename, indexed + bookmarked) → /stores.
      Param-preserving so deep links to a specific store survive. */
   { path: 'designer', pathMatch: 'full', redirectTo: 'stores' },
   { path: 'designer/:slug', redirectTo: 'stores/:slug' },
   {
-    /* Style Hub — `/styles`. Public storefront page: Community,
+    /* Style Hub, `/styles`. Public storefront page: Community,
        3bayti (editorial), and My styles (auth) tabs, each a grid of
        curated-outfit cards. Backed by /v3/styles + /v3/me/styles.
        Registered before `styles/:slug` so the index wins. */
@@ -136,7 +136,7 @@ export const routes: Routes = [
     title: 'routeTitles.styles',
   },
   {
-    /* Create a style — `/styles/create`. Name + product picker → POST
+    /* Create a style, `/styles/create`. Name + product picker → POST
        /me/styles. Auth-gated (the create endpoint is Bearer-bound).
        MUST precede `styles/:slug` so the literal segment wins. */
     path: 'styles/create',
@@ -146,7 +146,7 @@ export const routes: Routes = [
     title: 'routeTitles.styleCreate',
   },
   {
-    /* Style detail — `/styles/:slug`. Cover + the bundled products with
+    /* Style detail, `/styles/:slug`. Cover + the bundled products with
        View product + Add to wishlist, plus a display-only total. */
     path: 'styles/:slug',
     loadComponent: () =>
@@ -154,7 +154,7 @@ export const routes: Routes = [
     title: 'routeTitles.styleDetail',
   },
   {
-    /* Best Sellers — curated product listing sorted by sales. */
+    /* Best Sellers, curated product listing sorted by sales. */
     path: 'best-sellers',
     loadComponent: () =>
       import('./features/listings/product-listing-page').then(m => m.ProductListingPageComponent),
@@ -170,7 +170,7 @@ export const routes: Routes = [
     title: 'routeTitles.bestSellers',
   },
   {
-    /* New Arrivals — curated product listing sorted by recency. */
+    /* New Arrivals, curated product listing sorted by recency. */
     path: 'new-arrivals',
     loadComponent: () =>
       import('./features/listings/product-listing-page').then(m => m.ProductListingPageComponent),
@@ -186,7 +186,7 @@ export const routes: Routes = [
     title: 'routeTitles.newArrivals',
   },
   {
-    /* Discounted — on-sale product listing. Reuses the shared listing
+    /* Discounted, on-sale product listing. Reuses the shared listing
        component with `saleOnly` pinned so the API filters to price-based
        on-sale products (GET /v3/products?sale=true) across grid + facets +
        load-more. Linked from the primary nav's "Discounted" entry. */
@@ -206,7 +206,7 @@ export const routes: Routes = [
     title: 'routeTitles.discounted',
   },
   {
-    /* Gift Cards — browse the themed designs + purchase (Phase E2).
+    /* Gift Cards, browse the themed designs + purchase (Phase E2).
        Public page; purchasing requires auth (the API rejects an
        unauthenticated purchase) and sends the buyer to Noon checkout. */
     path: 'gift-cards',
@@ -223,7 +223,7 @@ export const routes: Routes = [
     title: 'routeTitles.giftCardRedeem',
   },
   {
-    /* Sell on 3bayti — vendor recruitment pitch (Phase F). Public; seller
+    /* Sell on 3bayti, vendor recruitment pitch (Phase F). Public; seller
        CTAs target the external seller app (VENDOR_APP_URL). */
     path: 'sell',
     loadComponent: () =>
@@ -285,7 +285,7 @@ export const routes: Routes = [
     title: 'routeTitles.resetPassword',
   },
   /* --- Cart + Checkout (M3.2.Y.2) --------------------------------------
-     /cart is public — guests and authenticated users both see their
+     /cart is public, guests and authenticated users both see their
      cart. Checkout routes (Y.2-D+) are auth-gated. */
   {
     path: 'cart',
@@ -326,7 +326,7 @@ export const routes: Routes = [
     title: 'routeTitles.accountMeasurements',
   },
   {
-    /* Connected accounts — Google/Apple link management (social sign-in). */
+    /* Connected accounts, Google/Apple link management (social sign-in). */
     path: 'account/connected',
     canActivate: [authActivateGuard],
     loadComponent: () =>
@@ -341,7 +341,7 @@ export const routes: Routes = [
     title: 'routeTitles.accountDelete',
   },
   {
-    /* Order chat inbox — the customer's conversations with vendors. */
+    /* Order chat inbox, the customer's conversations with vendors. */
     path: 'account/messages',
     canActivate: [authActivateGuard],
     loadComponent: () =>
@@ -349,7 +349,7 @@ export const routes: Routes = [
     title: 'routeTitles.accountMessages',
   },
   {
-    /* A single order conversation (uuid-keyed) — thread + composer. */
+    /* A single order conversation (uuid-keyed), thread + composer. */
     path: 'account/messages/:uuid',
     canActivate: [authActivateGuard],
     loadComponent: () =>
@@ -364,7 +364,7 @@ export const routes: Routes = [
     title: 'routeTitles.accountWishlist',
   },
   {
-    /* Gift cards the buyer owns (purchased + redeemed) — Phase E3. */
+    /* Gift cards the buyer owns (purchased + redeemed), Phase E3. */
     path: 'account/gift-cards',
     canActivate: [authActivateGuard],
     loadComponent: () =>
@@ -462,7 +462,7 @@ export const routes: Routes = [
     title: 'routeTitles.deleteAccount',
   },
   {
-    /* Catch-all 404 — MUST remain last. This is a client route (not a
+    /* Catch-all 404, MUST remain last. This is a client route (not a
        top-level 404.html asset), so Cloudflare Pages' built-in SPA
        fallback still serves index.html for unknown paths and Angular
        renders this page. */

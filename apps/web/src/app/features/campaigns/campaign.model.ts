@@ -1,7 +1,7 @@
 import type { Product, Money } from '../catalog/product.model';
 
 /**
- * Campaign types — match the v3 CampaignSerializer output
+ * Campaign types, match the v3 CampaignSerializer output
  * (GET /v3/campaigns/active and GET /v3/campaigns/:slug).
  *
  * Pricing is derived server-side at read time: campaign_price is the
@@ -33,14 +33,14 @@ export interface Campaign {
   /** Campaign-wide default discount percent. */
   discount_percent: number;
   starts_at: string;
-  /** ISO 8601 — the countdown target. */
+  /** ISO 8601, the countdown target. */
   ends_at: string;
   items: CampaignItem[];
 }
 
 /**
  * The active-campaigns payload. `server_now` is the server clock at
- * response time — countdowns compute their offset against it so a skewed
+ * response time, countdowns compute their offset against it so a skewed
  * device clock doesn't misreport the time remaining. Either campaign may
  * be null (none live of that type).
  */

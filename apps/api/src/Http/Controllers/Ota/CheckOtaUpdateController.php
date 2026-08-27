@@ -13,10 +13,10 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * POST /v3/ota/updates — the self-hosted update endpoint the
+ * POST /v3/ota/updates, the self-hosted update endpoint the
  * @capgo/capacitor-updater plugin polls on app resume / cold start.
  *
- * INTENTIONALLY UNAUTHENTICATED — the plugin runs before/around app auth and
+ * INTENTIONALLY UNAUTHENTICATED, the plugin runs before/around app auth and
  * carries no user JWT. It is safe: the endpoint only reads public release
  * metadata and returns a bundle URL + checksum. Integrity is enforced
  * downstream by the plugin (SHA256 verification, and signature verification
@@ -27,10 +27,10 @@ use Psr\Http\Message\ServerRequestInterface;
  *   app build), version_os, device_id, plugin_version, custom_id, is_prod,
  *   is_emulator, defaultChannel.
  *
- * Response — update available:
+ * Response, update available:
  *   { "version": "1.0.7", "url": "https://…/1.0.7.zip",
  *     "checksum": "<sha256>"[, "session_key": "<iv>"] }
- * Response — no update:
+ * Response, no update:
  *   { "message": "No update", "version": "", "url": "" }
  */
 final class CheckOtaUpdateController

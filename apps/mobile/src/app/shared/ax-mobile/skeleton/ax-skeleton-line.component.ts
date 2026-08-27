@@ -1,5 +1,5 @@
 /**
- * AxSkeletonLineComponent — single horizontal bar for text placeholders.
+ * AxSkeletonLineComponent, single horizontal bar for text placeholders.
  *
  * Usage:
  *

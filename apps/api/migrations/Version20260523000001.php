@@ -8,10 +8,10 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.4 — Five schema additions introduced across M3.4-A through M3.4-H.
+ * M3.4, Five schema additions introduced across M3.4-A through M3.4-H.
  *
  * All changes are additive (no column removal, no destructive ALTER).
- * Safe to apply to a live database with zero downtime — each statement
+ * Safe to apply to a live database with zero downtime, each statement
  * adds a new nullable column or a new table; no existing row is modified.
  *
  * Changes
@@ -42,7 +42,7 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * Rollback (down): drops new tables + new columns. Because promo_codes
  * rows with a non-null vendor_id are data created by vendors via M3.4,
- * a rollback would logically lose that coupon ownership information —
+ * a rollback would logically lose that coupon ownership information -
  * document this clearly in the runbook before rolling back.
  */
 final class Version20260523000001 extends AbstractMigration
@@ -145,7 +145,7 @@ final class Version20260523000001 extends AbstractMigration
         $this->addSql('DROP INDEX IF EXISTS uq_product_collections_slug');
         $this->addSql('DROP TABLE IF EXISTS product_collections');
 
-        // 4. support_ticket_messages (FK to support_tickets — drop first)
+        // 4. support_ticket_messages (FK to support_tickets, drop first)
         $this->addSql('DROP INDEX IF EXISTS idx_ticket_messages_ticket');
         $this->addSql('DROP TABLE IF EXISTS support_ticket_messages');
 

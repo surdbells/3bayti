@@ -11,7 +11,7 @@ import { TranslatePipe } from '../../../translate.pipe';
 import type { RoleOption, RoleRef } from '../users.component';
 
 /**
- * /adminusers/:id/roles — assign roles to a staff member.
+ * /adminusers/:id/roles, assign roles to a staff member.
  *
  * Extracted from the users page's in-place "Manage roles" drawer into a routed
  * sub-page (adminGuard). Loads the target staff member + the role list, then

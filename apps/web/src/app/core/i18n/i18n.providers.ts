@@ -13,7 +13,7 @@ import { LocaleService } from './locale.service';
  * The very first paint must already have translated strings or users
  * see English flash on a server-rendered Arabic page (or vice versa).
  * Returning the LocaleService.initialize() promise from the initializer
- * blocks app bootstrap until the JSON file is loaded — small cost
+ * blocks app bootstrap until the JSON file is loaded, small cost
  * (~10-50 KB single-fetch) for a clean first paint.
  *
  * Asset path layout
@@ -46,13 +46,13 @@ export function provideI18n(): EnvironmentProviders {
          whichever `use()` requests. */
     }),
 
-    /* Default HTTP loader — fetches /i18n/<lang>.json. */
+    /* Default HTTP loader, fetches /i18n/<lang>.json. */
     provideTranslateHttpLoader({
       prefix: '/i18n/',
       suffix: '.json',
     }),
 
-    /* App initializer — resolves the locale before first render.
+    /* App initializer, resolves the locale before first render.
        Inside the factory we have access to inject(). The function
        may return a Promise to defer bootstrap. */
     provideAppInitializer(() => {
@@ -63,7 +63,7 @@ export function provideI18n(): EnvironmentProviders {
          here keeps the service decoupled from ngx-translate's
          lifecycle methods.) */
       // Note: addLangs is internally a no-op for already-added langs.
-      // We don't need to call it ourselves — TranslateService picks
+      // We don't need to call it ourselves, TranslateService picks
       // up the lang from .use() automatically.
 
       return locale.initialize();

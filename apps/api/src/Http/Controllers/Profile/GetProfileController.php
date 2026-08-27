@@ -17,12 +17,12 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/me/profile
  *
- * Returns the authenticated user's full profile — same shape that
+ * Returns the authenticated user's full profile, same shape that
  * /v3/auth/me returns. The two endpoints exist as separate URIs for
  * clarity:
  *
- *   /v3/auth/me      — "who am I" (used by routing/onboarding logic)
- *   /v3/me/profile   — "show me my profile" (used by the profile page)
+ *   /v3/auth/me     , "who am I" (used by routing/onboarding logic)
+ *   /v3/me/profile  , "show me my profile" (used by the profile page)
  *
  * Both currently delegate to UserSerializer::publicProfile(). If/when
  * we want them to diverge (e.g., /me/profile shows extended fields
@@ -33,7 +33,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * AuthMiddleware (registered on the route in config/routes.php) loads
  * the User by JWT subject and attaches it to the request before this
  * controller runs. If the User isn't present, AuthMiddleware was
- * bypassed somehow — defensive check rejects with 401.
+ * bypassed somehow, defensive check rejects with 401.
  */
 final class GetProfileController
 {

@@ -1,7 +1,7 @@
 /**
  * Chromatic visual regression helper for apps/web e2e tests.
  *
- * M3.2.0-C — wraps @chromatic-com/playwright's takeSnapshot with a
+ * M3.2.0-C, wraps @chromatic-com/playwright's takeSnapshot with a
  * single import surface for our spec files, plus a no-op fallback
  * when CHROMATIC_PROJECT_TOKEN is absent (e.g. local dev).
  *

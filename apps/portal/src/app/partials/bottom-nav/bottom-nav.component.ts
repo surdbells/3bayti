@@ -13,7 +13,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
  * (Settings, Notifications, Messages, Reviews, Returns, Compliance,
  * Profile, Security, Sign Out).
  *
- * Hidden ≥ 769 px via CSS — desktop users have the full sidenav.
+ * Hidden ≥ 769 px via CSS, desktop users have the full sidenav.
  */
 @Component({
   selector: 'app-bottom-nav',

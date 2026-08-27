@@ -108,12 +108,12 @@ final class LocaleResolver
             return $vendorLocale;
         }
 
-        // Step 3: Admin recipient match — locked to English
+        // Step 3: Admin recipient match, locked to English
         if (in_array($recipientEmail, $adminRecipients, true)) {
             return self::DEFAULT_LOCALE;
         }
 
-        // Step 4: Unknown recipient — fail safe to English
+        // Step 4: Unknown recipient, fail safe to English
         return self::DEFAULT_LOCALE;
     }
 
@@ -141,7 +141,7 @@ final class LocaleResolver
      * Multi-vendor orders may have multiple distinct vendors, but
      * only ONE of them will match the recipient (the email goes to
      * a single vendor at a time). The first matching vendor wins
-     * by iteration order — this is deterministic because OrderItem
+     * by iteration order, this is deterministic because OrderItem
      * preserves insertion order.
      *
      * Reads the NEW Vendor.preferredLocale field. Already in short-

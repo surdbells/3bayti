@@ -29,8 +29,8 @@ use Psr\Http\Message\ServerRequestInterface;
  * user's active cart, optionally with a promo code applied.
  *
  * Request body (all fields optional):
- *   { "promo_code": "WELCOME10" }   — promo applied
- *   { }                              — no promo, just the cart preview
+ *   { "promo_code": "WELCOME10" }  , promo applied
+ *   { }                             , no promo, just the cart preview
  *
  * Response (200):
  *   {
@@ -54,7 +54,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   401  No / invalid bearer token
  *   422  Cart is empty (BUSINESS_RULE_VIOLATION). Quoting an empty
  *        cart isn't meaningful and matches the existing initiate
- *        endpoint's behavior — fail fast at the same shape.
+ *        endpoint's behavior, fail fast at the same shape.
  *   422  Promo failure (PROMO_NOT_FOUND, PROMO_EXPIRED, ...). The
  *        cart contents are valid; the supplied code didn't apply.
  *        Error code + structured details payload tell the client UX
@@ -142,7 +142,7 @@ final class QuoteCartController
     /**
      * Resolve the supplied promo code (if any) or return null when
      * the customer didn't pass one. Promo failures map to 422 via
-     * PromoNotApplicableException::toHttpException — same shape as
+     * PromoNotApplicableException::toHttpException, same shape as
      * the rest of the API's structured 422 envelope.
      */
     private function resolvePromoOrThrow(

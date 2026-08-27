@@ -45,7 +45,7 @@ use Psr\Http\Server\RequestHandlerInterface;
  * 2. User is authenticated but not admin → 403 Forbidden.
  *    Distinct from 401: the caller IS who they say they are; they
  *    just don't have the role we need. 403 communicates "we know
- *    who you are, you can't do this" — appropriate for a logged-in
+ *    who you are, you can't do this", appropriate for a logged-in
  *    customer trying to hit /v3/admin/*.
  *
  * Access check
@@ -59,7 +59,7 @@ use Psr\Http\Server\RequestHandlerInterface;
  * ---------------
  * Failed admin checks are logged at WARNING level via the standard
  * logger (auto-wired). The audit log itself is NOT written here
- * because the request never reached a controller — there's no
+ * because the request never reached a controller, there's no
  * "subject entity" to audit. Repeated failures should be visible
  * in log aggregation for ops to spot brute-force admin probing.
  */
@@ -95,7 +95,7 @@ final class AdminAuthMiddleware implements MiddlewareInterface
             return $this->forbidden();
         }
 
-        // Staff confirmed (full admin or a role-holder) — proceed. Each route is
+        // Staff confirmed (full admin or a role-holder), proceed. Each route is
         // additionally gated by PermissionMiddleware for its specific permission.
         return $handler->handle($request);
     }

@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.2.Z.3-API — Wishlist labels (Q-Z3=B).
+ * M3.2.Z.3-API, Wishlist labels (Q-Z3=B).
  *
  * Extends the flat Y.6-C wishlist with user-defined labels (the
  * mobile "closets" / folders model), so the mobile wishlist can
@@ -21,14 +21,14 @@ use Doctrine\Migrations\AbstractMigration;
  *   user_id     BIGINT NOT NULL → users(id) ON DELETE CASCADE
  *   name        VARCHAR(80) NOT NULL
  *   created_at  TIMESTAMPTZ NOT NULL
- *   UNIQUE (user_id, name)  — one label name per user
- *   INDEX (user_id)         — list a user's labels
+ *   UNIQUE (user_id, name) , one label name per user
+ *   INDEX (user_id)        , list a user's labels
  *
  * wishlist.label_id  BIGINT NULL → wishlist_labels(id) ON DELETE SET NULL
  *   - NULL = uncategorized ("All saved" view).
  *   - ON DELETE SET NULL: deleting a label keeps the saved products,
  *     just moves them back to uncategorized (no data loss).
- *   - INDEX (user_id, label_id) — the label-filtered read path.
+ *   - INDEX (user_id, label_id), the label-filtered read path.
  *
  * The existing unique (user_id, product_id) is unchanged: a product is
  * still saved at most once per user. A saved product belongs to at

@@ -24,10 +24,10 @@ use Psr\Http\Message\ServerRequestInterface;
  * (populated by the X.12-E cron) with popular-fallback when
  * pre-computed rows are missing.
  *
- * Authentication: not required — recommendations are public.
+ * Authentication: not required, recommendations are public.
  * Q-VendorScope = A: marketplace-wide recommendations cross vendors.
  *
- * No audit emission — public read endpoint without sensitive data.
+ * No audit emission, public read endpoint without sensitive data.
  *
  * Limit clamping per Q-OutputSize = B: clamped to [3, 20] in the
  * RecommendationsService rather than 400'ing on out-of-range input.

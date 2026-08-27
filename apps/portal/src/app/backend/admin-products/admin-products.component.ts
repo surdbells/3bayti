@@ -103,7 +103,7 @@ export class AdminProductsComponent implements OnInit {
             { label: 'On backorder', value: 'on_backorder' },
           ],
         },
-        // Store filter — value is the vendor SLUG (GET /products resolves a
+        // Store filter, value is the vendor SLUG (GET /products resolves a
         // store by slug, not the v3 id used on the orders/sales tables).
         { key: 'vendor', label: 'Store', type: 'select', optionsLoader: () => loadAdminVendorOptions(this.adapter, 'slug') },
       ],

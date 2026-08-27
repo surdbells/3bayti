@@ -26,7 +26,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * notifications.
  *
  * Owner-scoped: only deactivates a token that belongs to the current
- * user. Idempotent — an unknown or not-owned token is a no-op success
+ * user. Idempotent, an unknown or not-owned token is a no-op success
  * (204), because the caller's goal ("this token shouldn't receive my
  * pushes") is already satisfied. We never reveal whether a token
  * exists for another user.

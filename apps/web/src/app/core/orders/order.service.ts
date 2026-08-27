@@ -15,17 +15,17 @@ import type {
 } from './order.types';
 
 /**
- * OrderService — auth-required reads + cancel against `/v3/orders`.
+ * OrderService, auth-required reads + cancel against `/v3/orders`.
  *
- * Endpoints (all wrap their payload in an object — never a bare array):
+ * Endpoints (all wrap their payload in an object, never a bare array):
  *   GET    /v3/orders?limit=&offset=        → { orders: OrderListItem[], pagination }
  *   GET    /v3/orders/:id                   → { order } (detail with addresses)
  *   POST   /v3/orders/:id/cancel            → { order, cancellation }
  *
  * State surface (signals):
- *   - listItems()    Signal<OrderListItem[]>  — accumulating list for
+ *   - listItems()    Signal<OrderListItem[]> , accumulating list for
  *                                              load-more pagination
- *   - hasMore()      computed boolean         — true while a subsequent
+ *   - hasMore()      computed boolean        , true while a subsequent
  *                                              page might exist
  *   - isLoadingList()
  *   - isLoadingDetail()
@@ -36,7 +36,7 @@ import type {
  * with load-more (Q-Pagination=B from Y.2 plan). reset() clears the
  * accumulator before a fresh load (e.g. on route re-entry).
  *
- * Detail isn't held in a service signal — pages own their detail
+ * Detail isn't held in a service signal, pages own their detail
  * signal because two routes can be open simultaneously (e.g. orders
  * list cached while detail view is open in a tab).
  */
@@ -104,7 +104,7 @@ export class OrderService {
       const response = await firstValueFrom(
         this.http.get<OrderListResponse>(`${V3_BASE}/v3/orders`, { params: httpParams }),
       );
-      /* The API returns an OBJECT body { orders, pagination } — unwrap
+      /* The API returns an OBJECT body { orders, pagination }, unwrap
          the array off `orders`. Defensive against a missing/odd shape. */
       const page = Array.isArray(response?.orders) ? response.orders : [];
 
@@ -119,7 +119,7 @@ export class OrderService {
       this._lastPageSize.set(page.length);
 
       /* Record the authoritative total so hasMore is exact. Guard the
-         shape defensively — fall back to the page-size heuristic when
+         shape defensively, fall back to the page-size heuristic when
          pagination is absent or malformed. */
       const total = response?.pagination?.total;
       this._total.set(typeof total === 'number' ? total : null);
@@ -146,7 +146,7 @@ export class OrderService {
    * Best-effort: any failure (including the endpoint not being deployed
    * yet) resolves to an empty array so the detail page can fall back to a
    * client-derived stepper rather than erroring. The body is the bare
-   * `{ events, total }` shape (Responder writes it at top level — no
+   * `{ events, total }` shape (Responder writes it at top level, no
    * `data` envelope).
    */
   async getTimeline(id: number): Promise<OrderTimelineEvent[]> {
@@ -199,7 +199,7 @@ export class OrderService {
    *   - photos[]: 0-5 image files
    *
    * Returns the created return-request shape (currently typed as
-   * unknown until Y.5 surfaces a return-detail UI — the caller only
+   * unknown until Y.5 surfaces a return-detail UI, the caller only
    * needs to know the submission succeeded for now).
    */
   async submitReturn(

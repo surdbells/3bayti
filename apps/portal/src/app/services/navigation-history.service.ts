@@ -7,7 +7,7 @@ import { filter } from 'rxjs';
  * Powers "smart" back buttons.
  *
  * The problem: most `goBack()` handlers called `router.navigate(['/list'])`,
- * which is a NEW forward navigation — it re-initialises the destination
+ * which is a NEW forward navigation, it re-initialises the destination
  * (re-fetch, scroll to top, filters reset), so the user never lands back where
  * they were. It also defeats the router's scroll-position restoration, which
  * only kicks in on a real browser back (popstate).

@@ -14,15 +14,15 @@ use Psr\Log\LoggerInterface;
  * Event sources (Q-EventSources = A locked):
  *   1. Entity-derived events from the Order itself
  *      (order.created from createdAt; order.paid from paid_at)
- *   2. audit_log table — every recorded admin action against
+ *   2. audit_log table, every recorded admin action against
  *      the order or its items (subject_type IN ('Order','OrderItem',
  *      'OrderReturnRequest'))
- *   3. notification_logs — every email fired for the order
+ *   3. notification_logs, every email fired for the order
  *      (template + status + sent_at)
- *   4. order_return_requests — return lifecycle timestamps
+ *   4. order_return_requests, return lifecycle timestamps
  *      (requested / decided / picked_up / delivered_to_vendor /
  *      refunded / cancelled)
- *   5. order_disputes — dispute lifecycle (created, resolved)
+ *   5. order_disputes, dispute lifecycle (created, resolved)
  *
  * Vendor filter (Q-VendorScope = A locked)
  * =========================================
@@ -41,7 +41,7 @@ use Psr\Log\LoggerInterface;
  * {
  *   id:          "audit:1234" | "notification:567" | "return:42" |
  *                "dispute:8" | "order:created" | "order:paid"
- *                — namespaced source:id so cross-source uniqueness
+ *               , namespaced source:id so cross-source uniqueness
  *                  is guaranteed
  *   type:        "order.created" | "order.paid" | "order.status_changed"
  *                | "order.item_status_changed" | "notification.sent"
@@ -63,7 +63,7 @@ use Psr\Log\LoggerInterface;
  * Pagination (Q-Pagination = A locked)
  * =====================================
  * limit + offset over the merged + sorted list. v1 returns ALL
- * events from each source then slices in PHP — acceptable for
+ * events from each source then slices in PHP, acceptable for
  * typical orders with 10-50 events. Cursor-based deferred.
  *
  * Observability mirrors the X.10-D / X.14-A pattern.
@@ -71,7 +71,7 @@ use Psr\Log\LoggerInterface;
 /**
  * @internal Marked non-final ONLY to allow PHPUnit class doubles
  *           in controller tests. Production code MUST NOT subclass
- *           this — there's no extension point. Same posture as
+ *           this, there's no extension point. Same posture as
  *           FacetAggregator (X.10-A).
  */
 class OrderTimelineBuilder
@@ -132,7 +132,7 @@ class OrderTimelineBuilder
         // 4. Return request events
         $events = array_merge($events, $this->fetchReturnEvents($orderId, $vendorIdFilter));
 
-        // 5. Dispute events — admin-only (Q-VendorScope = A)
+        // 5. Dispute events, admin-only (Q-VendorScope = A)
         if ($vendorIdFilter === null) {
             $events = array_merge($events, $this->fetchDisputeEvents($orderId));
         }
@@ -156,7 +156,7 @@ class OrderTimelineBuilder
     }
 
     // =================================================================
-    // Source 1 — entity-derived events
+    // Source 1, entity-derived events
     // =================================================================
 
     /**
@@ -199,7 +199,7 @@ class OrderTimelineBuilder
     }
 
     // =================================================================
-    // Source 2 — audit_log
+    // Source 2, audit_log
     // =================================================================
 
     /**
@@ -342,7 +342,7 @@ class OrderTimelineBuilder
     }
 
     // =================================================================
-    // Source 3 — notification_logs
+    // Source 3, notification_logs
     // =================================================================
 
     /**
@@ -353,7 +353,7 @@ class OrderTimelineBuilder
         // Vendor scope: a vendor sees notifications addressed to them
         // (recipient matches their contact_email) and customer-side
         // notifications about their items. For v1 we apply ONLY the
-        // 'addressed to this vendor' filter — finer-grained per-item
+        // 'addressed to this vendor' filter, finer-grained per-item
         // attribution would require notification rows to carry
         // vendor_id (they don't today). Documented as operator
         // follow-up #22 in the closure.
@@ -416,7 +416,7 @@ class OrderTimelineBuilder
     }
 
     // =================================================================
-    // Source 4 — order_return_requests
+    // Source 4, order_return_requests
     // =================================================================
 
     /**
@@ -454,7 +454,7 @@ class OrderTimelineBuilder
             $returnId = (int) $row['id'];
             $reason = (string) ($row['reason'] ?? '');
 
-            // requested — always present
+            // requested, always present
             $events[] = [
                 'id' => 'return:' . $returnId . ':submitted',
                 'type' => 'return.submitted',
@@ -532,7 +532,7 @@ class OrderTimelineBuilder
     }
 
     // =================================================================
-    // Source 5 — order_disputes (admin-only per Q-VendorScope)
+    // Source 5, order_disputes (admin-only per Q-VendorScope)
     // =================================================================
 
     /**
@@ -657,7 +657,7 @@ class OrderTimelineBuilder
         }
         $uid = (int) $userId;
         $out = ['type' => $defaultType, 'id' => $uid];
-        // We don't join users here — keep the timeline query light.
+        // We don't join users here, keep the timeline query light.
         // Caller can hydrate the actor label if needed by joining
         // user_id → users.email in the serializer layer.
         return $out;

@@ -18,7 +18,7 @@ import { CartService } from '../../core/cart';
 import { ToastService } from '../../shared/forms';
 
 /**
- * /checkout/address — step 1 of 3.
+ * /checkout/address, step 1 of 3.
  *
  * Lets the user pick a shipping address from their address book
  * (or add a new one inline), then advances to /checkout/review.
@@ -267,7 +267,7 @@ export class CheckoutAddressPageComponent implements OnInit {
   }
 
   protected onCancelAdd(): void {
-    /* If the user had no addresses they can't cancel into nothing —
+    /* If the user had no addresses they can't cancel into nothing -
        keep them on the form. (The cancel button hides in that case
        via the form's own UX; here we double-check.) */
     if (this.addresses().length === 0) return;

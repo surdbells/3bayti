@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Utilities
+   Abayti Design System, Utilities
    Tailwind-inspired, hand-authored. All responsive variants: sm/md/lg/xl/2xl.
    Naming: ax-{property}-{value}  e.g. ax-p-4, ax-flex, ax-rounded-lg
    Responsive: ax-{bp}-{property}-{value}  e.g. ax-md-flex, ax-lg-p-8
@@ -119,7 +119,7 @@
 
 
 /* =========================================================================
-   SPACING — padding
+   SPACING, padding
    ========================================================================= */
 .ax-p-0 { padding: 0; }
 .ax-p-1 { padding: var(--ax-space-1); }
@@ -166,7 +166,7 @@
 
 
 /* =========================================================================
-   SPACING — margin
+   SPACING, margin
    ========================================================================= */
 .ax-m-0 { margin: 0; }
 .ax-m-1 { margin: var(--ax-space-1); }
@@ -203,7 +203,7 @@
 
 
 /* =========================================================================
-   SIZING — width & height
+   SIZING, width & height
    ========================================================================= */
 .ax-w-auto { width: auto; }
 .ax-w-full { width: 100%; }
@@ -529,7 +529,7 @@
 
 
 /* =========================================================================
-   CONTAINER — opinionated wrapper
+   CONTAINER, opinionated wrapper
    ========================================================================= */
 .ax-container {
   width: 100%;

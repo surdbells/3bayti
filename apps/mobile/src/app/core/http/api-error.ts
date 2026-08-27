@@ -8,7 +8,7 @@
  * envelope lives at `err.error.error`. This prefers the first field-level
  * validation message, then the top-level API message, and only falls back to the
  * caller's string (usually a localized `i18n.t(...)` generic) when the response
- * carries nothing usable — e.g. a real network failure.
+ * carries nothing usable, e.g. a real network failure.
  *
  * Rationale: a specific server message ("A measurement for size 'M' already
  * exists for your store.", a validation error, a business-rule violation) is far
@@ -17,7 +17,7 @@
  * still read naturally in the user's language.
  */
 export function apiErrorMessage(err: any, fallback: string): string {
-  // Network / connection failure — no server body to read; keep the (localized)
+  // Network / connection failure, no server body to read; keep the (localized)
   // fallback the caller supplied.
   if (err?.status === 0) {
     return fallback;

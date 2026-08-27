@@ -15,7 +15,7 @@ use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * PATCH /v3/vendor/store/status
- * Vendor self-service active/inactive toggle (not the approval lifecycle —
+ * Vendor self-service active/inactive toggle (not the approval lifecycle -
  * that remains admin-only via POST /v3/admin/vendors/{id}/approve|suspend).
  */
 final class ToggleVendorStoreStatusController

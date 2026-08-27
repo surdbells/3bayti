@@ -32,7 +32,7 @@ use Doctrine\ORM\Mapping as ORM;
  * No FK on order_id with CASCADE
  * -------------------------------
  * order_id is FK to orders(id) ON DELETE SET NULL. The notification
- * log is an audit trail — if an order is hard-deleted (rare; almost
+ * log is an audit trail, if an order is hard-deleted (rare; almost
  * always soft-delete via status), we keep the notification history
  * with order_id = null rather than losing the audit trail. Same
  * rationale as AuditLog::$userId / $subjectId (which use NO FK at
@@ -47,7 +47,7 @@ use Doctrine\ORM\Mapping as ORM;
  * - STATUS_SKIPPED: guard short-circuited before sending (no
  *                   recipient email, contact_email_unset, etc.)
  *
- * Skipped rows are valuable observability — they tell ops "this
+ * Skipped rows are valuable observability, they tell ops "this
  * customer has no email, so no notifications were attempted" rather
  * than silently dropping the signal.
  */
@@ -88,7 +88,7 @@ class NotificationLog
 
     /**
      * The cart this notification relates to (M3.2.X.11). Sibling to
-     * order_id — for cart-scoped notifications (e.g. abandoned cart
+     * order_id, for cart-scoped notifications (e.g. abandoned cart
      * reminders) cart_id is populated and order_id is null. For
      * order-scoped notifications it's the inverse. Both could
      * theoretically be set for a future "you abandoned this cart,
@@ -112,7 +112,7 @@ class NotificationLog
     /**
      * Recipient email address as it was sent to (or attempted).
      * Captured at attempt time; preserved even if the user's email
-     * later changes — this is the audit record of what we tried, not
+     * later changes, this is the audit record of what we tried, not
      * a live link to the current user state.
      */
     #[ORM\Column(name: 'recipient', type: 'string', length: 255)]
@@ -124,7 +124,7 @@ class NotificationLog
 
     /**
      * Timestamp of the attempt. Set on row creation; immutable.
-     * NOT the moment the email landed in the recipient's inbox —
+     * NOT the moment the email landed in the recipient's inbox -
      * ZeptoMail webhooks would provide that signal but M3.2.X.4
      * doesn't wire webhooks (the raw_event column is pre-allocated
      * for that future work).
@@ -167,7 +167,7 @@ class NotificationLog
     private DateTimeImmutable $updatedAt;
 
     /**
-     * Feed read-state — separate from the audit fact. Lets the
+     * Feed read-state, separate from the audit fact. Lets the
      * sent-notification log double as the vendor's in-app feed.
      */
     #[ORM\Column(name: 'is_read', type: 'boolean', options: ['default' => false])]
@@ -256,7 +256,7 @@ class NotificationLog
     ): self {
         $log = new self($orderId, $template, $recipient, self::STATUS_SKIPPED, $cartId);
         // For skipped rows, we don't have an error_kind in the
-        // MailerException sense — populate error_message with the
+        // MailerException sense, populate error_message with the
         // reason short-code for triage. Leaving error_kind NULL
         // distinguishes 'skipped (reason in error_message)' from
         // 'failed (error_kind + error_message)'.
@@ -265,7 +265,7 @@ class NotificationLog
     }
 
     // -----------------------------------------------------------------
-    // Accessors — read-only by design (immutability)
+    // Accessors, read-only by design (immutability)
     // -----------------------------------------------------------------
 
     public function getId(): ?int { return $this->id; }

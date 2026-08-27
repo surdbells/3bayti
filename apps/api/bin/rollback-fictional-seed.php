@@ -4,7 +4,7 @@
 declare(strict_types=1);
 
 /**
- * 3bayti — rollback fictional seed catalog data
+ * 3bayti, rollback fictional seed catalog data
  * =============================================
  *
  * Day 1 of 10-day rollout. Removes the fictional seed data created
@@ -28,7 +28,7 @@ declare(strict_types=1);
  * Safety
  * ------
  *  - Confirmation prompt (skip with --yes)
- *  - Transaction wraps everything — all-or-nothing
+ *  - Transaction wraps everything, all-or-nothing
  *  - Prints what will be deleted BEFORE doing it
  */
 
@@ -89,7 +89,7 @@ $conn->beginTransaction();
 try {
     // Order matters because of FK constraints.
     // categories has self-reference (parent_id → categories.id), so
-    // truncate via DELETE (not TRUNCATE — that would require disabling FKs).
+    // truncate via DELETE (not TRUNCATE, that would require disabling FKs).
     // The self-reference is ON DELETE SET NULL so order within doesn't matter.
 
     // 1. Audit log entries for catalog subjects (no FK, just dangling refs)
@@ -98,11 +98,11 @@ try {
     );
     echo "  audit_log catalog entries: deleted\n";
 
-    // 2. Brands (no FKs into it yet — products won't reference it post-rollback)
+    // 2. Brands (no FKs into it yet, products won't reference it post-rollback)
     $conn->executeStatement('DELETE FROM brands');
     echo "  brands: deleted\n";
 
-    // 3. Categories — self-referencing FK is ON DELETE SET NULL, so order
+    // 3. Categories, self-referencing FK is ON DELETE SET NULL, so order
     //    within DELETE doesn't matter. PG handles cascading correctly.
     $conn->executeStatement('DELETE FROM categories');
     echo "  categories: deleted\n";

@@ -117,7 +117,7 @@ final class GetProductByLegacyIdControllerTest extends HttpTestCase
     #[Test]
     public function returns404WhenIdPathSegmentIsNonNumeric(): void
     {
-        // No EM stubbing — the controller should reject before any
+        // No EM stubbing, the controller should reject before any
         // repo lookup. The route's {id} placeholder is unconstrained
         // by Slim, so we validate in the controller.
         $response = $this->handle(

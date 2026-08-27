@@ -15,7 +15,7 @@ use Doctrine\ORM\EntityRepository;
 class NotificationLogRepository extends EntityRepository
 {
     /**
-     * Persist a notification_log row. Fire-and-forget — callers don't
+     * Persist a notification_log row. Fire-and-forget, callers don't
      * have to know about EntityManager mechanics.
      *
      * Why flush() per call (not batched with the request's UoW)
@@ -24,7 +24,7 @@ class NotificationLogRepository extends EntityRepository
      * rows must land independently of the parent transaction. If the
      * mailer succeeds but a later step in the controller throws and
      * rolls back the request, the notification audit trail still
-     * shows the email was sent — we DID send it, regardless of what
+     * shows the email was sent, we DID send it, regardless of what
      * the rollback does to other state.
      *
      * Failures here are SWALLOWED by the caller (OrderNotificationService::
@@ -167,7 +167,7 @@ class NotificationLogRepository extends EntityRepository
             ->getQuery()
             ->getSingleScalarResult();
 
-        // Most recent first — matches the typical triage flow
+        // Most recent first, matches the typical triage flow
         // ("what just happened with order X").
         $qb->orderBy('nl.sentAt', 'DESC')
            ->addOrderBy('nl.id', 'DESC');

@@ -30,7 +30,7 @@ use Doctrine\ORM\Mapping as ORM;
  * One active cart per user
  * =========================
  * Enforced by the partial unique index `uq_carts_user_active` at the
- * DB layer — only one row per user_id can have status='active'. When
+ * DB layer, only one row per user_id can have status='active'. When
  * a cart is checked out, status flips to 'converted' (cart frozen,
  * order created); when it expires (M3.1.7+ cleanup), it flips to
  * 'archived'. Both terminal states release the unique constraint so
@@ -159,7 +159,7 @@ class Cart
      * This helper centralises the policy but the actual eligibility
      * query in CartAbandonmentFinder also enforces the "hasn't
      * been emailed yet" guard via a NOT EXISTS subquery on
-     * notification_logs — that part can't be answered from the
+     * notification_logs, that part can't be answered from the
      * Cart entity alone.
      */
     public function isAbandoned(DateTimeImmutable $now, \DateInterval $threshold): bool

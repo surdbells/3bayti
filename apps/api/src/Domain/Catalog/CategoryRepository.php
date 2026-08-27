@@ -49,14 +49,14 @@ class CategoryRepository extends EntityRepository
     /**
      * Look up a category by its legacy WordPress/CodeIgniter id.
      *
-     * Same rationale as VendorRepository::findByLegacyId — serves the
+     * Same rationale as VendorRepository::findByLegacyId, serves the
      * M3.1.5 mobile flip where mobile sends `category: 5` (legacy id)
      * and we resolve it server-side rather than forcing a mobile-side
      * slug-cache. Removable once mobile is rebuilt against slug
      * semantics (M3.1.10+).
      *
      * Returns null if no category has that legacy id. Inactive
-     * categories are returned by this method — the controller layer
+     * categories are returned by this method, the controller layer
      * decides whether to expose them.
      */
     public function findByLegacyId(int $legacyId): ?Category
@@ -213,7 +213,7 @@ class CategoryRepository extends EntityRepository
 
     /**
      * Does any product reference this category?
-     * Used to enforce "can't delete a category with products" — but
+     * Used to enforce "can't delete a category with products", but
      * we're soft-deleting via is_active=false anyway, so this is
      * more of a courtesy check than a hard constraint.
      *

@@ -12,7 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * A single "user follows vendor" relationship.
  *
- * One row per (user, vendor) — the unique index enforces "followed at
+ * One row per (user, vendor), the unique index enforces "followed at
  * most once". Following is immutable: it's either there or it isn't, so
  * toggling follow is a create/delete, never an update (mirrors the
  * Wishlist entity's posture). Net-new in the v3 customer-features

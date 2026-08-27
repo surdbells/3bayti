@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.2.X.4-A — Create notification_logs table.
+ * M3.2.X.4-A, Create notification_logs table.
  *
  * Background
  * ==========
@@ -16,11 +16,11 @@ use Doctrine\Migrations\AbstractMigration;
  * OrderNotificationService, EmailTemplate enum, OrderEmailTemplateRenderer)
  * but explicitly deferred persistence:
  *
- *   "Idempotency... We do NOT track 'already sent' state — duplicate
+ *   "Idempotency... We do NOT track 'already sent' state, duplicate
  *    calls cause duplicate emails. Acceptable trade-off vs. introducing
  *    a notification_log table for M3.1.7. Future: add notification_log
  *    if we get reports of duplicate emails from genuine retries."
- *      — apps/api/src/Notification/OrderNotificationService.php:33-40
+ *     , apps/api/src/Notification/OrderNotificationService.php:33-40
  *
  * The current state: emails go out, failures get logged to PSR-3 but
  * nothing is queryable. If a customer says "I never got my order
@@ -75,7 +75,7 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * Rollback safety
  * ---------------
- * down() drops the table. Any logged rows are lost on rollback —
+ * down() drops the table. Any logged rows are lost on rollback -
  * acceptable because rollback is an exceptional operation and the
  * pre-rollback observability data was already supplemental to PSR-3
  * logs (Q-Backfill = A locked: PSR-3 logs remain the pre-deploy

@@ -6,7 +6,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 /**
  * Persistent banner shown while an admin is impersonating a vendor. Mounted at
  * the app root so it's visible on every surface, with a one-tap Exit that
- * restores the admin session. Deliberately loud (amber) — impersonation is a
+ * restores the admin session. Deliberately loud (amber), impersonation is a
  * special, accountable mode.
  */
 @Component({

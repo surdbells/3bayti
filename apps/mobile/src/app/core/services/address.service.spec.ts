@@ -148,7 +148,7 @@ describe('AddressService', () => {
     const ok = await service.setDefault('tok', 7);
     expect(adapter.lastPatch.routeKey).toBe('PATCH /me/addresses/:id/default');
     expect(adapter.lastPatch.opts.pathParams).toEqual({ id: '7' });
-    // The API rejects an empty/all-null body with 422 — the PATCH must
+    // The API rejects an empty/all-null body with 422, the PATCH must
     // carry both role flags so the promotion actually takes effect.
     expect(adapter.lastPatch.body).toEqual({ shipping: true, billing: true });
     expect(ok).toBeTrue();

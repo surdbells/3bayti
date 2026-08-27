@@ -467,7 +467,7 @@ ion-modal.filter-modal {
   text-transform: uppercase;
 }
 
-/* Category chips — replaces <ion-button> chips with proper button elements */
+/* Category chips, replaces <ion-button> chips with proper button elements */
 .category-chips {
   display: flex;
   flex-wrap: wrap;
@@ -503,7 +503,7 @@ ion-modal.filter-modal {
   }
 }
 
-/* Price range — min/max inputs + dual-knob slider */
+/* Price range, min/max inputs + dual-knob slider */
 .price-inputs {
   display: flex;
   align-items: center;

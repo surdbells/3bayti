@@ -18,7 +18,7 @@ declare(strict_types=1);
  * missing). name defaults to 'Saved' if empty.
  *
  * NOTE: wishlist_labels.legacy_wishlist_label_id is added by Doctrine
- * migration Version20260624000002 — run migrations before this script.
+ * migration Version20260624000002, run migrations before this script.
  *
  * Idempotent, transactional, re-runnable while legacy stays live.
  *

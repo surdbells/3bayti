@@ -22,7 +22,7 @@ use Doctrine\ORM\EntityManagerInterface;
  *
  *   - storefront():      for showing a vendor on the public catalog
  *                        (just store_legal_name, ratings, public ids
- *                        — DOES NOT include email, phone, role flags)
+ *                       , DOES NOT include email, phone, role flags)
  *
  *   - adminListing():    for /v3/admin/users (M4)
  *                        (full record + audit fields)
@@ -42,7 +42,7 @@ final class UserSerializer
     }
 
     /**
-     * Public self-view — what the user sees about themselves on
+     * Public self-view, what the user sees about themselves on
      * /v3/auth/login and /v3/auth/me.
      *
      * @return array<string, mixed>
@@ -53,10 +53,10 @@ final class UserSerializer
         // users.is_store_* columns. The approve/suspend flow updates the
         // vendor but never synced those user columns (User::setStoreState
         // was dead code), so /me/profile reported is_store_approved=false
-        // for genuinely-approved stores — hiding the mobile store FAB.
+        // for genuinely-approved stores, hiding the mobile store FAB.
         // Derive store flags + the 'vendor' role from the user's vendor(s),
         // the same source of truth VendorAuthMiddleware already uses.
-        // EntityManager (not the concrete VendorRepository) — Doctrine repos
+        // EntityManager (not the concrete VendorRepository), Doctrine repos
         // aren't PHP-DI-autowirable (their ClassMetadata ctor arg isn't
         // guessable), which would break the compiled container.
         $vendors = $this->em->getRepository(Vendor::class)->findBy(['ownerUser' => $user]);
@@ -80,7 +80,7 @@ final class UserSerializer
 
             // Profile fields (M1.7.0+)
             'gender' => $user->getGender(),
-            // DOB is a calendar date — format as ISO 8601 date (YYYY-MM-DD).
+            // DOB is a calendar date, format as ISO 8601 date (YYYY-MM-DD).
             // Not the full ATOM datetime which includes time + timezone.
             'dob' => $user->getDob()?->format('Y-m-d'),
             'avatar_url' => $user->getAvatarUrl(),
@@ -97,7 +97,7 @@ final class UserSerializer
             'roles' => $this->extractActiveRoles($user, $hasVendor),
             // RBAC: the granular permission keys the user effectively holds
             // (union of assigned roles; empty for plain customers/vendors) and
-            // the assigned roles themselves — used by the portal to gate the UI.
+            // the assigned roles themselves, used by the portal to gate the UI.
             'permissions' => $user->effectivePermissionKeys(),
             'assigned_roles' => $this->assignedRoles($user),
             'is_store_approved' => $storeApproved,
@@ -170,13 +170,13 @@ final class UserSerializer
      *
      * Unlike staff(), this includes phone + country_code (so the Phone column
      * renders), the is_active / verification flags, the real registration date
-     * (created_at — the users table has carried a NOT NULL TIMESTAMPTZ
+     * (created_at, the users table has carried a NOT NULL TIMESTAMPTZ
      * created_at since the initial schema, mapped via the Timestamps trait),
      * and orders_count.
      *
      * orders_count is supplied by the caller because it's computed in a single
      * grouped LEFT JOIN at the repository layer (see
-     * UserRepository::findCustomersPaginated) rather than lazily per row — a
+     * UserRepository::findCustomersPaginated) rather than lazily per row, a
      * per-row Order count would be an N+1 across the listing.
      *
      * @return array<string, mixed>

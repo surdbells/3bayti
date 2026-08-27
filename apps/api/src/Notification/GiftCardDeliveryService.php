@@ -33,7 +33,7 @@ use Psr\Log\NullLogger;
  * Persistence
  * ===========
  * After marking any channel delivered, deliver() flushes so the
- * timestamp is committed immediately — this preserves the idempotency
+ * timestamp is committed immediately, this preserves the idempotency
  * guarantee even if the process dies before the next flush.
  */
 /**
@@ -88,7 +88,7 @@ class GiftCardDeliveryService
     }
 
     /**
-     * Deliver only if the card is DUE now — i.e. it has no future
+     * Deliver only if the card is DUE now, i.e. it has no future
      * scheduled-delivery date still pending. A future-dated card is
      * left for the gift-cards:dispatch-scheduled cron.
      *
@@ -99,13 +99,13 @@ class GiftCardDeliveryService
      * for their date. Uses the service's UTC now() so the comparison
      * matches the GiftCard domain's UTC convention.
      *
-     * Idempotent + non-blocking — delegates to deliver().
+     * Idempotent + non-blocking, delegates to deliver().
      */
     public function deliverIfDue(GiftCard $card): void
     {
         $scheduledAt = $card->getScheduledDeliveryAt();
         if ($scheduledAt !== null && $scheduledAt > $this->now()) {
-            return; // future-scheduled — the cron will deliver it
+            return; // future-scheduled, the cron will deliver it
         }
         $this->deliver($card);
     }
@@ -160,7 +160,7 @@ class GiftCardDeliveryService
             return false;
         }
 
-        // SMS not configured (NullSmsSender) — record honestly as NOT delivered
+        // SMS not configured (NullSmsSender), record honestly as NOT delivered
         // instead of marking the channel delivered off a silent no-op. The card
         // stays pending on SMS, so once real SMS is enabled the scheduled
         // dispatcher (gift-cards:dispatch-scheduled) actually sends it.

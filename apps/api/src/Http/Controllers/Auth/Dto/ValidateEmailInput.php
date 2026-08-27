@@ -16,7 +16,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * -------------------
  * The constructor trims the incoming email BEFORE the validator sees
  * it. Real form submissions routinely include accidental leading/
- * trailing spaces from copy-paste — failing those with a 422 would
+ * trailing spaces from copy-paste, failing those with a 422 would
  * be hostile UX. The pattern below (separate property + custom
  * constructor) is uglier than constructor-promoted properties but
  * it's the cleanest way to normalise input before validation.

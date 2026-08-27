@@ -23,7 +23,7 @@ use Psr\Log\LoggerInterface;
 /**
  * GET /v3/admin/chat/conversations/{uuid}?limit=100
  *
- * Full thread of any conversation for moderation investigation — both
+ * Full thread of any conversation for moderation investigation, both
  * parties named and ALL messages including the ones that were blocked, so
  * an admin can see the context around a flagged attempt. Read-only; admins
  * never post into a thread.

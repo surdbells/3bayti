@@ -75,7 +75,7 @@ class AdapterStub {
       this.lastGet = { routeKey, opts };
       return this.getError ? throwError(() => new Error('net')) : of(this.getResponse);
     }
-    // Any other GET (e.g. PendingOrdersService's 'GET /orders' list) — benign.
+    // Any other GET (e.g. PendingOrdersService's 'GET /orders' list), benign.
     return of({ response_code: 200, status: 'success', data: [] });
   }
   post_v3(routeKey: string, body: any, opts: any) {
@@ -182,7 +182,7 @@ describe('OrderDetailPage', () => {
     const { component, adapter, toast } = setup();
     await component.ngOnInit();
     // After a successful cancel the page reloads the order to reflect the
-    // authoritative status — serve the cancelled order on that reload.
+    // authoritative status, serve the cancelled order on that reload.
     adapter.getResponse = okOrder({ status: 'cancelled' });
     component['executeCancel']();
     expect(adapter.lastPost?.routeKey).toBe('POST /orders/:id/cancel');

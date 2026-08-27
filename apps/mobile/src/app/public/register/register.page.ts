@@ -39,7 +39,7 @@ import {PushManager} from "../../core/services/push-manager.service";
 import {DIAL_CODES, DialCode, mapDialToIso} from "../shared/dial-codes";
 
 /**
- * Mobile registration page — rebuilt for the v3 PHONE-FIRST 4-step flow.
+ * Mobile registration page, rebuilt for the v3 PHONE-FIRST 4-step flow.
  *
  * Flow (replaces the legacy 2-stage register/confirm flow)
  * ========================================================
@@ -253,7 +253,7 @@ export class RegisterPage implements OnInit, OnDestroy {
 
   /**
    * Ask the backend whether this phone is already registered and surface
-   * an inline hint. Best-effort UX only: never blocks, never toasts —
+   * an inline hint. Best-effort UX only: never blocks, never toasts -
    * the Continue-time 409 in initiate_phone() remains the hard gate.
    * POST /auth/validate-phone -> data { phone, available }.
    */
@@ -338,7 +338,7 @@ export class RegisterPage implements OnInit, OnDestroy {
       return;
     }
     // Guard the verification_id too: if it's been lost (blank), the server
-    // returns the same generic "fields failed validation" — restart cleanly
+    // returns the same generic "fields failed validation", restart cleanly
     // rather than firing a doomed request.
     if (!this.phoneVerificationId) {
       this.restartExpired();
@@ -623,7 +623,7 @@ export class RegisterPage implements OnInit, OnDestroy {
 
     // A 422 validation failure ("One or more fields failed validation") is
     // useless without the offending field. The v3 envelope carries the
-    // per-field messages in error_details ({ field: [msg, …] }) — surface the
+    // per-field messages in error_details ({ field: [msg, …] }), surface the
     // first one instead of the generic banner so the user knows what to fix.
     const details = response?.error_details;
     if (details && typeof details === 'object') {
@@ -860,7 +860,7 @@ export class RegisterPage implements OnInit, OnDestroy {
       next: (response: any) => {
         this.ui_controls.loading = false;
         if (response.response_code === 200 && response.status === 'success') {
-          // Capture the verification_id — /me/phone/verify REQUIRES it
+          // Capture the verification_id, /me/phone/verify REQUIRES it
           // alongside the code (same contract as the registration OTP).
           const vid = response.data?.verification_id;
           this.socialPhoneVerificationId = typeof vid === 'string' ? vid : '';

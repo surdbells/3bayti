@@ -8,7 +8,7 @@ use Bayti\Api\Domain\User\User;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * The customer's gift-card WALLET — the aggregate spendable balance across
+ * The customer's gift-card WALLET, the aggregate spendable balance across
  * all the cards they own (as buyer) or have redeemed (as recipient).
  *
  * A single gift card is still a discrete stored-value instrument with its
@@ -21,7 +21,7 @@ use Doctrine\ORM\EntityManagerInterface;
  * unchanged: if the wallet covers the whole order the gateway is skipped;
  * otherwise Noon is charged the remainder.
  *
- * This is a thin, stateless helper over the EntityManager — instantiated
+ * This is a thin, stateless helper over the EntityManager, instantiated
  * directly by controllers (no DI surface of its own beyond the EM).
  */
 final class GiftCardWalletService

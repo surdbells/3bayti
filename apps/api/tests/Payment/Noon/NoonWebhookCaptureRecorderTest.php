@@ -50,7 +50,7 @@ final class NoonWebhookCaptureRecorderTest extends TestCase
         self::assertCount(1, $lines);
         $row = json_decode($lines[0], true);
 
-        // Raw bytes preserved exactly — that's what the confirm tool needs.
+        // Raw bytes preserved exactly, that's what the confirm tool needs.
         self::assertSame($body, $row['raw_body']);
         self::assertSame('sha256=deadbeef', $row['signature_header']);
         self::assertSame('application/json', $row['content_type']);

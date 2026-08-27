@@ -23,7 +23,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * GET /v3/orders/{id}/returns
  *
  * Returns the customer's return requests for one of their orders.
- * Newest first. Not paginated — a customer's per-order return
+ * Newest first. Not paginated, a customer's per-order return
  * count is bounded (most orders → zero returns; rare to see > 5
  * for a single order).
  *
@@ -32,7 +32,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Response shape:
  *   { data: [ ...customer-shape return ], meta: { total: N } }
  *
- * No filtering args — this is a simple "show me my returns for
+ * No filtering args, this is a simple "show me my returns for
  * THIS order" view. The admin list endpoint (X.18-F) handles the
  * filter set for cross-order admin queries.
  */

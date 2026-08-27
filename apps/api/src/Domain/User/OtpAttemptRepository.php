@@ -31,7 +31,7 @@ class OtpAttemptRepository extends EntityRepository
     /**
      * Find the most recent usable (not consumed, not expired) OTP
      * for a phone+purpose pair. Used to detect "user already has a
-     * pending OTP" cases — we can either return the existing row or
+     * pending OTP" cases, we can either return the existing row or
      * issue a new one depending on policy.
      */
     public function findLatestUsable(string $phone, string $purpose): ?OtpAttempt
@@ -73,7 +73,7 @@ class OtpAttemptRepository extends EntityRepository
      * Count sends to a destination in the last N seconds, channel-aware.
      *
      * The "destination" is the phone for SMS rows and the email for
-     * email rows — email rows store '' in the NOT-NULL `phone` column
+     * email rows, email rows store '' in the NOT-NULL `phone` column
      * and the real recipient in `email`, so a plain phone match would
      * miss them. This is the DB fallback the rate-limiter uses when
      * Redis is unavailable (fail-CLOSED): the per-destination cap still
@@ -139,7 +139,7 @@ class OtpAttemptRepository extends EntityRepository
     }
 
     /**
-     * Cleanup job — delete OTP rows that expired more than `daysOld`
+     * Cleanup job, delete OTP rows that expired more than `daysOld`
      * days ago. The audit value of these rows decays after ~30 days;
      * we don't need to keep them forever.
      */

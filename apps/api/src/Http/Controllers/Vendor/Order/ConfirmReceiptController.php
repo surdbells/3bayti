@@ -23,9 +23,9 @@ use Psr\Http\Message\ServerRequestInterface;
  * POST /v3/vendor/returns/{id}/confirm-receipt
  *
  * Vendor confirms that the returned goods have physically arrived
- * back at their warehouse — this is the ONLY vendor-side state
+ * back at their warehouse, this is the ONLY vendor-side state
  * transition (per Q-VendorRole locked: vendor does NOT approve or
- * deny — admin does that; vendor only confirms receipt).
+ * deny, admin does that; vendor only confirms receipt).
  *
  * State machine: STATUS_PICKED_UP → STATUS_DELIVERED_TO_VENDOR.
  * Aggregate root rejects illegal transitions with DomainException

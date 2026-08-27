@@ -1,5 +1,5 @@
 /**
- * Order domain types — mirror apps/api OrderSerializer.
+ * Order domain types, mirror apps/api OrderSerializer.
  *
  * The API returns monetary amounts as decimal STRINGS to avoid IEEE 754
  * rounding. ISO 8601 timestamps for dates (created_at, paid_at).
@@ -13,7 +13,7 @@
  */
 
 /**
- * Order address snapshot — mirrors apps/api OrderSerializer::addressShape
+ * Order address snapshot, mirrors apps/api OrderSerializer::addressShape
  * (Http/Serializers/OrderSerializer.php). The API captures the address at
  * checkout time onto the order, exposing these exact keys. Every field is
  * nullable because the snapshot columns are nullable on the entity.
@@ -59,7 +59,7 @@ export interface OrderItem {
 
 export interface AppliedPromo {
   code: string;
-  /** 'percent' | 'fixed' — historical snapshot. */
+  /** 'percent' | 'fixed', historical snapshot. */
   type: string;
   /** Snapshot value (percent or fixed amount). */
   value: string;
@@ -91,7 +91,7 @@ export interface OrderListItem {
   paid_at: string | null;
   items: OrderItem[];
   applied_promo: AppliedPromo | null;
-  /** Optional — only present when the API was asked for returns. */
+  /** Optional, only present when the API was asked for returns. */
   returns?: ReturnSummary[];
 }
 
@@ -114,13 +114,13 @@ export interface OrderTimelineEvent {
   type: string;
   /** ISO 8601 timestamp, or null when the event carries no time. */
   occurred_at: string | null;
-  /** Generic actor — 'customer' | 'store' | 'system'. */
+  /** Generic actor, 'customer' | 'store' | 'system'. */
   actor: { type: string };
   /** Human-readable one-line summary rendered as the step label. */
   summary: string;
 }
 
-/** GET /v3/orders/:id/timeline response body — `{ events, total }`. */
+/** GET /v3/orders/:id/timeline response body, `{ events, total }`. */
 export interface OrderTimelineResponse {
   events: OrderTimelineEvent[];
   total: number;
@@ -171,7 +171,7 @@ export interface OrderListPagination {
 }
 
 /** Paginated list response. The API returns an OBJECT body
- *  `{ orders: OrderListItem[], pagination: {...} }` — NOT a bare array.
+ *  `{ orders: OrderListItem[], pagination: {...} }`, NOT a bare array.
  *  Read `response.orders` for the page and `response.pagination` for
  *  the page metadata. */
 export interface OrderListResponse {
@@ -242,7 +242,7 @@ export interface SubmitReturnInput {
 }
 
 /** API response shape for a created return request (post-submission).
- *  Lightweight — the Y.2 surface only needs to know whether it
+ *  Lightweight, the Y.2 surface only needs to know whether it
  *  succeeded; Y.5 may surface a full detail page. */
 export interface ReturnRequestResponse {
   id: number;

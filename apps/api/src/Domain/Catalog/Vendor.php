@@ -15,7 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
  * ----------
  * Vendor is a static data record. Admin creates / updates / soft-deletes
  * via /v3/admin/vendors endpoints. Vendor authentication, dashboard,
- * self-onboarding, KYC, settlement details — all M4.
+ * self-onboarding, KYC, settlement details, all M4.
  *
  * Why we need the entity in M2 anyway
  * ------------------------------------
@@ -129,7 +129,7 @@ class Vendor
      *
      * Filtering rule on the public endpoint:
      *   is_active = true AND is_featured = true
-     * — a vendor flagged featured but later soft-deleted must NOT
+     *, a vendor flagged featured but later soft-deleted must NOT
      * appear on the Spotlight surface.
      */
     #[ORM\Column(name: 'is_featured', type: 'boolean')]
@@ -189,7 +189,7 @@ class Vendor
      * Populated when admin provides one during approve/suspend/
      * reactivate; null otherwise.
      *
-     * Stored as TEXT (not enum) — reasons are operational, not
+     * Stored as TEXT (not enum), reasons are operational, not
      * categorical. Examples: "Quality complaints from 5 customers",
      * "Initial approval after KYC review".
      */
@@ -197,7 +197,7 @@ class Vendor
     private ?string $statusReason = null;
 
     /**
-     * Owner User — the user record with is_vendor=1 that owns this store.
+     * Owner User, the user record with is_vendor=1 that owns this store.
      * Optional because: (a) old M2.1 vendors have no owner since they
      * predate this field; (b) admin-created vendors don't always have a
      * user account at creation time.
@@ -219,7 +219,7 @@ class Vendor
      * - null → no preference; falls back to English per
      *          Q-FallbackBehavior = A locked
      *
-     * Distinct from the OWNER user's preferredLocale — a single
+     * Distinct from the OWNER user's preferredLocale, a single
      * vendor may have multiple staff members receiving notifications,
      * and the locale should match the business's preference rather
      * than any one staff member's. Q-VendorAdminLocale = A locked.
@@ -239,7 +239,7 @@ class Vendor
     /**
      * Emirate the store operates from (UAE-only platform). One of the
      * seven emirates as free text (Dubai, Abu Dhabi, Sharjah, Ajman,
-     * Umm Al Quwain, Ras Al Khaimah, Fujairah). Nullable — legacy
+     * Umm Al Quwain, Ras Al Khaimah, Fujairah). Nullable, legacy
      * vendors predate this column; the migration best-effort backfills
      * it from store_address.
      */
@@ -319,7 +319,7 @@ class Vendor
     /**
      * Legacy logo as a data: URL preserved verbatim. Image migration (M5)
      * extracts these to Flysystem and populates logo_url with a CDN URL.
-     * For demo, this field sits dormant — public APIs surface logo_url
+     * For demo, this field sits dormant, public APIs surface logo_url
      * (which is null for migrated vendors) OR fall back to a placeholder.
      */
     #[ORM\Column(name: 'legacy_logo_data_url', type: 'text', nullable: true)]
@@ -339,7 +339,7 @@ class Vendor
     private ?string $legacyCoverDataUrl = null;
 
     /**
-     * Commission percentage. Stored as decimal — DB CHECK enforces 0-100.
+     * Commission percentage. Stored as decimal, DB CHECK enforces 0-100.
      * Doctrine maps decimal to string by default to preserve precision;
      * we expose a float accessor for callers who need numeric ops.
      */
@@ -379,7 +379,7 @@ class Vendor
     }
 
     // -----------------------------------------------------------------
-    // Mutators — all explicit; no public general-purpose setter
+    // Mutators, all explicit; no public general-purpose setter
     // -----------------------------------------------------------------
 
     public function setSlug(string $slug): void { $this->slug = $slug; }
@@ -393,7 +393,7 @@ class Vendor
     public function getIdBack(): ?string { return $this->idBack; }
     public function getLicenseDoc(): ?string { return $this->licenseDoc; }
 
-    // Plain KYC-doc setters — used by the compliance:localize-documents backfill
+    // Plain KYC-doc setters, used by the compliance:localize-documents backfill
     // to swap an inline base64 value for its stored path WITHOUT touching
     // compliance_status (unlike submitCompliance, which marks it 'submitted').
     public function setIdFront(?string $path): void { $this->idFront = $path; }
@@ -472,7 +472,7 @@ class Vendor
      * Transition this vendor to STATUS_APPROVED.
      *
      * Valid from: STATUS_PENDING (initial admin approval),
-     *             STATUS_SUSPENDED (reactivation — though
+     *             STATUS_SUSPENDED (reactivation, though
      *             reactivate() is the semantic alias preferred
      *             for that case for clearer audit semantics).
      *
@@ -504,7 +504,7 @@ class Vendor
     /**
      * Transition this vendor to STATUS_SUSPENDED.
      *
-     * Valid from: STATUS_APPROVED only — a vendor must have been
+     * Valid from: STATUS_APPROVED only, a vendor must have been
      *             approved before being suspended. Suspending a
      *             pending vendor would be operationally confusing
      *             (admin should simply not approve them).
@@ -518,7 +518,7 @@ class Vendor
      *   - statusChangedAt → now (UTC)
      *   - statusReason → $reason
      *
-     * is_store_approved is NOT toggled by suspension — the vendor
+     * is_store_approved is NOT toggled by suspension, the vendor
      * WAS approved historically; the suspension is the more recent
      * operational state.
      *
@@ -683,7 +683,7 @@ class Vendor
 
     /**
      * Set commission rate. Float input is converted to fixed-precision string
-     * for DB storage. Out-of-range values throw — DB CHECK constraint would
+     * for DB storage. Out-of-range values throw, DB CHECK constraint would
      * catch them anyway but we want a clear application-layer error.
      */
     public function setCommissionRate(float $rate): void

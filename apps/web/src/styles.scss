@@ -1,5 +1,5 @@
 /* ============================================================================
-   3bayti web — Global styles
+   3bayti web, Global styles
    -----------------------------------------------------------------------------
    Tailwind 4 is loaded via PostCSS. The @use directive below brings in
    Tailwind's preflight + utility classes. Per-component styles live in
@@ -8,7 +8,7 @@
 
 @use "tailwindcss";
 
-/* Custom properties (semantic tokens) — light theme. Mirrors the mobile
+/* Custom properties (semantic tokens), light theme. Mirrors the mobile
    app's brand palette so users moving between mobile and web feel a
    consistent identity. */
 :root {
@@ -35,7 +35,7 @@
   --color-border-subtle:  rgba(46, 36, 28, 0.08);
   --color-border-default: rgba(46, 36, 28, 0.16);
 
-  /* Page layout tokens — used to align every section's content edge to
+  /* Page layout tokens, used to align every section's content edge to
      the same container bounds. Before these existed, sections used a mix
      of max-widths and paddings, causing strips to bleed to viewport
      edges while categories/designers stopped at 1280px (the "uneven
@@ -59,7 +59,7 @@
      token so a header-height change ripples through both in one place. */
   --header-height: 72px;
 
-  /* Shadow tokens — "Soft & subtle" surface elevation language.
+  /* Shadow tokens, "Soft & subtle" surface elevation language.
      Promoted from inline values to tokens so a future shadow change
      ripples through every surface in one place. Five surfaces use
      these: ProductCard, DesignerCard, category tiles, designer
@@ -68,9 +68,9 @@
 
      Replaced the previous "Pronounced shadow" language (Phase 1 W1)
      with these softer values per W3 round-3 direction. The previous
-     language used 3 layers up to 0.16 opacity at 48px blur — readable
+     language used 3 layers up to 0.16 opacity at 48px blur, readable
      but visually heavy, almost competing with the product imagery.
-     The new tokens use 2 layers, max 0.06 opacity at 12px blur — cards
+     The new tokens use 2 layers, max 0.06 opacity at 12px blur, cards
      still float but feel grounded. Closer to ASOS / COS / H&M
      editorial than Pinterest. */
   --shadow-card-resting:
@@ -142,7 +142,7 @@
 @media (min-width: 1280px) {
   :root {
     /* On desktop the gutter widens for visual breathing room. The
-       768-1024 tablet range stays at 24px for design simplicity —
+       768-1024 tablet range stays at 24px for design simplicity -
        jumping to 32px there created an awkward middle state. */
     --page-padding-x: 48px;
   }
@@ -162,7 +162,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Display type — for marketing headlines. Maps to Playfair Display per
+/* Display type, for marketing headlines. Maps to Playfair Display per
    the mobile app's editorial-luxury aesthetic. Loaded via Google Fonts
    link in src/index.html. */
 h1, h2, h3, .font-display {
@@ -171,7 +171,7 @@ h1, h2, h3, .font-display {
 }
 
 /* ===========================================================================
-   Brand logo (H1.1) — recolorable logomark + wordmark.
+   Brand logo (H1.1), recolorable logomark + wordmark.
 
    The source artwork is a single colour on a transparent/black field. We
    render it as a CSS mask so the shape inherits a brand colour per surface

@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
  *
  * Catches regressions like a too-wide image breaking the layout on
  * mobile, or a sidebar that overflows on tablet. We don't pixel-check
- * here — that's Chromatic's job in M3.2.0-C.
+ * here, that's Chromatic's job in M3.2.0-C.
  */
 
 const VIEWPORTS = [

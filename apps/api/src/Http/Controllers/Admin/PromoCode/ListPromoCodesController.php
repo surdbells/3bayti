@@ -28,17 +28,17 @@ use Psr\Http\Message\ServerRequestInterface;
  * pattern from M3.2.X.4-C.
  *
  * Query parameters:
- *   ?is_active=true|false        — filter by active flag
+ *   ?is_active=true|false       , filter by active flag
  *   ?discount_type=percentage|fixed_amount
- *   ?code=...                    — case-insensitive LIKE search
+ *   ?code=...                   , case-insensitive LIKE search
  *                                   (matches substring of UPPER(code))
- *   ?valid_at=ISO-datetime       — "currently valid at this timestamp"
+ *   ?valid_at=ISO-datetime      , "currently valid at this timestamp"
  *                                   filters out codes outside their
  *                                   time-window
- *   ?limit=N                     — default 20, max 100
- *   ?offset=N                    — default 0
+ *   ?limit=N                    , default 20, max 100
+ *   ?offset=N                   , default 0
  *
- * No per-row redemption count — that would be N+1 SQL. GetPromoCode
+ * No per-row redemption count, that would be N+1 SQL. GetPromoCode
  * provides the count for a single record (justifies one extra query).
  *
  * Audit: emits ACTION_VIEWED with filter context, matching
@@ -177,7 +177,7 @@ final class ListPromoCodesController
      * Parse the ?scope filter into a (sitewideOnly, vendorId) pair:
      *   'platform' / 'sitewide' → [true, null]  (admin-created, vendor_id NULL)
      *   a positive integer      → [null, int]   (that vendor's coupons)
-     *   anything else / absent  → [null, null]  (no scope filter — all coupons)
+     *   anything else / absent  → [null, null]  (no scope filter, all coupons)
      *
      * @return array{0: bool|null, 1: int|null}
      */

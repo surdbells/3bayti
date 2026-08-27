@@ -27,7 +27,7 @@ class VendorApplicationRepository extends EntityRepository
 
     /**
      * The most recent PENDING application for an email (lowercased),
-     * or null. Used by the public submit to dedupe — a second submit
+     * or null. Used by the public submit to dedupe, a second submit
      * from the same email while one is still pending returns an
      * idempotent response rather than creating a duplicate row.
      */

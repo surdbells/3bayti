@@ -7,7 +7,7 @@
  * selected / all) and hands it here.
  *
  * Heavy libraries (xlsx, jspdf) are dynamically imported so they never enter
- * the initial bundle — they only load the first time a user actually exports.
+ * the initial bundle, they only load the first time a user actually exports.
  */
 
 import { Injectable } from '@angular/core';

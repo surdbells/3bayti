@@ -13,7 +13,7 @@
 }
 
 /* ============================================================= *
-   List — /account/gift-cards
+   List, /account/gift-cards
  * ============================================================= */
 .gca__header {
   display: flex;
@@ -102,7 +102,7 @@
   border-radius: var(--radius-lg, 20px);
 }
 
-/* Unpaid (pending_payment) tile — non-clickable; dimmed card + pay CTA. */
+/* Unpaid (pending_payment) tile, non-clickable; dimmed card + pay CTA. */
 .gca__tile--unpaid {
   position: relative;
   cursor: default;
@@ -178,7 +178,7 @@
 }
 
 /* ============================================================= *
-   Detail — /account/gift-cards/:id
+   Detail, /account/gift-cards/:id
  * ============================================================= */
 .gcd__back {
   display: inline-block;

@@ -87,7 +87,7 @@ export class NotificationLogsComponent implements OnInit {
 
   private fetchLogs(query: AxQueryState) {
     // Routed through the adapter (not a raw fetch) so it shares the
-    // transparent token-refresh — an expired access token refreshes and
+    // transparent token-refresh, an expired access token refreshes and
     // retries instead of failing / signing the user out.
     const q: any = { limit: query.pageSize, offset: query.pageIndex * query.pageSize };
     if (query.filters['status']) q.status = query.filters['status'];

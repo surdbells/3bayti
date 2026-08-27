@@ -27,13 +27,13 @@ use Psr\Http\Message\ServerRequestInterface;
  * product strip: tap "Eid Collection" to filter products to that
  * label.
  *
- * No pagination — vendors typically have < 20 labels. Returning all
+ * No pagination, vendors typically have < 20 labels. Returning all
  * at once simplifies the storefront UI. If a vendor accumulates
  * many labels (>50), pagination becomes a follow-up.
  *
  * Behaviour:
  *   - 404 for unknown vendor slug OR inactive vendors
- *   - Returns {data: VendorLabel[], meta: {...}} — meta is empty
+ *   - Returns {data: VendorLabel[], meta: {...}}, meta is empty
  *     pagination shape (count() === total)
  *   - Inactive labels filtered out at the repository level
  *   - Ordered by display_order (NULLS LAST), then name
@@ -86,7 +86,7 @@ final class ListVendorLabelsController
         $productRepo = $this->em->getRepository(Product::class);
         $counts = $productRepo->countActiveByLabelForVendor($vendor->getId() ?? 0);
 
-        // No pagination — total === count.
+        // No pagination, total === count.
         return $this->ok(PaginatedEnvelope::build(
             $this->serializer->publicShapeMany($labels, $counts),
             count($labels),

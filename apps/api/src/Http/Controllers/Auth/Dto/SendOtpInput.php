@@ -11,7 +11,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Re-send an OTP to an existing unverified user. Used when:
  *   - User registered but didn't receive the OTP SMS (carrier issue, typo
- *     in phone number that they've since corrected — actually we don't
+ *     in phone number that they've since corrected, actually we don't
  *     support phone-correction at registration time yet, but the resend
  *     covers transient SMS delivery failures)
  *   - User registered and the OTP expired before they entered it
@@ -25,7 +25,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * ----------
  * Email-based per Decision A.6.4. We look up the User by email,
  * find their phone, and re-send to that phone. The user doesn't
- * supply a phone number — that's recorded at registration time
+ * supply a phone number, that's recorded at registration time
  * and can't be changed without first verifying it.
  *
  * Privacy

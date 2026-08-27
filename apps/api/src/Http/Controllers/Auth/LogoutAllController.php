@@ -31,7 +31,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * No body required; the access token in Authorization is the
  * identifier. Returns 204 on success.
  *
- * Response (204) — no body.
+ * Response (204), no body.
  *
  * Side effects
  * ------------
@@ -51,7 +51,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Why no separate /logout-all-and-change-password
  * -----------------------------------------------
- * That's just /reset/confirm — already does both. /logout-all is
+ * That's just /reset/confirm, already does both. /logout-all is
  * for the "I trust my password but want to reset all sessions" case.
  */
 final class LogoutAllController

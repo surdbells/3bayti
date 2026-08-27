@@ -82,7 +82,7 @@ export class LoginComponent implements OnInit {
       return;
     }
     this.loading = true;
-    // M3.3.0-C — flipped to v3 auth via PortalAuthService.
+    // M3.3.0-C, flipped to v3 auth via PortalAuthService.
     // Response is mapped to the legacy SESSION shape so all downstream
     // components (role guards, header nav, etc.) work without changes.
     this.authService.login(this.login.email, this.login.password).subscribe({
@@ -91,7 +91,7 @@ export class LoginComponent implements OnInit {
         if (response) {
           this.user_session = response.data;
           this.success_notification(response.message);
-          // SESSION already written by PortalAuthService — just navigate.
+          // SESSION already written by PortalAuthService, just navigate.
           const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
           const isAdminTier = this.user_session.is_admin || this.user_session.is_finance ||
             this.user_session.is_support || this.user_session._sub_admin;
@@ -113,7 +113,7 @@ export class LoginComponent implements OnInit {
             }
             return;
           }
-          // Fallback — role not recognised for portal access
+          // Fallback, role not recognised for portal access
           this.error_notification('Your account does not have portal access.');
           sessionStorage.clear();
           return;

@@ -17,7 +17,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Noon Payments adapter — implements PaymentGatewayInterface
+ * Noon Payments adapter, implements PaymentGatewayInterface
  * against api.noonpayments.com.
  *
  * Reference: docs.noonpayments.com (recon captured in
@@ -36,13 +36,13 @@ use Psr\Log\NullLogger;
  * Authentication
  * --------------
  * Header: `Authorization: Key <base64({biz}.{app}:{key})>`
- * Source: docs.noonpayments.com/sdk/reference/ios — verbatim example
+ * Source: docs.noonpayments.com/sdk/reference/ios, verbatim example
  *   `paymentRequest.authHeader = "Key e0J1c2luZXNzSWRlbnRpZmllcn0..."`
  *
  * Three identifiers required:
- *   - NOON_BUSINESS_IDENTIFIER — merchant account identifier
- *   - NOON_APP_IDENTIFIER      — application within the merchant
- *   - NOON_APP_KEY             — the secret key
+ *   - NOON_BUSINESS_IDENTIFIER, merchant account identifier
+ *   - NOON_APP_IDENTIFIER     , application within the merchant
+ *   - NOON_APP_KEY            , the secret key
  *
  * Back-compat: if NOON_APP_KEY is unset, falls back to the legacy
  * NOON_API_KEY with a deprecation log line.
@@ -64,7 +64,7 @@ use Psr\Log\NullLogger;
  * Noon explicitly bans IPs that abuse GET_ORDER polling
  * (docs.noonpayments.com/test/evaluating-api). retrieveOrder()
  * is called at most ONCE per state transition by NoonWebhookController
- * — never in a loop. GetCheckoutStatusController reads v3's cached
+ *, never in a loop. GetCheckoutStatusController reads v3's cached
  * order state, never Noon's.
  */
 final class NoonPaymentGateway implements PaymentGatewayInterface
@@ -297,7 +297,7 @@ final class NoonPaymentGateway implements PaymentGatewayInterface
                 $e,
             );
         } catch (RequestException $e) {
-            // Read timeout, broken response, etc. — treat as timeout
+            // Read timeout, broken response, etc., treat as timeout
             // because we don't know if Noon processed it.
             throw PaymentGatewayException::timeout(
                 "Noon {$opLabel}: request failed without response",
@@ -313,7 +313,7 @@ final class NoonPaymentGateway implements PaymentGatewayInterface
         $status = $response->getStatusCode();
         $raw = (string) $response->getBody();
 
-        // Auth + rate-limit short-circuits — these have specific
+        // Auth + rate-limit short-circuits, these have specific
         // semantics independent of the body
         if ($status === 401 || $status === 403) {
             $this->logger->error('Noon authentication rejected', [
@@ -506,7 +506,7 @@ final class NoonPaymentGateway implements PaymentGatewayInterface
         // CAPTURED / AUTHORIZED+CAPTURED = paid.
         // FAILED / EXPIRED / CANCELLED   = terminal-non-paid.
         // INITIATED / AUTHORIZED         = transient (still working).
-        // Mapping is conservative — anything we don't recognise is
+        // Mapping is conservative, anything we don't recognise is
         // treated as non-terminal to avoid silently marking orders
         // paid in error.
         $statusUpper = strtoupper($status);

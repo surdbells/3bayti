@@ -32,7 +32,7 @@ import { SocialAuthButtonsComponent } from '../social-auth-buttons/social-auth-b
 const RESEND_COOLDOWN_SECONDS = 30;
 
 /**
- * Login page — /login. PASSWORDLESS-FIRST redesign (web parity with the
+ * Login page, /login. PASSWORDLESS-FIRST redesign (web parity with the
  * mobile passwordless login, issue #8).
  *
  * A single page hosting several view states (no router sub-pages), driven

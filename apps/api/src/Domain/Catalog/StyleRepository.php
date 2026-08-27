@@ -74,7 +74,7 @@ class StyleRepository extends EntityRepository
      * Paginated active-styles listing owned by a specific user.
      *
      * Mirrors findActivePaginatedByType but filters on ownership
-     * (created_by_user) instead of style_type — this backs the "My
+     * (created_by_user) instead of style_type, this backs the "My
      * Styles" tab (GET /v3/me/styles), which surfaces the styles the
      * authenticated user submitted, regardless of their type.
      *
@@ -116,7 +116,7 @@ class StyleRepository extends EntityRepository
      * ==================================================
      * The `style_products` join table has a display_order column we
      * need to respect when surfacing products to mobile (which reads
-     * style.products[0], style.products[1], etc. — order matters).
+     * style.products[0], style.products[1], etc., order matters).
      *
      * Doctrine's many-to-many association can't easily preserve a
      * join-table column-ordered result without introducing an
@@ -124,7 +124,7 @@ class StyleRepository extends EntityRepository
      * mapping, this method uses raw SQL via the EntityManager's
      * connection and returns a structured map keyed by style_id.
      *
-     * Performance: one query for all styles in a page — beats N+1
+     * Performance: one query for all styles in a page, beats N+1
      * cleanly. The cost is the structured-return shape; the caller
      * (StyleSerializer) walks it.
      *

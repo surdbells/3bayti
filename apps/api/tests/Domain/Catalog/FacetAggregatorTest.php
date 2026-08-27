@@ -62,7 +62,7 @@ final class FacetAggregatorTest extends TestCase
             'categoryId' => 5,
         ]);
 
-        // First query is the size facet — its SQL must NOT reference :sizes
+        // First query is the size facet, its SQL must NOT reference :sizes
         $sizeQuery = $captured['queries'][0];
         self::assertStringNotContainsString(':sizes', $sizeQuery['sql']);
         self::assertArrayNotHasKey('sizes', $sizeQuery['params']);
@@ -92,7 +92,7 @@ final class FacetAggregatorTest extends TestCase
             'colors' => ['Black'],
         ]);
 
-        // color query (second) — must NOT have :colors param
+        // color query (second), must NOT have :colors param
         $colorQuery = $captured['queries'][1];
         self::assertStringNotContainsString(':colors', $colorQuery['sql']);
         self::assertArrayNotHasKey('colors', $colorQuery['params']);
@@ -120,7 +120,7 @@ final class FacetAggregatorTest extends TestCase
             'categoryId' => 5,
         ]);
 
-        // price query (third) — must NOT carry minPrice or maxPrice
+        // price query (third), must NOT carry minPrice or maxPrice
         $priceQuery = $captured['queries'][2];
         self::assertArrayNotHasKey('minPrice', $priceQuery['params']);
         self::assertArrayNotHasKey('maxPrice', $priceQuery['params']);
@@ -234,7 +234,7 @@ final class FacetAggregatorTest extends TestCase
     #[Test]
     public function colorFacetSortsByCountDescThenAlpha(): void
     {
-        // SQL already does ORDER BY count DESC, value ASC — verify we
+        // SQL already does ORDER BY count DESC, value ASC, verify we
         // pass through without reshuffling.
         $captured = $this->captureQueries([
             [],
@@ -434,7 +434,7 @@ final class FacetAggregatorTest extends TestCase
         self::assertStringContainsString('jsonb_exists_any(p.available_sizes', $colorQuery['sql']);
         self::assertStringNotContainsString('?|', $colorQuery['sql']);
 
-        // Total-products query (last) applies BOTH filters — neither may
+        // Total-products query (last) applies BOTH filters, neither may
         // reintroduce the operator.
         $totalQuery = $captured['queries'][5];
         self::assertStringContainsString('jsonb_exists_any(p.available_sizes', $totalQuery['sql']);
@@ -456,7 +456,7 @@ final class FacetAggregatorTest extends TestCase
             'categoryId' => 5,
         ]);
 
-        // Total query is the 6th (last) — must apply EVERY filter
+        // Total query is the 6th (last), must apply EVERY filter
         $totalQuery = $captured['queries'][5];
         self::assertSame(['M'], $totalQuery['params']['sizes']);
         self::assertSame(['Black'], $totalQuery['params']['colors']);
@@ -465,7 +465,7 @@ final class FacetAggregatorTest extends TestCase
     }
 
     // =================================================================
-    // X.10-D — Observability + defensive timeout
+    // X.10-D, Observability + defensive timeout
     // =================================================================
 
     #[Test]
@@ -548,7 +548,7 @@ final class FacetAggregatorTest extends TestCase
     {
         $logger = new InMemoryLogger();
         // Build a connection whose executeQuery sleeps 110ms each call
-        // — but only on the first call (size facet) so we don't
+        //, but only on the first call (size facet) so we don't
         // multiply the sleep across all 6 queries (test runtime).
         $sleeps = [110_000, 0, 0, 0, 0, 0];   // microseconds
         $callIdx = 0;

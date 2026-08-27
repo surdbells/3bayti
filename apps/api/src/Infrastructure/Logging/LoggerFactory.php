@@ -22,12 +22,12 @@ use Psr\Log\LoggerInterface;
  *   var/logs/3bayti-api-2026-05-10.log
  *
  * Each line is a single JSON object with these keys:
- *   - datetime    — ISO-8601 with microseconds + timezone
- *   - channel     — "3bayti-api" (we don't split into multiple channels)
- *   - level_name  — DEBUG / INFO / WARNING / ERROR / CRITICAL
- *   - message     — the human-readable message
- *   - context     — caller-supplied associative array
- *   - extra       — auto-added: request_id, php_pid, hostname
+ *   - datetime   , ISO-8601 with microseconds + timezone
+ *   - channel    , "3bayti-api" (we don't split into multiple channels)
+ *   - level_name , DEBUG / INFO / WARNING / ERROR / CRITICAL
+ *   - message    , the human-readable message
+ *   - context    , caller-supplied associative array
+ *   - extra      , auto-added: request_id, php_pid, hostname
  *
  * Why JSON
  * --------
@@ -71,7 +71,7 @@ final class LoggerFactory
      * Build a configured Monolog Logger.
      *
      * @param string $logDir   Directory for log files (will be created if missing)
-     * @param string $env      'prod' | 'dev' | 'test' — picks default level
+     * @param string $env      'prod' | 'dev' | 'test', picks default level
      * @param ?string $levelOverride Explicit level name from LOG_LEVEL env, or null
      */
     public static function create(
@@ -83,7 +83,7 @@ final class LoggerFactory
         // to write inside it; if missing, the first call throws.
         if (!is_dir($logDir)) {
             // Recursive create with sensible perms. 0775 lets group
-            // (e.g. www) read/write — important when logs are written
+            // (e.g. www) read/write, important when logs are written
             // by FPM workers but read by an ops human.
             @mkdir($logDir, 0775, true);
         }
@@ -102,7 +102,7 @@ final class LoggerFactory
 
         // JSON output, one record per line.
         // includeStacktraces(true) attaches PHP stack traces to log
-        // records that include an exception in context — useful for
+        // records that include an exception in context, useful for
         // post-mortem debugging.
         $formatter = new JsonFormatter();
         $formatter->includeStacktraces(true);
@@ -126,7 +126,7 @@ final class LoggerFactory
     private static function resolveLevel(string $env, ?string $override): Level
     {
         if ($override !== null && $override !== '') {
-            // Try to parse — e.g. "INFO", "warning", "Error"
+            // Try to parse, e.g. "INFO", "warning", "Error"
             $upper = strtoupper(trim($override));
             // Map names to Level enum cases.
             // Monolog\Level::fromName throws on invalid; we want graceful fallback.
@@ -150,7 +150,7 @@ final class LoggerFactory
      */
     private static function buildRequestProcessor(): callable
     {
-        // Cache hostname once per worker — it doesn't change.
+        // Cache hostname once per worker, it doesn't change.
         $hostname = gethostname() ?: 'unknown';
 
         return static function (LogRecord $record) use ($hostname): LogRecord {

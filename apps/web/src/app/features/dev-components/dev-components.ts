@@ -13,7 +13,7 @@ import { ProductCardComponent } from '../catalog/product-card';
 import type { Product } from '../catalog/product.model';
 
 /**
- * /_dev/components — visual showcase of every shared UI primitive.
+ * /_dev/components, visual showcase of every shared UI primitive.
  *
  * This is our lightweight Storybook substitute. Native to the app, no
  * extra deps, fully SSR-rendered (so we also get to verify primitives
@@ -22,7 +22,7 @@ import type { Product } from '../catalog/product.model';
  * The route is noindex'd so search engines never include it.
  *
  * To browse: visit /_dev/components in dev or staging. Production
- * users can technically reach it too — there's no harm in that, the
+ * users can technically reach it too, there's no harm in that, the
  * page is purely informational. We could route-guard it if it ever
  * felt necessary.
  */
@@ -55,7 +55,7 @@ export class DevComponentsComponent {
     });
   }
 
-  /** Variants matrix used by the template — keeps logic out of HTML. */
+  /** Variants matrix used by the template, keeps logic out of HTML. */
   readonly buttonVariants = ['primary', 'secondary', 'ghost'] as const;
   readonly buttonSizes = ['sm', 'md', 'lg'] as const;
   readonly headingSizes = ['display', 'xl', 'lg', 'md', 'sm'] as const;
@@ -71,10 +71,10 @@ export class DevComponentsComponent {
    *   1. With image + vendor + rating + sale price (the rich case)
    *   2. With image but no rating yet (new product, no reviews)
    *   3. Out-of-stock (overlay treatment)
-   *   4. Letter-fallback (no primary_image) — most common with broken
+   *   4. Letter-fallback (no primary_image), most common with broken
    *      backend image URLs in current data
    *   5. Bestseller pill, no sale
-   *   6. Missing slug (renders as div, not anchor) — defensive case
+   *   6. Missing slug (renders as div, not anchor), defensive case
    *
    * Once the live API is wired, real data will replace these. The mocks
    * stay in /_dev/components for ongoing visual regression checks.
@@ -133,7 +133,7 @@ export class DevComponentsComponent {
       vendor: { slug: 'maison-eden-22', name: 'Maison Eden' },
       rating: 4.2,
       review_count: 8,
-      in_stock: false,  // Out of stock — overlay treatment
+      in_stock: false,  // Out of stock, overlay treatment
       is_new: false,
       is_bestseller: false,
     },

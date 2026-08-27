@@ -8,7 +8,7 @@ use Bayti\Api\Domain\Ota\OtaBundle;
 
 /**
  * Public admin shape for an OTA bundle (the portal management UI). The raw
- * session_key is never exposed — only whether the bundle is signed.
+ * session_key is never exposed, only whether the bundle is signed.
  */
 final class OtaBundleSerializer
 {

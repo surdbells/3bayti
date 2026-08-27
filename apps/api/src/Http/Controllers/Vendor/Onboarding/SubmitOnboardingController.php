@@ -29,7 +29,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * onboarding status endpoint.
  *
  * Auth requirement: AuthMiddleware only (NOT VendorAuthMiddleware).
- * This is the endpoint that GRANTS vendor role — by definition the
+ * This is the endpoint that GRANTS vendor role, by definition the
  * caller is not yet a vendor when they hit it (or has never used
  * the platform's vendor capabilities even if the flag is somehow
  * set).
@@ -76,7 +76,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *     onboarding status endpoint provides self-serve visibility)
  *   - Auto-approve (Q-OnboardingFlow=A: admin approval required)
  *   - Allow multiple submissions in flight from the same user (a
- *     user CAN own multiple Vendor entities — that's the multi-
+ *     user CAN own multiple Vendor entities, that's the multi-
  *     store pattern; per-slug uniqueness is the only constraint)
  */
 final class SubmitOnboardingController
@@ -140,7 +140,7 @@ final class SubmitOnboardingController
         }
 
         // Vendor status defaults to STATUS_PENDING per the entity's
-        // initial state — no explicit transition needed.
+        // initial state, no explicit transition needed.
 
         // Flip the user's vendor flag so they can access the
         // onboarding status endpoint + future vendor surfaces once

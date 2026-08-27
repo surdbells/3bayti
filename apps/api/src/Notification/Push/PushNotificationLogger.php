@@ -24,7 +24,7 @@ use Psr\Log\LoggerInterface;
  * user_id. We therefore write/read the push ledger with narrow raw
  * SQL here, leaving the entity (and its email-side invariants)
  * untouched. This is also the safest posture for the PHP-DI
- * compiled container — no object/enum defaults, no closures in DI.
+ * compiled container, no object/enum defaults, no closures in DI.
  *
  * The `channel` column is the linchpin of independent idempotency:
  * an email log row (channel='email') never suppresses a push, and a
@@ -33,7 +33,7 @@ use Psr\Log\LoggerInterface;
  *
  * Template values used here are the PUSH data.type strings from the
  * shared mobile contract (cart.abandoned, order.review_prompt,
- * re_engagement.nudge) — distinct from the email template values
+ * re_engagement.nudge), distinct from the email template values
  * (e.g. cart.abandoned.customer) so the two never collide.
  *
  * @internal Marked non-final ONLY so PHPUnit can build class doubles in

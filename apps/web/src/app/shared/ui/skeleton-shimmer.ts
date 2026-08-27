@@ -2,17 +2,17 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
- * SkeletonShimmer — loading placeholder with a subtle shimmer sweep.
+ * SkeletonShimmer, loading placeholder with a subtle shimmer sweep.
  *
  * Used wherever data is loading and we want to show a shape rather than
  * a blank space. Particularly useful for product strips on the home
- * page (Phase 1) — render 4 skeleton cards while the API call is in
+ * page (Phase 1), render 4 skeleton cards while the API call is in
  * flight, then swap to real cards when data arrives. Prevents the
  * jarring "nothing → something" pop and reduces perceived load time.
  *
  * Visual: a cream-tinted rectangle with a slow diagonal gradient sweep
  * (linear-gradient that animates from -100% to 100% over 1.6s, infinite
- * loop). Matches the Gilded Boutique palette — never grey-on-white,
+ * loop). Matches the Gilded Boutique palette, never grey-on-white,
  * always brand-tinted.
  *
  * Accessibility:
@@ -96,14 +96,14 @@ import { TranslatePipe } from '@ngx-translate/core';
   `],
 })
 export class SkeletonShimmerComponent {
-  /** Width — any CSS length. Default fills container. */
+  /** Width, any CSS length. Default fills container. */
   @Input() width = '100%';
 
-  /** Height — any CSS length. Use with aspectRatio for image placeholders. */
+  /** Height, any CSS length. Use with aspectRatio for image placeholders. */
   @Input() height = '100%';
 
   /**
-   * Aspect ratio — CSS value like '3 / 4' or '16 / 9'. When set, the
+   * Aspect ratio, CSS value like '3 / 4' or '16 / 9'. When set, the
    * height is determined by width × ratio, which is exactly what we
    * want for product-card image placeholders.
    */

@@ -13,7 +13,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Firebase Cloud Messaging HTTP v1 sender — production adapter.
+ * Firebase Cloud Messaging HTTP v1 sender, production adapter.
  *
  * Sends to https://fcm.googleapis.com/v1/projects/{projectId}/messages:send.
  * FCM relays to APNs for iOS, so this single adapter covers both
@@ -114,7 +114,7 @@ final class FcmHttpV1Sender implements PushSenderInterface
 
         // FCM v1 requires message.data to be a JSON OBJECT (map<string,string>).
         // An empty PHP array encodes to `[]` (a JSON array), which FCM rejects
-        // with an INVALID_ARGUMENT error — this is why broadcasts (no data)
+        // with an INVALID_ARGUMENT error, this is why broadcasts (no data)
         // failed on every token while order pushes (which always carry data)
         // went through. Only include data when present, and cast so it always
         // serializes as an object even if a caller passes a list-shaped array.

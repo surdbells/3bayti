@@ -40,7 +40,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *         of category candidates
  *      c. If still under TOP_N_TARGET, the product gets
  *         fallback_popular rows (added by X.12-F at read time
- *         from a marketplace-wide popularity ranking) — we do
+ *         from a marketplace-wide popularity ranking), we do
  *         NOT persist fallback_popular rows here; they're
  *         dynamic at the read tier
  *   4. Bulk-delete all existing rows + bulk-insert the fresh
@@ -50,7 +50,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * Idempotency
  * ===========
  * Each run truncates the entire table before re-populating.
- * No need for upsert logic — clean slate every time. The
+ * No need for upsert logic, clean slate every time. The
  * read tier serves stale data during the cron run only for
  * the duration of the transaction (typically <30s).
  *

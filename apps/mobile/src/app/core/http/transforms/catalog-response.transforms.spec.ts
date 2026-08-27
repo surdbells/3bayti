@@ -59,7 +59,7 @@ describe('transformProductListResponse', () => {
     expect(card['image_1']).toBe('https://cdn/foo.jpg');
     expect(card['price']).toBe(299);
     expect(card['store_name']).toBe('Almas Fashion');
-    // store / store_id = vendor.legacy_id — the id the vendor badge navigates
+    // store / store_id = vendor.legacy_id, the id the vendor badge navigates
     // with (/vendors?id={id} -> GET /v3/vendors/by-legacy-id/{id}). Search
     // reads `store`, the explore/vertican card reads `store_id`; both must
     // carry the same legacy id.
@@ -168,7 +168,7 @@ describe('transformProductDetailResponse', () => {
     // Description:
     expect(r['description']).toBe('A luxurious silk abaya...');
 
-    // Pricing — flat number AND formatted string:
+    // Pricing, flat number AND formatted string:
     expect(r['price']).toBe(299);
     expect(r['price_formated']).toBe('299');
     expect(r['sale_price']).toBe(249);
@@ -298,7 +298,7 @@ describe('transformVendorResponse', () => {
     expect(r['slug']).toBe('almas-fashion');
     expect(r['is_verified']).toBe(true);
 
-    // Documented gaps — emit safe defaults:
+    // Documented gaps, emit safe defaults:
     expect(r['tagline']).toBe('');
     expect(r['following']).toBe(false);
   });
@@ -456,7 +456,7 @@ describe('CATALOG_RESPONSE_TRANSFORMS registry', () => {
       'GET /mobile/category-listing',
       'GET /mobile/vendors-products',
       'GET /mobile/store-latest',
-      // M3.1.5.5 — search + products-by-labels reuse the list mapper:
+      // M3.1.5.5, search + products-by-labels reuse the list mapper:
       'GET /mobile/search',
       'GET /mobile/products-by-labels',
     ];

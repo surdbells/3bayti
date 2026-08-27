@@ -8,7 +8,7 @@
  * is precomputed by the API).
  *
  * Currency is part of every cart payload so the UI never has to guess
- * — useful when a multi-currency rollout lands.
+ *, useful when a multi-currency rollout lands.
  */
 
 export interface CartItem {
@@ -22,7 +22,7 @@ export interface CartItem {
   product_image: string;
   /** Quantity in the cart. */
   quantity: number;
-  /** Unit price snapshot — string decimal. */
+  /** Unit price snapshot, string decimal. */
   unit_price: string;
   /** quantity × unit_price, precomputed by the API. */
   line_subtotal: string;
@@ -51,7 +51,7 @@ export interface Cart {
   cart_code: string;
   /** Sum of line_subtotals as a decimal string. */
   subtotal: string;
-  /** Total quantity across all items. NOT items.length — multi-quantity lines count their qty. */
+  /** Total quantity across all items. NOT items.length, multi-quantity lines count their qty. */
   item_count: number;
   /** Line items. */
   items: CartItem[];
@@ -90,7 +90,7 @@ export interface MergeAnonCartInput {
 }
 
 /**
- * Cart quote response — POST /v3/cart/quote.
+ * Cart quote response, POST /v3/cart/quote.
  *
  * Includes the server-authoritative resolved promo (if any) and the
  * line breakdown with shipping + tax. Used on the cart page and

@@ -15,7 +15,7 @@ use Bayti\Api\Domain\User\User;
  * ==============================================================
  * Each template is ~30-50 lines of HTML + plain-text composition.
  * Splitting them into 11 separate files would add navigation
- * overhead without separation benefits — they all share the same
+ * overhead without separation benefits, they all share the same
  * Order/OrderItem inputs and the same shared header/footer.
  *
  * If templates grow significantly (image attachments, rich
@@ -31,7 +31,7 @@ use Bayti\Api\Domain\User\User;
  * Plain-text body
  * ===============
  * Required for accessibility, spam filter avoidance, and clients
- * that strip HTML. Generated alongside HTML — both bodies are
+ * that strip HTML. Generated alongside HTML, both bodies are
  * always non-empty.
  *
  * Localization (M3.2.X.7)
@@ -54,7 +54,7 @@ use Bayti\Api\Domain\User\User;
  * render Arabic in RTL.
  *
  * Admin templates (DISPUTE_OPENED_ADMIN) are LOCKED to English
- * regardless of locale parameter — admin emails are always
+ * regardless of locale parameter, admin emails are always
  * English per Q-VendorAdminLocale = A locked. The match
  * expression enforces this by always calling the English variant.
  */
@@ -81,7 +81,7 @@ final class OrderEmailTemplateRenderer
 
         $rendered = $this->dispatch($template, $order, $extra, $isArabic);
 
-        // Support-contact footer — CUSTOMER emails only (never vendor/admin).
+        // Support-contact footer, CUSTOMER emails only (never vendor/admin).
         // Filled centrally into the slot wrapHtml() leaves in the content card,
         // so every customer template carries it without per-template edits.
         $isCustomer = str_ends_with($template->value, '.customer');
@@ -165,7 +165,7 @@ final class OrderEmailTemplateRenderer
             EmailTemplate::DISPUTE_OPENED_ADMIN => $this->disputeOpenedAdminEn($order, $extra),
             EmailTemplate::ORDER_STATUS_CHANGED_ADMIN => $this->orderStatusChangedAdminEn($order, $extra),
 
-            // M3.2.X.18-G — Return request flow. Customer templates
+            // M3.2.X.18-G, Return request flow. Customer templates
             // dispatch by locale; vendor template uses vendor's
             // preferred locale; admin template always English.
             EmailTemplate::RETURN_SUBMITTED_CUSTOMER => $isArabic
@@ -191,7 +191,7 @@ final class OrderEmailTemplateRenderer
                 : $this->returnSubmittedVendorEn($order, $extra),
             EmailTemplate::RETURN_SUBMITTED_ADMIN => $this->returnSubmittedAdminEn($order, $extra),
 
-            // M3.2.X.11 — cart-scoped templates are rendered by
+            // M3.2.X.11, cart-scoped templates are rendered by
             // CartEmailTemplateRenderer, not this class. If a caller
             // routes one here it's a wiring bug; fail loudly rather
             // than silently render an empty email.
@@ -248,7 +248,7 @@ HTML,
     {
         $ref = $order->getOrderReference();
 
-        // Itemless orders (e.g. a gift-card PURCHASE — a synthetic order with
+        // Itemless orders (e.g. a gift-card PURCHASE, a synthetic order with
         // no product line items) get a clean confirmation, not the empty
         // item/measurement block or a "we're preparing… it ships" line.
         if ($order->getItems()->isEmpty()) {
@@ -360,7 +360,7 @@ TXT,
         }
         $text .= "  {$note}\n";
 
-        // HTML — themed panel with the code called out.
+        // HTML, themed panel with the code called out.
         $rowsHtml = '';
         foreach ($rows as [$k, $v]) {
             $isCode = ($k === $l['code']);
@@ -423,7 +423,7 @@ HTML,
 
     /**
      * Scheduled reminder that an order still needs payment. `reason`
-     * ('pending'|'failed') tunes the lead copy — a gentle nudge for an
+     * ('pending'|'failed') tunes the lead copy, a gentle nudge for an
      * unpaid order vs. a retry prompt after a failed charge. Both point
      * the customer back to the app to complete payment.
      *
@@ -458,7 +458,7 @@ HTML,
         $totalEsc = $this->esc($total);
         $currencyEsc = $this->esc($currency);
 
-        // Detailed breakdown — the same rich items + pricing + delivery block
+        // Detailed breakdown, the same rich items + pricing + delivery block
         // the order-confirmation emails use, so the customer sees exactly what
         // they're about to pay for (a strong recovery driver). Itemless orders
         // (gift-card purchases) fall back to the amount-due line only.
@@ -504,7 +504,7 @@ TXT,
      */
     /**
      * A focused single-item card (image, name, qty, size/colour, measurements)
-     * for per-item lifecycle emails — richer than a bare item name, without the
+     * for per-item lifecycle emails, richer than a bare item name, without the
      * whole-order pricing/address block.
      *
      * @return array{0: string, 1: string} [text, html]
@@ -855,7 +855,7 @@ HTML,
 
     /**
      * Map an Order::STATUS_* code to a friendly English label. Unknown
-     * codes pass through verbatim (defensive — never render an empty
+     * codes pass through verbatim (defensive, never render an empty
      * status line).
      */
     private function statusLabelEn(string $status): string
@@ -934,7 +934,7 @@ TXT,
      * Full detail block(s) for a vendor's items. Prefers the rich
      * orderDetails() card built from 'vendor_order_items'
      * (list<OrderItem>); falls back to bare names in 'vendor_items' if a
-     * caller didn't pass the items (defensive — the paid-order path always
+     * caller didn't pass the items (defensive, the paid-order path always
      * passes them).
      *
      * @param array<string, mixed> $extra
@@ -975,7 +975,7 @@ TXT,
         $reasonLineHtml = $reason !== ''
             ? '<p style="font-size:14px;color:#4a453e;line-height:1.6;"><strong>Reason:</strong> ' . $this->esc($reason) . '</p>'
             : '';
-        // The vendor's own line items (with measurements) — so they know
+        // The vendor's own line items (with measurements), so they know
         // exactly what NOT to ship, not just an order number.
         [$detailsText, $detailsHtml] = $this->vendorDetails($order, $extra, false);
 
@@ -1054,17 +1054,17 @@ HTML,
     }
 
     /**
-     * Admin alert — an admin manually overrode an order or item status.
+     * Admin alert, an admin manually overrode an order or item status.
      * Surfaces in the admin bell + ops email. Always English
      * (Q-VendorAdminLocale = A locked).
      *
      * $extra:
-     *   new_status  — the status the order/item was forced into
-     *   old_status  — the previous status (optional)
-     *   scope       — 'order' | 'item' (optional, defaults 'order')
-     *   item_name   — name of the item when scope='item' (optional)
-     *   actor       — email/name of the admin who made the change (optional)
-     *   reason      — admin's reason for the override (optional)
+     *   new_status , the status the order/item was forced into
+     *   old_status , the previous status (optional)
+     *   scope      , 'order' | 'item' (optional, defaults 'order')
+     *   item_name  , name of the item when scope='item' (optional)
+     *   actor      , email/name of the admin who made the change (optional)
+     *   reason     , admin's reason for the override (optional)
      *
      * @param array<string, mixed> $extra
      */
@@ -1162,7 +1162,7 @@ HTML,
      * and the delivery address. Returns [plainText, html].
      *
      * Unlike the order CHAT (OrderDetailsMessageBuilder), emails deliberately
-     * do NOT carry the "keep all communication here" policy line — that stays
+     * do NOT carry the "keep all communication here" policy line, that stays
      * in the in-app chat only.
      *
      * @param iterable<OrderItem> $items
@@ -1433,7 +1433,7 @@ HTML,
      * inline styles so it renders consistently in Gmail/Outlook/Apple Mail.
      *
      * Emits proper lang= and dir= attributes so email clients render Arabic
-     * RTL — without these, Outlook and some webmail clients render Arabic
+     * RTL, without these, Outlook and some webmail clients render Arabic
      * left-to-right which is visually broken.
      *
      * $preheader is the short line email clients show next to the subject in
@@ -1502,7 +1502,7 @@ HTML;
     }
 
     // -----------------------------------------------------------------
-    // Arabic templates — customer-facing (M3.2.X.7-C)
+    // Arabic templates, customer-facing (M3.2.X.7-C)
     // -----------------------------------------------------------------
     //
     // Modern Standard Arabic (MSA), formal/respectful register.
@@ -1513,16 +1513,16 @@ HTML;
     //     same order reference they'd see on the web/mobile app)
     //   - Currency 'د.إ' (AED in Arabic) when locale=ar; 'AED' on
     //     the English side. The numeric value itself stays Western
-    //     Arabic numerals (1,2,3 not ١,٢,٣) — UAE business convention
+    //     Arabic numerals (1,2,3 not ١,٢,٣), UAE business convention
     //     for clarity in commercial contexts
-    //   - Email signature '— 3bayti' kept in Latin for consistent
+    //   - Email signature '- 3bayti' kept in Latin for consistent
     //     brand identity (matches wrapHtml's tagline pattern)
     //   - HTML structure mirrors the English templates so RTL
     //     rendering flows naturally from the dir="rtl" on <html>
     //
     // OPERATOR FOLLOW-UP: a native Arabic reviewer pass before
     // production is recommended (documented in closure runbook).
-    // The translations are formal MSA — unlikely to land badly but
+    // The translations are formal MSA, unlikely to land badly but
     // a polish pass adds confidence. Not a hard blocker.
 
     private function orderPlacedCustomerAr(Order $order): RenderedEmail
@@ -1568,7 +1568,7 @@ HTML,
     {
         $ref = $order->getOrderReference();
 
-        // Itemless order (e.g. a gift-card purchase) — clean confirmation.
+        // Itemless order (e.g. a gift-card purchase), clean confirmation.
         if ($order->getItems()->isEmpty()) {
             $total    = $order->getTotal();
             $currency = $order->getCurrency();
@@ -1832,14 +1832,14 @@ HTML,
     }
 
     // -----------------------------------------------------------------
-    // Arabic templates — vendor-facing (M3.2.X.7-D)
+    // Arabic templates, vendor-facing (M3.2.X.7-D)
     // -----------------------------------------------------------------
     //
     // Vendor users opt in via Vendor.preferredLocale = 'ar'. Same
     // translation conventions as customer templates (UAE business
     // norms: Latin order references, Western Arabic numerals, etc.).
     //
-    // No admin-facing Arabic template exists — admin notifications are
+    // No admin-facing Arabic template exists, admin notifications are
     // ALWAYS English per Q-VendorAdminLocale = A locked. The renderer's
     // match expression enforces this by always dispatching admin
     // templates to disputeOpenedAdminEn regardless of locale.
@@ -1928,7 +1928,7 @@ TXT,
     }
 
     // =================================================================
-    // M3.2.X.18-G — Return request flow templates
+    // M3.2.X.18-G, Return request flow templates
     // =================================================================
     //
     // Six customer-facing lifecycle events (each EN + AR), one vendor

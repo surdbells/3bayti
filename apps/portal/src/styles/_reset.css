@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Reset
+   Abayti Design System, Reset
    Modern, opinionated baseline. Built on tokens.
    ========================================================================= */
 
@@ -129,7 +129,7 @@ b {
   outline: none;
 }
 
-/* Custom scrollbar — subtle, premium */
+/* Custom scrollbar, subtle, premium */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--ax-color-border-strong) transparent;

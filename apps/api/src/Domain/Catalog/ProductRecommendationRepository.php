@@ -9,7 +9,7 @@ use Doctrine\ORM\EntityRepository;
 /**
  * Repository for ProductRecommendation entities (M3.2.X.12-B).
  *
- * The hot read path is findTopForProduct() — single indexed
+ * The hot read path is findTopForProduct(), single indexed
  * lookup serving the catalog "you might also like" endpoint.
  * The write path is used by the X.12-E cron command which
  * rebuilds recommendations nightly.

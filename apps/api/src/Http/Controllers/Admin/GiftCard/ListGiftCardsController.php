@@ -28,20 +28,20 @@ use Psr\Http\Message\ServerRequestInterface;
  * gift_cards.view. Mirrors the ListPromoCodes pattern.
  *
  * Query parameters (all optional):
- *   ?search=...          — substring match on code / recipient email /
+ *   ?search=...         , substring match on code / recipient email /
  *                          recipient name / purchaser email
- *   ?status=active|...   — exact GiftCard::STATUS_* match
- *   ?min_balance=100.00  — balance >=
- *   ?max_balance=500.00  — balance <=
- *   ?min_value=100.00    — denomination (original value) >=
- *   ?max_value=500.00    — denomination <=
- *   ?created_from=ISO    — created_at >=
- *   ?created_to=ISO      — created_at <=
- *   ?delivered=true|false— delivered (any channel) yes / no
- *   ?limit=N             — default 20, max 100
- *   ?offset=N            — default 0
+ *   ?status=active|...  , exact GiftCard::STATUS_* match
+ *   ?min_balance=100.00 , balance >=
+ *   ?max_balance=500.00 , balance <=
+ *   ?min_value=100.00   , denomination (original value) >=
+ *   ?max_value=500.00   , denomination <=
+ *   ?created_from=ISO   , created_at >=
+ *   ?created_to=ISO     , created_at <=
+ *   ?delivered=true|false- delivered (any channel) yes / no
+ *   ?limit=N            , default 20, max 100
+ *   ?offset=N           , default 0
  *
- * No per-row ledger — that would be N+1. The detail endpoint returns the
+ * No per-row ledger, that would be N+1. The detail endpoint returns the
  * ledger for a single card.
  */
 final class ListGiftCardsController

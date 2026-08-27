@@ -14,7 +14,7 @@ use Doctrine\ORM\Mapping as ORM;
  * Net-new in M3.2.Z.3 (Q-Z3=B). A user can group their saved products
  * under named labels; a saved product belongs to at most one label
  * (Wishlist.label, nullable). Deleting a label moves its products back
- * to uncategorized via ON DELETE SET NULL — no products are lost.
+ * to uncategorized via ON DELETE SET NULL, no products are lost.
  *
  * Only created_at is tracked (rename mutates `name` in place; we don't
  * surface an updated_at).

@@ -20,11 +20,11 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
  *
  * What's NOT here
  * ---------------
- *   - email — change requires re-verification flow (separate endpoint, M1.7.4+)
- *   - phone — same as email
- *   - password — change requires old-password verification (M1.7.4+)
- *   - country_code — set at registration, not editable (per business decision)
- *   - role flags — admin-only operation
+ *   - email, change requires re-verification flow (separate endpoint, M1.7.4+)
+ *   - phone, same as email
+ *   - password, change requires old-password verification (M1.7.4+)
+ *   - country_code, set at registration, not editable (per business decision)
+ *   - role flags, admin-only operation
  *
  * Tristate semantics (limitation)
  * --------------------------------
@@ -36,7 +36,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
  *
  * These are indistinguishable. We therefore treat them the same:
  * "no value provided." That means PATCH cannot CLEAR an existing
- * value via this endpoint — once you set a gender, you can't unset
+ * value via this endpoint, once you set a gender, you can't unset
  * it via PATCH (only change it to a different value).
  *
  * If we ever need true tristate (set/unset/leave-alone) we'd need to
@@ -66,7 +66,7 @@ final class UpdateProfileInput
 
     /**
      * Reasonable upper bound on age. Anyone older than 130 is either
-     * lying or breaking world records — both warrant rejecting the
+     * lying or breaking world records, both warrant rejecting the
      * value rather than letting bogus data into the DB.
      */
     private const MAX_AGE_YEARS = 130;
@@ -78,7 +78,7 @@ final class UpdateProfileInput
     public readonly ?string $last_name;
 
     /**
-     * Gender — accepts null OR one of the canonical enum values.
+     * Gender, accepts null OR one of the canonical enum values.
      */
     #[Assert\Choice(
         callback: [Gender::class, 'values'],
@@ -102,7 +102,7 @@ final class UpdateProfileInput
     public readonly ?string $locale;
 
     /**
-     * Timezone — IANA identifier. Validated against PHP's timezone
+     * Timezone, IANA identifier. Validated against PHP's timezone
      * database via the Callback (the list is too large for inline
      * Choice).
      */

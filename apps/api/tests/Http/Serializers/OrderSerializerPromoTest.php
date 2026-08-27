@@ -22,12 +22,12 @@ use PHPUnit\Framework\TestCase;
  *   - Order without a PromoRedemption serializes applied_promo: null
  *   - Order with a PromoRedemption surfaces the snapshot fields
  *     (code, discount_type, discount_value, discount_amount,
- *     redeemed_at) — NOT the live PromoCode fields, so a later
+ *     redeemed_at), NOT the live PromoCode fields, so a later
  *     admin rename / re-price leaves historical orders untouched.
  *   - Both listShape and detailShape include applied_promo (since
  *     detailShape extends listShape).
  *
- * Direct-construction tests — no HTTP layer, no DI. Builds Order +
+ * Direct-construction tests, no HTTP layer, no DI. Builds Order +
  * PromoCode + PromoRedemption via the entities' real constructors,
  * then injects ids via reflection where needed.
  */

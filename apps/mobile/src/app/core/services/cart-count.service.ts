@@ -6,7 +6,7 @@ import { LocalCartService } from './local-cart.service';
 import { MobileNetworkAdapter } from '../http/mobile-network-adapter';
 
 /**
- * CartCountService — single reactive source of truth for the header
+ * CartCountService, single reactive source of truth for the header
  * cart-badge item count, mirroring web's CartService.itemCount.
  *
  * Why this exists
@@ -27,16 +27,16 @@ import { MobileNetworkAdapter } from '../http/mobile-network-adapter';
  *
  * The count is exposed BOTH as an Angular signal (`count`) and a
  * BehaviorSubject (`count$`) so template bindings can consume whichever
- * fits — `app-cart-icon` takes a plain number @Input, so pages read the
+ * fits, `app-cart-icon` takes a plain number @Input, so pages read the
  * signal in the template.
  *
  * Update surface
  * ==============
- *   refresh()    — recompute from the authoritative store (call on page
+ *   refresh()   , recompute from the authoritative store (call on page
  *                  enter). Async; safe to fire-and-forget.
- *   setCount(n)  — set the count directly (e.g. authed add returns the new
+ *   setCount(n) , set the count directly (e.g. authed add returns the new
  *                  total in its response).
- *   bump(delta)  — adjust the count immediately by a delta (default +1)
+ *   bump(delta) , adjust the count immediately by a delta (default +1)
  *                  for instant feedback after a mutation, ahead of the
  *                  authoritative refresh().
  *
@@ -65,13 +65,13 @@ export class CartCountService {
     try {
       const ret = await Preferences.get({ key: 'user' });
       if (ret.value == null) {
-        // Guest — sum quantities from the device-local cart.
+        // Guest, sum quantities from the device-local cart.
         const count = await this.localCart.count();
         this.setCount(count);
         return;
       }
 
-      // Authed — read the server cart's count.
+      // Authed, read the server cart's count.
       const user = JSON.parse(ret.value) as { token?: string };
       const response: any = await firstValueFrom(
         this.networkAdapter.get_v3('GET /cart', { authToken: user.token }),

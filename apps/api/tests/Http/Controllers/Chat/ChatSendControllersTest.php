@@ -150,7 +150,7 @@ final class ChatSendControllersTest extends HttpTestCase
         $body = $this->jsonBody($response);
         self::assertSame('CHAT_MESSAGE_BLOCKED', $body['error']['code']);
         self::assertContains('phone', $body['error']['details']['flag_types']);
-        // Withheld — vendor never notified.
+        // Withheld, vendor never notified.
         self::assertSame(0, $conv->getVendorUnreadCount());
     }
 

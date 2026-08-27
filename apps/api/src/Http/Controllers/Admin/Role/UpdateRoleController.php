@@ -13,12 +13,12 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * PUT /v3/admin/roles/{id} — body may include name, description, permissions[].
+ * PUT /v3/admin/roles/{id}, body may include name, description, permissions[].
  *
  * System roles (is_system) are protected: only their name/description may be
  * tuned. Any attempt to change their slug or permission set is rejected (422).
  * This is critical for super_admin, which is special-cased at runtime to hold
- * EVERY permission (PermissionCatalog) — editing its stored permission set must
+ * EVERY permission (PermissionCatalog), editing its stored permission set must
  * never silently diverge from that contract. (System roles also cannot be
  * deleted; see DeleteRoleController.)
  *
@@ -79,7 +79,7 @@ final class UpdateRoleController
             $role->setDescription(trim((string) ($body['description'] ?? '')) ?: null);
         }
         if (array_key_exists('permissions', $body)) {
-            // (Only reachable for non-system roles — guarded above.)
+            // (Only reachable for non-system roles, guarded above.)
             $keys = $this->validatePermissionKeys($body['permissions']);
             $this->assertNoPermissionEscalation($actor, $keys);
             $this->syncPermissions($this->em, $role, $keys);

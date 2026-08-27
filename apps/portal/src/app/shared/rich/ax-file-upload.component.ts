@@ -19,7 +19,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { IconComponent } from '../icon/icon.component';
 /**
  * Metadata describing a file staged by the uploader. Not the native File
- * object — the component keeps both (the File on `file`, the preview URL on
+ * object, the component keeps both (the File on `file`, the preview URL on
  * `thumbUrl`) so consumers can inspect size, name, or mime without touching
  * the DOM object.
  */
@@ -55,7 +55,7 @@ export interface AxUploadFile {
  *     (filesChange)="handleUpload($event)">
  *   </app-ax-file-upload>
  *
- * The component is a ControlValueAccessor — the value is an array of
+ * The component is a ControlValueAccessor, the value is an array of
  * AxUploadFile. Parent components listen to filesChange to upload (component
  * does not POST to a server).
  *

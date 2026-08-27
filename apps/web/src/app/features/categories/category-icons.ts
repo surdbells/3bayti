@@ -31,7 +31,7 @@ const ICON_MAP: Record<string, string> = {
   kaftans: '/icons/categories/kaftan.png',
   'modest-clothes': '/icons/categories/modest.png',
   mukhawars: '/icons/categories/mukhawar.png',
-  // pyjamas: intentionally absent — categories without an icon are filtered
+  // pyjamas: intentionally absent, categories without an icon are filtered
   // out of the home page categories row. Add the line below when an icon
   // exists:
   // pyjamas: '/icons/categories/pyjamas.png',
@@ -57,7 +57,7 @@ export function categoryIconUrl(slug: string): string | null {
  * Used by HomeComponent to filter out categories like Pyjamas that
  * don't yet have icons. Filtering at the UI layer (rather than the
  * data layer) means /category and /category/:slug still surface every
- * category — only the home-page icon row hides icon-less ones.
+ * category, only the home-page icon row hides icon-less ones.
  */
 export function categoryHasIcon(slug: string): boolean {
   return categoryIconUrl(slug) !== null;

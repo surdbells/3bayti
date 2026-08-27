@@ -1,6 +1,6 @@
 /**
  * Cloudflare image transform helper for the 3bayti mobile app.
- * Mirrors packages/shared-ui/src/image-transform.ts — keep in sync.
+ * Mirrors packages/shared-ui/src/image-transform.ts, keep in sync.
  *
  * Transforms image URLs to use Cloudflare's /cdn-cgi/image/ resizing
  * path when the domain is CF-proxied (orange cloud). Passes through
@@ -28,15 +28,15 @@ export interface CfImageOptions {
  * We request ~2× the CSS pixel width so Retina screens are sharp.
  */
 export const CF_MOBILE_PRESETS = {
-  /** Product cards in lists / category grids — half-screen width @2×. */
+  /** Product cards in lists / category grids, half-screen width @2×. */
   card:    { width: 480,  quality: 82, fit: 'cover',   format: 'auto' } as CfImageOptions,
   /** Full-screen product image gallery. */
   detail:  { width: 900,  quality: 88, fit: 'cover',   format: 'auto' } as CfImageOptions,
-  /** Order line items / cart rows — small thumbnail. */
+  /** Order line items / cart rows, small thumbnail. */
   thumb:   { width: 160,  quality: 75, fit: 'cover',   format: 'auto' } as CfImageOptions,
-  /** Vendor cover banner — full-width. */
+  /** Vendor cover banner, full-width. */
   cover:   { width: 1200, quality: 80, fit: 'cover',   format: 'auto' } as CfImageOptions,
-  /** Vendor logo — small square. */
+  /** Vendor logo, small square. */
   logo:    { width: 160,  quality: 80, fit: 'contain', format: 'auto' } as CfImageOptions,
 } as const;
 

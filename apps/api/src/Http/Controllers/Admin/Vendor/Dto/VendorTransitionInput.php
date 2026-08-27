@@ -13,7 +13,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *   POST /v3/admin/vendors/{id}/suspend
  *   POST /v3/admin/vendors/{id}/reactivate
  *
- * Shared because all three transitions accept the same shape — an
+ * Shared because all three transitions accept the same shape, an
  * optional operator-supplied reason. Reason is recommended for
  * suspend (operationally important for the vendor + audit trail)
  * and optional for approve/reactivate.

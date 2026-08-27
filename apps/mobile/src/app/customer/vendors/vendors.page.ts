@@ -78,11 +78,11 @@ export class VendorsPage implements OnInit {
     token: "",
     // Active label filter. 0 === "no label filter" (the "All" view); a
     // positive value is the tapped chip's label id. Previously hard-coded
-    // to 4, which made ONLY label-4 products ever load — the empty-labels
+    // to 4, which made ONLY label-4 products ever load, the empty-labels
     // client bug this redesign fixes.
     label: 0,
     store_id: 0,
-    // Vendor slug — the storefront is resolved by slug now (legacy store_id is
+    // Vendor slug, the storefront is resolved by slug now (legacy store_id is
     // 0 for v3-native stores, which used to open a blank storefront).
     store_slug: "",
     store_name: ""
@@ -94,7 +94,7 @@ export class VendorsPage implements OnInit {
     store_slug: ""
   }
   view_vendor = {
-    // v3 numeric vendor id — populated by transformVendorResponse from the
+    // v3 numeric vendor id, populated by transformVendorResponse from the
     // by-legacy-id read. This is the id the Follow/Unfollow routes expect
     // (NOT store_id, which is the legacy WP/CI id used only for the
     // by-legacy-id catalog shims). 0 until the vendor read returns.
@@ -191,7 +191,7 @@ goToReviews(slug: string, vendorId: number, name: string) {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
     // Direct v3 (GET /v3/vendors/by-legacy-id/{id}/products). Public catalog
-    // read — no authToken. transformStoreLatestRequest maps store_id into the
+    // read, no authToken. transformStoreLatestRequest maps store_id into the
     // {id} path param (and drops the legacy id/token/label); the v3 endpoint
     // hardcodes sort=newest, so no query params are needed. The registered
     // response transform still applies via get_v3, so response.data keeps the
@@ -213,7 +213,7 @@ goToReviews(slug: string, vendorId: number, name: string) {
       }))
   }
   get_vendor() {
-    // Direct v3 (GET /v3/vendors/by-legacy-id/{id}). Public read — no
+    // Direct v3 (GET /v3/vendors/by-legacy-id/{id}). Public read, no
     // authToken. transformReadVendorRequest maps store_id into the {id} path
     // param. Response transform applies via get_v3, so response.data keeps the
     // legacy storefront-header shape.
@@ -263,7 +263,7 @@ goToReviews(slug: string, vendorId: number, name: string) {
   user_unfollow_vendor() {
     // Direct v3 (DELETE /v3/me/following/{vendorId}). Authenticated write.
     // The {vendorId} path param MUST be the v3 numeric primary key (same as
-    // follow above) — view_vendor.id, NOT the legacy store_id. DELETE
+    // follow above), view_vendor.id, NOT the legacy store_id. DELETE
     // carries no body. 204 → still passes the response_code === 200 envelope
     // check via the adapter's wrap.
     if (!this.view_vendor.id) {
@@ -279,7 +279,7 @@ goToReviews(slug: string, vendorId: number, name: string) {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
             // Reflect locally instead of re-reading (anonymous vendor read
-            // always reports following:false — see follow handler above).
+            // always reports following:false, see follow handler above).
             this.view_vendor.following = false;
           }else {
             this.error_notification(response.message);
@@ -306,7 +306,7 @@ goToReviews(slug: string, vendorId: number, name: string) {
   }
 
   /**
-   * "All" view — load the FULL vendor catalog (every label + label-null
+   * "All" view, load the FULL vendor catalog (every label + label-null
    * products). Uses GET /mobile/vendors-products → /v3/vendors/by-legacy-id/
    * {id}/products, which takes the vendor by path param and applies NO label
    * filter (unlike products-by-labels, which needs a label_id). This replaces
@@ -336,7 +336,7 @@ goToReviews(slug: string, vendorId: number, name: string) {
   get_product_by_label() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
-    // Direct v3 (GET /v3/products). Public catalog read — no authToken.
+    // Direct v3 (GET /v3/products). Public catalog read, no authToken.
     // transformProductsByLabelsRequest maps the legacy label → label_id and
     // store_id → vendor_id query params, omitting each when it's 0 (the
     // "no filter" signal). The label is now the TAPPED chip's id (not the old
@@ -374,7 +374,7 @@ goToReviews(slug: string, vendorId: number, name: string) {
   get_label() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
-    // Direct v3 (GET /v3/vendors/by-legacy-id/{id}/labels). Public read — no
+    // Direct v3 (GET /v3/vendors/by-legacy-id/{id}/labels). Public read, no
     // authToken. transformStoreLabelsRequest maps store_id into the {id} path
     // param (dropping the legacy id/token/label/store_name). Response transform
     // applies via get_v3, so response.data keeps the legacy Labels[] shape.
@@ -390,7 +390,7 @@ goToReviews(slug: string, vendorId: number, name: string) {
             // the old get_product_by_label() call that fetched only label 4.
             this.selectLabel(null);
           }else{
-            // No labels is NOT an error — the vendor may simply have no
+            // No labels is NOT an error, the vendor may simply have no
             // collections. Still load the full catalog under "All".
             this.categories = [];
             this.ui_controls.is_loading = false;

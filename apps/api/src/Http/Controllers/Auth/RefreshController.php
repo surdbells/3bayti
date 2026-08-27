@@ -30,7 +30,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * calls this endpoint with its stored refresh token to get fresh
  * credentials without forcing the user to re-enter their password.
  *
- * Response (200) — same shape as /login, /confirm, /reset/confirm
+ * Response (200), same shape as /login, /confirm, /reset/confirm
  *   {
  *     "access_token": "...",
  *     "access_token_expires_at": "...",
@@ -51,38 +51,38 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  *   3. Hash match. The presented raw token is hashed and compared
  *      to the stored token_hash. If they don't match, something
- *      crafted a JWT with the right jti but wrong contents — only
+ *      crafted a JWT with the right jti but wrong contents, only
  *      possible with a leaked signing key, but defense in depth.
  *
  *   4. State check: not revoked AND not expired (per DB row's
- *      expires_at — same as JWT exp but stored separately).
+ *      expires_at, same as JWT exp but stored separately).
  *
  *   5. User must still be active (is_active = true).
  *
  *   6. Mark the row revoked with reason 'rotated'. New pair issued
- *      after this — single-use semantics.
+ *      after this, single-use semantics.
  *
  *   7. Persist new refresh-token row. Return new pair.
  *
  * Refresh-token reuse detection
  * -----------------------------
- * If we find the row but it's already revoked, that's suspicious —
+ * If we find the row but it's already revoked, that's suspicious -
  * a legitimate client only presents each refresh token ONCE before
  * the rotation replaces it. A revoked-token presentation suggests
  * either:
  *   (a) Token was stolen and the attacker's client got there first
  *       (real client now has a valid refresh; attacker has the
- *       same token but it's stale — they'll fail next time)
+ *       same token but it's stale, they'll fail next time)
  *   (b) Real client replayed the same token (network retry that
  *       succeeded the first time but the response was lost in transit)
  *
- * Rotation grace window (case b — innocent retry)
+ * Rotation grace window (case b, innocent retry)
  * ------------------------------------------------
  * Case (b) is common on mobile: the server rotates the token, but the
  * client never receives or persists the replacement (dropped connection,
  * app backgrounded mid-refresh), then retries with the token it still
  * holds. To keep those customers signed in, a token that was revoked by
- * ROTATION within ROTATION_GRACE_SECONDS is treated as an innocent retry —
+ * ROTATION within ROTATION_GRACE_SECONDS is treated as an innocent retry -
  * we simply rotate again and re-issue a fresh pair (see Step 4). Only the
  * 'rotated' reason within the window qualifies.
  *
@@ -91,7 +91,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * password_changed, admin_force_logout), we revoke ALL of the user's
  * refresh tokens with reason 'reuse_detected'. The user is logged out
  * everywhere and forced to re-authenticate, cutting off an attacker who
- * has stolen credentials — a small UX cost for a strong security guarantee.
+ * has stolen credentials, a small UX cost for a strong security guarantee.
  *
  * All failure modes
  * -----------------
@@ -150,29 +150,29 @@ final class RefreshController
         $refreshRepo = $this->em->getRepository(RefreshToken::class);
         $row = $refreshRepo->findByJti($claims->jti);
         if ($row === null) {
-            // Cryptographically valid but not in our DB — could be
+            // Cryptographically valid but not in our DB, could be
             // forged with a leaked secret OR purged by cleanup. Either
             // way, reject.
             throw $this->refreshInvalid();
         }
 
-        // Step 3: hash match. Defense-in-depth — JWT signature should
+        // Step 3: hash match. Defense-in-depth, JWT signature should
         // catch most forgery, but a hash-mismatch with a valid signature
         // is a real anomaly worth refusing.
         if (!$row->matchesToken($input->refresh_token)) {
             throw $this->refreshInvalid();
         }
 
-        // Step 4: state check — revoked OR expired-in-DB.
+        // Step 4: state check, revoked OR expired-in-DB.
         if ($row->isRevoked()) {
-            // Rotation grace window — tell an innocent lost-response retry
+            // Rotation grace window, tell an innocent lost-response retry
             // apart from genuine token theft. A single-use token that was
             // JUST rotated and is re-presented within the grace window is
             // almost always the same client retrying after its rotation
             // response was lost (dropped connection / app suspended
             // mid-refresh), NOT an attacker. In that case we fall through
             // and rotate again (Step 6), re-issuing a fresh pair so the
-            // customer's session survives — rather than revoking every
+            // customer's session survives, rather than revoking every
             // session. `revoke('rotated')` in Step 6 is idempotent, so the
             // grace window stays anchored to the FIRST rotation and repeated
             // retries inside the window all succeed.
@@ -187,7 +187,7 @@ final class RefreshController
             }
         }
         if ($row->isExpired()) {
-            // Past expires_at — JWT exp claim should have caught this
+            // Past expires_at, JWT exp claim should have caught this
             // earlier, but DB-side expiry is the authoritative limit.
             throw $this->refreshInvalid();
         }

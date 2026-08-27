@@ -21,7 +21,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/admin/products
  *
- * Global admin product catalogue — EVERY vendor, EVERY status. Unlike the
+ * Global admin product catalogue, EVERY vendor, EVERY status. Unlike the
  * public GET /v3/products (findActivePaginated, active-only), this surfaces
  * DRAFTS so admins can find and publish them. Filters: status
  * (draft/published), stock_status, vendor (slug), search, pagination.

@@ -13,7 +13,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/gift-cards/balance?code=XXXX-XXXX-XXXX-XXXX
  *
- * Public balance check — returns balance and status without auth.
+ * Public balance check, returns balance and status without auth.
  * Deliberately minimal response (no buyer name, no transactions) to
  * prevent information leakage if a code is guessed.
  */

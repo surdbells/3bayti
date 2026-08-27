@@ -90,7 +90,7 @@ export class ProcessingComponent implements OnInit {
       export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'orders-and-sales' },
       filters: [
         // Status as a chip strip: defaults to "Active" (every status except
-        // the exempt set — pending payment, cancelled, failed), each chip shows
+        // the exempt set, pending payment, cancelled, failed), each chip shows
         // a count. "All" and the individual statuses remain selectable.
         {
           key: 'status',
@@ -184,7 +184,7 @@ export class ProcessingComponent implements OnInit {
   /**
    * Per-status order counts for the status chips. One cheap limit=1 query per
    * status (reads pagination.total only); the "All" bucket ('') is their sum.
-   * Counts are totals — independent of the date/type/store filters — so they
+   * Counts are totals, independent of the date/type/store filters, so they
    * stay stable as the admin drills in. Failures degrade to 0, never blocking
    * the table.
    */

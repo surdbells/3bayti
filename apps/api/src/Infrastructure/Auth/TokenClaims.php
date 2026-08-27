@@ -25,7 +25,7 @@ use DateTimeImmutable;
  *   exp  - expiry (unix timestamp)
  *   jti  - JWT id (uuid)
  *
- * 3bayti-specific claims (access tokens only — refresh tokens stay
+ * 3bayti-specific claims (access tokens only, refresh tokens stay
  * minimal, since they're DB-validated):
  *   email            - user's email at issuance
  *   pwd_changed_at   - unix timestamp of last password change. Lets

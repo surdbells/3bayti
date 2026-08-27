@@ -10,7 +10,7 @@ import { CommonModule } from '@angular/common';
 import { AxIconComponent } from '../icon';
 
 /**
- * <ax-lightbox> — fullscreen image viewer primitive.
+ * <ax-lightbox>, fullscreen image viewer primitive.
  *
  * Design intent: minimal, low-distraction image lightbox for
  * tapped-from-context images (chat attachments, gallery thumbs,
@@ -45,7 +45,7 @@ import { AxIconComponent } from '../icon';
  * is hidden when isOpen=false). When integrating with state
  * that has a separate "image data" + "open" flag (like the
  * chat page's viewingImage + isImageViewerOpen pair), bind
- * src independently — the component just renders whatever src
+ * src independently, the component just renders whatever src
  * resolves to.
  */
 @Component({
@@ -157,12 +157,12 @@ export class AxLightboxComponent {
 
   /** Emitted when the user dismisses the lightbox (close button,
    *  backdrop tap, or Escape key). Named 'closed' (not 'close') to
-   *  avoid the @angular-eslint/no-output-native rule — 'close' is
+   *  avoid the @angular-eslint/no-output-native rule, 'close' is
    *  also a native DOM event name. */
   @Output() closed = new EventEmitter<void>();
 
   onBackdropClick(_event: MouseEvent): void {
-    // Backdrop click — image clicks are stopped via stopPropagation in template
+    // Backdrop click, image clicks are stopped via stopPropagation in template
     this.closed.emit();
   }
 

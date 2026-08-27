@@ -32,7 +32,7 @@ class MockLocalCart {
     this.cleared = true;
   }
 
-  // Stub methods not used by CartMergeService — present for TS interface match.
+  // Stub methods not used by CartMergeService, present for TS interface match.
   async add(_item: LocalCartItem): Promise<void> { /* noop */ }
   async updateQuantity(_id: number, _qty: number): Promise<void> { /* noop */ }
   async remove(_id: number): Promise<void> { /* noop */ }
@@ -68,7 +68,7 @@ describe('CartMergeService.mergeIfAny', () => {
     net = new MockNetwork();
     service = new CartMergeService(
       net as unknown as NetworkService,
-      net as unknown as never, // MobileNetworkAdapter — same MockNetwork double works
+      net as unknown as never, // MobileNetworkAdapter, same MockNetwork double works
       local as unknown as LocalCartService,
     );
   });
@@ -140,7 +140,7 @@ describe('CartMergeService.mergeIfAny', () => {
     expect(result.success).toBe(true);
     expect(result.skipped.length).toBe(1);
     expect(result.skipped[0]?.product_id).toBe(100);
-    expect(local.cleared).toBe(true); // still cleared — server accepted
+    expect(local.cleared).toBe(true); // still cleared, server accepted
   });
 
   it('does NOT clear local cart on network failure', async () => {
@@ -200,7 +200,7 @@ describe('CartMergeService.mergeIfAny', () => {
 
     const result = await service.mergeIfAny({ id: 1, token: 'tok' });
 
-    // Either way is acceptable — success path uses (status==='success'),
+    // Either way is acceptable, success path uses (status==='success'),
     // missing data means skipped[] defaults to []
     expect(result.success).toBe(true);
     expect(result.skipped).toEqual([]);

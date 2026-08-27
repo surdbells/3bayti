@@ -22,7 +22,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Removes a line from the authenticated user's active cart.
  *
- * Authorization: same cross-tenant defence as UpdateCartItemController —
+ * Authorization: same cross-tenant defence as UpdateCartItemController -
  * an item id belonging to another user's cart returns 404, not 403,
  * to avoid leaking existence.
  *

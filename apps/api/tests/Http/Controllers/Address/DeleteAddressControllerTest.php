@@ -30,7 +30,7 @@ final class DeleteAddressControllerTest extends HttpTestCase
         $addrRepo = $this->createMock(AddressRepository::class);
         $addrRepo->method('find')->willReturn($addr);
         $addrRepo->expects(self::once())->method('remove')->with($addr);
-        // Not the default — no auto-promotion path.
+        // Not the default, no auto-promotion path.
         $addrRepo->method('findAllForUser')->willReturn([]);
 
         $em = $this->stubEm(function ($em) use ($userRepo, $addrRepo) {
@@ -104,7 +104,7 @@ final class DeleteAddressControllerTest extends HttpTestCase
         $addrRepo = $this->createMock(AddressRepository::class);
         $addrRepo->method('find')->willReturn($addr);
         $addrRepo->expects(self::once())->method('remove')->with($addr);
-        // No remaining addresses — nothing to promote.
+        // No remaining addresses, nothing to promote.
         $addrRepo->method('findAllForUser')->willReturn([]);
         $addrRepo->expects(self::never())->method('setAsDefaultShipping');
         $addrRepo->expects(self::never())->method('setAsDefaultBilling');

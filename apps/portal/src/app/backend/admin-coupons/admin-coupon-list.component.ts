@@ -39,7 +39,7 @@ interface CouponRow extends Record<string, unknown> {
 }
 
 /**
- * Admin "Coupons & discounts" — oversight of EVERY promo code across the
+ * Admin "Coupons & discounts", oversight of EVERY promo code across the
  * platform (sitewide + vendor-owned) plus creation of platform-wide codes.
  *
  * Backed by the admin promo-code API (GET/POST/PUT/DELETE /admin/promo-codes,
@@ -72,7 +72,7 @@ export class AdminCouponListComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     // Resolve store names once so the Scope column can show "Acme Store"
-    // instead of a bare id, and to populate the Scope filter. Best-effort —
+    // instead of a bare id, and to populate the Scope filter. Best-effort -
     // the column falls back to "Store #id" and the filter still offers the
     // Sitewide option if the store list fails to load.
     try {

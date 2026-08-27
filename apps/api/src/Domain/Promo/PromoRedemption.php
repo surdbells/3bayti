@@ -17,7 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
  * ---------
  * Exactly one row is created when InitiateCheckoutController commits
  * an order with a valid promo_code. The row is written inside the same
- * EM transaction that creates the Order — atomicity guarantees the
+ * EM transaction that creates the Order, atomicity guarantees the
  * order's discount and its redemption attribution land together or
  * not at all.
  *
@@ -33,7 +33,7 @@ use Doctrine\ORM\Mapping as ORM;
  * If an order is later canceled (M3.1.7-F flow), the redemption row
  * stays in place as a historical record. This means a one-time-use
  * code is "used up" even if the user never actually transacted with
- * it. This is a documented v1 limitation — admin can manually delete
+ * it. This is a documented v1 limitation, admin can manually delete
  * the redemption via the (future) admin endpoint, or the cancel flow
  * can be extended in a future X-phase to auto-revoke. Out of v1 scope.
  *
@@ -62,7 +62,7 @@ class PromoRedemption
 
     /**
      * The promo code this redemption is against. FK ON DELETE RESTRICT
-     * — admin cannot hard-delete a promo code that has at least one
+     *, admin cannot hard-delete a promo code that has at least one
      * redemption (must soft-delete via setActive(false) instead).
      */
     #[ORM\ManyToOne(targetEntity: PromoCode::class)]
@@ -70,7 +70,7 @@ class PromoRedemption
     private PromoCode $promoCode;
 
     /**
-     * The customer who redeemed. FK ON DELETE RESTRICT — preserves
+     * The customer who redeemed. FK ON DELETE RESTRICT, preserves
      * the redemption history; user deletion is not a flow we support
      * in v3 anyway (Q7 anonymity model).
      */
@@ -79,7 +79,7 @@ class PromoRedemption
     private User $user;
 
     /**
-     * The order this redemption belongs to. FK ON DELETE CASCADE — if
+     * The order this redemption belongs to. FK ON DELETE CASCADE, if
      * an order is hard-deleted (very rare), the redemption goes with
      * it (the inverse is on Order.promoRedemption with ON DELETE SET
      * NULL which leaves the order's discount line intact while
@@ -108,7 +108,7 @@ class PromoRedemption
 
     /**
      * discount_type as it was at redemption. Same rationale as
-     * code_snapshot — admin changes don't rewrite history.
+     * code_snapshot, admin changes don't rewrite history.
      */
     #[ORM\Column(name: 'discount_type_snapshot', type: 'string', length: 16)]
     private string $discountTypeSnapshot;
@@ -128,7 +128,7 @@ class PromoRedemption
     /**
      * Construct a redemption record. Called only by
      * PromoCodeResolverService::recordRedemption inside the checkout
-     * EM transaction — never by controllers directly.
+     * EM transaction, never by controllers directly.
      *
      * @throws \InvalidArgumentException for malformed money strings
      */
@@ -158,7 +158,7 @@ class PromoRedemption
     }
 
     // -----------------------------------------------------------------
-    // Accessors — read-only by design (immutability)
+    // Accessors, read-only by design (immutability)
     // -----------------------------------------------------------------
 
     public function getId(): ?int { return $this->id; }

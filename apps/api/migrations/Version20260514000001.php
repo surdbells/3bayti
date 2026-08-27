@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.1.1d — create user_locations table.
+ * M3.1.1d, create user_locations table.
  *
  * Backs the GET / PATCH /v3/me/location endpoints that are being
  * added in M3.1.1e. Single-row-per-user model: a UNIQUE constraint
@@ -33,7 +33,7 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * Why a new table and not columns on `users`
  * ------------------------------------------
- *   1. Location data is sparse — most users won't grant permission;
+ *   1. Location data is sparse, most users won't grant permission;
  *      sparse columns on the wide `users` table waste storage.
  *   2. The location capture cadence (first launch, on-demand) differs
  *      from User row updates (every API request via last_login_at).
@@ -50,7 +50,7 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * Idempotency
  * -----------
- * The migration is forward-only safe — creates a new table that
+ * The migration is forward-only safe, creates a new table that
  * doesn't depend on legacy data. No backfill from MySQL is needed
  * (legacy didn't have structured location data; mobile's
  * `customer/settings/update-location` stored only a free-form

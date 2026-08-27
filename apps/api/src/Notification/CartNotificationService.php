@@ -32,7 +32,7 @@ use Psr\Log\LoggerInterface;
  * Each check writes a STATUS_SKIPPED row to notification_logs
  * with the cart_id populated, so the X.11-C CartAbandonmentFinder
  * sees it on the next run and excludes the cart from re-evaluation.
- * This is the 'persistent suppression marker' pattern — opt-out
+ * This is the 'persistent suppression marker' pattern, opt-out
  * is honored AND we don't waste resources re-checking the same
  * cart forever.
  *
@@ -106,7 +106,7 @@ class CartNotificationService
             return;
         }
 
-        // All checks passed — render + send
+        // All checks passed, render + send
         $this->safeSend($cart, $user, $template, $email);
     }
 
@@ -116,7 +116,7 @@ class CartNotificationService
         EmailTemplate $template,
         string $email,
     ): void {
-        // Cart owner's locale is the only signal needed — unlike
+        // Cart owner's locale is the only signal needed, unlike
         // OrderNotificationService which has to dispatch to customer
         // + vendor + admin recipients on the same order.
         $locale = $this->normalizeLocale($user->getLocale());

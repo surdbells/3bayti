@@ -221,7 +221,7 @@ export class DiscountedPage implements OnInit, OnDestroy {
     this.resetImageStates();
     this.cdr.markForCheck();
 
-    // Public catalog read — no authToken. The registered response transform
+    // Public catalog read, no authToken. The registered response transform
     // (transformProductListResponse on 'GET /mobile/category-listing')
     // applies via get_v3, so response.data keeps the legacy Products[] shape
     // with sale_price surfaced for the on-sale card rendering.

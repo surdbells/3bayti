@@ -17,7 +17,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Called internally by the payment-finalize webhook after the buyer's
  * payment gateway transaction confirms. Body: { "order_reference": "..." }
  *
- * This endpoint is admin-auth only — not exposed to customers.
+ * This endpoint is admin-auth only, not exposed to customers.
  */
 final class ActivateGiftCardController
 {
@@ -49,7 +49,7 @@ final class ActivateGiftCardController
 
         $repo->save($card);
 
-        // Immediate recipient delivery (no-op for a future-scheduled card —
+        // Immediate recipient delivery (no-op for a future-scheduled card -
         // the gift-cards:dispatch-scheduled cron handles those). deliverIfDue
         // is already non-blocking; the catch is belt-and-braces so a delivery
         // failure can never fail the activation webhook.

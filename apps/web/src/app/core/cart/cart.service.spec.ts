@@ -64,7 +64,7 @@ function makeServerCart(overrides: Partial<Cart> = {}): Cart {
 /**
  * The authenticated cart endpoints (GET /v3/cart, POST /v3/cart/merge)
  * wrap the cart as { cart }, same as /resolve and /quote. Flush this for
- * those responses so the fixtures match the real API envelope — a bare
+ * those responses so the fixtures match the real API envelope, a bare
  * makeServerCart() here is what let the "envelope set as Cart" bug ship
  * green. (POST/PATCH /items bodies are discarded by the service, so
  * wrapping them too is harmless.)
@@ -123,7 +123,7 @@ function setup(opts: { authed?: boolean } = {}): {
   const controller = TestBed.inject(HttpTestingController);
   /* Flush the construction-time effect (signal first-read). For the
      authed=true path this fires the merge+refresh chain. Note that
-     handleSignIn awaits microtasks internally — tests that want to
+     handleSignIn awaits microtasks internally, tests that want to
      consume the initial GET /v3/cart should `await Promise.resolve()`
      a couple times after setup() before calling expectOne. */
   TestBed.tick();
@@ -151,7 +151,7 @@ describe('CartService', () => {
   });
 
   /* -----------------------------------------------------------------
-     Guest cart — localStorage-backed
+     Guest cart, localStorage-backed
      ----------------------------------------------------------------- */
   describe('guest cart (localStorage)', () => {
     it('starts empty when localStorage has no entry', () => {
@@ -527,7 +527,7 @@ describe('CartService', () => {
   });
 
   /* -----------------------------------------------------------------
-     Authenticated cart — API-backed
+     Authenticated cart, API-backed
      ----------------------------------------------------------------- */
   describe('authenticated cart (API)', () => {
     it('addItem POSTs /v3/cart/items and updates the cart signal', async () => {
@@ -633,7 +633,7 @@ describe('CartService', () => {
       const req = controller.expectOne(`${V3_BASE}/v3/cart/quote`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ promo_code: 'SAVE10' });
-      /* Real API shape: a { data } envelope with pricing only — NO cart. */
+      /* Real API shape: a { data } envelope with pricing only, NO cart. */
       req.flush({
         data: {
           currency: 'AED',
@@ -783,7 +783,7 @@ describe('CartService', () => {
       merge1.flush('boom', { status: 500, statusText: 'Server error' });
       await drainMicrotasks();
 
-      /* refresh still loads the server cart (empty) — but the guest
+      /* refresh still loads the server cart (empty), but the guest
          items are NOT cleared, so nothing is lost. */
       controller
         .expectOne(`${V3_BASE}/v3/cart`)
@@ -852,7 +852,7 @@ describe('CartService', () => {
       /* First merge cleared localStorage. Sign out + back in:
          mergedThisSession resets but the guest cart is now empty, so
          handleSignIn skips merge and goes straight to refresh. This is
-         the intended behaviour — no stale-payload replay. */
+         the intended behaviour, no stale-payload replay. */
       auth.setAuthenticated(false);
       TestBed.tick();
       auth.setAuthenticated(true);

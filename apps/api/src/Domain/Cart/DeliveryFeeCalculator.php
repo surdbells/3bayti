@@ -8,7 +8,7 @@ namespace Bayti\Api\Domain\Cart;
  * Computes the order delivery fee from the number of distinct vendors
  * (stores) represented in a cart.
  *
- * Policy (fixed for now — change the two constants, or inject config here,
+ * Policy (fixed for now, change the two constants, or inject config here,
  * to make it flexible later):
  *
  *   fee = FIRST_STORE_FEE + ADDITIONAL_STORE_FEE × (distinctStores − 1)

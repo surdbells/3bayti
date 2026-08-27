@@ -17,7 +17,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * The authenticated customer's gift-card WALLET: the aggregate spendable
  * balance across every card they own or have redeemed, plus the cards
- * themselves (soonest-expiry first — the order they'll be spent in).
+ * themselves (soonest-expiry first, the order they'll be spent in).
  *
  * Response:
  * {

@@ -20,11 +20,11 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * POST /v3/products/{productId}/reviews — leave a review (authenticated).
+ * POST /v3/products/{productId}/reviews, leave a review (authenticated).
  *
  * Upsert (one review per user+product): re-reviewing edits the existing
  * row and resets it to PENDING re-moderation, rather than spawning
- * duplicates. New review → 201; edited → 200. Always lands as PENDING —
+ * duplicates. New review → 201; edited → 200. Always lands as PENDING -
  * a moderator approves before it shows publicly. The vendor + a product-
  * name snapshot are captured so the review survives product changes.
  */

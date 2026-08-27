@@ -15,12 +15,12 @@ import { StyleService, STYLE_HUB_PAGE_SIZE, type StyleTab } from './style.servic
 import type { Style } from './style.model';
 
 /**
- * /styles — the Style Hub.
+ * /styles, the Style Hub.
  *
  * Public storefront page (no auth guard). Three tabs:
- *   1. Community  — GET /styles?type=community  (shopper-submitted).
- *   2. 3bayti     — GET /styles?type=editorial  (curated by 3bayti).
- *   3. My styles  — GET /me/styles (AUTH). For guests this tab shows a
+ *   1. Community , GET /styles?type=community  (shopper-submitted).
+ *   2. 3bayti    , GET /styles?type=editorial  (curated by 3bayti).
+ *   3. My styles , GET /me/styles (AUTH). For guests this tab shows a
  *      sign-in prompt INSTEAD of calling the endpoint.
  *
  * Each tab renders a responsive grid of style cards. A style card is a
@@ -30,7 +30,7 @@ import type { Style } from './style.model';
  *
  * Pagination: load-more advances the offset on the ACTIVE tab via the
  * service accumulator (meta.has_more). Per-tab loading skeletons +
- * empty states. The three tab accumulators are independent — switching
+ * empty states. The three tab accumulators are independent, switching
  * tabs never refetches an already-loaded tab.
  */
 @Component({

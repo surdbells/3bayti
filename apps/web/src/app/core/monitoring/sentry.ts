@@ -2,14 +2,14 @@ import { ErrorHandler, Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 
 /**
- * Browser Sentry error reporting — lazily loaded.
+ * Browser Sentry error reporting, lazily loaded.
  *
  * The @sentry/browser SDK (~85 KB) is dynamically imported so it is only
  * fetched and parsed when SENTRY_DSN is actually configured. When the DSN
  * is unset (dev, test, unconfigured deploys) nothing is shipped to the
  * client beyond this tiny module, and nothing phones home.
  *
- * Scope: error reporting only — no performance/tracing integration, to
+ * Scope: error reporting only, no performance/tracing integration, to
  * keep things lean. The DSN is a public client key; shipping it in the
  * browser is expected and safe.
  */

@@ -1,4 +1,4 @@
-/* Home page styles — Phase 1 Week 2
+/* Home page styles, Phase 1 Week 2
  * ===================================
  * Hero typography refreshed (Cormorant eyebrow + Playfair display +
  * Inter body); categories grid restyled with the cream / Pronounced
@@ -13,7 +13,7 @@
  */
 
 /* =====================================================================
-   GOLDEN HOUR PALETTE — scoped token overrides (Option A)
+   GOLDEN HOUR PALETTE, scoped token overrides (Option A)
    ---------------------------------------------------------------------
    The home page is re-themed to a warm, saturated, festive direction by
    OVERRIDING the global design tokens *only* under .home-page. Because
@@ -44,11 +44,11 @@
   --color-brand-200: #e7d6bc;
   --color-brand-300: #d6a93b;  /* gold */
   --color-brand-400: #c98a2a;
-  --color-brand-500: #b26a1b;  /* amber — primary brand */
+  --color-brand-500: #b26a1b;  /* amber, primary brand */
   --color-brand-600: #9a5613;  /* deeper amber */
-  --color-brand-700: #2e241c;  /* espresso — headings + dark tiles */
+  --color-brand-700: #2e241c;  /* espresso, headings + dark tiles */
 
-  /* Warm neutrals — cream page field, espresso ink. */
+  /* Warm neutrals, cream page field, espresso ink. */
   --color-bg-canvas:  #fbf6ee;  /* cream */
   --color-bg-surface: #fffdf8;
   --color-bg-muted:   #f3e9d6;
@@ -93,7 +93,7 @@
 
   display: flex;
   flex-direction: column;
-  /* Section gap — tightened (was 64/88/112) so more of the page reads
+  /* Section gap, tightened (was 64/88/112) so more of the page reads
    * without scrolling. Each section's own padding adds to this. */
   gap: 44px;
   padding-bottom: 0; /* Footer mounts directly below; no padding here. */
@@ -120,7 +120,7 @@
 
 /* =====================================================================
    GENERIC HOME-SECTION HEADER (shared by Categories + Store Spotlight)
-   ProductStrip has its own header pattern — these two surfaces use a
+   ProductStrip has its own header pattern, these two surfaces use a
    slightly different shape because they're not horizontally scrolling.
 
    All sections use the global --page-padding-x / --page-max-width tokens
@@ -270,7 +270,7 @@
   .stores-more__btn:hover { transform: none; }
 }
 
-/* Store skeleton — matches StoreCard's outer dimensions so the
+/* Store skeleton, matches StoreCard's outer dimensions so the
  * layout doesn't shift when real content swaps in. Updated for W3
  * redesign (was 420px min-height with 2x2 mosaic; now 360px with
  * horizontal product row). */
@@ -295,7 +295,7 @@
 }
 
 /* ===========================================================
-   Sell on 3bayti band (Phase F2) — vendor-recruitment CTA.
+   Sell on 3bayti band (Phase F2), vendor-recruitment CTA.
    Base .home-section supplies the inline gutter; the band
    centres itself (like __bounds) and renders a gilded card.
    =========================================================== */
@@ -400,7 +400,7 @@
 
 /* =====================================================================
    GIFT CARD PROMO (marketing band)
-   A gilded, dark espresso card with a gold gift motif + sparkles —
+   A gilded, dark espresso card with a gold gift motif + sparkles -
    mirrors mobile's dashboard .gift-promo intent in the web design
    language. Centres within the page max-width like .sell-band.
    ===================================================================== */
@@ -408,7 +408,7 @@
   margin-block: clamp(1rem, 3vw, 2rem);
 }
 
-/* GOLDEN HOUR gift promo — a WARM CREAM card (was dark espresso) with a
+/* GOLDEN HOUR gift promo, a WARM CREAM card (was dark espresso) with a
    gold medallion + amber/coral CTAs. Espresso ink for AA on the light field. */
 .gift-promo {
   position: relative;
@@ -517,7 +517,7 @@
   gap: 0.75rem 1.5rem;
 }
 
-/* Primary buy CTA — coral on the cream card. */
+/* Primary buy CTA, coral on the cream card. */
 .gift-promo__cta {
   display: inline-flex;
   align-items: center;
@@ -547,7 +547,7 @@
   outline-offset: 2px;
 }
 
-/* Secondary redeem link — amber. */
+/* Secondary redeem link, amber. */
 .gift-promo__link {
   display: inline-flex;
   align-items: center;
@@ -583,7 +583,7 @@
 }
 
 /* =====================================================================
-   GET THE APP — mobile-app promo band.
+   GET THE APP, mobile-app promo band.
    A warm, on-brand card pairing the heading + store badges with a
    line-art phone mockup. Mirrors the .sell-band / .gift-promo layout
    language (centred within page max-width, gilded surface) but on a
@@ -594,7 +594,7 @@
   margin-block: clamp(1.5rem, 4vw, 3rem);
 }
 
-/* GOLDEN HOUR get-the-app band — an ESPRESSO slab (was light cream) so it
+/* GOLDEN HOUR get-the-app band, an ESPRESSO slab (was light cream) so it
    reads as a rich anchor near the page foot; gold heading + cream copy. */
 .app-band {
   position: relative;
@@ -715,7 +715,7 @@
   border-radius: 8px;
 }
 
-/* Placeholder variant — store URL is still '#'. Slightly dimmed and
+/* Placeholder variant, store URL is still '#'. Slightly dimmed and
    non-interactive-looking, but keeps a tooltip ("coming soon"). */
 .store-badge--disabled {
   cursor: default;
@@ -839,7 +839,7 @@
 
 
 /* =====================================================================
-   SOUK REBUILD — bento hero + benefits strip + category tiles
+   SOUK REBUILD, bento hero + benefits strip + category tiles
    Reuses the Golden Hour --gh-* tokens + global page gutter/spacing.
    RTL mirrors the band glows and flips CTA arrows via logical properties.
    ===================================================================== */
@@ -847,7 +847,7 @@
   position: relative;
   width: 100%;
   /* The header sits in normal flow above the hero (not overlaying it), so the
-     band needs no --header-height offset — symmetric top/bottom breathing room. */
+     band needs no --header-height offset, symmetric top/bottom breathing room. */
   padding-block: clamp(2rem, 4vw, 3.25rem);
   border-block-end: 1px solid rgba(46, 36, 28, 0.18);
   background:
@@ -987,7 +987,7 @@
 .cat-tile__count { font-size: 11px; color: var(--color-text-tertiary); }
 .cat-tile--skeleton { pointer-events: none; }
 
-/* Discounted shortcut tile — sale-red accent + on-sale count badge. */
+/* Discounted shortcut tile, sale-red accent + on-sale count badge. */
 .cat-tile--discounted .cat-tile__badge {
   position: relative;
   background: var(--color-sale-bg, #fbeae6);

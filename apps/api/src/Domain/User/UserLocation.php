@@ -16,7 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
  * Mobile apps prompt the user on first launch for their location to
  * personalise shipping cost estimates, content (local vendors near
  * you), and language defaults. The captured location is one row per
- * user — we keep only the most recent. Historical location tracking
+ * user, we keep only the most recent. Historical location tracking
  * is intentionally out of scope for M3.1.x.
  *
  * Location vs User.countryCode
@@ -59,7 +59,7 @@ use Doctrine\ORM\Mapping as ORM;
  * Why a separate table (not columns on `users`)
  * ----------------------------------------------
  * Three reasons:
- *   1. Location data is sparse — many users won't grant permission.
+ *   1. Location data is sparse, many users won't grant permission.
  *      Sparse columns on `users` waste storage.
  *   2. The OS location capture cadence (first launch + on-demand)
  *      differs from the User entity's lifecycle (every API call).
@@ -122,7 +122,7 @@ class UserLocation
 
     /**
      * ISO 3166-1 alpha-2 country code (e.g. 'AE', 'SA').
-     * Optional — see entity docblock for distinction from
+     * Optional, see entity docblock for distinction from
      * User.countryCode.
      */
     #[ORM\Column(name: 'country_code', type: 'string', length: 2, nullable: true)]
@@ -166,7 +166,7 @@ class UserLocation
     }
 
     // -------------------------------------------------------------------
-    // Mutators — controller calls update() with a coherent payload;
+    // Mutators, controller calls update() with a coherent payload;
     // individual setters are NOT public to discourage piecemeal mutation.
     // -------------------------------------------------------------------
 
@@ -183,7 +183,7 @@ class UserLocation
      * For permission_granted: pass bool to set, null to leave.
      *
      * If lat AND lng are both provided, also bumps lastCapturedAt
-     * to now() — that's the only path that updates the capture
+     * to now(), that's the only path that updates the capture
      * timestamp.
      */
     public function update(
@@ -193,7 +193,7 @@ class UserLocation
         ?string $countryCode = null,
         ?bool $permissionGranted = null,
     ): void {
-        // Coordinates are paired — accept both or neither, not one.
+        // Coordinates are paired, accept both or neither, not one.
         // The controller should enforce this; here we defensively
         // accept "neither" but treat partial as "neither" + log
         // would-be partial via assertion.

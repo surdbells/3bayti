@@ -446,7 +446,7 @@ export class AxDatePickerComponent implements ControlValueAccessor, OnDestroy {
       d.setHours(0, 0, 0, 0);
       cells.push({ date: d, outside: false, today: d.getTime() === today.getTime() });
     }
-    // Next month head — pad to 6 rows of 7
+    // Next month head, pad to 6 rows of 7
     while (cells.length < 42) {
       const last = cells[cells.length - 1].date;
       const d = new Date(last);

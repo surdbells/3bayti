@@ -278,7 +278,7 @@ final class ListAdminVendorMetricsControllerTest extends HttpTestCase
             allMetricsOverride: $allMetrics,
         );
 
-        // ?limit=1&offset=1 — should get the SECOND vendor in sorted order (202)
+        // ?limit=1&offset=1, should get the SECOND vendor in sorted order (202)
         $body = $this->jsonBody($this->makeGet(
             $admin, '/v3/admin/vendor-metrics?sort=fulfillment_rate_desc&limit=1&offset=1'
         ));

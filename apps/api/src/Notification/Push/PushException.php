@@ -9,7 +9,7 @@ namespace Bayti\Api\Notification\Push;
  * (network error, provider 4xx/5xx, etc.).
  *
  * Mirrors MailerException: callers MUST NOT block their action on
- * this — log + continue. A failed push is non-critical to order
+ * this, log + continue. A failed push is non-critical to order
  * processing.
  *
  * Kind helps operators triage AND lets the sender decide whether to

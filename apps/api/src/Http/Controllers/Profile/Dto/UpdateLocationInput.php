@@ -17,7 +17,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Coordinate pairing
  * ------------------
  * Latitude and longitude must be present together or not at all. The
- * #[Assert\Callback] below enforces this at validation time — sending
+ * #[Assert\Callback] below enforces this at validation time, sending
  * only one results in 422. The entity defensively ignores partial
  * coords too, but catching at the validation layer gives a better
  * error message.
@@ -117,9 +117,9 @@ final class UpdateLocationInput
     ) {
         $this->latitude = $latitude;
         $this->longitude = $longitude;
-        // Pre-trim string fields. Don't lowercase country_code here —
+        // Pre-trim string fields. Don't lowercase country_code here -
         // the entity uppercases on write. Don't reject the empty
-        // string — that's the documented "clear this field" signal.
+        // string, that's the documented "clear this field" signal.
         $this->city = $city !== null ? trim($city) : null;
         $this->country_code = $country_code !== null ? trim($country_code) : null;
         $this->permission_granted = $permission_granted;

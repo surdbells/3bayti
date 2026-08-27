@@ -34,16 +34,16 @@ use Psr\Http\Message\ServerRequestInterface;
  * Firebase SDK and posts the resulting ID token; we verify it and then
  * resolve a user via one of three branches:
  *
- *   (a) KNOWN IDENTITY — a SocialIdentity already exists for
+ *   (a) KNOWN IDENTITY, a SocialIdentity already exists for
  *       (provider, provider_uid). Log that identity's user in.
  *
- *   (b) AUTO-LINK — no identity row, but the token's email is verified
+ *   (b) AUTO-LINK, no identity row, but the token's email is verified
  *       AND matches an existing user. Link the new identity to that
  *       user and log them in. (Email is only trusted as a link key when
  *       the provider asserts email_verified; an unverified email could
  *       be attacker-controlled and would let one take over an account.)
  *
- *   (c) CREATE — otherwise, provision a brand-new social-only user
+ *   (c) CREATE, otherwise, provision a brand-new social-only user
  *       (password_hash NULL, is_email_verified=true, is_phone_verified
  *       =false) and create the identity row.
  *
@@ -123,9 +123,9 @@ final class SocialLoginController
 
     /**
      * Provision a new social-only user. password_hash is NULL (no
-     * password — only social sign-in). Email is verified (the provider
+     * password, only social sign-in). Email is verified (the provider
      * asserted it, or it's a private-relay Apple email we still trust as
-     * the account's own). Phone is unverified — the user can add one
+     * the account's own). Phone is unverified, the user can add one
      * later via POST /v3/me/phone.
      */
     private function createUser(VerifiedSocialIdentity $verified, SocialLoginInput $input): User
@@ -201,7 +201,7 @@ final class SocialLoginController
      * Persist a SocialIdentity row linking $user to the verified
      * provider account. Defends against the unique-constraint race
      * (someone linked the same identity concurrently) by treating a
-     * violation as "already linked — proceed".
+     * violation as "already linked, proceed".
      */
     private function createIdentity(User $user, VerifiedSocialIdentity $verified): void
     {
@@ -218,7 +218,7 @@ final class SocialLoginController
             $identities->save($identity);
         } catch (UniqueConstraintViolationException) {
             // Concurrent link of the same (provider, provider_uid).
-            // Harmless — the row exists; carry on issuing tokens.
+            // Harmless, the row exists; carry on issuing tokens.
         }
     }
 

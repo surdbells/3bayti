@@ -40,7 +40,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * The caller stores the "url" value directly in
  * products.primary_image_url / products.images[] / vendors.logo_url
- * etc. — no further endpoint needed.
+ * etc., no further endpoint needed.
  *
  * Cloudflare image transforms are applied by the front-end by
  * wrapping the URL:
@@ -65,7 +65,7 @@ final class UploadImageController
 
     public function __invoke(ServerRequestInterface $request): ResponseInterface
     {
-        // Auth — vendor or admin
+        // Auth, vendor or admin
         $user = $request->getAttribute(AuthMiddleware::ATTR_USER);
         if (!$user instanceof User) {
             throw HttpException::unauthorized(ErrorCodes::AUTH_INVALID_TOKEN, 'Authentication required.');
@@ -84,7 +84,7 @@ final class UploadImageController
             throw HttpException::badRequest('context must be one of: product, vendor_logo, vendor_cover.');
         }
 
-        // Resolve vendor slug — needed for path namespacing
+        // Resolve vendor slug, needed for path namespacing
         $vendorSlug = $this->resolveVendorSlug($user, $context);
 
         try {

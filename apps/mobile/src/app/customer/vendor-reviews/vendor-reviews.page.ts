@@ -105,7 +105,7 @@ export class VendorReviewsPage implements OnInit {
     token: "",
     label: 4,
     store_id: 0,
-    // Vendor slug — the storefront header read is slug-keyed now. The reviews
+    // Vendor slug, the storefront header read is slug-keyed now. The reviews
     // list + create still use the v3 numeric vendor id (numeric-only route),
     // carried separately as `vendor_id` in the nav params.
     store_slug: "",
@@ -236,7 +236,7 @@ export class VendorReviewsPage implements OnInit {
     }
     this.ui_controls.is_creating = true;
     this.ui_controls.is_empty = true;
-    // Direct v3 (POST /v3/vendors/:vendorId/reviews — CreateVendorReviewController,
+    // Direct v3 (POST /v3/vendors/:vendorId/reviews, CreateVendorReviewController,
     // authenticated). The legacy request transform (transformAddVendorReviewRequest)
     // moved store_id into the vendorId path param and reduced the body to
     // { star, title, comment }; replicated here. star comes from add_new_review.star.
@@ -266,7 +266,7 @@ export class VendorReviewsPage implements OnInit {
   }
   get_vendor() {
     this.ui_controls.is_loading = true;
-    // Direct v3 (GET /v3/vendors/by-legacy-id/:id) — public storefront header,
+    // Direct v3 (GET /v3/vendors/by-legacy-id/:id), public storefront header,
     // no authToken. The legacy request transform (transformReadVendorRequest)
     // moved store_id into the {id} path param; replicated here. The registered
     // response transform still applies via get_v3, so response.data keeps the
@@ -290,7 +290,7 @@ export class VendorReviewsPage implements OnInit {
     this.initial.id = this.single_user.id;
     this.initial.token = this.single_user.token;
     this.initial.store_id = Number(this.route.snapshot.queryParamMap.get('vendor_id'));
-    // Direct v3 (GET /v3/vendors/:vendorId/reviews) — public list of a store's
+    // Direct v3 (GET /v3/vendors/:vendorId/reviews), public list of a store's
     // approved reviews, no authToken. The legacy request transform
     // (transformVendorReviewsListRequest) moved store_id into the vendorId path
     // param; replicated here. The registered response transform still applies
@@ -313,7 +313,7 @@ export class VendorReviewsPage implements OnInit {
     this.is_helpful.id =  this.single_user.id;
     this.is_helpful.token =  this.single_user.token;
     this.is_helpful.reviewId =  reviewId;
-    // Direct v3 (POST /v3/reviews/:id/helpful — MarkReviewHelpfulController,
+    // Direct v3 (POST /v3/reviews/:id/helpful, MarkReviewHelpfulController,
     // authenticated). The legacy request transform (transformMarkHelpfulRequest)
     // moved reviewId into the {id} path param and sends an empty body;
     // replicated here.
@@ -348,7 +348,7 @@ export class VendorReviewsPage implements OnInit {
     this.initial.token = this.single_user.token;
     this.initial.store_id = Number(this.route.snapshot.queryParamMap.get('vendor_id'));
     this.initial.offset = this.initial.offset + this.initial.limit
-    // Direct v3 (GET /v3/vendors/:vendorId/reviews) — same public endpoint as
+    // Direct v3 (GET /v3/vendors/:vendorId/reviews), same public endpoint as
     // get_reviews. The legacy request transform (transformVendorReviewsListRequest)
     // only maps store_id -> vendorId path param (it does NOT forward
     // limit/offset), so paging is replicated identically here.
@@ -373,7 +373,7 @@ export class VendorReviewsPage implements OnInit {
     }, 500);
   }
   triggerBack() {
-    // Native pop — return to wherever we came from (vendor store, my-orders,
+    // Native pop, return to wherever we came from (vendor store, my-orders,
     // etc.). Force-navigating to '/vendors' here pushed a NEW page, which then
     // ping-ponged with the vendors page's native back and created a loop
     // (see [[mobile-back-nav-model]]).

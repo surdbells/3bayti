@@ -181,7 +181,7 @@ export class AxTableComponent<T = any> implements AfterContentInit, OnChanges {
   @Input() pageIndex = 0;
   @Output() pageIndexChange = new EventEmitter<number>();
 
-  /** trackBy key — row[field] used as identity. Defaults to 'id' if present. */
+  /** trackBy key, row[field] used as identity. Defaults to 'id' if present. */
   @Input() trackBy: string = 'id';
 
   /** Empty state copy. */

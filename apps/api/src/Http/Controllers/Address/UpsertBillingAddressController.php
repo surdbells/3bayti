@@ -101,7 +101,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Address count limit
  * -------------------
  * Same 50-per-user cap as CreateAddressController. If the user is
- * at the cap and has no existing billing address, we 422 — same
+ * at the cap and has no existing billing address, we 422, same
  * error code as CreateAddressController for consistency.
  */
 final class UpsertBillingAddressController
@@ -149,7 +149,7 @@ final class UpsertBillingAddressController
     }
 
     /**
-     * UPDATE path — existing default-billing address gets its fields
+     * UPDATE path, existing default-billing address gets its fields
      * rewritten. The is_default_billing flag stays true.
      */
     private function updatePath(
@@ -187,7 +187,7 @@ final class UpsertBillingAddressController
     }
 
     /**
-     * CREATE path — no default-billing exists yet. Create one. Since
+     * CREATE path, no default-billing exists yet. Create one. Since
      * the user has no other default-billing row (per partial unique
      * index), no demotion of others needed; just set the flag and
      * persist.

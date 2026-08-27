@@ -83,7 +83,7 @@ final class TransitionVendorOrderItemControllerTest extends HttpTestCase
         $order = $this->makeOrder($user, id: 100, reference: 'V3-001', subtotal: '299.00');
         $this->setEntityProp($order, 'status', Order::STATUS_PAID);
 
-        // Item is 'pending' — can't jump straight to 'delivered'
+        // Item is 'pending', can't jump straight to 'delivered'
         $item = $this->makeItem($myVendor, $product, id: 501, status: OrderItem::ITEM_STATUS_PENDING);
         $order->addItem($item);
 
@@ -93,7 +93,7 @@ final class TransitionVendorOrderItemControllerTest extends HttpTestCase
         $orderRepo->method('findForVendorIds')->willReturn($order);
 
         $em = $this->bindEm($user, $orderRepo, $vendorRepo);
-        // No flush — transaction rejected
+        // No flush, transaction rejected
         $em->expects(self::never())->method('flush');
 
         $response = $this->makePatch(
@@ -130,7 +130,7 @@ final class TransitionVendorOrderItemControllerTest extends HttpTestCase
         $order = $this->makeOrder($user, id: 100, reference: 'V3-001', subtotal: '99.00');
         $this->setEntityProp($order, 'status', Order::STATUS_PAID);
 
-        // My item — gives me access to the order
+        // My item, gives me access to the order
         $myItem = $this->makeItem($myVendor, $product, id: 501, status: OrderItem::ITEM_STATUS_PENDING);
         $order->addItem($myItem);
 
@@ -241,7 +241,7 @@ final class TransitionVendorOrderItemControllerTest extends HttpTestCase
     }
 
     // =================================================================
-    // M3.2.X.17-B — Audit emission on item transitions
+    // M3.2.X.17-B, Audit emission on item transitions
     // =================================================================
 
     #[Test]
@@ -308,7 +308,7 @@ final class TransitionVendorOrderItemControllerTest extends HttpTestCase
     public function transitionWithoutOrderStatusChangeEmitsOnlyItemAudit(): void
     {
         // Transition from 'accepted' to 'preparing' on a single-item
-        // order that's already in 'fulfilling' — the order rollup
+        // order that's already in 'fulfilling', the order rollup
         // doesn't move (still fulfilling). So we should see ONE
         // audit row (item-level), not two.
         $user = $this->makeVendorUser(7);
@@ -351,7 +351,7 @@ final class TransitionVendorOrderItemControllerTest extends HttpTestCase
         $order = $this->makeOrder($user, id: 100, reference: 'V3-001', subtotal: '299.00');
         $this->setEntityProp($order, 'status', Order::STATUS_PAID);
 
-        // Item is pending — can't jump straight to delivered
+        // Item is pending, can't jump straight to delivered
         $item = $this->makeItem($myVendor, $product, id: 501, status: OrderItem::ITEM_STATUS_PENDING);
         $order->addItem($item);
 

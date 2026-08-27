@@ -31,7 +31,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Body:
  *   { "reason"?: string }
  *
- * Reason is recommended (not enforced) — operationally important
+ * Reason is recommended (not enforced), operationally important
  * for the audit trail and any future vendor-facing communication
  * about the suspension.
  *
@@ -39,7 +39,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   - vendor.status = 'suspended'
  *   - vendor.status_changed_at = now()
  *   - vendor.status_reason = body.reason (or null)
- *   - vendor.is_store_approved is NOT toggled — the vendor was
+ *   - vendor.is_store_approved is NOT toggled, the vendor was
  *     historically approved; suspension is the more-recent
  *     operational state (Q-LegacyFlags=A invariant)
  *

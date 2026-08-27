@@ -34,7 +34,7 @@ import {
  * Maps the legacy Material Symbols names (still used throughout the
  * templates and rowAction configs) to Lucide icon data. Keeping the
  * Material names as the public API means the icon sweep was a pure
- * tag swap — the name→glyph decision lives only here.
+ * tag swap, the name→glyph decision lives only here.
  *
  * If a name is missing at runtime the IconComponent falls back to a
  * neutral dot (Circle), so a typo degrades gracefully rather than

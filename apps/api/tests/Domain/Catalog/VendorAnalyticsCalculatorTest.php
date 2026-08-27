@@ -118,7 +118,7 @@ final class VendorAnalyticsCalculatorTest extends TestCase
         $calc = $this->makeCalc(queryResults: [
             // totals
             [['revenue' => '1250.50', 'orders' => 8, 'items' => 12, 'unique_customers' => 6]],
-            // revenue_series (skipped in this test — empty list)
+            // revenue_series (skipped in this test, empty list)
             [],
             // top_units, top_revenue, customer_mix, status_mix all empty
             [], [], [], [],
@@ -381,7 +381,7 @@ final class VendorAnalyticsCalculatorTest extends TestCase
     public function statusMixQueryUsesFilterClauses(): void
     {
         // Single aggregate with COUNT(*) FILTER (WHERE ...) for
-        // each status class — efficient single-pass over the
+        // each status class, efficient single-pass over the
         // order_items table for the window.
         $captured = $this->captureQueries();
         $calc = new VendorAnalyticsCalculator($captured['em'], new InMemoryLogger());

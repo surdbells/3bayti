@@ -12,13 +12,13 @@ ion-content.app-bg {
   ion-content.app-bg { --background: var(--ax-color-bg-canvas); }
 }
 
-/* Chipper-style white surface canvas (local override — dark mode still
+/* Chipper-style white surface canvas (local override, dark mode still
    flips this token, so we do NOT touch the global .app-bg class). */
 ion-content.register-bg {
   --background: var(--ax-color-bg-surface);
 }
 
-/* ----- Auth container — left-aligned single column ----- */
+/* ----- Auth container, left-aligned single column ----- */
 .auth-container {
   display: flex;
   flex-direction: column;

@@ -26,7 +26,7 @@
 .invoice-back-btn:hover { background-color: var(--ax-color-bg-muted); }
 .invoice-back-btn app-icon { font-size: 1.25rem; }
 
-/* Status badge — solid black variant for the "ORDER STATUS" pill */
+/* Status badge, solid black variant for the "ORDER STATUS" pill */
 .status-badge {
   display: inline-block;
   padding: var(--ax-space-2) var(--ax-space-3);
@@ -38,7 +38,7 @@
   border-radius: var(--ax-radius-pill);
 }
 
-/* Deliver-to block — mirrors legacy `mt-3 mt-md-0` (mobile-only top margin) */
+/* Deliver-to block, mirrors legacy `mt-3 mt-md-0` (mobile-only top margin) */
 .invoice-deliver-to { margin-top: var(--ax-space-3); }
 @media (min-width: 768px) {
   .invoice-deliver-to { margin-top: 0; }

@@ -53,13 +53,13 @@ export type SocialLoginResult =
   | { ok: false; reason: 'cancelled' | 'unavailable' | 'popup-blocked' | 'failed' };
 
 /**
- * AuthService — single source of truth for authentication state.
+ * AuthService, single source of truth for authentication state.
  *
  * Public surface
  * --------------
- *   - `currentUser`     — Signal<AuthUser | null>
- *   - `isAuthenticated` — Signal<boolean>
- *   - `accessToken`     — Signal<string | null>
+ *   - `currentUser`    , Signal<AuthUser | null>
+ *   - `isAuthenticated`, Signal<boolean>
+ *   - `accessToken`    , Signal<string | null>
  *   - `login()`, `register()`, `confirmRegistration()`, `refresh()`,
  *     `logout()`, `requestPasswordReset()`, `confirmPasswordReset()`,
  *     `resendOtp()`, `hydrate()`
@@ -86,12 +86,12 @@ export type SocialLoginResult =
  *
  * Refresh scheduler
  * -----------------
- * The scheduler is armed inside applyAuthState() — i.e. only after a
+ * The scheduler is armed inside applyAuthState(), i.e. only after a
  * real auth response sets a real token. We deliberately do NOT inject
  * ApplicationRef and wait for isStable: ApplicationRef participates in
  * the APP_INITIALIZER graph, so injecting it from a root service used
  * by an initializer creates an NG0200 circular dependency. Arming on
- * token-set is the correct trigger anyway — with no token there is
+ * token-set is the correct trigger anyway, with no token there is
  * nothing to schedule.
  */
 @Injectable({ providedIn: 'root' })
@@ -130,7 +130,7 @@ export class AuthService {
    * or the next request fails with a revoked token. Mirrors the
    * token-first / user-second / reschedule sequence of applyAuthState.
    *
-   * No-op when signed out (defensive — a password change can only
+   * No-op when signed out (defensive, a password change can only
    * happen for an authenticated user).
    */
   applyPasswordChange(input: {
@@ -196,7 +196,7 @@ export class AuthService {
        resumes in the chosen locale.
 
        This watches the LocaleService.current() signal. We deliberately
-       do NOT push on the FIRST emit after login — the API just told us
+       do NOT push on the FIRST emit after login, the API just told us
        what the user's locale was (it set our local state via syncLocale
        on the auth response), so pushing it back would be redundant
        chatter. We track the last-pushed value to skip the no-op case.
@@ -213,7 +213,7 @@ export class AuthService {
       }
       if (this.lastPushedLocale === desired) return;
       if (user.locale === desired) {
-        /* Local state already matches server — no need to PATCH. */
+        /* Local state already matches server, no need to PATCH. */
         this.lastPushedLocale = desired;
         return;
       }
@@ -245,7 +245,7 @@ export class AuthService {
       );
       this.applyAuthState(response);
     } catch (err) {
-      /* Most likely a 401 (no session) — clear local state and
+      /* Most likely a 401 (no session), clear local state and
          move on. Don't surface the error to the UI; this is the
          initial check and the UI shouldn't show an error toast
          for "you're not logged in". */
@@ -292,7 +292,7 @@ export class AuthService {
    *   2. POST that id_token (+ name from the popup) to the BFF
    *      /auth-proxy/social, which exchanges it at /v3/auth/social and parks
    *      the refresh_token in the HttpOnly cookie (same model as /login).
-   *   3. Feed the response into the SAME applyAuthState() as password login —
+   *   3. Feed the response into the SAME applyAuthState() as password login -
    *      token store + currentUser + scheduleRefresh + locale sync.
    *
    * Returns a typed result rather than throwing: a user-cancelled popup is a
@@ -326,7 +326,7 @@ export class AuthService {
       this.applyAuthState(response);
       return { ok: true, user: response.user };
     } catch {
-      /* BFF / upstream / network failure — the popup itself succeeded, but
+      /* BFF / upstream / network failure, the popup itself succeeded, but
          the token exchange didn't. Surface a generic failure for the page. */
       return { ok: false, reason: 'failed' };
     }
@@ -334,7 +334,7 @@ export class AuthService {
 
   /**
    * Register a new account. Returns the verification_id needed for
-   * the OTP confirm step. NO tokens issued yet — the user is still
+   * the OTP confirm step. NO tokens issued yet, the user is still
    * unverified.
    */
   async register(input: RegisterInput): Promise<RegisterResponse> {
@@ -375,7 +375,7 @@ export class AuthService {
   /**
    * Request a password reset. Always returns 200 (anti-enumeration);
    * the verification_id may be a fake-prefixed string for
-   * non-existent emails — that's fine, the OTP verification step
+   * non-existent emails, that's fine, the OTP verification step
    * will fail the same way as a bad code.
    */
   async requestPasswordReset(email: string): Promise<ResetResponse> {
@@ -403,7 +403,7 @@ export class AuthService {
   }
 
   /* =========================================================================
-     Passwordless parity (#8) — mirrors the mobile v3 passwordless flows.
+     Passwordless parity (#8), mirrors the mobile v3 passwordless flows.
      All of these go through the BFF /auth-proxy so the cookie model is
      preserved: the two *verify* steps that mint a token-pair
      (otp-login/verify, register/confirm-email) route through the BFF's
@@ -446,7 +446,7 @@ export class AuthService {
   }
 
   /**
-   * Register step 1 (phone) — initiate. Sends a phone OTP and returns the
+   * Register step 1 (phone), initiate. Sends a phone OTP and returns the
    * verification_id consumed by registerVerifyPhone().
    */
   async registerInitiate(
@@ -462,7 +462,7 @@ export class AuthService {
   }
 
   /**
-   * Register step 2 (verify phone) — exchanges the phone OTP for a
+   * Register step 2 (verify phone), exchanges the phone OTP for a
    * short-lived registration_token used to authorise registerSubmit().
    */
   async registerVerifyPhone(
@@ -478,7 +478,7 @@ export class AuthService {
   }
 
   /**
-   * Register step 3 (details) — submit. Sends a fresh email OTP and
+   * Register step 3 (details), submit. Sends a fresh email OTP and
    * returns the verification_id consumed by registerConfirmEmail().
    */
   async registerSubmit(
@@ -515,7 +515,7 @@ export class AuthService {
   /**
    * Best-effort phone-availability probe for the register step-1 UX.
    * Returns { phone, available }; available=false means already
-   * registered. Never a hard gate — the register/initiate 409 is.
+   * registered. Never a hard gate, the register/initiate 409 is.
    */
   async validatePhone(input: ValidatePhoneInput): Promise<ValidatePhoneResponse> {
     return firstValueFrom(
@@ -549,7 +549,7 @@ export class AuthService {
    * Single-flight: concurrent callers share one inflight promise.
    * Returns `true` if the refresh succeeded, `false` if it failed
    * (which means the session is dead and the user should be logged
-   * out — callers should call `applyLogoutState()` on false).
+   * out, callers should call `applyLogoutState()` on false).
    *
    * Why return boolean rather than throw
    * ------------------------------------
@@ -569,11 +569,11 @@ export class AuthService {
   }
 
   /**
-   * Log out — clear server-side refresh-token row + local state.
+   * Log out, clear server-side refresh-token row + local state.
    *
    * We call the BFF's logout endpoint (which calls API /logout) so
    * the refresh token's DB row is invalidated. Then we drop local
-   * state regardless of whether the API call succeeded — local
+   * state regardless of whether the API call succeeded, local
    * logout should always work even if the network is broken.
    */
   async logout(): Promise<void> {
@@ -615,7 +615,7 @@ export class AuthService {
     this._currentUser.set(user);
     this.scheduleRefresh();
     /* Locale sync is a NON-CRITICAL side effect. It must never be able
-       to throw out of applyAuthState — otherwise a failure here
+       to throw out of applyAuthState, otherwise a failure here
        propagates into hydrate()'s catch and tears down an otherwise
        valid session (the root cause of "cart disappears on reload":
        syncLocale threw on a missing locale and hydrate logged the user
@@ -643,7 +643,7 @@ export class AuthService {
    *
    * If the user has a locale on record that differs from the current
    * resolved locale, switch to theirs. We don't write back to the
-   * API here — the user chose their locale when registering or in
+   * API here, the user chose their locale when registering or in
    * their profile; the client just respects it.
    *
    * For users without a locale on record (null), we leave the
@@ -665,7 +665,7 @@ export class AuthService {
 
     if (user.locale === this.locale.current()) return;
     /* setLocale is async (it triggers translation load) but we
-       don't await — the locale change can settle in the background.
+       don't await, the locale change can settle in the background.
        The signal is updated synchronously inside setLocale. */
     void this.locale.setLocale(user.locale);
   }
@@ -675,7 +675,7 @@ export class AuthService {
    *
    * Browser-only, silent-on-failure. The browser-side HttpClient
    * goes via the refreshInterceptor so Authorization is attached
-   * and 401s trigger a token refresh + retry. No BFF route needed —
+   * and 401s trigger a token refresh + retry. No BFF route needed -
    * this is a Bearer-bound call, not a cookie-bound one.
    *
    * Returns nothing; failures are logged as a warning and otherwise
@@ -684,7 +684,7 @@ export class AuthService {
    */
   private async pushLocaleToServer(locale: 'en' | 'ar'): Promise<void> {
     /* Build the v3 base URL inline rather than injecting
-       ApiConfigService — keeps the dependency graph small.
+       ApiConfigService, keeps the dependency graph small.
        Future Y.2: extract a constant or DI token. */
     const url = 'https://api-v3.3bayti.ae/v3/me/profile';
     try {
@@ -704,7 +704,7 @@ export class AuthService {
       /* Don't roll back lastPushedLocale: a transient failure followed
          by the user changing locale again would still trigger a push.
          If we cleared the marker, every render-time recomputation of
-         the effect would re-fire the PATCH — bad. */
+         the effect would re-fire the PATCH, bad. */
     }
   }
 
@@ -750,7 +750,7 @@ export class AuthService {
 
     /* If the token is already inside the refresh window (e.g. user
        hydrates a tab with a near-expired token), fire immediately.
-       If it's already EXPIRED, also fire — the refresh will either
+       If it's already EXPIRED, also fire, the refresh will either
        extend the session or fail cleanly and log out. */
     const clampedDelay = Math.max(delayMs, 0);
 

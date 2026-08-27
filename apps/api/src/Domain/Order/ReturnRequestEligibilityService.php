@@ -15,20 +15,20 @@ use DateTimeZone;
  *
  * Three rules (Q-EligibilityWindow + Q-Authorization locked):
  *
- *   Rule 1 — Window. Order must have been paid within the
+ *   Rule 1, Window. Order must have been paid within the
  *            configured window (default 14 days). The window starts
  *            from paid_at (delivered_at not yet tracked in v3; paid_at
  *            is the most authoritative timestamp we have).
  *
- *   Rule 2 — Per-item. Each OrderItem in the request must be in the
+ *   Rule 2, Per-item. Each OrderItem in the request must be in the
  *            DELIVERED status, and must NOT already be in a returned/
  *            refunded/cancelled state (already settled).
  *
- *   Rule 3 — No overlap. None of the OrderItems in the request can be
+ *   Rule 3, No overlap. None of the OrderItems in the request can be
  *            referenced by another in-flight (non-terminal) return
  *            request. Prevents accidental duplicate submissions.
  *
- * Returns a structured ReturnEligibilityResult — ok() if all rules
+ * Returns a structured ReturnEligibilityResult, ok() if all rules
  * pass, or one of the failure factories with a specific error code
  * the controller will surface as a 422 with that code.
  *
@@ -36,7 +36,7 @@ use DateTimeZone;
  * =====================
  * Q-Authorization = A locks customer-owns-order to a 404 (not 403)
  * for cross-user attempts. That check happens at the controller
- * layer BEFORE eligibility — by the time eligibility runs, we already
+ * layer BEFORE eligibility, by the time eligibility runs, we already
  * know the customer owns the order. This service does not re-check
  * authorization; it focuses purely on the lifecycle/state rules.
  */
@@ -73,7 +73,7 @@ final class ReturnRequestEligibilityService
 
         // The customer-owns-order check is enforced at the controller
         // layer per Q-Authorization. Defense in depth: assert the
-        // order's customer matches the supplied customer here too —
+        // order's customer matches the supplied customer here too -
         // if it doesn't, treat as RETURN_FORBIDDEN (the controller
         // would have already returned 404 in normal flow).
         if ($order->getUser()->getId() !== $customer->getId()) {
@@ -83,13 +83,13 @@ final class ReturnRequestEligibilityService
             );
         }
 
-        // Rule 1 — window.
+        // Rule 1, window.
         $windowResult = $this->checkWindow($order);
         if (!$windowResult->ok) {
             return $windowResult;
         }
 
-        // Rule 2 — per-item eligibility. Builds a list of the actual
+        // Rule 2, per-item eligibility. Builds a list of the actual
         // OrderItem instances on the way so we can hand them back to
         // the controller without re-fetching.
         $itemsResult = $this->checkItems($order, $requestedOrderItemIds);
@@ -97,7 +97,7 @@ final class ReturnRequestEligibilityService
             return $itemsResult;
         }
 
-        // Rule 3 — no overlap with existing in-flight returns.
+        // Rule 3, no overlap with existing in-flight returns.
         if ($this->returnRepo->hasOverlappingPendingForOrderItems($requestedOrderItemIds)) {
             return ReturnEligibilityResult::failure(
                 'RETURN_OVERLAPPING_PENDING',
@@ -111,7 +111,7 @@ final class ReturnRequestEligibilityService
     }
 
     // -----------------------------------------------------------------
-    // Rule 1 — window
+    // Rule 1, window
     // -----------------------------------------------------------------
 
     private function checkWindow(Order $order): ReturnEligibilityResult
@@ -139,7 +139,7 @@ final class ReturnRequestEligibilityService
     }
 
     // -----------------------------------------------------------------
-    // Rule 2 — per-item
+    // Rule 2, per-item
     // -----------------------------------------------------------------
 
     /**

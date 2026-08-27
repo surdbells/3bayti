@@ -9,18 +9,18 @@ import { RouterLink } from '@angular/router';
 import { SeoService } from '../../core/seo/seo.service';
 
 /**
- * /privacy — the public Privacy Policy (Google Play compliance).
+ * /privacy, the public Privacy Policy (Google Play compliance).
  *
  * A static, PUBLIC prose page (no guard). The route title is localized
  * via I18nTitleStrategy (routeTitles.privacy); the long legal BODY is
  * intentionally kept INLINE in English (not moved into i18n) so the
  * canonical wording lives in one place and reviews cleanly.
  *
- * Indexable — the SeoService call leaves robots at the default
+ * Indexable, the SeoService call leaves robots at the default
  * 'index,follow' so the policy is discoverable by crawlers (a Play/App
  * Store review requirement).
  *
- * Tailored to 3bayti — a UAE modest-fashion e-commerce MARKETPLACE
+ * Tailored to 3bayti, a UAE modest-fashion e-commerce MARKETPLACE
  * (multiple independent vendors fulfil orders; Noon processes payments).
  */
 @Component({
@@ -268,7 +268,7 @@ export class PrivacyPolicyPageComponent implements OnInit {
         'information when you shop the modest-fashion marketplace on our ' +
         'website and app. Includes your data rights and how to delete your ' +
         'account.',
-      /* Legal page must be indexable for app-store / Play review — leave
+      /* Legal page must be indexable for app-store / Play review, leave
          robots at the SeoService default ('index,follow'). */
     });
   }

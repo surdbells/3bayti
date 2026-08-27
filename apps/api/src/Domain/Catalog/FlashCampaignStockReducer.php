@@ -10,7 +10,7 @@ use DateTimeImmutable;
 /**
  * Decrements flash-campaign stock for the lines of a just-paid order.
  *
- * Invoked exactly once per order — on the first paid transition (callers
+ * Invoked exactly once per order, on the first paid transition (callers
  * gate on {@see Order::markPaid()}'s boolean return). For each ordered
  * line, every live flash-campaign item referencing that product has its
  * stockRemaining reduced by the purchased quantity, floored at zero.

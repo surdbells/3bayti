@@ -15,10 +15,10 @@ export interface WishlistMeta {
 }
 
 /**
- * WishlistService — the authenticated user's saved products.
+ * WishlistService, the authenticated user's saved products.
  *
  * Uses the direct Bearer HttpClient (auth attached by the interceptor),
- * consistent with MeasurementService / account deletion — these
+ * consistent with MeasurementService / account deletion, these
  * endpoints aren't in the RoutedHttpClient registry.
  *
  * State model
@@ -42,7 +42,7 @@ export class WishlistService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
 
-  /** Saved product ids — the source of truth for the heart UI. */
+  /** Saved product ids, the source of truth for the heart UI. */
   private readonly _savedIds = signal<ReadonlySet<number>>(new Set());
   readonly savedIds: Signal<ReadonlySet<number>> = this._savedIds.asReadonly();
 

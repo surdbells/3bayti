@@ -18,7 +18,7 @@ use Doctrine\Migrations\AbstractMigration;
  * item at its product's current image.
  *
  * Only rows whose snapshot is empty or still points at the legacy host are
- * touched, and only when the product actually has a localized image — real v3
+ * touched, and only when the product actually has a localized image, real v3
  * orders keep their own snapshot. Idempotent: a second run matches nothing.
  *
  * Pairs with OrderSerializer::itemShape, which applies the same fallback at

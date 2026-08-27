@@ -36,7 +36,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *     "user": { "email": "...", "phone": "...", "is_phone_verified": false }
  *   }
  *
- * The user payload is INTENTIONALLY MINIMAL — it does NOT include
+ * The user payload is INTENTIONALLY MINIMAL, it does NOT include
  * the user id, role flags, or other fields. The full payload comes
  * back from /v3/auth/confirm once the phone is verified, alongside
  * the token pair. Until then the user is in a half-state:
@@ -50,11 +50,11 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Failure modes
  * -------------
- *   - 409 CONFLICT_EMAIL_TAKEN — email already registered
- *   - 409 CONFLICT_PHONE_TAKEN — phone already registered
- *   - 422 VALIDATION_FAILED   — body shape errors
- *   - 429 OTP_RATE_LIMITED    — phone hit hourly cap
- *   - 502 OTP_PROVIDER_ERROR  — MessageCentral down/refusing
+ *   - 409 CONFLICT_EMAIL_TAKEN, email already registered
+ *   - 409 CONFLICT_PHONE_TAKEN, phone already registered
+ *   - 422 VALIDATION_FAILED  , body shape errors
+ *   - 429 OTP_RATE_LIMITED   , phone hit hourly cap
+ *   - 502 OTP_PROVIDER_ERROR , MessageCentral down/refusing
  *
  * Race condition handling
  * -----------------------
@@ -68,7 +68,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * ----------------------
  * 1. INSERT User row (catches email/phone conflict via UNIQUE).
  * 2. Call OtpService::send (which talks to CPaaS first, then INSERTs
- *    its own audit row — service-internal transaction).
+ *    its own audit row, service-internal transaction).
  *
  * Why NOT wrap (1) and (2) in one transaction:
  *   - OtpService::send opens its own transaction internally; nesting
@@ -80,7 +80,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Tradeoff: a successful register that loses the OTP send leaves an
  * orphaned User row in is_phone_verified=false. A nightly cleanup
  * job (M5) deletes such rows older than 30 days. For now they just
- * accumulate slowly — fine until volume picks up.
+ * accumulate slowly, fine until volume picks up.
  */
 final class RegisterController
 {
@@ -107,7 +107,7 @@ final class RegisterController
         /** @var UserRepository $users */
         $users = $this->em->getRepository(User::class);
 
-        // Pre-flight conflict check — friendlier error if we already
+        // Pre-flight conflict check, friendlier error if we already
         // know the email/phone is taken (saves a trip to OTP).
         // The DB UNIQUE constraint is the actual race-safe guard.
         if (!$users->isEmailAvailable($input->email)) {
@@ -125,7 +125,7 @@ final class RegisterController
 
         // Build the user record. Phone unverified; account active by
         // default (so login flow doesn't see it as disabled, just as
-        // not-yet-phone-verified). Customer role only — vendor flag
+        // not-yet-phone-verified). Customer role only, vendor flag
         // is set later via vendor onboarding (M1.7+).
         $user = new User(
             email: $input->email,
@@ -139,13 +139,13 @@ final class RegisterController
             $users->save($user);
         } catch (UniqueConstraintViolationException $e) {
             // Race winner already inserted. Tell the user the right
-            // thing — but we can't easily tell email vs phone from the
+            // thing, but we can't easily tell email vs phone from the
             // exception class alone. Inspect the message.
             throw $this->classifyUniqueViolation($e);
         }
 
         // Fire the OTP. If this fails, the User row stays in place
-        // (deliberate — see class docblock).
+        // (deliberate, see class docblock).
         try {
             $verificationId = $this->otp->send(
                 to: $input->phone,
@@ -176,7 +176,7 @@ final class RegisterController
     /**
      * Decide whether a Postgres UNIQUE violation was on email or
      * phone, returning the right HttpException. If we can't tell
-     * (extremely unlikely — would mean an unknown index name), fall
+     * (extremely unlikely, would mean an unknown index name), fall
      * back to a generic 409.
      */
     private function classifyUniqueViolation(UniqueConstraintViolationException $e): HttpException

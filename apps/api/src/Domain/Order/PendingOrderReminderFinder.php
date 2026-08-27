@@ -14,7 +14,7 @@ use Psr\Log\LoggerInterface;
  *
  * Targets orders stuck in `pending_payment` (customer reached the gateway
  * but never finished) or `failed` (the charge attempt failed and is
- * retryable). Both are recoverable revenue — a well-timed nudge brings a
+ * retryable). Both are recoverable revenue, a well-timed nudge brings a
  * share of them back to a completed sale, mirroring the abandoned-cart
  * recovery flow (CartAbandonmentFinder).
  *
@@ -22,17 +22,17 @@ use Psr\Log\LoggerInterface;
  * ===========================
  *   1. status IN ('pending_payment', 'failed')
  *   2. created_at <= now - minAge   (old enough that the customer has
- *      genuinely dropped off — not still mid-checkout, and past the
+ *      genuinely dropped off, not still mid-checkout, and past the
  *      reconcile cron's window)
  *   3. created_at >= now - maxAge   (not so old the nudge is pointless)
- *   4. No prior reminder for this order+channel (NOT EXISTS guard) — so a
+ *   4. No prior reminder for this order+channel (NOT EXISTS guard), so a
  *      re-run never double-nudges the same order.
  *
  * Two independent finders, one per channel, exactly like the cart finder:
  * the EMAIL guard keys on template 'order.payment_reminder.customer'; the
  * PUSH guard keys on the push data.type 'order.payment_reminder' AND
  * channel='push'. An email reminder therefore never suppresses a push and
- * vice-versa — an order can receive both, each idempotent on its own
+ * vice-versa, an order can receive both, each idempotent on its own
  * channel. Additionally, the email finder requires the customer to have an
  * email; the push finder requires at least one active device token.
  *
@@ -41,10 +41,10 @@ use Psr\Log\LoggerInterface;
  *
  * Indexes relied upon
  * ===================
- *   - orders partial index on (created_at) WHERE status IN (...) — added in
+ *   - orders partial index on (created_at) WHERE status IN (...), added in
  *     the accompanying migration; keeps the range scan cheap as the table
  *     grows.
- *   - notification_logs (order_id) — for the NOT EXISTS subquery.
+ *   - notification_logs (order_id), for the NOT EXISTS subquery.
  */
 final class PendingOrderReminderFinder
 {
@@ -191,7 +191,7 @@ final class PendingOrderReminderFinder
     /**
      * Order ids eligible for the EMAIL FOLLOW-UP (stage 2). Eligible when the
      * stage-1 email was sent at least $followupAfterHours ago and no stage-2
-     * email exists yet — so there is always a real gap since the first
+     * email exists yet, so there is always a real gap since the first
      * reminder, regardless of when it actually fired. Bounded by a created_at
      * floor so ancient orders aren't nudged.
      *

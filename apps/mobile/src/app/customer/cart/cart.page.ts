@@ -176,11 +176,11 @@ export class CartPage implements OnInit, OnDestroy {
   ngOnInit() {
     // Cart contents are (re)loaded in ionViewWillEnter so they refresh on every
     // entry. ngOnInit runs only once because Ionic caches the page in the nav
-    // stack — loading here left the cart showing stale/empty content after
+    // stack, loading here left the cart showing stale/empty content after
     // navigating away and back, until a manual pull-to-refresh.
   }
   ionViewWillEnter() {
-    // Fires on first entry AND every re-entry — re-pull the cart each time the
+    // Fires on first entry AND every re-entry, re-pull the cart each time the
     // page is shown so it never shows a stale/empty snapshot.
     this.getObject();
   }
@@ -195,7 +195,7 @@ export class CartPage implements OnInit, OnDestroy {
   async getObject() {
     const ret: any = await Preferences.get({ key: 'user' });
     if (ret.value == null){
-      // M3.1.6i.2-E: guest mode — show device-local cart instead of
+      // M3.1.6i.2-E: guest mode, show device-local cart instead of
       // redirecting to /login. Encourages adds-to-cart before sign-up.
       this.isGuest = true;
       this.load_cart();
@@ -230,7 +230,7 @@ export class CartPage implements OnInit, OnDestroy {
     this.request.id = this.single_user.id;
     // Direct v3 (GET /v3/cart). The transformCartListResponse response
     // transform still applies via get_v3, so response.data keeps the
-    // {items, bill, ...} shape — the dual-shape handling below is left
+    // {items, bill, ...} shape, the dual-shape handling below is left
     // intact (the v3 branch is the one that runs).
     this.networkAdapter.get_v3('GET /cart', { authToken: this.single_user.token })
       .subscribe(({
@@ -266,7 +266,7 @@ export class CartPage implements OnInit, OnDestroy {
                 ...(data.bill ?? {}),
               };
             } else {
-              // Defensive fallback — empty cart
+              // Defensive fallback, empty cart
               this.carts = [];
               this.bill = { ...this.bill, count: 0, subtotal: 0 };
             }
@@ -309,7 +309,7 @@ export class CartPage implements OnInit, OnDestroy {
           id: it.localId ?? 0,
           // The template's remove/increase/decrease handlers are bound to
           // `cart.item`, and open_product to `cart.product`. The guest
-          // line key is the IndexedDB localId — expose it under `item` so
+          // line key is the IndexedDB localId, expose it under `item` so
           // LocalCartService.updateQuantity/remove (which guard localId<=0)
           // receive the real id instead of undefined (silent no-op before).
           item: it.localId ?? 0,
@@ -335,7 +335,7 @@ export class CartPage implements OnInit, OnDestroy {
           extra_measurement: it.extra_measurement,
           note: it.note,
           in_stock: true,
-          // Computed line_total — local cart doesn't store it
+          // Computed line_total, local cart doesn't store it
           line_total: ((Number.isFinite(unitPrice) ? unitPrice : 0) * (it.quantity || 0)).toFixed(2),
         };
       }) as unknown as Cart[];

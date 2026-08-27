@@ -11,18 +11,18 @@ use DateTimeInterface;
  * Convert Brand entities to public response shapes.
  *
  * One shape exposed: brand summary. No "full vs summary" distinction
- * needed yet — brand has so few fields that one shape covers admin
+ * needed yet, brand has so few fields that one shape covers admin
  * + public reads. If we add per-brand statistics (product count,
  * top categories) later, that's a separate "full" shape.
  *
- * is_active is NOT exposed in the public shape — public consumers
+ * is_active is NOT exposed in the public shape, public consumers
  * shouldn't even know about inactive brands. Admin response wraps
  * the same shape via a separate adminShape() that includes it.
  */
 final class BrandSerializer
 {
     /**
-     * Public shape — what storefront consumers see.
+     * Public shape, what storefront consumers see.
      *
      * @return array<string, mixed>
      */
@@ -37,7 +37,7 @@ final class BrandSerializer
     }
 
     /**
-     * Admin shape — includes lifecycle fields hidden from public.
+     * Admin shape, includes lifecycle fields hidden from public.
      *
      * @return array<string, mixed>
      */

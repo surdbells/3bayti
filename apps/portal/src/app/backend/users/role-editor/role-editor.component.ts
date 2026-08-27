@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../translate.pipe';
 import type { RoleDetail, CatalogModule, CatalogPreset } from '../users.component';
 
 /**
- * /admin_role[?id=] — create or edit a role + its permission matrix.
+ * /admin_role[?id=], create or edit a role + its permission matrix.
  *
  * Production-grade permission matrix: per-module grouping with collapse, a
  * live permission search/filter over the full catalog, per-module select-all
@@ -322,7 +322,7 @@ export class RoleEditorComponent implements OnInit {
     this.selectedPerms = next;
   }
 
-  /** Presets are ADDITIVE — they union onto the current selection rather than
+  /** Presets are ADDITIVE, they union onto the current selection rather than
    *  silently replacing it (the old behaviour wiped any custom picks). */
   applyPreset(p: CatalogPreset): void {
     if (this.isSystem) return;

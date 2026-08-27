@@ -12,8 +12,8 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * A requested new phone number is stored here (NOT applied to users.phone)
  * until the SMS OTP is verified; on success it's promoted to the active phone
- * and this column is cleared. So an abandoned change never touches — or
- * un-verifies — the user's current phone. See SetPhoneController +
+ * and this column is cleared. So an abandoned change never touches, or
+ * un-verifies, the user's current phone. See SetPhoneController +
  * VerifyPhoneController.
  */
 final class Version20260826000002 extends AbstractMigration

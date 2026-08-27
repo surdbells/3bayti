@@ -40,8 +40,8 @@ use Psr\Log\LoggerInterface;
  * for the prior-reminder guard. LIMIT bounds the batch.
  *
  * Indexes used:
- *   - carts (status, updated_at)  — added in X.11-C if missing
- *   - notification_logs (cart_id) WHERE cart_id IS NOT NULL — added in X.11-A
+ *   - carts (status, updated_at) , added in X.11-C if missing
+ *   - notification_logs (cart_id) WHERE cart_id IS NOT NULL, added in X.11-A
  *
  * Tested-baseline: scanning ~10k active carts with 100 abandoned
  * picks the batch in <50ms on a warm cache. SLOW_THRESHOLD_MS
@@ -50,7 +50,7 @@ use Psr\Log\LoggerInterface;
 /**
  * @internal Marked non-final ONLY to allow PHPUnit class doubles
  *           in console-command tests. Production code MUST NOT
- *           subclass this — there's no extension point. Same
+ *           subclass this, there's no extension point. Same
  *           posture as OrderTimelineBuilder (X.17-C) and
  *           FacetAggregator (X.10-A).
  */
@@ -72,7 +72,7 @@ class CartAbandonmentFinder
      * Find up to $limit cart_ids that match the eligibility criteria.
      *
      * Returns IDs (not entities) so the caller can decide how to
-     * hydrate — for the cron command, we hydrate one at a time to
+     * hydrate, for the cron command, we hydrate one at a time to
      * keep memory bounded over very large batches.
      *
      * @return list<int>
@@ -94,7 +94,7 @@ class CartAbandonmentFinder
 
         // The NOT EXISTS guard checks for ANY notification_log row
         // with template='cart.abandoned.customer' and matching cart_id
-        // — regardless of status (sent/failed/skipped). All three
+        //, regardless of status (sent/failed/skipped). All three
         // are 'we've already evaluated this cart'; we don't want to
         // resend even on failed delivery (Q-MaxRemindersPerCart = A).
         // If retry-on-failure becomes desirable later, narrow this
@@ -159,7 +159,7 @@ class CartAbandonmentFinder
      * idempotent on its own channel.
      *
      * Same structural eligibility as the email finder (active, has
-     * items, idle past threshold, owner has — here we do NOT require an
+     * items, idle past threshold, owner has, here we do NOT require an
      * email since push targets device tokens, not email; the dispatch
      * layer skips carts whose owner has no active token or opted out of
      * marketing push). The template/channel guard uses the PUSH

@@ -42,9 +42,9 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  * What this DOES NOT do
  * ---------------------
  *   - Doesn't handle multipart/form-data (we're a JSON API)
- *   - Doesn't try to recover from missing fields by defaulting them —
+ *   - Doesn't try to recover from missing fields by defaulting them -
  *     the DTO's own defaults handle that
- *   - Doesn't auto-trim whitespace — if a field needs that, add
+ *   - Doesn't auto-trim whitespace, if a field needs that, add
  *     #[Assert\NotBlank(allowNull: false)] or do it in the DTO
  *
  * Why hand-rolled instead of using a fancier library
@@ -117,7 +117,7 @@ final class RequestValidator
         $constructor = $reflection->getConstructor();
 
         if ($constructor === null) {
-            // DTO with no constructor — just instantiate.
+            // DTO with no constructor, just instantiate.
             return $reflection->newInstance();
         }
 
@@ -129,7 +129,7 @@ final class RequestValidator
             } elseif ($param->isDefaultValueAvailable()) {
                 $args[$name] = $param->getDefaultValue();
             } else {
-                // No value supplied and no default — pass null and
+                // No value supplied and no default, pass null and
                 // let validation catch the missing field. (Type
                 // declarations like `string` would TypeError here,
                 // but our DTOs have defaults on every field.)

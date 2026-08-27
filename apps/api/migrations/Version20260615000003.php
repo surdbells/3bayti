@@ -8,12 +8,12 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * HP-BE1 — campaigns + campaign_items schema.
+ * HP-BE1, campaigns + campaign_items schema.
  *
  * Backs the time-boxed merchandising campaigns that drive the storefront
  * homepage's "Anniversary Deals" and "Flash Sale" sections:
  *
- *   GET /v3/campaigns/active   (public read — the live anniversary + flash)
+ *   GET /v3/campaigns/active   (public read, the live anniversary + flash)
  *   GET /v3/campaigns          (public list by type)
  *   /v3/admin/campaigns*       (admin CRUD)
  *
@@ -22,7 +22,7 @@ use Doctrine\Migrations\AbstractMigration;
  *   - type VARCHAR(20): 'anniversary' | 'flash' (validated in the entity).
  *   - discount_percent SMALLINT default 0: campaign-wide default discount,
  *     applied to items that don't carry their own override. The campaign
- *     never stores a per-product money amount — the discount is applied to
+ *     never stores a per-product money amount, the discount is applied to
  *     the product's live price at read time, so it stays correct as prices
  *     change.
  *   - starts_at / ends_at: the active window. A campaign is "live" when
@@ -34,7 +34,7 @@ use Doctrine\Migrations\AbstractMigration;
  * campaign_items
  * ==============
  *   - (campaign_id, product_id) UNIQUE: a product appears at most once per
- *     campaign. Both FKs ON DELETE CASCADE — removing a campaign or product
+ *     campaign. Both FKs ON DELETE CASCADE, removing a campaign or product
  *     cleans up the join.
  *   - discount_percent SMALLINT nullable: per-item override of the campaign
  *     default (null -> use the campaign default).

@@ -1,5 +1,5 @@
 /* ============================================================================
-   AxTextField — abayti M2 text input primitive
+   AxTextField, abayti M2 text input primitive
    ============================================================================ */
 
 :host {
@@ -78,7 +78,7 @@
     opacity: 1;             /* Firefox respects opacity by default */
   }
 
-  /* Hover (desktop only — mobile won't see :hover) */
+  /* Hover (desktop only, mobile won't see :hover) */
   @media (hover: hover) {
     &:hover:not(:disabled) {
       border-color: var(--ax-color-border-strong);
@@ -121,7 +121,7 @@
     font-family: inherit;
   }
 
-  /* Error state — ring becomes danger */
+  /* Error state, ring becomes danger */
   .ax-text-field--error & {
     border-color: var(--ax-palette-danger-500);
     border-width: var(--ax-input-border-width-focus, 1.5px);

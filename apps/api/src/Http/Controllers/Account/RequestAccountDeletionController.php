@@ -19,7 +19,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * POST /v3/account/deletion-request  (PUBLIC — no auth)
+ * POST /v3/account/deletion-request  (PUBLIC, no auth)
  *
  * A user requests deletion of their account + associated data from the
  * public web. Google Play requires a publicly reachable (no login) URL
@@ -32,7 +32,7 @@ use Psr\Log\LoggerInterface;
  * Anti-enumeration
  * ----------------
  * We NEVER reveal whether the submitted email matches an account. Any
- * well-formed request returns 202 { "status": "received" } — identical
+ * well-formed request returns 202 { "status": "received" }, identical
  * whether or not an account exists. (Mirrors the vendor-application and
  * OTP-send controllers.)
  *
@@ -42,7 +42,7 @@ use Psr\Log\LoggerInterface;
  *   - per-IP  (CF-Connecting-IP):  short cooldown + hourly cap
  *   - per-email:                    short cooldown + hourly cap
  * A Redis outage degrades to "allow" (fail-open) rather than blocking a
- * legitimate user — mirrors SubmitVendorApplicationController.
+ * legitimate user, mirrors SubmitVendorApplicationController.
  *
  * Ops notification
  * ----------------
@@ -93,7 +93,7 @@ final class RequestAccountDeletionController
         // not the email matches a real user.
         $this->notifyOps($input, $ip);
 
-        // Always 202 for a well-formed request — no account disclosure.
+        // Always 202 for a well-formed request, no account disclosure.
         $response = $this->getResponseFactory()->createResponse(202);
         $response->getBody()->write('{"status":"received"}');
         return $response->withHeader('Content-Type', 'application/json');
@@ -107,11 +107,11 @@ final class RequestAccountDeletionController
      */
     private function enforceRateLimits(?string $ip, string $email): void
     {
-        // Per-email (always available — email is in the body).
+        // Per-email (always available, email is in the body).
         $this->enforceCooldown('acctdel:cd:email:' . $email);
         $this->enforceHourlyCap('acctdel:rl:email:' . $email, self::PER_EMAIL_HOURLY_CAP);
 
-        // Per-IP (skipped entirely when the IP can't be resolved — never
+        // Per-IP (skipped entirely when the IP can't be resolved, never
         // block a legit user because we couldn't read their IP).
         if ($ip !== null && $ip !== '') {
             $this->enforceCooldown('acctdel:cd:ip:' . $ip);
@@ -167,7 +167,7 @@ final class RequestAccountDeletionController
 
     /**
      * Email the configured ops recipients that a deletion request
-     * arrived. Entirely non-blocking — a mailer failure never fails the
+     * arrived. Entirely non-blocking, a mailer failure never fails the
      * HTTP response. No-ops when ADMIN_NOTIFICATION_EMAILS is empty.
      */
     private function notifyOps(RequestAccountDeletionInput $input, ?string $ip): void

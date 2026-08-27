@@ -21,7 +21,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * GET /v3/cart
  *
  * Returns the authenticated user's active cart. If the user has
- * no cart yet, returns an empty-cart shape with id=0 — this lets
+ * no cart yet, returns an empty-cart shape with id=0, this lets
  * mobile render an empty state without needing a separate
  * "no cart" endpoint.
  *

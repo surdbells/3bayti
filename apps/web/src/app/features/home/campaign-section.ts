@@ -7,10 +7,10 @@ import type { Money } from '../catalog/product.model';
 import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign.model';
 
 /**
- * CampaignSection — a homepage rail for a live campaign (Anniversary
+ * CampaignSection, a homepage rail for a live campaign (Anniversary
  * Deals or Flash Sale). Visually distinct from the neutral product
  * strips: a tinted band, a prominent live countdown, per-item savings
- * badges, and — for flash sales — scarcity stock bars.
+ * badges, and, for flash sales, scarcity stock bars.
  *
  * Variant differences:
  *   anniversary → celebratory gold band, savings badges, no stock bars

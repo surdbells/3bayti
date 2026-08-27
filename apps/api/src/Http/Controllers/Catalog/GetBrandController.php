@@ -17,7 +17,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/brands/{slug}
  *
- * Brand detail by slug. Returns 404 for unknown OR inactive brand —
+ * Brand detail by slug. Returns 404 for unknown OR inactive brand -
  * inactive brands should be invisible from public discovery.
  */
 final class GetBrandController

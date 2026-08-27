@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Backfill vendor KYC documents from the legacy MySQL `users` table.
  *
  * The legacy platform stored a store owner's identity documents on the USER
- * row (users.id_front / id_back / license_doc — base64 data URLs). The v3
+ * row (users.id_front / id_back / license_doc, base64 data URLs). The v3
  * user/vendor migration copied profile + registration fields but NOT these
  * documents, and the earlier Postgres-only backfill (Version20260826000001)
  * found nothing because the data lives in legacy MySQL. So the compliance
@@ -16,7 +16,7 @@ declare(strict_types=1);
  *   legacy users.user_id  ->  v3 users.legacy_user_id  ->  vendors.owner_user_id
  * and only filling a v3 column that's still empty (never clobbering a doc the
  * vendor re-uploaded in v3). Read-only against legacy MySQL; writes only v3
- * vendors. Idempotent — re-running only fills blanks.
+ * vendors. Idempotent, re-running only fills blanks.
  *
  * The copied values keep the legacy shape (usually a base64 data URL); the
  * compliance serve path already renders those. Run compliance:localize-documents

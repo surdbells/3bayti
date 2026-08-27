@@ -5,7 +5,7 @@ import { RoutedHttpClient } from '../http/routed-http-client';
  * Shared on-sale product count.
  *
  * Backs the count badge on the Discounted shortcuts (home category tile +
- * header nav link). One cheap limit=1 read of GET /products?sale=true — we only
+ * header nav link). One cheap limit=1 read of GET /products?sale=true, we only
  * need meta.total, not the rows. Loaded once and shared, so multiple consumers
  * don't each fire the request. Degrades to 0 on error (badge hidden).
  */
@@ -19,7 +19,7 @@ export class SaleCountService {
 
   private loaded = false;
 
-  /** Fetch the on-sale total once. Idempotent — safe to call from every consumer. */
+  /** Fetch the on-sale total once. Idempotent, safe to call from every consumer. */
   load(): void {
     if (this.loaded) {
       return;

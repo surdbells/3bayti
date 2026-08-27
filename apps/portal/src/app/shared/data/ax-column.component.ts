@@ -31,7 +31,7 @@ export class AxColumnComponent {
   /** Horizontal alignment of cell content + header. */
   @Input() align: AxColumnAlign = 'left';
 
-  /** Width (any CSS size) — default auto. */
+  /** Width (any CSS size), default auto. */
   @Input() width?: string;
 
   /** Hide this column on mobile (responsive stacking still works for others). */

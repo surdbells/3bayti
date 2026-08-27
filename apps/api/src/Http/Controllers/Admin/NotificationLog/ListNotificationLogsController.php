@@ -29,16 +29,16 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Query parameters (Q-FilterSet = A locked)
  * ==========================================
- *   ?order_id=N        — exact order match
- *   ?template=...      — exact EmailTemplate enum value match
+ *   ?order_id=N       , exact order match
+ *   ?template=...     , exact EmailTemplate enum value match
  *                         (e.g. 'order.placed.customer')
- *   ?status=...        — sent | failed | skipped
- *   ?recipient=...     — exact email match
- *   ?error_kind=...    — MailerException kind or exception class name
- *   ?since=...         — ISO datetime, inclusive lower bound on sent_at
- *   ?until=...         — ISO datetime, inclusive upper bound on sent_at
- *   ?limit=N           — default 20, max 100
- *   ?offset=N          — default 0
+ *   ?status=...       , sent | failed | skipped
+ *   ?recipient=...    , exact email match
+ *   ?error_kind=...   , MailerException kind or exception class name
+ *   ?since=...        , ISO datetime, inclusive lower bound on sent_at
+ *   ?until=...        , ISO datetime, inclusive upper bound on sent_at
+ *   ?limit=N          , default 20, max 100
+ *   ?offset=N         , default 0
  *
  * Audit (Q-Audit = A locked)
  * ==========================
@@ -122,7 +122,7 @@ final class ListNotificationLogsController
         $result = $repo->findFilteredPaginated($filters);
 
         // Audit the listing access. Subject is the admin User
-        // themselves — list views have no single subject entity. The
+        // themselves, list views have no single subject entity. The
         // filter context lets ops reconstruct what the admin viewed.
         $this->audit->recordView(
             request: $request,

@@ -10,7 +10,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** DELETE /v3/admin/products/{id} — soft-delete */
+/** DELETE /v3/admin/products/{id}, soft-delete */
 final class DeleteAdminProductController
 {
     use Responder;

@@ -146,7 +146,7 @@ try {
             $log->warn('users', $legacyId, "Suspicious password hash (len=" . strlen($passwordHash) . ")");
         }
 
-        // ---- Email collision handling — only matters on first INSERT ----
+        // ---- Email collision handling, only matters on first INSERT ----
         // Per Sodiq's decision, email is STABLE across re-syncs. So if a v3 row
         // already exists for this legacy_user_id, we keep its current email
         // regardless of what's in legacy now. Collision logic only applies
@@ -163,7 +163,7 @@ try {
         $isCollisionLoser = ($emailWinners[$email] ?? null) !== $legacyId;
         $renamedEmail = null;
         if ($isCollisionLoser && $existingUser === false) {
-            // First-time insert AND we're a collision loser — generate suffixed email
+            // First-time insert AND we're a collision loser, generate suffixed email
             $atPos = strrpos($email, '@');
             if ($atPos === false) {
                 $log->skip('users', $legacyId, "Malformed email '{$email}'");
@@ -189,7 +189,7 @@ try {
             default => 'AE',
         };
 
-        // Phone — verbatim, may be NULL
+        // Phone, verbatim, may be NULL
         $phone = trim((string) ($row['phone'] ?? ''));
         $phone = $phone === '' ? null : $phone;
 
@@ -295,7 +295,7 @@ try {
 
             $migrated++;
         } else {
-            // -------- UPDATE — email stable, password stable, all else updated --------
+            // -------- UPDATE, email stable, password stable, all else updated --------
             $changes = [];
             $set = [];
             $params = ['legacy_id' => $legacyId];
@@ -316,7 +316,7 @@ try {
                 $changes['country_code'] = ['from' => $existingUser['country_code'], 'to' => $cc];
                 $set[] = 'country_code = :cc'; $params['cc'] = $cc;
             }
-            // Boolean comparison — normalize before compare
+            // Boolean comparison, normalize before compare
             $cmpBool = static fn ($v): bool => $v === true || $v === 't' || $v === '1' || $v === 1;
 
             if ($cmpBool($existingUser['is_customer']) !== $isCustomer) {
@@ -340,7 +340,7 @@ try {
                 $set[] = 'trade_license_number = :tln'; $params['tln'] = $tradeLicense;
             }
 
-            // Password hash UPDATE — legacy may rotate, we want re-sync to pick that up.
+            // Password hash UPDATE, legacy may rotate, we want re-sync to pick that up.
             // Email and renamed_email are NOT updated (stable per decision).
             if ($existingUser['password_hash'] !== $passwordHash && $passwordHash !== '') {
                 $changes['password_hash'] = ['from' => '***', 'to' => '*** (rotated)'];
@@ -348,7 +348,7 @@ try {
             }
 
             if (count($changes) === 0) {
-                continue; // No drift — silent
+                continue; // No drift, silent
             }
 
             $set[] = 'updated_at = date_trunc('second', NOW())';

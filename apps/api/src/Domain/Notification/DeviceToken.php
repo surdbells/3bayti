@@ -16,7 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
  * reactivate a previously-deactivated token, and reassigns user_id if
  * the device has since signed in as a different user.
  *
- * Net-new in M3.2.Z.4 (push notifications, Q-Z4=A: FCM-only — FCM
+ * Net-new in M3.2.Z.4 (push notifications, Q-Z4=A: FCM-only, FCM
  * relays to APNs for iOS, so the platform column is informational
  * /analytics only; both platforms carry FCM tokens).
  *

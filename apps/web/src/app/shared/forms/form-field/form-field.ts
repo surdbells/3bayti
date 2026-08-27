@@ -13,12 +13,12 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 
 /**
- * Form field — labelled control wrapper.
+ * Form field, labelled control wrapper.
  *
  * Wraps a single FormControl (or any AbstractControl) with:
  *   - The visible label
  *   - Optional helper text below the input
- *   - Inline error rendering — appears only after the control is
+ *   - Inline error rendering, appears only after the control is
  *     touched/dirty AND has errors
  *   - Full a11y wiring: aria-describedby pointing at the helper +
  *     error ids; aria-invalid driven by the control's state
@@ -40,7 +40,7 @@ import { Subscription } from 'rxjs';
  * Error map shape
  * ---------------
  * Reactive Forms expose errors as { [key: string]: unknown }. We map
- * each key to an i18n string via `errorMap` — a Record<string, string>
+ * each key to an i18n string via `errorMap`, a Record<string, string>
  * supplied by the consumer, where the value is an i18n key. Unmapped
  * errors fall back to errorMap['_default'] if present, otherwise the
  * generic auth.fields.required key.
@@ -153,7 +153,7 @@ export class FormFieldComponent implements OnInit, OnDestroy {
   @Input() fieldId = '';
   /** The form control to observe for invalid / touched state. */
   @Input() control: AbstractControl | null = null;
-  /** Marks the label with an asterisk (visual only — `required` validator
+  /** Marks the label with an asterisk (visual only, `required` validator
    *  drives the actual validation). */
   @Input() required = false;
   /** Optional helper text shown below the input when there's no error. */
@@ -161,7 +161,7 @@ export class FormFieldComponent implements OnInit, OnDestroy {
   /** Map from Angular validator key → i18n message key. */
   @Input() errorMap: Record<string, string> = {};
 
-  /** Cached identifiers for aria-describedby — stable for the component's
+  /** Cached identifiers for aria-describedby, stable for the component's
    *  lifetime so the browser's accessibility tree doesn't churn. */
   protected helperId = '';
   protected errorId = '';
@@ -173,7 +173,7 @@ export class FormFieldComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     /* Build stable IDs from the fieldId. Fall back to a random suffix
-       if the consumer forgot to pass fieldId — should be rare since
+       if the consumer forgot to pass fieldId, should be rare since
        label-for and aria-describedby both reference it. */
     const base = this.fieldId !== '' ? this.fieldId : `ff-${Math.random().toString(36).slice(2, 8)}`;
     this.helperId = `${base}-helper`;
@@ -182,7 +182,7 @@ export class FormFieldComponent implements OnInit, OnDestroy {
 
     /* Re-render the error block whenever control state changes.
        The `events` observable (Angular 17+) emits on value, status,
-       AND touched/pristine transitions — covering all the cases that
+       AND touched/pristine transitions, covering all the cases that
        affect shouldShowErrors(). statusChanges alone misses the
        touched transition. */
     if (this.control !== null) {
@@ -226,7 +226,7 @@ export class FormFieldComponent implements OnInit, OnDestroy {
    * which the translation 'Must be at least {{ requiredLength }} characters'
    * uses.
    *
-   * Returns an empty object when there's nothing to pass — safe for
+   * Returns an empty object when there's nothing to pass, safe for
    * translate's pure-key path.
    */
   protected errorParams(): Record<string, unknown> {

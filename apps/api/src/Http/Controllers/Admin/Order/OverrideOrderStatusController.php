@@ -28,7 +28,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Body: { "status": "<Order::STATUS_*>", "reason": "..." }
  *
  * Admin-driven order status override. Bypasses normal state-machine
- * transition validation — used by safety overrides (unsticking a
+ * transition validation, used by safety overrides (unsticking a
  * stuck order, manually marking refunded, etc.).
  *
  * Q5=A audit: emits ACTION_OVERRIDDEN with before/after snapshot
@@ -105,7 +105,7 @@ final class OverrideOrderStatusController
         // Notify the customer of the order-status change (email + push).
         // Reuse the dedicated lifecycle methods where one exists
         // (cancelled / refunded); otherwise fall back to the generic
-        // status-changed notice. All sends are fire-and-forget — a
+        // status-changed notice. All sends are fire-and-forget, a
         // notification failure must never break the override.
         if ($newStatus === Order::STATUS_CANCELLED) {
             $this->notifications->orderCancelled($order, ['reason' => $reason]);

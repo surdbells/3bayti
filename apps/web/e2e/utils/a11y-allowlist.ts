@@ -35,7 +35,7 @@ interface AxeResult {
  * Removing an entry (fix landed) is celebrated.
  *
  * Initial baseline will be populated during M3.2.0-D first-run. Empty
- * here means "no known violations — every new violation is a failure."
+ * here means "no known violations, every new violation is a failure."
  *
  * The expiresAt mechanism ensures we don't accumulate forever-deferred
  * a11y debt. Three months is the default; extend with a fresh
@@ -43,7 +43,7 @@ interface AxeResult {
  */
 
 export interface A11yAllowlistEntry {
-  /** Axe rule ID — see https://dequeuniversity.com/rules/axe */
+  /** Axe rule ID, see https://dequeuniversity.com/rules/axe */
   rule: string;
   /** Substring match against page.url() at test time */
   urlPattern: string;
@@ -51,7 +51,7 @@ export interface A11yAllowlistEntry {
   reason: string;
   /** Which M3.2.x phase will fix it */
   remediationPhase: string;
-  /** ISO date — after this date the entry is a hard failure */
+  /** ISO date, after this date the entry is a hard failure */
   expiresAt: string;
 }
 

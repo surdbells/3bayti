@@ -8,7 +8,7 @@
 
 /**
  * Sort values accepted by GET /v3/products. `relevance` is intentionally
- * omitted from the listing UI — it only makes sense with a search query,
+ * omitted from the listing UI, it only makes sense with a search query,
  * which these listings never carry.
  */
 export type ProductSort =

@@ -278,7 +278,7 @@ final class OrderNotificationServiceTest extends TestCase
         );
         $order = $this->makeOrder('V3-107');
 
-        // This MUST NOT throw — fire-and-forget contract
+        // This MUST NOT throw, fire-and-forget contract
         $service->orderPaid($order);
 
         // Mailer was called (we tried), but caller didn't see the error

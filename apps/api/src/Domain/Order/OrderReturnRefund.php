@@ -19,7 +19,7 @@ use Doctrine\ORM\Mapping as ORM;
  * credit, cash) and records the event here for compliance + audit.
  *
  * The existing RefundOrderController + PaymentTransaction(REFUND)
- * machinery is intentionally NOT used for returns — that path stays
+ * machinery is intentionally NOT used for returns, that path stays
  * available for dispute-driven refunds and admin direct refunds
  * outside the return flow, but it talks to Noon. Returns use this
  * entity instead.
@@ -28,16 +28,16 @@ use Doctrine\ORM\Mapping as ORM;
  * =============================
  * UNIQUE constraint on return_request_id at the DB level. A return
  * request has at most one OrderReturnRefund row. If a correction is
- * needed (rare), the operational path is admin-led — either a new
- * return or a manual override through other channels — not mutating
+ * needed (rare), the operational path is admin-led, either a new
+ * return or a manual override through other channels, not mutating
  * this row.
  *
  * Method taxonomy (Q-Refund)
  * ==========================
- * bank_transfer — wire to the customer's bank account
- * store_credit — applied to the customer's account balance
- * cash — physical cash refund (rare, COD orders)
- * other — escape hatch; notes field should explain
+ * bank_transfer, wire to the customer's bank account
+ * store_credit, applied to the customer's account balance
+ * cash, physical cash refund (rare, COD orders)
+ * other, escape hatch; notes field should explain
  *
  * Reference field
  * ===============

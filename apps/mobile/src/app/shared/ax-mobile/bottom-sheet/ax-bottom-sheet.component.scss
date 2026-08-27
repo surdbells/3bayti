@@ -1,5 +1,5 @@
 /* ============================================================================
-   AxBottomSheet — premium rounded floating bottom sheet
+   AxBottomSheet, premium rounded floating bottom sheet
    ============================================================================
    Rendered into a CDK Overlay container appended to <body>. Selectors here
    target both the panel/backdrop classes (set by Overlay config) and the
@@ -59,8 +59,8 @@
   /* Fill the viewport minus an ~11px gutter each side, but never exceed a
      comfortable card width. `margin-inline: auto` is load-bearing: it
      centers the sheet once max-width caps it. With fixed left/right margins
-     (the previous code) a capped sheet on a wide viewport — landscape, or
-     large/foldable phones whose CSS width exceeds ~500px — got shoved to
+     (the previous code) a capped sheet on a wide viewport, landscape, or
+     large/foldable phones whose CSS width exceeds ~500px, got shoved to
      one side and read as "half the screen". The calc keeps the 11px gutter
      on narrow phones where the cap doesn't apply. */
   width: calc(100% - 22px);
@@ -81,7 +81,7 @@
 }
 
 /* ----- Full-height opt-out mode ------------------------- */
-/* Edge-to-edge, top-corners-only rounded — the legacy behaviour, used by
+/* Edge-to-edge, top-corners-only rounded, the legacy behaviour, used by
    sheets that genuinely need full height (styles/create product picker). */
 
 .ax-sheet--fullscreen {

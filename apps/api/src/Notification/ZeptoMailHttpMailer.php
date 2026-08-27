@@ -12,7 +12,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * ZeptoMail (Zoho) HTTP API mailer — production adapter.
+ * ZeptoMail (Zoho) HTTP API mailer, production adapter.
  *
  * Uses ZeptoMail's v1.1 email endpoint at api.zeptomail.com.
  * Authentication is a single API token sent as a custom
@@ -44,7 +44,7 @@ use Psr\Log\NullLogger;
  * Token bytes
  * ===========
  * ZeptoMail tokens are typically 64+ chars (Zoho-encoded). We
- * don't validate length here — Zoho rejects malformed tokens
+ * don't validate length here, Zoho rejects malformed tokens
  * with a 4xx that surfaces as MailerException.
  */
 final class ZeptoMailHttpMailer implements MailerInterface
@@ -225,7 +225,7 @@ final class ZeptoMailHttpMailer implements MailerInterface
      *      scheme if present.
      *
      * For a correctly-stored RAW key (no scheme, no whitespace) this is a
-     * no-op — behavior is identical. Only one leading scheme is removed;
+     * no-op, behavior is identical. Only one leading scheme is removed;
      * a key that legitimately contained the literal substring elsewhere is
      * untouched.
      */

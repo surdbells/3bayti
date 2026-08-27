@@ -76,7 +76,7 @@ final class GetOrderController
             throw HttpException::notFound('Order not found.');
         }
 
-        // M3.2.X.18-H — Embed return summaries inline so the mobile
+        // M3.2.X.18-H, Embed return summaries inline so the mobile
         // order-detail screen can show a "Returns" section without
         // a follow-up API call. Customer-scoped query (own returns
         // only); falls back to empty list if the table doesn't yet
@@ -97,7 +97,7 @@ final class GetOrderController
         // Gift-card purchase orders carry no real items; resolve the
         // linked card (one lookup) so the serializer can synthesize the
         // "Gift Card" line. Only worth looking up when there are no real
-        // items — a normal order never has a linked purchase card.
+        // items, a normal order never has a linked purchase card.
         $giftCard = null;
         if ($order->getItems()->isEmpty()) {
             /** @var GiftCardRepository $giftCards */

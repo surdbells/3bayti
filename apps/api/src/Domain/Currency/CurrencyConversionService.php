@@ -51,7 +51,7 @@ final class CurrencyConversionService
     /**
      * In-memory cache of rates loaded once per service instance.
      * The Slim DI container is per-request so this naturally
-     * resets between requests — no manual invalidation needed.
+     * resets between requests, no manual invalidation needed.
      *
      * @var array<string, FxRate>|null map of target_code → FxRate
      */
@@ -78,7 +78,7 @@ final class CurrencyConversionService
      */
     public function convert(string $aedAmount, Currency $target): array
     {
-        // Validate input — bcmath silently coerces bad input to 0,
+        // Validate input, bcmath silently coerces bad input to 0,
         // which would zero out a customer's displayed price.
         if (!preg_match('/^-?\d+(\.\d+)?$/', $aedAmount)) {
             throw new \InvalidArgumentException(
@@ -127,7 +127,7 @@ final class CurrencyConversionService
     }
 
     /**
-     * Convert in batch — same shape as convert() but takes a list
+     * Convert in batch, same shape as convert() but takes a list
      * of amounts and returns a parallel list. Lets serializers
      * pre-load the rate once and apply it to many products without
      * per-call DB pressure (the cache is already in-memory but
@@ -153,7 +153,7 @@ final class CurrencyConversionService
         $rates = $this->loadRates();
         $rate = $rates[$target->value] ?? null;
 
-        // Staleness check — independent of conversion logic.
+        // Staleness check, independent of conversion logic.
         // Fires per-call rather than per-load so admin dashboards
         // see the warning every time a stale rate is hit, not
         // just once on load.
@@ -212,7 +212,7 @@ final class CurrencyConversionService
      */
     private function roundHalfUp(string $value): string
     {
-        // bcmath doesn't have a native round() — implement HALF_UP:
+        // bcmath doesn't have a native round(), implement HALF_UP:
         //   value > 0: add 0.5 * 10^-DECIMALS then truncate
         //   value < 0: subtract 0.5 * 10^-DECIMALS then truncate
         //   value = 0: trivially '0.00'

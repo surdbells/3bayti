@@ -36,7 +36,7 @@ function pushStr(value: unknown): string {
 /**
  * Map a push notification's `data` payload to a router URL (the shared
  * push deep-link contract). Returns a full URL string suitable for
- * Router.navigateByUrl — query-param routes (chat) bake the query string
+ * Router.navigateByUrl, query-param routes (chat) bake the query string
  * into the returned URL.
  *
  * data.type -> target (per the backend PushNotificationService contract):
@@ -53,13 +53,13 @@ function pushStr(value: unknown): string {
  *    the order lifecycle (it's a post-delivery follow-up on that order).
  *  - gift_card.expiry_nudge routes to the wallet (/my-gift-cards) rather
  *    than /gift-card-detail: the detail page is state-driven (it needs the
- *    full card object passed via navigation state — see
+ *    full card object passed via navigation state, see
  *    gift-card-detail.page.ts), and a push only carries card_id. The wallet
  *    lists the user's cards so they can open the nudged one.
  *
  * Pure + exported so it can be unit-tested without the plugin, Router, or
  * a native platform. Returns null when there's no usable target (unknown
- * type, or a known type missing its required id) — the caller then does
+ * type, or a known type missing its required id), the caller then does
  * nothing rather than navigating somewhere wrong.
  *
  * Backward-compatible fallback: a payload with no/blank `type` but a usable
@@ -101,7 +101,7 @@ export function resolvePushDeepLink(data: Record<string, unknown> | null | undef
 }
 
 /**
- * PushManager (mobile) — owns the push-notification lifecycle:
+ * PushManager (mobile), owns the push-notification lifecycle:
  * native listeners, permission request, and orchestration of
  * token register/deactivate via PushRegistrationService.
  *
@@ -195,7 +195,7 @@ export class PushManager {
 
   /**
    * Called after the user signs in. Requests permission (the moment
-   * chosen per Q-Z5.1=A) and, if granted, registers with the plugin —
+   * chosen per Q-Z5.1=A) and, if granted, registers with the plugin -
    * which fires `registration`, sending the token to the backend.
    * No-op on non-native platforms.
    */
@@ -222,7 +222,7 @@ export class PushManager {
    * Launch-time re-registration for users who are ALREADY signed in.
    *
    * Registration normally happens in onSignedIn (fresh login). But an
-   * established user who just opens the app — no re-login — would never
+   * established user who just opens the app, no re-login, would never
    * register, so their device token never reaches the backend. That's why
    * the vast majority of an existing install base can be missing from
    * device_tokens even after the native token-forwarding fix ships.

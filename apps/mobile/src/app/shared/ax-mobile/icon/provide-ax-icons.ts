@@ -1,5 +1,5 @@
 /**
- * provideAxIcons — registers all icons in the abayti icon set with
+ * provideAxIcons, registers all icons in the abayti icon set with
  * lucide-angular's icon-provider system.
  *
  * Wire into main.ts providers:

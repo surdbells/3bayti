@@ -42,7 +42,7 @@ final class OrderEmailTemplateRendererTest extends TestCase
     #[Test]
     public function orderPlacedCustomerEscapesHtmlInProductName(): void
     {
-        // XSS payload as product name — must be escaped in HTML, raw in text
+        // XSS payload as product name, must be escaped in HTML, raw in text
         $order = $this->makeOrder(reference: 'V3-XSS');
         $this->addItem($order, name: '<script>alert(1)</script>');
 
@@ -106,7 +106,7 @@ final class OrderEmailTemplateRendererTest extends TestCase
     #[Test]
     public function htmlEmailsUseTheRichBrandedShell(): void
     {
-        // A PRODUCT order — the tracker only belongs on orders that actually
+        // A PRODUCT order, the tracker only belongs on orders that actually
         // ship (a gift-card purchase is digital; see the itemless test below).
         $order = $this->makeOrder(reference: 'V3-RICH');
         $this->addItem($order, name: 'Abaya');
@@ -145,7 +145,7 @@ final class OrderEmailTemplateRendererTest extends TestCase
     #[Test]
     public function orderPaidCustomerItemlessOrderGetsCleanConfirmation(): void
     {
-        // A gift-card PURCHASE is a synthetic order with no line items — the
+        // A gift-card PURCHASE is a synthetic order with no line items, the
         // paid email must NOT show an empty details block or a "we're
         // preparing… it ships" line.
         $order = $this->makeOrder(reference: 'V3-GC-PURCHASE');
@@ -160,7 +160,7 @@ final class OrderEmailTemplateRendererTest extends TestCase
     public function orderPaidCustomerShowsThePurchasedGiftCardDetails(): void
     {
         // When the order funded a gift card, OrderNotificationService resolves
-        // the card and passes it in $extra — the buyer's confirmation must show
+        // the card and passes it in $extra, the buyer's confirmation must show
         // what they actually bought (value, code, recipient, expiry).
         $order = $this->makeOrder(reference: 'V3-GC-DETAIL');
         $rendered = $this->renderer->render(EmailTemplate::ORDER_PAID_CUSTOMER, $order, [
@@ -249,7 +249,7 @@ final class OrderEmailTemplateRendererTest extends TestCase
     #[Test]
     public function orderPaymentReminderIsDetailedWithItemsAndPricing(): void
     {
-        // The reminder must show what the customer is about to pay for —
+        // The reminder must show what the customer is about to pay for -
         // the itemised list + a pricing breakdown, like the confirmation email.
         $order = $this->makeOrder(reference: 'V3-REM-DETAIL', subtotal: '300.00');
         $this->addItem($order, name: 'Silk Abaya');

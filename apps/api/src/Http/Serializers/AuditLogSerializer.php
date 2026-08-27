@@ -11,7 +11,7 @@ use DateTimeInterface;
  * Serialize AuditLog rows for the admin audit-log surface.
  *
  * The actor (user_id) is denormalised to a name/email by the controller, which
- * batch-loads the users for the page and passes them in as $actors — keeping
+ * batch-loads the users for the page and passes them in as $actors, keeping
  * this serializer free of DB access and the list free of N+1 queries.
  */
 final class AuditLogSerializer

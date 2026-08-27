@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Gift-card recipient delivery — add optional recipient contact +
+ * Gift-card recipient delivery, add optional recipient contact +
  * per-channel delivery timestamps to gift_cards.
  *
  * New columns
@@ -24,7 +24,7 @@ use Doctrine\Migrations\AbstractMigration;
  *
  *   - email_delivered_at TIMESTAMPTZ NULL
  *       When the delivery email was sent. Null until delivered. The
- *       per-channel timestamp is the idempotency guard — a non-null
+ *       per-channel timestamp is the idempotency guard, a non-null
  *       value means "already delivered, never send again".
  *
  *   - sms_delivered_at TIMESTAMPTZ NULL

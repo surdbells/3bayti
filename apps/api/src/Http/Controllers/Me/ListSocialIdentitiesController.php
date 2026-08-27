@@ -22,7 +22,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * List the current user's connected Google/Apple accounts. Backs the
  * "connected accounts" section of account settings.
  *
- * Each entry: { provider, email, created_at }. Own-data read — no audit.
+ * Each entry: { provider, email, created_at }. Own-data read, no audit.
  */
 final class ListSocialIdentitiesController
 {

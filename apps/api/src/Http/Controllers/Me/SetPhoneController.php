@@ -32,7 +32,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Primary use case: a user who signed up via Google/Apple (no phone)
  * adding one so they can receive SMS / unlock phone-gated features.
  *
- * Response: 200 { verification_id } — same contract as the registration
+ * Response: 200 { verification_id }, same contract as the registration
  * OTP send endpoints.
  *
  * Conflict: 409 if the number is already in use by ANOTHER user.
@@ -71,7 +71,7 @@ final class SetPhoneController
         $users = $this->em->getRepository(User::class);
 
         // Reject a number already taken by a DIFFERENT account. (Same
-        // number on the current user's own record is fine — re-sending.)
+        // number on the current user's own record is fine, re-sending.)
         $owner = $users->findByPhone($input->phone);
         if ($owner !== null && $owner->getId() !== $user->getId()) {
             throw HttpException::conflict(

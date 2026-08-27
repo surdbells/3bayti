@@ -149,7 +149,7 @@ final class FlashCampaignStockReducerTest extends TestCase
     #[Test]
     public function it_skips_products_without_an_id(): void
     {
-        // A transient product (null id) must not raise — and the finder is
+        // A transient product (null id) must not raise, and the finder is
         // never consulted for it.
         $reducer = new FlashCampaignStockReducer($this->finder([]));
 

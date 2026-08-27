@@ -83,7 +83,7 @@
   }
 }
 
-/* Passwordless login (#8) — Phone / Email choice cards. */
+/* Passwordless login (#8), Phone / Email choice cards. */
 .auth-choice {
   display: flex;
   flex-direction: column;
@@ -131,7 +131,7 @@
   color: var(--color-text-muted, #6b6056);
 }
 
-/* OTP code input — shared with verify-phone / reset (duplicated here so the
+/* OTP code input, shared with verify-phone / reset (duplicated here so the
    login page is self-contained; verify-phone.scss @imports this file). */
 .auth-input--code {
   letter-spacing: 8px;
@@ -142,7 +142,7 @@
   padding-inline-start: 18px;
 }
 
-/* Resend block — shared with verify-phone. */
+/* Resend block, shared with verify-phone. */
 .auth-resend {
   margin-top: 24px;
   text-align: center;
@@ -264,11 +264,11 @@ button.auth-link {
   }
 }
 
-/* RTL polish — Playfair Display falls back gracefully via system Arabic
+/* RTL polish, Playfair Display falls back gracefully via system Arabic
    serifs, but ensure right-aligned padding for inputs in RTL. The
    logical-property approach in .auth-input above handles this for free. */
 
-/* H1.1 — brand wordmark above the auth card title. */
+/* H1.1, brand wordmark above the auth card title. */
 .auth-card__brand {
   display: flex;
   justify-content: center;
@@ -279,7 +279,7 @@ button.auth-link {
   height: 2rem;
 }
 
-/* Inline warning hint — used by the OTP rate-limit lockout banner
+/* Inline warning hint, used by the OTP rate-limit lockout banner
    (and the forgot-password submit cooldown). Mirrors register.scss so the
    countdown copy reads consistently across the shared auth surface. */
 .auth-field-hint {

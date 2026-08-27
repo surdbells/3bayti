@@ -33,7 +33,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   limit 1-100 (default 25), offset 0+
  *
  * The actor name/email is denormalised per page (batch user load) so the list
- * is one query for rows + one for actors — no N+1.
+ * is one query for rows + one for actors, no N+1.
  */
 final class ListAuditLogsController
 {

@@ -1,5 +1,5 @@
 /**
- * AUTO-GENERATED — do not edit by hand.
+ * AUTO-GENERATED, do not edit by hand.
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *

@@ -40,7 +40,7 @@ use Psr\Http\Server\RequestHandlerInterface;
  * Placement
  * =========
  * Should be wired BEFORE the catalog routes but doesn't need to
- * run before AuthMiddleware — currency choice is independent of
+ * run before AuthMiddleware, currency choice is independent of
  * authentication. v1 mounts it at the catalog route group level
  * in routes.php.
  */

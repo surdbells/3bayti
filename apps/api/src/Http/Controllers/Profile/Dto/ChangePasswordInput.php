@@ -21,7 +21,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *     existing one. This is the "re-auth check" that every consumer
  *     service requires (Gmail, Banks, Apple, etc.).
  *   - new_password: minimum 8 chars per NIST SP 800-63B; no complexity
- *     rules (mixed case, special chars) — those reduce entropy in
+ *     rules (mixed case, special chars), those reduce entropy in
  *     practice. Matches ResetConfirmInput's policy for consistency.
  *
  * Distinct from password reset
@@ -62,7 +62,7 @@ final class ChangePasswordInput
         // Do NOT trim passwords. Legacy passwords with whitespace
         // exist (Day 4 migration preserves them as-is). Trimming
         // would break login for those users. The login flow also
-        // does not trim — keep symmetric.
+        // does not trim, keep symmetric.
         $this->current_password = $current_password;
         $this->new_password = $new_password;
     }

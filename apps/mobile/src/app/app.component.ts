@@ -62,7 +62,7 @@ import {PushManager, resolvePushDeepLink} from "./core/services/push-manager.ser
 export class AppComponent {
   fadeTransition = fadeTransition;
 
-  /* Force-update prompt state. Driven by AppUpdateService.check() — the
+  /* Force-update prompt state. Driven by AppUpdateService.check(), the
      service runs on app launch and on every resume from background, so
      a kill-switch flip will activate the prompt within at most 5 minutes
      (the in-memory remote-config cache window) for already-running apps,
@@ -95,14 +95,14 @@ export class AppComponent {
     private ota: OtaUpdateService,
     private pendingOrders: PendingOrdersService,
   ) {
-      /* OTA (self-hosted Capgo) — confirm the freshly-booted web bundle is
+      /* OTA (self-hosted Capgo), confirm the freshly-booted web bundle is
          healthy. MUST run on EVERY native cold start as early as possible: if
          notifyAppReady() doesn't fire within appReadyTimeout (10s, see
          capacitor.config.ts) the plugin AUTO-ROLLS BACK to the previous bundle.
-         Called synchronously here — not behind platform.ready() — so nothing
+         Called synchronously here, not behind platform.ready(), so nothing
          can delay it past the timeout. Native-guarded + try/caught so a plugin
          error can never block boot. (OTA = web/JS bundles only; native shell
-         updates remain handled by AppUpdateService — the store gate.) */
+         updates remain handled by AppUpdateService, the store gate.) */
       this.initOtaUpdater();
 
       this.initializeApp();
@@ -126,15 +126,15 @@ export class AppComponent {
           // Dismiss the native splash now that Angular has bootstrapped
           // and platform.ready() has resolved. The 200ms fade hands off
           // to the canvas-color #faf8f5 body bg (set inline in
-          // src/index.html — see M29) so there is no visible flash.
+          // src/index.html, see M29) so there is no visible flash.
           try {
             await SplashScreen.hide({ fadeOutDuration: 200 });
           } catch (e) {
-            // Plugin not available (e.g. web build) — safe to ignore.
+            // Plugin not available (e.g. web build), safe to ignore.
             console.warn('SplashScreen.hide failed:', e);
           }
 
-          /* Run an update check on cold launch. Failing-safe — if the
+          /* Run an update check on cold launch. Failing-safe, if the
              service fails for any reason, no prompt shows. */
           this.runUpdateCheck();
           void this.pendingOrders.refresh();
@@ -153,10 +153,10 @@ export class AppComponent {
           });
       });
       /* Native-only: attach push listeners once. Permission is NOT
-         requested here — it's requested after sign-in (Q-Z5.1=A), see
+         requested here, it's requested after sign-in (Q-Z5.1=A), see
          PushManager.onSignedIn called from the login flow. */
       if (Capacitor.isNativePlatform()) {
-        /* Z.5-C — route a tapped notification to its target. All order
+        /* Z.5-C, route a tapped notification to its target. All order
            pushes carry order_id and deep-link to /orders/:id. The
            Router lives here (the app shell), so the routing concern is
            injected into PushManager via a tap handler rather than the
@@ -170,7 +170,7 @@ export class AppComponent {
         void this.pushManager.initListeners();
         /* Capture the token for users who are ALREADY signed in (they won't
            hit onSignedIn just by opening the app). Only registers when
-           permission was already granted — never prompts on launch. */
+           permission was already granted, never prompts on launch. */
         void this.pushManager.ensureRegisteredIfSignedIn();
       }
   }
@@ -194,7 +194,7 @@ export class AppComponent {
        - The listeners make OTA observable in chrome://inspect / Safari Web
          Inspector.
        - AppUpdateService.check() (runUpdateCheck) still governs mandatory
-         NATIVE shell updates via the store gate — the two never conflict: OTA
+         NATIVE shell updates via the store gate, the two never conflict: OTA
          swaps the JS bundle inside the SAME native version; the store gate
          forces a new native version when native code/permissions change.
      Native-guarded + fully wrapped so a plugin error can never block boot. */
@@ -218,7 +218,7 @@ export class AppComponent {
 
 
   /* Run AppUpdateService.check() and update local UI state.
-     Always async, never throws — the service handles errors internally. */
+     Always async, never throws, the service handles errors internally. */
   private async runUpdateCheck(): Promise<void> {
     try {
       const result = await this.appUpdate.check();
@@ -247,7 +247,7 @@ export class AppComponent {
       /* Note: we don't auto-dismiss here when shouldForceUpdate becomes
          false. Once the prompt is up, it stays until the user updates
          (which restarts the app from scratch). If the kill-switch is
-         flipped off remotely, the next cold launch won't show it — which
+         flipped off remotely, the next cold launch won't show it, which
          is the right behavior. */
     } catch {
       /* Failing safe: any unexpected error keeps the prompt hidden. */

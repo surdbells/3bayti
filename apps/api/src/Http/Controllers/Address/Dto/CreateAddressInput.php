@@ -22,7 +22,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Why street_address is optional
  * ------------------------------
- * Some UAE addresses don't have street names — they're identified by
+ * Some UAE addresses don't have street names, they're identified by
  * landmarks ("villa next to ADCB Jumeirah branch"). The
  * building_details field is where that goes, plus the recipient_phone
  * for live coordination on delivery.
@@ -70,7 +70,7 @@ final class CreateAddressInput
     public readonly ?string $street_address;
 
     /**
-     * No length cap on building_details — the column is TEXT to allow
+     * No length cap on building_details, the column is TEXT to allow
      * detailed delivery instructions. The DB and JSON parser will
      * cap at MEDIUMTEXT-ish if abuse hits.
      */
@@ -93,7 +93,7 @@ final class CreateAddressInput
      * If the user already has a default, it gets unset.
      *
      * If the user has NO addresses at all, the first one created
-     * becomes the default automatically regardless of this flag —
+     * becomes the default automatically regardless of this flag -
      * the controller handles that.
      */
     public readonly bool $is_default;

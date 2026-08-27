@@ -1,5 +1,5 @@
 /**
- * Auth-proxy /social — Cloudflare Pages Function.
+ * Auth-proxy /social, Cloudflare Pages Function.
  *
  * Sibling of the catch-all `[[path]].ts` auth-proxy router. A more-specific
  * filename, so Pages routes POST /auth-proxy/social here in preference to the
@@ -101,7 +101,7 @@ async function handleSocial(req: Request): Promise<Response> {
     });
   }
 
-  /* Upstream error (bad/expired id_token, etc.) — relay status + body
+  /* Upstream error (bad/expired id_token, etc.), relay status + body
      verbatim; do NOT touch the cookie. */
   return new Response(JSON.stringify(ud), { status: ur.status, headers: rh });
 }

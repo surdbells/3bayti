@@ -36,7 +36,7 @@ interface AdminReturnRow extends Record<string, unknown> {
 }
 
 /**
- * Admin cross-vendor returns queue — parity with legacy
+ * Admin cross-vendor returns queue, parity with legacy
  * admin/common/get-returns.php. Reads GET /admin/returns (all vendors)
  * with status filter + date range; shows which store each return belongs
  * to (admins oversee every vendor, unlike the vendor-scoped screen).

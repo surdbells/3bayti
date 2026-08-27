@@ -19,7 +19,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * GET /v3/admin/notification-broadcasts
  *
  * Paginated broadcast history (Compose "Send Now" results + future
- * scheduled occurrences). Summary rows only — the detail + recipient
+ * scheduled occurrences). Summary rows only, the detail + recipient
  * drill-down live on separate endpoints. Filters: status, search (title).
  */
 final class ListBroadcastsController

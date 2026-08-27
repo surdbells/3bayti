@@ -9,10 +9,10 @@ import type {
 } from './address.types';
 
 /**
- * AddressService — auth-required CRUD against `/v3/me/addresses`.
+ * AddressService, auth-required CRUD against `/v3/me/addresses`.
  *
  * Public surface (signals):
- *   - addresses()         Signal<Address[]>  — current list
+ *   - addresses()         Signal<Address[]> , current list
  *   - defaultShipping()   computed Signal<Address|null>
  *   - defaultBilling()    computed Signal<Address|null>
  *   - isLoading()         Signal<boolean>
@@ -27,7 +27,7 @@ import type {
  * Local state policy
  * ------------------
  * After every mutation we refresh the `addresses()` signal with the
- * server response (single source of truth — the API authoritatively
+ * server response (single source of truth, the API authoritatively
  * decides defaults). We do NOT optimistically update before the
  * response lands; a 500 would leave the UI showing a phantom address.
  *

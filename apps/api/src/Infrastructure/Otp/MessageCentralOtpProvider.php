@@ -12,7 +12,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * MessageCentral CPaaS OTP provider — production adapter.
+ * MessageCentral CPaaS OTP provider, production adapter.
  *
  * Three-step flow per MessageCentral's CPaaS API:
  *
@@ -37,7 +37,7 @@ use Psr\Log\NullLogger;
  * Malformed JSON → OtpProviderException('malformed').
  * Successful 200 with no verificationId → OtpProviderException('missing_id').
  *
- * "Wrong code" is NOT an exception — verify() returns false in that
+ * "Wrong code" is NOT an exception, verify() returns false in that
  * case. CPaaS distinguishes auth/transport failures from "OTP didn't
  * match" via the response body's responseCode field.
  *
@@ -49,7 +49,7 @@ use Psr\Log\NullLogger;
  *   - email       (used as auth identifier)
  *   - country     ('971' for UAE; the API's "country code" not the
  *                  ISO country code)
- *   - baseUrl     (https://cpaas.messagecentral.com — overridable
+ *   - baseUrl     (https://cpaas.messagecentral.com, overridable
  *                  for staging/sandbox)
  *
  * All come from env vars in production via the DI factory.
@@ -65,7 +65,7 @@ final class MessageCentralOtpProvider implements OtpProvider
      * nearby markets). MessageCentral's send API wants the destination
      * split into (countryCode, mobileNumber), so we detect the code the
      * number actually carries instead of assuming UAE. Longest-first so a
-     * 2-digit code ('20') can't shadow a 3-digit one — though none of
+     * 2-digit code ('20') can't shadow a 3-digit one, though none of
      * these overlap as prefixes. Keep in sync with the mobile app's
      * country list.
      *
@@ -99,7 +99,7 @@ final class MessageCentralOtpProvider implements OtpProvider
         // CPaaS expects the destination split into a country code and a
         // local mobile number (both without '+'). The number the user
         // typed carries its OWN country code (they pick a dial code in the
-        // app) — we must forward THAT, not a hardcoded UAE code, or e.g. a
+        // app), we must forward THAT, not a hardcoded UAE code, or e.g. a
         // Bahrain number (+973…) gets sent as countryCode=971 + 973… and
         // MessageCentral rejects the malformed +971973… destination.
         [$countryCode, $localNumber] = $this->resolveDestination($toPhone);
@@ -174,7 +174,7 @@ final class MessageCentralOtpProvider implements OtpProvider
 
         // 200 with verificationStatus=VERIFICATION_COMPLETED → success.
         // 200 with verificationStatus=VERIFICATION_FAILED → wrong code.
-        // 4xx → some other failure (expired, exhausted, etc.) — also false.
+        // 4xx → some other failure (expired, exhausted, etc.), also false.
         // 5xx → throw, transport-level problem.
         if ($status >= 500) {
             $this->logger->error('MessageCentral verify upstream error', [
@@ -187,7 +187,7 @@ final class MessageCentralOtpProvider implements OtpProvider
         $decoded = json_decode($body, true);
         if (!is_array($decoded)) {
             // Malformed but we treat it as a verification failure
-            // rather than throwing — the user just sees "wrong code"
+            // rather than throwing, the user just sees "wrong code"
             // and can retry. Throwing would 500 the request.
             $this->logger->warning('MessageCentral verify returned non-JSON', [
                 'status' => $status,
@@ -224,7 +224,7 @@ final class MessageCentralOtpProvider implements OtpProvider
         } catch (ConnectException $e) {
             // Log parity with the send path: the auth step used to throw
             // silently, so an auth-token failure (the most common systemic OTP
-            // outage — bad/expired key, suspended account, endpoint down) left
+            // outage, bad/expired key, suspended account, endpoint down) left
             // no file-log trail and was only visible via the exception cause.
             $this->logger->error('MessageCentral auth failed', ['kind' => 'network', 'detail' => $e->getMessage()]);
             throw new OtpProviderException('network', 'auth: ' . $e->getMessage(), $e);
@@ -286,7 +286,7 @@ final class MessageCentralOtpProvider implements OtpProvider
     private function resolveDestination(string $phone): array
     {
         $digits = preg_replace('/\D/', '', $phone) ?? '';
-        // '00' is the international access prefix — same meaning as '+'.
+        // '00' is the international access prefix, same meaning as '+'.
         if (str_starts_with($digits, '00')) {
             $digits = substr($digits, 2);
         }

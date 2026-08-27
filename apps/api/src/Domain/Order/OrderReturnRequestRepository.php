@@ -51,7 +51,7 @@ class OrderReturnRequestRepository extends EntityRepository
      * Admin-facing lookup: every return request associated with the
      * given order id, regardless of customer. Used by GetAdminOrderController
      * (M3.2.X.18-H) to embed a returns summary inline in the order
-     * detail response — avoids a second round-trip for ops.
+     * detail response, avoids a second round-trip for ops.
      *
      * @return list<OrderReturnRequest>
      */
@@ -100,7 +100,7 @@ class OrderReturnRequestRepository extends EntityRepository
      *   - status (string)
      *   - reason (string)
      *   - customerId (int)
-     *   - vendorId (int)  — joins through items
+     *   - vendorId (int) , joins through items
      *   - orderId (int)
      *   - since (DateTimeImmutable)
      *   - until (DateTimeImmutable)
@@ -166,7 +166,7 @@ class OrderReturnRequestRepository extends EntityRepository
             ->getQuery()
             ->getSingleScalarResult();
 
-        // Newest requests first — matches "review queue" UX.
+        // Newest requests first, matches "review queue" UX.
         $qb->orderBy('rr.requestedAt', 'DESC')
            ->addOrderBy('rr.id', 'DESC');
 

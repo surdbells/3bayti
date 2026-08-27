@@ -11,16 +11,16 @@ import { SALES_STATUSES } from '../../backend/shared/order-filters';
  *
  * Two independent signals, each with its own semantics (chosen per item):
  *
- *  - applications$ — the pending vendor-application BACKLOG. Counts every
+ *  - applications$, the pending vendor-application BACKLOG. Counts every
  *    application still awaiting review; it only shrinks when one is approved
  *    or rejected, so merely opening the page does NOT clear it.
  *
- *  - sales$ — NEW sales since the admin last opened /admin/sales. A last-seen
+ *  - sales$, NEW sales since the admin last opened /admin/sales. A last-seen
  *    timestamp is kept in localStorage; visiting the Sales page stamps "now"
  *    and the badge drops to zero. The first run stamps "now" too, so the whole
  *    sales history isn't flagged as new.
  *
- * Both are cheap `limit=1` queries — we only read the pagination total, never
+ * Both are cheap `limit=1` queries, we only read the pagination total, never
  * the rows. Counts refresh on every navigation plus a slow poll, so same-page
  * mutations (e.g. approving an application) still surface without a reload.
  */
@@ -38,7 +38,7 @@ export class NavBadgeService {
 
   private started = false;
 
-  /** Begin populating the badges. Idempotent — the sidenav calls it on init. */
+  /** Begin populating the badges. Idempotent, the sidenav calls it on init. */
   start(): void {
     if (this.started) {
       return;

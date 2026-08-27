@@ -51,14 +51,14 @@ use Psr\Log\LoggerInterface;
  *
  * Error paths
  * ===========
- * 404 — order not found OR doesn't belong to the customer
- * 422 — validation failure (missing fields, oversized photos,
+ * 404, order not found OR doesn't belong to the customer
+ * 422, validation failure (missing fields, oversized photos,
  *       eligibility rule failure with RETURN_* error code)
- * 500 — Flysystem write failure (rare)
+ * 500, Flysystem write failure (rare)
  *
  * Audit
  * =====
- * No explicit AuditEmitter call from this path — customer actions
+ * No explicit AuditEmitter call from this path, customer actions
  * are intrinsically logged via the order timeline; the
  * OrderReturnRequest row itself IS the audit record (with
  * requested_at + customer_user_id stamped at construction).
@@ -117,7 +117,7 @@ final class SubmitReturnController
             ]);
         }
 
-        // 404 — and only 404 — for cross-user attempts (Q-Authorization=A).
+        // 404, and only 404, for cross-user attempts (Q-Authorization=A).
         /** @var OrderRepository $orderRepo */
         $orderRepo = $this->em->getRepository(Order::class);
         $order = $orderRepo->findForUser($orderId, $user);
@@ -167,7 +167,7 @@ final class SubmitReturnController
         }
 
         // Upload photos. Use returnRequestId=0 for the 'pending' subdir
-        // since the parent isn't persisted yet — the path is stable
+        // since the parent isn't persisted yet, the path is stable
         // and captured into the photo entity.
         $storedPhotos = [];
         try {
@@ -211,9 +211,9 @@ final class SubmitReturnController
         $returnRepo = $this->em->getRepository(OrderReturnRequest::class);
         $returnRepo->save($returnRequest);
 
-        // M3.2.X.18-G — Fan out submit notifications: customer +
+        // M3.2.X.18-G, Fan out submit notifications: customer +
         // affected vendors + admins. Wrapped in try/catch defense in
-        // depth — notification failure must never block the response.
+        // depth, notification failure must never block the response.
         try {
             $this->notifications->returnSubmitted($order, [
                 'return_reference' => $this->formatReturnReference($returnRequest),

@@ -23,7 +23,7 @@ export function axNotificationId(): string {
  *   - on a native platform (Capacitor reports as native), and
  *   - for status types we've decided merit haptics (error, success).
  *
- * Errors are swallowed silently — haptics are a nice-to-have, not a
+ * Errors are swallowed silently, haptics are a nice-to-have, not a
  * critical path. PWA / desktop / Android-with-quirky-vibration all
  * fall through to no-op.
  */
@@ -40,9 +40,9 @@ export async function axNotificationHaptic(
     } else if (status === 'success') {
       await Haptics.impact({ style: ImpactStyle.Light });
     }
-    // info / warning / loading — no haptic per spec
+    // info / warning / loading, no haptic per spec
   } catch {
-    // Swallow — haptics are non-critical.
+    // Swallow, haptics are non-critical.
   }
 }
 

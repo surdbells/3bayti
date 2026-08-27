@@ -8,7 +8,7 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Product — the central catalog entity.
+ * Product, the central catalog entity.
  *
  * Maps the legacy flat-product model into a richer v3 shape that
  * preserves all legacy data but exposes typed accessors.
@@ -21,7 +21,7 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * - `status` is the canonical lifecycle field ('active', 'draft', 'soft_deleted').
  *   `is_active` is a denormalised boolean for cheap index filtering on hot
- *   paths. The two are kept in sync by setStatus() — no public setter for
+ *   paths. The two are kept in sync by setStatus(), no public setter for
  *   is_active.
  *
  * - `primary_image_url` is the "lead" image (shown in cards). `images` is
@@ -45,7 +45,7 @@ class Product
     public const STOCK_OUT = 'out_of_stock';
     public const STOCK_LIMITED = 'limited';
     /**
-     * Backorder status — accepting orders despite zero on-hand stock,
+     * Backorder status, accepting orders despite zero on-hand stock,
      * but warning customers of delayed fulfillment. Preserved from
      * legacy where 11 products use this value.
      */
@@ -81,7 +81,7 @@ class Product
 
     /**
      * Denormalised from status for cheap index filtering.
-     * NOT independently settable — kept in sync via setStatus().
+     * NOT independently settable, kept in sync via setStatus().
      */
     #[ORM\Column(name: 'is_active', type: 'boolean')]
     private bool $isActive = false;
@@ -177,19 +177,19 @@ class Product
     /**
      * PostgreSQL-managed tsvector for fulltext search.
      *
-     * The DB column is GENERATED ALWAYS AS STORED — Postgres
+     * The DB column is GENERATED ALWAYS AS STORED, Postgres
      * recomputes it on every INSERT/UPDATE from `name` and
      * `description`. The application never writes to it.
      *
      * insertable: false / updatable: false reflects that contract.
      * Doctrine reads the column on entity hydration (so it CAN be
-     * referenced by DQL — see TsMatchFunction + TsRankFunction in
+     * referenced by DQL, see TsMatchFunction + TsRankFunction in
      * `src/Doctrine/DqlFunction/`) but never includes it in INSERT
      * or UPDATE statements, leaving the DB free to compute it.
      *
      * Stored as `string` from Doctrine's perspective because there's
      * no native `tsvector` type in DBAL. Treating as opaque text is
-     * fine — application code never inspects the value, only the
+     * fine, application code never inspects the value, only the
      * DQL functions pass it to the PG operators.
      *
      * Nullable in the entity even though the DB column is NOT NULL,
@@ -257,7 +257,7 @@ class Product
     public function getStockStatus(): string { return $this->stockStatus; }
 
     /**
-     * Whether the product is buyable. `stock_status` is authoritative — v3
+     * Whether the product is buyable. `stock_status` is authoritative, v3
      * keeps it in sync with quantity on write, and legacy-migrated rows carry
      * the store's declared status (which the old platform tracked by status,
      * not quantity). So a migrated product with stock_status='in_stock' but a

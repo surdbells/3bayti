@@ -117,7 +117,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     countryCode: "+971",
     phone: "",
     // Profile parity with web (UpdateProfileInput): gender, dob (YYYY-MM-DD),
-    // locale. Empty string = unset / "prefer not to say" — the tristate is
+    // locale. Empty string = unset / "prefer not to say", the tristate is
     // respected in update_profile() (an empty value omits the key).
     gender: "",
     dob: "",
@@ -385,7 +385,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   ngOnInit() {
     this.getObject();
     // Opened from the "add your phone" banner (home / account) with
-    // ?addPhone=1 — jump straight into the add/change-phone OTP flow.
+    // ?addPhone=1, jump straight into the add/change-phone OTP flow.
     if (this.route.snapshot.queryParamMap.get('addPhone')) {
       this.openChangePhone();
     }
@@ -418,7 +418,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     // Direct v3 (GET /v3/me/profile). No response transform is registered
     // for this route-key, so response.data is the raw v3 envelope payload
     // `{ user: {...} }` (UserSerializer::publicProfile). Map the v3 user
-    // fields onto the page's `update` model explicitly — v3 returns
+    // fields onto the page's `update` model explicitly, v3 returns
     // first_name/last_name/phone/country_code/avatar_url as discrete
     // fields (no legacy flat profile shape).
     this.networkAdapter.get_v3('GET /me/profile', { authToken: this.single_user.token })
@@ -434,7 +434,7 @@ export class ProfilePage implements OnInit, OnDestroy {
               }
               this.update.phone = u.phone ?? '';
               // Profile parity: gender / dob / locale. dob comes back as an
-              // ISO datetime — slice to YYYY-MM-DD for the date input. Empty
+              // ISO datetime, slice to YYYY-MM-DD for the date input. Empty
               // values map to the "unset" select option.
               this.update.gender = u.gender ?? '';
               this.update.dob = u.dob ? String(u.dob).slice(0, 10) : '';
@@ -462,7 +462,7 @@ export class ProfilePage implements OnInit, OnDestroy {
       }
       this.ui_controls.is_updating = true;
       // Direct v3 (PATCH /v3/me/profile, RFC 7396 merge-patch). Build the
-      // body explicitly — request transforms don't apply to direct calls.
+      // body explicitly, request transforms don't apply to direct calls.
       // The v3 UpdateProfileInput accepts first_name/last_name/gender/
       // dob/locale/timezone (all strings); phone/countryCode are not
       // editable here (disabled in the template), so they're never sent.

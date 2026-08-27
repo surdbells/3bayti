@@ -80,7 +80,7 @@
               <span class="mgc-card__theme">{{ card.theme_meta?.label ?? card.theme }}</span>
               <!--
                 The code itself is NOT shown on the listing (open the card for
-                that) — paid cards just get a Copy button that copies the code
+                that), paid cards just get a Copy button that copies the code
                 to the clipboard. stopPropagation so it doesn't open the card.
               -->
               @if (!isUnpaid(card)) {

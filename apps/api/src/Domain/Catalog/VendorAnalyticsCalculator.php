@@ -25,7 +25,7 @@ use Psr\Log\LoggerInterface;
  *   5. Status mix (delivered / cancelled / returned ratios from
  *      the order_items table)
  *
- * No new revenue capture — this is a pure read-side aggregation
+ * No new revenue capture, this is a pure read-side aggregation
  * over existing orders + order_items + users.
  *
  * Q-decisions locked:
@@ -75,7 +75,7 @@ class VendorAnalyticsCalculator
      * OrderItem statuses excluded from revenue per Q-RevenueDef=A.
      * Items in these terminal-loss states never count toward the
      * vendor's revenue total. Refunded items are removed even
-     * though they were originally paid — the vendor returned that
+     * though they were originally paid, the vendor returned that
      * money so it's not earned revenue.
      *
      * Used by X.13-B revenue queries.
@@ -90,7 +90,7 @@ class VendorAnalyticsCalculator
 
     /**
      * OrderItem statuses considered "cancelled (by vendor)" for
-     * status_mix. Vendor-initiated only — customer-cancelled
+     * status_mix. Vendor-initiated only, customer-cancelled
      * orders go through a different path (status_changed_at is
      * on the order, not the item).
      */
@@ -214,7 +214,7 @@ class VendorAnalyticsCalculator
     }
 
     // =================================================================
-    // Per-section computations — implemented in X.13-B, X.13-C,
+    // Per-section computations, implemented in X.13-B, X.13-C,
     // X.13-D. Each method runs a focused SQL query and returns the
     // result in the named window shape. The comment header below this
     // block was written during X.13-A (scaffolding phase) and has been
@@ -228,7 +228,7 @@ class VendorAnalyticsCalculator
      * One aggregate SQL selecting:
      *   - revenue_aed:        SUM(oi.subtotal) for items not in
      *                          REVENUE_EXCLUDED_ITEM_STATUSES
-     *   - orders:             COUNT(DISTINCT o.id) — orders that
+     *   - orders:             COUNT(DISTINCT o.id), orders that
      *                          contributed at least one revenue-
      *                          counted item
      *   - items:              SUM(oi.quantity) for same items
@@ -468,7 +468,7 @@ class VendorAnalyticsCalculator
      * Identical query shape to computeTopProductsByUnits but
      * ORDER BY revenue DESC. The pair-of-lists output (Q-TopN = C
      * locked) lets dashboards show 'biggest sellers by units' and
-     * 'biggest earners by revenue' separately — useful because
+     * 'biggest earners by revenue' separately, useful because
      * the lists rarely overlap (low-volume premium SKUs are big
      * earners; high-volume staples are big sellers).
      *
@@ -491,7 +491,7 @@ class VendorAnalyticsCalculator
         \DateTimeImmutable $until,
         string $orderBy,
     ): array {
-        // ORDER BY column whitelist — never interpolate user input
+        // ORDER BY column whitelist, never interpolate user input
         // into SQL identifiers. Even though this is internal-only,
         // the discipline matters.
         $orderColumn = match ($orderBy) {
@@ -560,7 +560,7 @@ class VendorAnalyticsCalculator
      *
      * Q-CustomerMix = A locked: vendor-scoped definition. "New"
      * means the customer's FIRST order with THIS vendor was in
-     * window — not first order with the marketplace.
+     * window, not first order with the marketplace.
      *
      * Implementation:
      *   1. Find unique user_ids who ordered from this vendor in
@@ -583,7 +583,7 @@ class VendorAnalyticsCalculator
             '?',
         ));
 
-        // Same status exclusions as revenue — a vendor doesn't gain
+        // Same status exclusions as revenue, a vendor doesn't gain
         // a customer from a rejected order (the customer never got
         // anything from them).
         $sql = "
@@ -656,7 +656,7 @@ class VendorAnalyticsCalculator
      *
      * Single aggregate query counting delivered/cancelled/returned
      * items in the window. NOT a 1:1 sum of the totals.items
-     * counter — totals.items excludes rejected/refunded items
+     * counter, totals.items excludes rejected/refunded items
      * (Q-RevenueDef = A) while status_mix includes ALL items
      * regardless of outcome, so the dashboard can show the
      * customer-experience ratio.

@@ -52,23 +52,23 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { MeasurementService, MEASUREMENT_FIELDS } from '../account/measurement.service';
 
-/** Categories where size selection is optional — a size (incl. CUSTOM) is
+/** Categories where size selection is optional, a size (incl. CUSTOM) is
  *  never required before add-to-cart, and CUSTOM doesn't force measurements. */
 const SIZE_OPTIONAL_CATEGORIES = ['bags', 'accessories', 'kaftans', 'mukhawars'];
 
 /**
- * Product detail page (PDP) — `/product/:slug`.
+ * Product detail page (PDP), `/product/:slug`.
  *
  * THIS IS THE SEO TARGET PAGE. Every product gets its own server-
  * rendered HTML page with full content visible to crawlers without
- * JavaScript. Bottom-of-funnel — these are the pages that need to
+ * JavaScript. Bottom-of-funnel, these are the pages that need to
  * rank for "{vendor} {product name}", "{category} from {vendor}",
  * and brand-name + product-name search queries.
  *
  * Prerender strategy:
  *   /v2/products?limit=200&sort=newest at build time → prerender 200
  *   most recent products. The remaining ~1,457 products work via
- *   runtime SSR — slower first paint but still fully indexable.
+ *   runtime SSR, slower first paint but still fully indexable.
  *   Build time stays under 5 minutes.
  *   See app.routes.server.ts for the cap.
  *
@@ -76,7 +76,7 @@ const SIZE_OPTIONAL_CATEGORIES = ['bags', 'accessories', 'kaftans', 'mukhawars']
  *   - Image gallery (primary + thumbnails)
  *   - Title, vendor, price (with sale strike-through)
  *   - Sizes + colors display
- *   - Description (HTML stripped to plain text — no XSS risk)
+ *   - Description (HTML stripped to plain text, no XSS risk)
  *   - Stock state
  *   - Visual breadcrumb (Home › Categories › {category} › {product})
  *   - Basic SEO meta (title, description, canonical, OG)
@@ -86,9 +86,9 @@ const SIZE_OPTIONAL_CATEGORIES = ['bags', 'accessories', 'kaftans', 'mukhawars']
  *   - Reviews section (per-review stars, verified buyer badge,
  *     graceful date handling)
  *   - schema.org Product JSON-LD (price, availability, brand,
- *     aggregateRating, review[]) — eligible for Google rich results
+ *     aggregateRating, review[]), eligible for Google rich results
  *   - BreadcrumbList JSON-LD mirroring the visual breadcrumb
- *   - Related products grid ("You may also like") — bottom of page
+ *   - Related products grid ("You may also like"), bottom of page
  */
 @Component({
   selector: 'app-product-detail',
@@ -119,7 +119,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   private i18n = inject(TranslateService);
   private auth = inject(AuthService);
   private measurements = inject(MeasurementService);
-  /** Signed-in state — gates the custom-size measurement form. */
+  /** Signed-in state, gates the custom-size measurement form. */
   protected readonly isAuthenticated = this.auth.isAuthenticated;
 
   /** True if the API returned 404 for this slug. */
@@ -148,7 +148,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
    *
    * The "you may also like" strip prefers these engine results and only
    * falls back to the product's own `related_products` (from the single
-   * PDP fetch) when the engine returns nothing — so the section always
+   * PDP fetch) when the engine returns nothing, so the section always
    * has the best data available and never regresses below the old
    * behaviour.
    */
@@ -171,7 +171,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   /**
    * The products to show in the "you may also like" grid: engine
    * recommendations when present, otherwise the PDP's related_products,
-   * otherwise empty (section hidden). Capped at 10 — the grid is a
+   * otherwise empty (section hidden). Capped at 10, the grid is a
    * wrapping 5×2 layout (decision #5), 2 per row on mobile.
    */
   readonly relatedProducts = computed<Product[]>(() => {
@@ -336,7 +336,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
    * reaches the end of the content, so it never sits over the site footer.
    * A sentinel at the end of the page is observed; the negative bottom root
    * margin (~bar height) flips the bar off just before it would cover the
-   * sentinel. CSR-only — IntersectionObserver is feature-guarded. */
+   * sentinel. CSR-only, IntersectionObserver is feature-guarded. */
   readonly stickyCtaHidden = signal(false);
   @ViewChild('ctaSentinel') private ctaSentinel?: ElementRef<HTMLElement>;
   private ctaObserver?: IntersectionObserver;
@@ -364,7 +364,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   readonly selectedSize = signal<string | null>(null);
   /** Selected colour label (null until the shopper picks one). */
   readonly selectedColor = signal<string | null>(null);
-  /** Vendor's EXTRA measurement (free text) — additional measurements the
+  /** Vendor's EXTRA measurement (free text), additional measurements the
    *  seller needs beyond the account profile. Empty until the shopper types. */
   readonly extraMeasurement = signal('');
   /** Quantity to add (1–99). */
@@ -422,7 +422,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   @ViewChild('sizeGuideClose') private sizeGuideCloseBtn?: ElementRef<HTMLButtonElement>;
 
   /**
-   * Dimension columns to render — the fixed order above, filtered to those
+   * Dimension columns to render, the fixed order above, filtered to those
    * with at least one numeric value across the loaded rows. Keeps the table
    * compact: a store that only fills bust/waist/length shows three columns,
    * not eight mostly-empty ones.
@@ -538,7 +538,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     const key = (this.product()?.category_slug ?? '').toLowerCase().replace(/-\d+$/, '');
     return SIZE_OPTIONAL_CATEGORIES.includes(key);
   });
-  /** True for bags/accessories only — these hide the size + colour selectors
+  /** True for bags/accessories only, these hide the size + colour selectors
    *  and the size guide, and never require a colour on add-to-cart. Scoped
    *  narrower than isSizeOptional (which also covers kaftans/mukhawars). */
   readonly isBagOrAccessory = computed(() => {
@@ -593,7 +593,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     }
     /* Products that ask for an extra measurement need it filled in. */
     if (p.requires_measurement === true && this.extraMeasurement().trim() === '') return false;
-    /* CUSTOM size requires a signed-in shopper with a complete measurement —
+    /* CUSTOM size requires a signed-in shopper with a complete measurement -
        unless the category makes size optional, where it's never forced. */
     if (this.isCustomSize() && !this.isSizeOptional()) {
       if (!this.isAuthenticated()) return false;
@@ -609,7 +609,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
 
   /**
    * Description as plain text. Source data contains HTML (<div>, <span>,
-   * etc.) which we strip server-side-equivalent — no innerHTML, no XSS
+   * etc.) which we strip server-side-equivalent, no innerHTML, no XSS
    * vector, no risk of an editor injecting <script>. The description
    * isn't rich content; just product copy. Plain text is fine.
    *
@@ -670,7 +670,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   /**
    * Aggregate rating to display, or null if there's nothing meaningful
    * to show. Used by both the visible star block and (W2.2b Phase 2)
-   * the schema.org JSON-LD AggregateRating — both must reflect the
+   * the schema.org JSON-LD AggregateRating, both must reflect the
    * same numbers, which is why this is a single source of truth.
    *
    * Returns null when:
@@ -702,7 +702,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
 
   /* ----- Reviews: read (embedded + paginated load-more) ------------------
    * First PDP render uses the reviews already embedded in the detail
-   * response (p.recent_reviews — up to 10 approved, newest first). The
+   * response (p.recent_reviews, up to 10 approved, newest first). The
    * "see all reviews" button pages the rest in via
    * GET /products/:productId/reviews (approved-only, ReviewSerializer::
    * publicShape) and appends, de-duped by id. `loadedReviews` holds the
@@ -742,7 +742,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
 
   /**
    * Whether there are more approved reviews on the server than we've
-   * loaded so far — gates the "see all / load more" button. Uses the
+   * loaded so far, gates the "see all / load more" button. Uses the
    * review_count aggregate as the initial source of truth (before any
    * page fetch), then the list meta total once a page has loaded.
    */
@@ -891,7 +891,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       });
   }
 
-  /** Computed page title — fed to SeoService AND displayed in <title>. */
+  /** Computed page title, fed to SeoService AND displayed in <title>. */
   readonly pageTitle = computed(() => {
     const p = this.product();
     if (!p) return null;
@@ -901,7 +901,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
 
   constructor() {
     /* Deep link: /product/x#reviews opens directly on the Reviews tab.
-       Guarded — some test harnesses provide ActivatedRoute without a
+       Guarded, some test harnesses provide ActivatedRoute without a
        snapshot. */
     if (this.route.snapshot?.fragment === 'reviews') {
       this.activeContentTab.set('reviews');
@@ -958,7 +958,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     /* Apply SEO via effect() so it runs within Angular's CD cycle.
        During SSR prerender, this ensures meta tags are present in the
        captured HTML. (Microtask-based scheduling does NOT work for
-       prerender — see CategoryDetailComponent commit history for
+       prerender, see CategoryDetailComponent commit history for
        background.) */
     effect(() => {
       const p = this.product();
@@ -986,9 +986,9 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       /* ----- JSON-LD structured data --------------------------------
        *
        * Two schema.org graphs:
-       *   1. Product — primary SEO win. Eligible for Google's product
+       *   1. Product, primary SEO win. Eligible for Google's product
        *      rich results (price, availability, star rating in SERPs).
-       *   2. BreadcrumbList — eligible for the breadcrumb trail above
+       *   2. BreadcrumbList, eligible for the breadcrumb trail above
        *      the result snippet. Mirrors the visual breadcrumb in
        *      the template.
        *
@@ -1054,7 +1054,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
 
       /* Breadcrumb mirrors the visual trail (Home › Categories ›
        * {category} › {product}). Skip the category step when
-       * category_slug isn't known — never emit broken URLs in
+       * category_slug isn't known, never emit broken URLs in
        * structured data. The visual breadcrumb in the template uses
        * the same categoryLabel() helper, so the two stay in sync. */
       const crumbs = [
@@ -1136,7 +1136,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   /**
    * Add the current selection to the cart. No-ops unless the product is
    * in stock and every required variant axis has a valid selection (the
-   * button is disabled in that state too — this is the belt-and-braces
+   * button is disabled in that state too, this is the belt-and-braces
    * guard). On success the cart drawer opens; on failure an inline,
    * actionable message is shown.
    */
@@ -1155,7 +1155,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
         color: this.selectedColor(),
         is_custom: custom,
         // CUSTOM size: snapshot the entered body measurements onto THIS order
-        // (order-only — we never write back to the account default here).
+        // (order-only, we never write back to the account default here).
         measurement: custom ? JSON.stringify(this.customMeasurementValues()) : null,
         extra_measurement: this.requiresExtraMeasurement() ? this.extraMeasurement().trim() : null,
       });
@@ -1288,7 +1288,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
    * remaining name (rare but possible) are replaced with spaces.
    *
    * Used by both the visual breadcrumb and the BreadcrumbList JSON-LD
-   * so the two stay in lockstep — Google rejects structured data
+   * so the two stay in lockstep, Google rejects structured data
    * that doesn't match what's visible on the page.
    *
    * Returns null when there's no category_slug.

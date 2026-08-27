@@ -81,7 +81,7 @@ export class UsersComponent implements OnInit {
     roles_list_loading: false,
   };
 
-  // Roles list (the matrix editor itself lives at /admin_role — RoleEditorComponent)
+  // Roles list (the matrix editor itself lives at /admin_role, RoleEditorComponent)
   rolesList: RoleDetail[] = [];
 
   config!: AxDataTableConfig<StaffUser>;

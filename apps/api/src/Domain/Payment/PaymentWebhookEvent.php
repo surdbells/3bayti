@@ -29,14 +29,14 @@ use Doctrine\ORM\Mapping as ORM;
  * Idempotency
  * ============
  * Noon's webhook delivery is at-least-once with redelivery on
- * non-2xx response. We dedup by `idempotency_key` (UNIQUE) — same
+ * non-2xx response. We dedup by `idempotency_key` (UNIQUE), same
  * webhook arriving twice produces a constraint-violation on the
  * second INSERT, which the handler catches and treats as "already
  * processed, return 200 idempotently".
  *
  * Signature verification
  * =======================
- * Noon webhook docs are gated behind the merchant portal — we don't
+ * Noon webhook docs are gated behind the merchant portal, we don't
  * yet know the signature algorithm. M3.1.6 ships with the
  * `LoggingOnlyVerifier` that always returns true and records
  * `signature_verified = false` so M3.1.7's empirical-capture work
@@ -55,7 +55,7 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * order_id FK
  * ============
- * ON DELETE SET NULL — if an order is later deleted (admin tooling
+ * ON DELETE SET NULL, if an order is later deleted (admin tooling
  * in M3.1.7+), the webhook history stays intact for compliance.
  */
 #[ORM\Entity(repositoryClass: PaymentWebhookEventRepository::class)]

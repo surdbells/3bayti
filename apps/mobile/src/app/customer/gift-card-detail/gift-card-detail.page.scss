@@ -73,7 +73,7 @@
 .gcd-code {
   font-family: monospace;
   /* Scale to the viewport so the whole 19-char code always fits on ONE line
-     next to the copy button — the fixed 18px/0.15em wrapped to two lines. No
+     next to the copy button, the fixed 18px/0.15em wrapped to two lines. No
      ellipsis: a gift-card code must never be truncated. */
   font-size: clamp(13px, 4vw, 18px);
   font-weight: 700;
@@ -83,7 +83,7 @@
   min-width: 0;
 }
 
-/* Explicit copy affordance — icon + "Tap to copy", tinted in the brand accent
+/* Explicit copy affordance, icon + "Tap to copy", tinted in the brand accent
    so the row reads as interactive rather than a static field. */
 .gcd-copy-cta {
   display: inline-flex;
@@ -101,7 +101,7 @@
 }
 
 @media (max-width: 360px) {
-  /* Extra room on very narrow screens — drop the words, keep the icon.
+  /* Extra room on very narrow screens, drop the words, keep the icon.
      (The code itself already scales via clamp() above.) */
   .gcd-copy-cta__label { display: none; }
 }

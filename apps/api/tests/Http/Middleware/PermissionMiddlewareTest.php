@@ -99,7 +99,7 @@ final class PermissionMiddlewareTest extends HttpTestCase
     public function superAdminBypassesEveryPermission(): void
     {
         $user = $this->makeUser(id: 9);
-        $user->setRoles(admin: true); // is_admin — no roles assigned at all
+        $user->setRoles(admin: true); // is_admin, no roles assigned at all
 
         $response = $this->guard()->for('orders.refund')->process($this->requestFor($user), $this->passingHandler());
 

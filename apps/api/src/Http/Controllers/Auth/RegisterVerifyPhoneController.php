@@ -28,7 +28,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   Request:  { verification_id, code }
  *   Response: 200 { registration_token }
  *
- * The OtpAttempt MUST be a registration-purpose, SMS-channel row — a
+ * The OtpAttempt MUST be a registration-purpose, SMS-channel row, a
  * password-reset OTP or an email-channel OTP submitted here is rejected
  * with the same uniform 401 (cross-flow abuse guard). The phone bound
  * into the token is the attempt's own phone, NOT anything supplied by

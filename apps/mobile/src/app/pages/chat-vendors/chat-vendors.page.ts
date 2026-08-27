@@ -53,7 +53,7 @@ export class ChatVendorsPage implements OnInit, OnDestroy {
   ionViewWillEnter(): void {
     // Refresh the inbox each time the page is shown so unread counts, order
     // references and last-message previews reflect activity that happened
-    // while the user was away — without needing to open a thread.
+    // while the user was away, without needing to open a thread.
     this.load();
   }
 

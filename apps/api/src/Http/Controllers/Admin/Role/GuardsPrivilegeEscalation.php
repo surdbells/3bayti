@@ -17,7 +17,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * any permission set the actor tries to grant against the actor's OWN effective
  * permissions.
  *
- * Super-admins (`is_admin`) are exempt — they already hold every permission, so
+ * Super-admins (`is_admin`) are exempt, they already hold every permission, so
  * no set can be a superset of theirs.
  */
 trait GuardsPrivilegeEscalation

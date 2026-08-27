@@ -36,7 +36,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * ================================
  * For multi-vendor users where multiple of their vendors have items
  * in the same return: we filter using the FIRST matching vendor id
- * (deterministic — smallest id wins). The UI can supply ?vendor_id
+ * (deterministic, smallest id wins). The UI can supply ?vendor_id
  * to select explicitly; we honor it if the user owns that vendor
  * AND that vendor has items in the return.
  */

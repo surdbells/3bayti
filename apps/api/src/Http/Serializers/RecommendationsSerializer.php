@@ -46,7 +46,7 @@ final class RecommendationsSerializer
     }
 
     /**
-     * Admin "explain" shape — fuller breakdown grouping recs by
+     * Admin "explain" shape, fuller breakdown grouping recs by
      * source so an admin can see at a glance: 'this product gets
      * 5 copurchase + 3 category recs'.
      *

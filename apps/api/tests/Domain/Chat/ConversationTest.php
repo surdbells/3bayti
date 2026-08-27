@@ -112,9 +112,9 @@ final class ConversationTest extends TestCase
         $t0 = new \DateTimeImmutable('2026-06-14 10:00:00');
         $c->markNotified(Conversation::PARTY_VENDOR, $t0);
 
-        // 5 minutes later — still inside a 10-minute window.
+        // 5 minutes later, still inside a 10-minute window.
         self::assertFalse($c->shouldNotify(Conversation::PARTY_VENDOR, $t0->modify('+5 minutes'), 600));
-        // 10 minutes later — window elapsed.
+        // 10 minutes later, window elapsed.
         self::assertTrue($c->shouldNotify(Conversation::PARTY_VENDOR, $t0->modify('+10 minutes'), 600));
         // The other party is unaffected.
         self::assertTrue($c->shouldNotify(Conversation::PARTY_CUSTOMER, $t0->modify('+1 minute'), 600));

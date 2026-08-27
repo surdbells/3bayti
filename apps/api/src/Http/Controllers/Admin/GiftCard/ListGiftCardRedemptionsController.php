@@ -22,7 +22,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/admin/gift-cards/redemptions
  *
- * The admin "gift cards spent at checkout" report — every DEBIT tied to an
+ * The admin "gift cards spent at checkout" report, every DEBIT tied to an
  * order (a customer applying a gift card / their wallet toward a purchase),
  * newest first, plus a summary of the total value redeemed over the range.
  * Gated by gift_cards.view.
@@ -32,10 +32,10 @@ use Psr\Http\Message\ServerRequestInterface;
  * how much gift-card value is being spent and against which orders.
  *
  * Query parameters (all optional):
- *   ?from=ISO   — created_at >= (start of range)
- *   ?to=ISO     — created_at <= (end of range)
- *   ?limit=N    — default 20, max 100
- *   ?offset=N   — default 0
+ *   ?from=ISO  , created_at >= (start of range)
+ *   ?to=ISO    , created_at <= (end of range)
+ *   ?limit=N   , default 20, max 100
+ *   ?offset=N  , default 0
  *
  * Response: { data: [ …redemption rows… ], meta: {…pagination…},
  *             summary: { total_redeemed, redemption_count, currency } }
@@ -94,7 +94,7 @@ final class ListGiftCardRedemptionsController
         $count = (int) $row['cnt'];
         $totalRedeemed = bcadd((string) $row['total'], '0.00', 2);
 
-        // Page — eager-load the card + buyer so the row shaper never N+1s.
+        // Page, eager-load the card + buyer so the row shaper never N+1s.
         $items = (clone $base)
             ->leftJoin('t.giftCard', 'g')->addSelect('g')
             ->leftJoin('g.buyerUser', 'b')->addSelect('b')

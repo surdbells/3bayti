@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../translate.pipe';
 import type { RoleOption } from '../users.component';
 
 /**
- * /adminusers/new — create a staff member.
+ * /adminusers/new, create a staff member.
  *
  * Create → assign is reachable in one flow: the form includes a role picker
  * (GET /admin/roles). On a successful POST /admin/users we read the created
@@ -171,7 +171,7 @@ export class StaffCreateComponent implements OnInit {
       next: (response: any) => {
         const newId = Number(response?.data?.id ?? response?.id);
         if (!newId) {
-          // Created but we can't resolve the id — fall back to the list.
+          // Created but we can't resolve the id, fall back to the list.
           this.toast.success('Staff member created.');
           this.ui.registering = false;
           this.router.navigate(['/adminusers']);

@@ -4,14 +4,14 @@
  *
  * Why this exists: some product-name snapshots are stored HTML-entity
  * encoded (e.g. `Abaya &amp; Scarf`). Angular text interpolation sets
- * `textContent`, which does NOT re-parse entities — so `&amp;` renders
+ * `textContent`, which does NOT re-parse entities, so `&amp;` renders
  * literally as `&amp;` instead of `&`. Decoding at display time fixes
  * the double-escape without touching stored data.
  *
- * SSR-safe: pure string work, no DOM (`document`/`textarea`) — so it runs
+ * SSR-safe: pure string work, no DOM (`document`/`textarea`), so it runs
  * identically during server prerender and in the browser.
  *
- * Scope: intentionally covers only the entities we actually see —
+ * Scope: intentionally covers only the entities we actually see -
  * the named basics plus numeric (decimal + hex) character references.
  * It is NOT a general-purpose HTML sanitizer; callers must still avoid
  * binding the result to `innerHTML`.

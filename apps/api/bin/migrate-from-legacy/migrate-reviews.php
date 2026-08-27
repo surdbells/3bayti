@@ -98,7 +98,7 @@ try {
         $createdAt = parseLegacyTimestamp((string) ($row['created_at'] ?? '')) ?? date('Y-m-d H:i:sP');
 
         try {
-            // UPSERT — reviews have no slug/email stability concerns.
+            // UPSERT, reviews have no slug/email stability concerns.
             // Every column updatable except product_id (set NULL by design)
             // and legacy_review_id (the conflict key).
             $conn->executeStatement(

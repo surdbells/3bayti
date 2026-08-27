@@ -21,7 +21,7 @@
 
   @if(!ui_controls.product_missing){
   <div class="safe-area">
-    <!-- Image Slider — tap opens the fullscreen lightbox gallery -->
+    <!-- Image Slider, tap opens the fullscreen lightbox gallery -->
     <div class="slides-wrapper" (click)="openLightbox(index())">
       @if(images.length > 0){
         <div class="expand-hint" aria-hidden="true">
@@ -99,7 +99,7 @@
           </div>
         </div>
 
-        <!-- Description / Reviews — premium pill toggle -->
+        <!-- Description / Reviews, premium pill toggle -->
         <div class="info-tabs" role="tablist">
           <button
             type="button"

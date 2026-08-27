@@ -25,13 +25,13 @@ use Bayti\Api\Http\Errors\HttpException;
  * Details payload by error code
  * ------------------------------
  *   PROMO_MIN_SUBTOTAL_NOT_MET: { min_subtotal: "100.00", currency: "AED" }
- *     — client UX can show "Spend X more to unlock"
+ *    , client UX can show "Spend X more to unlock"
  *   PROMO_NOT_YET_VALID:        { valid_from: "2026-06-01T00:00:00Z" }
- *     — client UX can show "Comes back live on X"
+ *    , client UX can show "Comes back live on X"
  *   PROMO_EXPIRED:              { valid_until: "2026-04-30T23:59:59Z" }
- *     — client UX can show "Expired on X"
+ *    , client UX can show "Expired on X"
  *   PROMO_CURRENCY_MISMATCH:    { promo_currency: "USD", cart_currency: "AED" }
- *   All others:                  { } — code alone is enough to inform UX
+ *   All others:                  { }, code alone is enough to inform UX
  *
  * Public message
  * --------------
@@ -57,7 +57,7 @@ final class PromoNotApplicableException extends \RuntimeException
 
     /**
      * Map to the HTTP-layer exception the controller throws. Status
-     * is always 422 — promo failures are business-rule violations,
+     * is always 422, promo failures are business-rule violations,
      * not validation errors (the code STRING was valid; the rule
      * said the code doesn't apply).
      */
@@ -72,7 +72,7 @@ final class PromoNotApplicableException extends \RuntimeException
     }
 
     // -----------------------------------------------------------------
-    // Named factories — one per validation-chain failure
+    // Named factories, one per validation-chain failure
     // -----------------------------------------------------------------
 
     public static function notFound(string $rawCode): self

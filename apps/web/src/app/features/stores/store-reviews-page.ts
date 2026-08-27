@@ -13,7 +13,7 @@ import { StoreService, DESIGNER_PAGE_SIZE } from '../catalog/store.service';
 import type { Store, StoreReview } from '../catalog/store.model';
 
 /**
- * /stores/:slug/reviews — a store's public reviews.
+ * /stores/:slug/reviews, a store's public reviews.
  *
  * Surfaces the migrated store reviews (vendor-scoped, product_id null,
  * status 'approved') plus any product reviews, via
@@ -31,7 +31,7 @@ import type { Store, StoreReview } from '../catalog/store.model';
  * Data
  * ----
  *   - getBySlug(slug) for the header (a 404 → inline not-found, same as
- *     the store detail page — never a hard router error).
+ *     the store detail page, never a hard router error).
  *   - listReviews(slug, {limit, offset}) for the list, accumulated
  *     locally (the service keeps reviews stateless).
  *

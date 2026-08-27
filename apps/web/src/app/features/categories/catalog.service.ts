@@ -3,7 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import type { Product } from '../catalog/product.model';
 
-/** Default page size — matches the API's GET /products default (24). */
+/** Default page size, matches the API's GET /products default (24). */
 export const CATALOG_PAGE_SIZE = 24;
 
 /** Valid sort values accepted by GET /v3/products. */
@@ -66,7 +66,7 @@ interface ProductsMeta {
 }
 
 /**
- * CatalogService — filtered, paginated product listing + facet counts
+ * CatalogService, filtered, paginated product listing + facet counts
  * for the category listing page (M3.2.W.2). Consumes the X.10 backend:
  *
  *   GET /v3/products          (filtered, paginated grid)

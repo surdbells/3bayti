@@ -26,7 +26,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * GiftCardTransaction ledger row and updating the balance atomically.
  * Gated by gift_cards.adjust_balance.
  *
- * Body — two accepted forms (pick one):
+ * Body, two accepted forms (pick one):
  *   { "amount": "50.00",  "reason": "..." }   ← signed: + credit, - debit
  *   { "amount": "-25.00", "reason": "..." }
  *   { "type": "credit"|"debit", "amount": "50.00", "reason": "..." }

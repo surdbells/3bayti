@@ -142,7 +142,7 @@ final class GetVendorOrderTimelineControllerTest extends HttpTestCase
     #[Test]
     public function multiStoreUserWithUnownedVendorIdGets404(): void
     {
-        // Cross-tenant attempt — opaque 404, not 403.
+        // Cross-tenant attempt, opaque 404, not 403.
         $user = $this->makeVendorUser(50);
         $order = $this->makeOrder(1234, 'V3-X');
         $this->bindDeps($user, [101, 202], $order, ['events' => [], 'total' => 0]);

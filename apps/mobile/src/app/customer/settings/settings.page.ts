@@ -142,7 +142,7 @@ export class SettingsPage implements OnInit, OnDestroy {
    * (city + lat/lng + permission flag) and has NO free-form field. We
    * capture these here so update_location() can build the v3 body. Stays
    * null when the user only typed a manual string (no Places selection),
-   * in which case we send just the city-less coordinate-less body — see
+   * in which case we send just the city-less coordinate-less body, see
    * update_location().
    */
   private selectedPlace: { city: string | null; latitude: number; longitude: number } | null = null;
@@ -213,7 +213,7 @@ export class SettingsPage implements OnInit, OnDestroy {
    * Connect (link) a social provider to the current account: run the native
    * Firebase sign-in for that provider, read the Firebase ID token, then
    * POST /me/social-identities { id_token }. A 409 means the identity is
-   * already linked (to this or another account) — surfaced as a clear msg.
+   * already linked (to this or another account), surfaced as a clear msg.
    * Cancelled sign-in is swallowed quietly.
    */
   async connectProvider(key: string): Promise<void> {
@@ -272,7 +272,7 @@ export class SettingsPage implements OnInit, OnDestroy {
   /**
    * Disconnect (unlink) a social provider. DELETE /me/social-identities/:provider.
    * A 422 is the server's last-method guard (you can't remove your only
-   * remaining sign-in method) — surfaced with a clear explanation.
+   * remaining sign-in method), surfaced with a clear explanation.
    */
   disconnectProvider(key: string): void {
     if (this.socialBusy) return;
@@ -308,7 +308,7 @@ export class SettingsPage implements OnInit, OnDestroy {
    * Resolve the real installed app version for the Settings footer. Prefers
    * the native Capacitor App plugin (App.getInfo() returns the user-facing
    * semver in `version` and the build code in `build`). On the web/dev
-   * platform getInfo() is unimplemented and throws — we swallow that and keep
+   * platform getInfo() is unimplemented and throws, we swallow that and keep
    * the environment.appVersion fallback already seeded into appVersion.
    */
   private async loadAppVersion(): Promise<void> {
@@ -318,7 +318,7 @@ export class SettingsPage implements OnInit, OnDestroy {
         ? `v${info.version} (${info.build})`
         : `v${info.version}`;
     } catch {
-      /* web/dev: getInfo() unimplemented — keep env fallback */
+      /* web/dev: getInfo() unimplemented, keep env fallback */
     }
   }
 
@@ -329,7 +329,7 @@ export class SettingsPage implements OnInit, OnDestroy {
   // Hardware back is left to Ionic's default IonRouterOutlet handling so it
   // pops to the previous screen natively (and closes any open overlay first)
   // instead of the old priority-9999 override that force-reset the stack to
-  // /account — which broke native back and caused the inconsistent loops.
+  // /account, which broke native back and caused the inconsistent loops.
 
   async loadUser(): Promise<void> {
     const ret: any = await Preferences.get({ key: 'user' });
@@ -374,7 +374,7 @@ export class SettingsPage implements OnInit, OnDestroy {
           this.single_user.avatar = user.avatar_url;
           Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
         },
-        error: () => { /* silent — fallback avatar applies */ },
+        error: () => { /* silent, fallback avatar applies */ },
       });
   }
 
@@ -484,7 +484,7 @@ export class SettingsPage implements OnInit, OnDestroy {
   }
 
   // Tab bar navigation. Use a normal (push) navigation like the account tab
-  // bar does — navigateRoot reset the stack to a single page, so hardware back
+  // bar does, navigateRoot reset the stack to a single page, so hardware back
   // from the destination had nothing to pop and exited the app. A push keeps
   // history so native back returns here.
   user_home(): void {
@@ -547,7 +547,7 @@ export class SettingsPage implements OnInit, OnDestroy {
 
     // Direct v3 (PATCH /v3/me/location, upsert, RFC 7396 merge-patch). The v3
     // UpdateLocationInput accepts latitude/longitude (must pair)/city/
-    // country_code (ISO alpha-2)/permission_granted — all optional — and has
+    // country_code (ISO alpha-2)/permission_granted, all optional, and has
     // NO free-form `location` field. Build the body from the structured place
     // captured in onLocationSelected(); omit fields we don't have so we never
     // send a half coordinate pair or an empty city. permission_granted: true

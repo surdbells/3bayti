@@ -158,7 +158,7 @@ final class ZeptoMailHttpMailerTest extends TestCase
     public function rawTokenIsUnchangedByNormalization(): void
     {
         // A correctly-stored RAW key (no scheme) must pass through
-        // untouched — normalization is a no-op for the common case.
+        // untouched, normalization is a no-op for the common case.
         self::assertSame('abc123XYZ', ZeptoMailHttpMailer::normalizeToken('abc123XYZ'));
         // Only ONE leading scheme is stripped; a key is otherwise verbatim.
         self::assertSame('my-token', ZeptoMailHttpMailer::normalizeToken('Zoho-enczapikey my-token'));

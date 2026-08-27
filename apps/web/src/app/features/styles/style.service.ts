@@ -25,7 +25,7 @@ interface TabState {
 const EMPTY_TAB: TabState = { items: [], hasMore: false, isLoading: false };
 
 /**
- * StyleService — storefront reads for the Style Hub (Community,
+ * StyleService, storefront reads for the Style Hub (Community,
  * Editorial/3bayti) and the owner-scoped "My styles" tab, plus the
  * single-style detail fetch and community style creation.
  *
@@ -35,7 +35,7 @@ const EMPTY_TAB: TabState = { items: [], hasMore: false, isLoading: false };
  * RoutedHttpClient (like StoreService / HomeDataService), NOT the
  * Bearer-bound direct client. The authenticated reads (GET /me/styles)
  * and the create mutation (POST /me/styles) also go through
- * RoutedHttpClient — the auth interceptor attaches the Bearer token to
+ * RoutedHttpClient, the auth interceptor attaches the Bearer token to
  * the v3 host, exactly as it does for the other /me/* routes the web
  * app already calls through this client.
  *
@@ -48,7 +48,7 @@ const EMPTY_TAB: TabState = { items: [], hasMore: false, isLoading: false };
  *   - hasMore(tab)    whether the last page reported more
  *   - isLoading(tab)  in-flight flag for that tab
  *
- * Single-style detail is NOT held in service signals — the detail page
+ * Single-style detail is NOT held in service signals, the detail page
  * owns it (two style pages could be open in different tabs; per-page
  * ownership avoids cross-contamination), exactly as the store-detail
  * page does.
@@ -127,7 +127,7 @@ export class StyleService {
   }
 
   /**
-   * A page of public styles by type. Stateless — loadMore() owns the
+   * A page of public styles by type. Stateless, loadMore() owns the
    * accumulator. Returns { items, hasMore } from the envelope's
    * meta.has_more.
    */
@@ -147,7 +147,7 @@ export class StyleService {
 
   /**
    * A page of the authenticated user's own styles (Bearer auth).
-   * Stateless — loadMore('mine') owns the accumulator. Callers must
+   * Stateless, loadMore('mine') owns the accumulator. Callers must
    * only invoke this for signed-in users (the hub shows a sign-in
    * prompt for guests rather than firing it).
    */

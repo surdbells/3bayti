@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface TopPerformer {
-  /** Entity id (vendor / customer) — used by the parent to navigate on select. */
+  /** Entity id (vendor / customer), used by the parent to navigate on select. */
   id: number | string;
   rank: number;
   name: string;
@@ -12,7 +12,7 @@ export interface TopPerformer {
 }
 
 /**
- * "Minimal Metric Rail" — a compact, horizontally-scrolling leaderboard of
+ * "Minimal Metric Rail", a compact, horizontally-scrolling leaderboard of
  * top performers (design C). Each card shows a rank chip, a rounded avatar,
  * the name, the metric, and a share-of-leader bar so relative performance
  * reads at a glance. Reused for Top Stores (by sales) and Top Customers

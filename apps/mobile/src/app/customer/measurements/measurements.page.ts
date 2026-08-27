@@ -168,7 +168,7 @@ export class MeasurementsPage implements OnInit, OnDestroy {
       for (const k of ['bust', 'shoulder', 'armhole', 'length', 'hip', 'arm'] as const) {
         const n = Number(this.update[k]);
         // Clamp to the v3 range (cm, 0-500). Drop out-of-range values exactly
-        // as the old request transform did — sending >500 would 422 the whole save.
+        // as the old request transform did, sending >500 would 422 the whole save.
         if (Number.isFinite(n) && n > 0 && n <= 500) values[k] = n;
       }
       this.networkAdapter.put_v3('PUT /me/measurements/default', { values }, { authToken: this.single_user.token })

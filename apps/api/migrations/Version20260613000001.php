@@ -8,9 +8,9 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * F2 — Vendor size charts: the `vendor_size_charts` table.
+ * F2, Vendor size charts: the `vendor_size_charts` table.
  *
- * A vendor's published size chart — one row per (vendor, size), where
+ * A vendor's published size chart, one row per (vendor, size), where
  * each row holds the garment dimensions for that size (bust, waist, hip,
  * length, neck, arm, armhole, shoulder). This is the STORE's size guide
  * (e.g. "our size M = bust 92cm"), distinct from a customer's own body
@@ -28,7 +28,7 @@ use Doctrine\Migrations\AbstractMigration;
  *   created_at  TIMESTAMPTZ NOT NULL
  *   updated_at  TIMESTAMPTZ NOT NULL
  *
- * UNIQUE (vendor_id, size) — a size appears once per store. This is what
+ * UNIQUE (vendor_id, size), a size appears once per store. This is what
  *   makes the legacy "Measurement already exists for your store" guard a
  *   DB-level invariant.
  */

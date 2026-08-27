@@ -64,7 +64,7 @@ final class CartRemindersObservabilityIntegrationTest extends TestCase
         $cart = $this->makeCart(id: 42, user: $user);
 
         // Connection returns one cart id (42) for the EMAIL finder query
-        // and nothing for the PUSH finder query — this test asserts the
+        // and nothing for the PUSH finder query, this test asserts the
         // email pass only (push has its own dedicated coverage). The two
         // finders are told apart by their template parameter:
         // 'cart.abandoned.customer' (email) vs 'cart.abandoned' (push).
@@ -143,7 +143,7 @@ final class CartRemindersObservabilityIntegrationTest extends TestCase
         self::assertSame('cart.abandoned.customer', $mailer->sent()[0]['context']['template']);
         self::assertSame(42, $mailer->sent()[0]['context']['cart_id']);
 
-        // Unsubscribe URL is in the body — full integration through
+        // Unsubscribe URL is in the body, full integration through
         // the token issuer
         self::assertStringContainsString(
             'https://3bayti.ae/v3/notifications/unsubscribe?token=',
@@ -160,7 +160,7 @@ final class CartRemindersObservabilityIntegrationTest extends TestCase
         // Observability fired through the full stack:
         //   - Finder emits cart_abandonment_finder.computed TWICE (once
         //     for the email-eligible query, once for the push-eligible
-        //     query — both run every cron pass)
+        //     query, both run every cron pass)
         //   - Service emits cart_notification.sent
         //   - Command emits cart_reminders.batch_complete
         self::assertCount(2, $logger->findByMessage('cart_abandonment_finder.computed'));
@@ -243,7 +243,7 @@ final class CartRemindersObservabilityIntegrationTest extends TestCase
 
         self::assertSame(Command::SUCCESS, $exit);
 
-        // NO email sent — user opted out at service layer
+        // NO email sent, user opted out at service layer
         self::assertCount(0, $mailer->sent());
 
         // SKIPPED row written with cart_id → guarantees next run

@@ -81,18 +81,18 @@ final class UpdateAddressController
         // requires all four required fields.
         $input = $this->validator->parse($request, UpdateAddressInput::class);
 
-        // M1.6.1.C — capture pre-mutation state for audit diff.
+        // M1.6.1.C, capture pre-mutation state for audit diff.
         $beforeSnapshot = $this->audit->snapshot($address);
 
         // Address::update() accepts nullable strings for partial
-        // updates — if a field is null, the existing value stays.
+        // updates, if a field is null, the existing value stays.
         // For PUT semantics we ALWAYS pass values for required
         // fields and explicitly pass nullables (clears them when
         // omitted from the request).
         //
         // To get true full-replace behavior on optional fields
         // (omitted in JSON → cleared), we'd have to distinguish
-        // 'absent' from 'null in JSON' — which RequestValidator
+        // 'absent' from 'null in JSON', which RequestValidator
         // can't do (same tristate issue). Acceptable trade-off:
         // PUT here clears optional fields when null is explicitly
         // sent, and leaves them when omitted. That matches REST

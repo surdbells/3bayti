@@ -14,7 +14,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** GET /v3/vendor/reviews[?limit&offset] — reviews for the vendor's products. */
+/** GET /v3/vendor/reviews[?limit&offset], reviews for the vendor's products. */
 final class ListVendorReviewsController
 {
     use Responder;

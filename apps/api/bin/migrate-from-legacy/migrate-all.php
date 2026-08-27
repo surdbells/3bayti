@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Orchestrator — runs the full migration in correct dependency order.
+ * Orchestrator, runs the full migration in correct dependency order.
  *
  * All migration logic lives in Bayti\Api\Migration\MigrationSteps.
  * This script is a thin wrapper: bootstrap, instantiate, run steps,
@@ -21,7 +21,7 @@ declare(strict_types=1);
  *
  * Usage
  * -----
- *   php migrate-all.php              # default — INSERT new + UPDATE drift
+ *   php migrate-all.php              # default, INSERT new + UPDATE drift
  *   php migrate-all.php --wipe-seed  # also wipe fictional M2.1.B seed first
  *
  * Use --wipe-seed ONLY on the very first migration. After that, real
@@ -78,7 +78,7 @@ try {
         // (categories…wishlist) do not support rollback and would write for
         // real, so they are skipped here. migrateOrders resolves the
         // already-migrated users/products/vendors, inserts orders + items +
-        // addresses inside a transaction, then rolls back — exact counts,
+        // addresses inside a transaction, then rolls back, exact counts,
         // zero writes. If those catalog tables are empty, run a normal
         // (non-dry) migration first, then dry-run the orders.
         echo "----- DRY RUN: order-migration preview only -----\n";
@@ -113,14 +113,14 @@ try {
     echo "----- step {$stepNum}: reviews -----\n";
     $results['reviews'] = $steps->migrateReviews();
 
-    // M3.1.5.5c — vendor_labels + styles
+    // M3.1.5.5c, vendor_labels + styles
     //
     // These come AFTER products because vendor_labels needs the
     // products.label_id FK validated against existing products,
     // and migrateVendorLabels remaps products.label_id values from
     // legacy to v3 ids as part of its transaction.
     //
-    // Both methods are defensive — if the legacy table isn't found,
+    // Both methods are defensive, if the legacy table isn't found,
     // they log-and-skip rather than failing. Operator can extend the
     // candidate name list in MigrationSteps if the legacy tables
     // use names not in the default probe list.
@@ -132,14 +132,14 @@ try {
     echo "----- step {$stepNum}: styles -----\n";
     $results['styles'] = $steps->migrateStyles();
 
-    // vendor_size_charts — needs vendors (resolves vendor_id via
+    // vendor_size_charts, needs vendors (resolves vendor_id via
     // vendors.legacy_vendor_id = legacy store_id). Independent of
     // products/styles, but placed here after the catalog steps.
     $stepNum++;
     echo "----- step {$stepNum}: vendor_size_charts -----\n";
     $results['vendor_size_charts'] = $steps->migrateVendorSizeCharts();
 
-    // wishlist_labels -> wishlist — labels need users; items need users
+    // wishlist_labels -> wishlist, labels need users; items need users
     // AND products AND (optionally) the just-migrated labels for label_id
     // resolution. Order matters: labels before items.
     $stepNum++;
@@ -157,7 +157,7 @@ try {
     // payment_attempts header (address, delivery fee, total, paid status),
     // and writes orders + items + addresses in one per-order transaction.
     //
-    // Carts (cart_code='PND') are NOT migrated (transient state — active
+    // Carts (cart_code='PND') are NOT migrated (transient state, active
     // legacy carts are lost on cutover; users re-add items in v3).
     if ($includeOrders) {
         $stepNum++;
@@ -195,7 +195,7 @@ try {
         $r = $results[$phase];
         printf("  %-15s  %9d  %9d  %9d\n", $phase, $r['migrated'], $r['skipped'], $r['errors']);
     }
-    // M3.1.5.5c phases — print only if they ran (status field
+    // M3.1.5.5c phases, print only if they ran (status field
     // distinguishes 'completed' vs 'skipped_no_legacy_table' etc).
     foreach (['vendor_labels', 'styles'] as $phase) {
         if (!isset($results[$phase])) {

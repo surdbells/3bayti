@@ -131,7 +131,7 @@ final class RegisterConfirmEmailControllerTest extends HttpTestCase
     public function returns401WhenAttemptCapReached(): void
     {
         // Already at the cap (5 failed tries). Even the CORRECT code is
-        // refused — the row is burned.
+        // refused, the row is burned.
         $user = $this->makeUser(phoneVerified: true);
         $this->bindEmailAttempt($user, code: '123456', attempts: OtpAttempt::MAX_EMAIL_ATTEMPTS);
 

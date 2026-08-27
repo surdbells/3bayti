@@ -205,11 +205,11 @@ final class ListVendorOrdersControllerTest extends HttpTestCase
     #[Test]
     public function nonVendorGets403(): void
     {
-        // Plain customer hitting /v3/vendor/orders — middleware rejects.
+        // Plain customer hitting /v3/vendor/orders, middleware rejects.
         $user = $this->makeUser(id: 99);
         // user is NOT a vendor
 
-        // No EM stubs needed — middleware short-circuits before controller.
+        // No EM stubs needed, middleware short-circuits before controller.
         $jwt = $this->app->getContainer()->get(JwtService::class);
         $pair = $jwt->issueTokenPair($user);
 

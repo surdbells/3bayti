@@ -41,7 +41,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Why we don't surface "OTP expired, please request a new one"
  * ------------------------------------------------------------
- * That's a UX concern — the FRONTEND can detect expiry by tracking
+ * That's a UX concern, the FRONTEND can detect expiry by tracking
  * its own timer (the verification_id is returned with no expiry,
  * but the frontend knows the policy is 5 minutes). When the user
  * waits past 5 minutes and tries to confirm, the frontend should
@@ -58,7 +58,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * post-M1.
  *
  * The OtpAttempt's `purpose` field guards against cross-flow abuse
- * — confirm() pulls the row by verification_id and verifies the
+ *, confirm() pulls the row by verification_id and verifies the
  * purpose is PURPOSE_REGISTRATION before proceeding.
  */
 final class ConfirmController

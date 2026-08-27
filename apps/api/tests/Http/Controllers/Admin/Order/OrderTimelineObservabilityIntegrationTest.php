@@ -36,7 +36,7 @@ use Psr\Log\NullLogger;
  * PSR-3 events; the test logger captures them.
  *
  * Catches the failure mode where unit tests pass but production
- * logs silently die — e.g. a future DI config change that ships
+ * logs silently die, e.g. a future DI config change that ships
  * NullLogger by accident for LoggerInterface bindings.
  */
 final class OrderTimelineObservabilityIntegrationTest extends HttpTestCase
@@ -121,7 +121,7 @@ final class OrderTimelineObservabilityIntegrationTest extends HttpTestCase
     /**
      * Connection mock returning empty rows for every executeQuery.
      * The builder still issues its queries + emits its observability
-     * — we just don't supply real data because we're testing the
+     *, we just don't supply real data because we're testing the
      * LOGGING, not the event values.
      */
     private function emptyConnection(): Connection

@@ -13,7 +13,7 @@ use DateTimeInterface;
  *
  * publicShape:    storefront-facing view (no commission, no contact phone)
  * featuredShape:  Designer Spotlight view (publicShape + rating
- *                 aggregate + embedded products) — apps/web home page
+ *                 aggregate + embedded products), apps/web home page
  * adminShape:     admin view (includes commission, all fields, is_featured)
  *
  * Contact email/phone are not in publicShape because exposing them
@@ -76,18 +76,18 @@ final class VendorSerializer
     /**
      * Admin "Manage store" detail shape.
      *
-     * GET /v3/admin/vendors/{id} — the single-vendor screen
+     * GET /v3/admin/vendors/{id}, the single-vendor screen
      * (apps/portal manage-store) binds a flat, legacy-named `store`
      * object: the owner user's identity, the store profile, the
      * banking / tax / trade-license fields captured at onboarding, and
      * the KYC document URLs. Field names here MUST match the template
-     * bindings (store.first_name, store.store_legal_name, …) — this is
+     * bindings (store.first_name, store.store_legal_name, …), this is
      * the contract the portal reads, distinct from {@see adminShape}
      * (the Stores *table* row) which uses v3-native names.
      *
      * All fields are nullable at source (legacy rows, or v3 vendors
      * that never completed onboarding) and pass through as null → the
-     * portal renders "— not provided —" and the setup-progress meter
+     * portal renders "- not provided -" and the setup-progress meter
      * counts them as unfilled.
      *
      * @return array<string, mixed>
@@ -113,7 +113,7 @@ final class VendorSerializer
             'license_doc' => $v->getLicenseDoc(),
             // Lifecycle flags. `approved` gates the Approved/Pending badge
             // and MUST track the lifecycle `status` (what the stores list,
-            // the status filter, and approve/suspend all use) — not the
+            // the status filter, and approve/suspend all use), not the
             // legacy is_store_approved boolean, which migrated vendors carry
             // as true even while status is still 'pending', so the two
             // surfaces disagreed. `store_status`/`is_active` both feed the
@@ -178,14 +178,14 @@ final class VendorSerializer
      *   - POST /v3/vendor/onboarding/submit (creation response)
      *   - GET /v3/vendor/onboarding/status  (read response)
      *
-     * Returns vendor info as the vendor user sees it — their own
+     * Returns vendor info as the vendor user sees it, their own
      * stores, with status visibility so they understand whether
      * they're still pending or have been approved/suspended. Omits
      * admin-only fields (commission_rate, legacy_vendor_id) that
      * the vendor user has no business reason to see.
      *
      * Does NOT include contact_email/contact_phone of the store
-     * because the vendor user already knows those — they submitted
+     * because the vendor user already knows those, they submitted
      * them. The shape is informational, not a re-render of submitted
      * data.
      *
@@ -201,7 +201,7 @@ final class VendorSerializer
             'logo_url' => $v->getLogoUrl(),
             'cover_image_url' => $v->getCoverImageUrl(),
             'legal_name' => $v->getLegalName(),
-            // Lifecycle status — the key visibility the vendor user
+            // Lifecycle status, the key visibility the vendor user
             // needs from this shape. status_reason surfaces admin
             // notes (e.g. "Need to clarify product authenticity"
             // during pending review, or "Quality complaints from
@@ -237,7 +237,7 @@ final class VendorSerializer
      * Matches the FeaturedVendor + FeaturedVendorProduct interfaces
      * defined in apps/web/src/app/features/catalog/designer-card.ts.
      * Any field-name change here is a breaking change for that
-     * contract — keep them in sync.
+     * contract, keep them in sync.
      *
      * Why this method takes pre-computed data
      * ========================================
@@ -259,7 +259,7 @@ final class VendorSerializer
     ): array {
         return [
             'slug' => $vendor->getSlug(),
-            // Legacy store id — apps/web navigates featured vendors by slug,
+            // Legacy store id, apps/web navigates featured vendors by slug,
             // but apps/mobile's trending-stores cards open the store + its
             // reviews via the by-legacy-id vendor endpoints. Additive: web
             // ignores it. Null for vendors with no legacy row.
@@ -267,7 +267,7 @@ final class VendorSerializer
             'name' => $vendor->getName(),
             // Logo + cover for the rich hero-image store card (matches the
             // mobile vendor card). Getters already used by publicShape /
-            // directoryShape; additive here — apps/web falls back to a product
+            // directoryShape; additive here, apps/web falls back to a product
             // image when cover is null, so this degrades gracefully.
             'logo_url' => $vendor->getLogoUrl(),
             'cover_image_url' => $vendor->getCoverImageUrl(),
@@ -298,7 +298,7 @@ final class VendorSerializer
     }
 
     /**
-     * Store DIRECTORY card shape (Stores H2.B) — a superset of
+     * Store DIRECTORY card shape (Stores H2.B), a superset of
      * {@see publicShape} (so existing /v3/vendors consumers keep every
      * field they read) PLUS the rating aggregate + embedded product
      * thumbnails the rich store card renders. Product mapping matches

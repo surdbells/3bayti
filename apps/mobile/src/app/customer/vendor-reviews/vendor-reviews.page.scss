@@ -1,5 +1,5 @@
 /* ============================================================================
-   Vendor reviews page — M2 redesign (M23 Tier 3)
+   Vendor reviews page, M2 redesign (M23 Tier 3)
    ============================================================================ */
 
 ion-content.page-bg {
@@ -87,7 +87,7 @@ ion-content.page-bg {
   }
 
   &--filled {
-    color: #d6a800;       /* gold star — same accent literal used elsewhere */
+    color: #d6a800;       /* gold star, same accent literal used elsewhere */
   }
 }
 
@@ -310,7 +310,7 @@ ion-content.page-bg {
 }
 
 /* ============================================================================
-   Write review sheet (rendered via <ax-bottom-sheet> using inline title prop —
+   Write review sheet (rendered via <ax-bottom-sheet> using inline title prop -
    no per-page modal chrome SCSS needed)
    ============================================================================ */
 

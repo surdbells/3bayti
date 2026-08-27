@@ -1,4 +1,4 @@
-/* Visible OTA update sheet — a bottom sheet that slides up while a bundle
+/* Visible OTA update sheet, a bottom sheet that slides up while a bundle
    downloads (progress) and when it's ready (restart/later). Theme-aware; the
    scrim dims the app behind but tapping it dismisses (non-trapping). */
 :host {

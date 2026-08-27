@@ -8,12 +8,12 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Per-device outcome of a broadcast — backs the recipient drill-down and
+ * Per-device outcome of a broadcast, backs the recipient drill-down and
  * the "resend to failed" flow.
  *
  * status: pending (row created, not yet attempted) -> sent (FCM accepted)
  * or failed (FCM rejected; error_kind carries the reason). Only the
- * last 6 chars of the token are stored (token_suffix) — never the secret.
+ * last 6 chars of the token are stored (token_suffix), never the secret.
  */
 #[ORM\Entity(repositoryClass: NotificationBroadcastRecipientRepository::class)]
 #[ORM\Table(name: 'notification_broadcast_recipients')]

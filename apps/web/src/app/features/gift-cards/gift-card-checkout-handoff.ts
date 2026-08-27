@@ -18,7 +18,7 @@ export function markGiftCardCheckout(orderReference: string): void {
   try {
     sessionStorage.setItem(KEY, orderReference);
   } catch {
-    /* sessionStorage unavailable (private mode) — non-fatal: the buyer
+    /* sessionStorage unavailable (private mode), non-fatal: the buyer
        still completes payment and finds the card under My Gift Cards;
        only the convenience auto-redirect is skipped. */
   }

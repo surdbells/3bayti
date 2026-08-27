@@ -8,7 +8,7 @@ namespace Bayti\Api\Notification;
  * Thrown when the underlying mail transport fails (network error,
  * provider 4xx/5xx, invalid recipient, etc.).
  *
- * Callers MUST NOT block their action on this — log + continue.
+ * Callers MUST NOT block their action on this, log + continue.
  * A failed order confirmation email is annoying for the customer
  * but the order itself is still valid.
  *

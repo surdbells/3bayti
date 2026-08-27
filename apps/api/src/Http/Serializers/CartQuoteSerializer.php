@@ -14,7 +14,7 @@ use Bayti\Api\Domain\Promo\PromoResolution;
  *
  * Mobile/web consumer surfaces use this to render the checkout
  * summary BEFORE the user commits to /v3/checkout/initiate. The
- * server is authoritative on every number — no client math.
+ * server is authoritative on every number, no client math.
  *
  * Why a separate serializer instead of extending CartSerializer
  * --------------------------------------------------------------
@@ -36,16 +36,16 @@ use Bayti\Api\Domain\Promo\PromoResolution;
  * ----------------------------------------------
  * gross = subtotal + delivery_fee
  * net   = gross - discount
- * total = max(net, 0.00)   — discount can't make total negative
+ * total = max(net, 0.00)  , discount can't make total negative
  *
  * Same bcmath ops + same floor-at-zero rule as Order::computeTotal
- * — keeps the quote and the eventual placed order in lock-step.
+ *, keeps the quote and the eventual placed order in lock-step.
  */
 final class CartQuoteSerializer
 {
     // NOTE: $delivery is a REQUIRED dependency (no `= new DeliveryFeeCalculator()`
     // default). A `new` object default cannot be compiled by PHP-DI in prod
-    // (enableCompilation) — it throws "An object was found but objects cannot
+    // (enableCompilation), it throws "An object was found but objects cannot
     // be compiled". The class is only ever resolved via the container
     // (QuoteCartController dep), and DeliveryFeeCalculator is a no-arg concrete
     // class, so autowiring constructs and injects it cleanly. This mirrors

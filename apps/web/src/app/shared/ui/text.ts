@@ -1,16 +1,16 @@
 import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 
 /**
- * Text — body copy primitive.
+ * Text, body copy primitive.
  *
  * Renders as <p> by default, or <span> when `inline` is set (for inline
  * text inside other elements where a block-level <p> would break layout).
  *
  * Sizes:
- *   xs    12px  — captions, fine print
- *   sm    13px  — secondary metadata
- *   base  15px  — default body text
- *   lg    17px  — lede paragraphs, callouts
+ *   xs    12px , captions, fine print
+ *   sm    13px , secondary metadata
+ *   base  15px , default body text
+ *   lg    17px , lede paragraphs, callouts
  *
  * Tones:
  *   default     primary text color (high-contrast)

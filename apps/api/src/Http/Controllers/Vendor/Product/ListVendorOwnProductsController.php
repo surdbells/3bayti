@@ -23,7 +23,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/vendor/products
  *
- * The authenticated vendor's own product catalog — ALL states (draft,
+ * The authenticated vendor's own product catalog, ALL states (draft,
  * inactive, out-of-stock), not just storefront-active. Replaces the
  * portal's prior use of GET /vendors/by-legacy-id/{id}/products, which
  * resolved by legacy *vendor* id and 404'd when the session carried the

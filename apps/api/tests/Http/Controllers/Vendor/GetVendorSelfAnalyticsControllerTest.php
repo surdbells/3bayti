@@ -27,7 +27,7 @@ use Psr\Http\Message\ResponseInterface;
  *   - ?vendor_id pointing to a store the user owns: that one
  *   - ?vendor_id pointing to a store the user doesn't own: 404
  *
- * No audit emission tested — vendors viewing own data is non-
+ * No audit emission tested, vendors viewing own data is non-
  * auditable (matches the X.14 self-metrics pattern).
  */
 #[CoversClass(GetVendorSelfAnalyticsController::class)]
@@ -45,7 +45,7 @@ final class GetVendorSelfAnalyticsControllerTest extends HttpTestCase
     }
 
     // =================================================================
-    // Single-store user — no vendor_id needed
+    // Single-store user, no vendor_id needed
     // =================================================================
 
     #[Test]

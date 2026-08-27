@@ -181,7 +181,7 @@ final class OrderEmailTemplateRendererLocaleTest extends TestCase
             EmailTemplate::DISPUTE_OPENED_ADMIN,
             $order,
             $extra,
-            'ar',  // Caller asks for Arabic — admin endpoint MUST ignore
+            'ar',  // Caller asks for Arabic, admin endpoint MUST ignore
         );
 
         // Subject is English (the English template's known prefix)

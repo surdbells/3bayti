@@ -1,5 +1,5 @@
 :host {
-  /* M6c — local CSS var overrides retargeted to M2 tokens.
+  /* M6c, local CSS var overrides retargeted to M2 tokens.
      The previous values were warm-but-off-brand peach/cream; the new
      values defer to M2's semantic tokens so this page picks up the
      locked palette. --accent kept as a brown-pink for any legacy
@@ -12,17 +12,17 @@
 }
 
 /* ============================================================
-   M6c — Header redesign: beige + brown + Poltawski editorial
+   M6c, Header redesign: beige + brown + Poltawski editorial
    ============================================================ */
 
-/* Header outer block — beige background, defers Ionic toolbar bg
+/* Header outer block, beige background, defers Ionic toolbar bg
    override below. */
 .m6-header {
   background: var(--ax-color-bg-toolbar);  /* #efe2cf */
   border-bottom: 0.5px solid var(--ax-color-border-subtle);
 }
 
-/* Toolbar — reuses .toolbar class. Override its bg to inherit
+/* Toolbar, reuses .toolbar class. Override its bg to inherit
    the header's beige (so the toolbar visually merges into the
    header). The previous styling forced white with a faint border. */
 .toolbar {
@@ -58,7 +58,7 @@
   }
 }
 
-/* Avatar — replaces former <tui-avatar>. Round 40px image with
+/* Avatar, replaces former <tui-avatar>. Round 40px image with
    warm-brown fallback when no avatar is set. */
 .m6-avatar {
   width: 40px;
@@ -86,7 +86,7 @@
   }
 }
 
-/* Search bar — non-input pseudo-input that opens the real search
+/* Search bar, non-input pseudo-input that opens the real search
    page on click. The actual <tui-textfield> was never an editable
    input here either; clicking it called user_search() which
    navigated away. So this is now a styled clickable pill, not a
@@ -119,9 +119,9 @@
   }
 }
 
-/* Category chips — white pill buttons with subtle border, brown
+/* Category chips, white pill buttons with subtle border, brown
    text. Replaces the previous .chip styling for the new HTML;
-   icons kept (the spec was amended during M6c implementation —
+   icons kept (the spec was amended during M6c implementation -
    with 7 categories, icon recognition aids scanning). */
 .categories {
   /* The .h-scroll utility already handles horizontal scroll */
@@ -167,7 +167,7 @@
     }
   }
 
-  /* Discounted (on-sale) shortcut — filled accent chip, deliberately
+  /* Discounted (on-sale) shortcut, filled accent chip, deliberately
      distinct from the outlined category chips. Leads the row. */
   .m6-chip--discounted {
     background: var(--ax-color-bg-danger);
@@ -183,7 +183,7 @@
       font-weight: 600;
     }
 
-    /* Product-count badge — white pill on the red chip. */
+    /* Product-count badge, white pill on the red chip. */
     .m6-chip-count {
       display: inline-flex;
       align-items: center;
@@ -206,7 +206,7 @@
   }
 }
 
-/* Search wrap container — beige bg flows under it from header */
+/* Search wrap container, beige bg flows under it from header */
 .search-wrap {
   background: transparent;
 
@@ -238,7 +238,7 @@
 
 
 /* ============================================================
-   M6e — Vendor featured card (hero-led)
+   M6e, Vendor featured card (hero-led)
    ============================================================ */
 
 .m6e-featured-card {
@@ -300,7 +300,7 @@
   flex-direction: column;
   gap: 3px;
 
-  /* The gradient itself — a separate pseudo-element on the parent
+  /* The gradient itself, a separate pseudo-element on the parent
      hero that fades from transparent to dark. Done as ::after on
      hero, not on this overlay, so the overlay text isn't affected. */
 }
@@ -513,7 +513,7 @@
   color: var(--ax-color-text-primary);
 }
 
-/* The "add" affordance for each wishlist label — small brown
+/* The "add" affordance for each wishlist label, small brown
    plus icon in a muted-beige circle. Less aggressive than a
    full-brown circle would be in a list of repeating items. */
 .m6f-wishlist-add {
@@ -546,7 +546,7 @@
    Preserved utilities used by the current redesigned HTML
    ============================================================ */
 
-/* Image-loading skeleton — used by .m6d-img-skeleton,
+/* Image-loading skeleton, used by .m6d-img-skeleton,
    .m6e-featured-hero-skeleton, .m6e-featured-thumb-skeleton via
    the .skeleton-shimmer child element. */
 /* M44: shimmer pattern in global.scss; this page overrides the opacity. */
@@ -554,7 +554,7 @@
   --skeleton-shimmer-color: rgba(255, 255, 255, 0.30);
 }
 
-/* Page content background — used by <ion-content class="home-bg">
+/* Page content background, used by <ion-content class="home-bg">
    in account.page.html. Defers to the M2 canvas token. */
 ion-content.home-bg {
   --background: var(--ax-color-bg-canvas);
@@ -601,7 +601,7 @@ ion-modal ion-content {
 // warm gold-tinted wash, a thin gold hairline border, and a gentle
 // shadow. Gold accents (#D4AF37) read as tasteful trim against dark,
 // legible text. Honest copy: there is no automatic delivery to the
-// recipient — the buyer shares the code.
+// recipient, the buyer shares the code.
 
 .gift-promo {
   position: relative;
@@ -619,7 +619,7 @@ ion-modal ion-content {
     0 6px 18px rgba(120, 84, 0, 0.10),
     inset 0 1px 0 rgba(255, 255, 255, 0.70);
 
-  // Subtle dismiss (X) — sits above the decorative layers, top-right.
+  // Subtle dismiss (X), sits above the decorative layers, top-right.
   &__close {
     position: absolute;
     top: 8px;
@@ -645,7 +645,7 @@ ion-modal ion-content {
     }
   }
 
-  // Compact tappable header — always visible (medallion + label + chevron).
+  // Compact tappable header, always visible (medallion + label + chevron).
   &__toggle {
     position: relative;
     z-index: 2;
@@ -670,7 +670,7 @@ ion-modal ion-content {
     gap: 2px;
   }
 
-  // Balance inline in the collapsed header — one extra text line, no band.
+  // Balance inline in the collapsed header, one extra text line, no band.
   &__balance {
     margin-top: 2px;
     font-size: 12px;
@@ -747,7 +747,7 @@ ion-modal ion-content {
     transform: rotate(180deg);
   }
 
-  // Expanded detail — shown below the header when expanded.
+  // Expanded detail, shown below the header when expanded.
   &__body {
     position: relative;
     z-index: 2;
@@ -770,7 +770,7 @@ ion-modal ion-content {
     pointer-events: none;
   }
 
-  // Soft warm glow behind the medallion — kept subtle on the light card.
+  // Soft warm glow behind the medallion, kept subtle on the light card.
   &__glow {
     position: absolute;
     top: -40%;
@@ -795,7 +795,7 @@ ion-modal ion-content {
     &--2 { bottom: 14px; right: 38px; opacity: 0.4; }
   }
 
-  // Gold gift medallion — circular, gradient-gold, embossed look. Reads as
+  // Gold gift medallion, circular, gradient-gold, embossed look. Reads as
   // a tasteful warm-gold disc against the light card.
   &__medallion {
     position: relative;
@@ -852,14 +852,14 @@ ion-modal ion-content {
     color: rgba(60, 44, 16, 0.66);
   }
 
-  // Three equal action tiles — Buy / Redeem / My Cards.
+  // Three equal action tiles, Buy / Redeem / My Cards.
   &__actions {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
   }
 
-  // Light pill/tile button — soft ivory fill, thin gold border, gold icon
+  // Light pill/tile button, soft ivory fill, thin gold border, gold icon
   // in a tinted disc, dark legible label. Consistent with the light card.
   &__tile {
     display: flex;
@@ -907,7 +907,7 @@ ion-modal ion-content {
   }
 }
 
-// Narrow phones — shrink the medallion + heading and tighten the tiles
+// Narrow phones, shrink the medallion + heading and tighten the tiles
 // so the three actions keep room without crowding.
 @media (max-width: 340px) {
   .gift-promo {
@@ -923,7 +923,7 @@ ion-modal ion-content {
   }
 }
 
-/* Header Messages button — unread badge overlay. The badge floats over the
+/* Header Messages button, unread badge overlay. The badge floats over the
    top-end corner of the message-square icon, mirroring the cart count badge. */
 .m6-msg-btn {
   position: relative;
@@ -956,7 +956,7 @@ ion-modal ion-content {
   inset-inline-end: 16px;
   /* Flex column-reverse: the first DOM child (Messages, always shown) sits at
      the bottom anchor; the conditional Dashboard FAB stacks above it. When the
-     Dashboard FAB is @if-removed there is no empty slot — Messages stays put. */
+     Dashboard FAB is @if-removed there is no empty slot, Messages stays put. */
   display: flex;
   flex-direction: column-reverse;
   align-items: center;
@@ -969,7 +969,7 @@ ion-modal ion-content {
     --color: var(--ax-color-text-on-brand);
     --box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
     --border-radius: 50%;
-    width: 40px;   /* 56 * 0.7 — reduced 30% */
+    width: 40px;   /* 56 * 0.7, reduced 30% */
     height: 40px;
     margin: 0;     /* the flex gap handles spacing */
   }

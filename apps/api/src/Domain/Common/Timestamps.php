@@ -12,7 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * `created_at` is set in the entity's constructor; `updated_at` is
  * automatically refreshed on every UPDATE via the @PreUpdate hook.
- * Both are stored as TIMESTAMPTZ (timezone-aware) — the only
+ * Both are stored as TIMESTAMPTZ (timezone-aware), the only
  * defensible choice for a multi-region marketplace where customers
  * and vendors aren't necessarily in the same timezone.
  *

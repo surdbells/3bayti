@@ -98,7 +98,7 @@ final class CurrencyObservabilityIntegrationTest extends HttpTestCase
 
         self::assertSame(200, $response->getStatusCode());
 
-        // Conversion still succeeded — sticky last-known rate
+        // Conversion still succeeded, sticky last-known rate
         $body = $this->jsonBody($response);
         self::assertSame('USD', $body['data'][0]['price']['currency']);
 
@@ -123,7 +123,7 @@ final class CurrencyObservabilityIntegrationTest extends HttpTestCase
 
         self::assertSame(200, $response->getStatusCode());
 
-        // Falls back to AED — single-amount shape
+        // Falls back to AED, single-amount shape
         $body = $this->jsonBody($response);
         $price = $body['data'][0]['price'];
         self::assertSame('AED', $price['currency']);
@@ -158,7 +158,7 @@ final class CurrencyObservabilityIntegrationTest extends HttpTestCase
         self::assertSame('AED', $price['currency']);
         self::assertArrayNotHasKey('source_amount', $price);
 
-        // No warnings — the AED short-circuit avoids even loading
+        // No warnings, the AED short-circuit avoids even loading
         // the rates table, so we don't see the stale USD rate
         self::assertCount(0, $this->logger->findByMessage('fx_rate.stale'));
         self::assertCount(0, $this->logger->findByMessage('fx_rate.missing'));
@@ -212,7 +212,7 @@ final class CurrencyObservabilityIntegrationTest extends HttpTestCase
         );
         $this->bind(EntityManagerInterface::class, $em);
 
-        // Real services — autowired via the container
+        // Real services, autowired via the container
         $this->bind(CurrencyConversionService::class,
             new CurrencyConversionService($em, $this->logger));
         $this->bind(ProductSerializer::class,

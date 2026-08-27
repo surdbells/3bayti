@@ -33,7 +33,7 @@ describe('loadPasswordScorer', () => {
     const scorer = await loadPasswordScorer();
     if (scorer === null) return;
 
-    /* Length and entropy together — zxcvbn cares about both. */
+    /* Length and entropy together, zxcvbn cares about both. */
     expect(scorer('correct-horse-battery-staple').score).toBeGreaterThanOrEqual(3);
     expect(scorer('xK9$mPq#L7nT@2vR8wYf').score).toBeGreaterThanOrEqual(3);
   });

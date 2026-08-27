@@ -20,7 +20,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * Vendor message inbox — the vendor read-side of admin→vendor direct
+ * Vendor message inbox, the vendor read-side of admin→vendor direct
  * messages.
  *
  *   GET  /v3/vendor/messages              list (paginated, + unread count)

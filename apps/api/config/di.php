@@ -32,7 +32,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  *
  * Most controllers/services are autowired (PHP-DI inspects constructors
  * and resolves type-hinted dependencies automatically). We only add
- * explicit factories here when a class needs special construction —
+ * explicit factories here when a class needs special construction -
  * e.g. database connections, third-party SDK clients.
  *
  * Keep this file as the single source of truth for "how does X get
@@ -49,7 +49,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  * ----------------
  * PHP-DI's compiled-container mode (enabled when APP_ENV=prod) generates
  * a static PHP class containing serialised factories. Closures with
- * `use ($foo)` cannot be serialised — they hold runtime variable state
+ * `use ($foo)` cannot be serialised, they hold runtime variable state
  * that compiler can't represent in source code. Reading from the
  * container instead works identically in dev and prod and works under
  * compilation. See PHP-DI docs:
@@ -58,9 +58,9 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 /**
  * Resolve Firebase service-account credentials for FCM from env, in
  * precedence order:
- *   1. FCM_SERVICE_ACCOUNT_JSON  — the full service-account JSON inline
- *   2. FCM_SERVICE_ACCOUNT_FILE  — a path to the service-account JSON
- *   3. FCM_PROJECT_ID / FCM_CLIENT_EMAIL / FCM_PRIVATE_KEY — the three
+ *   1. FCM_SERVICE_ACCOUNT_JSON , the full service-account JSON inline
+ *   2. FCM_SERVICE_ACCOUNT_FILE , a path to the service-account JSON
+ *   3. FCM_PROJECT_ID / FCM_CLIENT_EMAIL / FCM_PRIVATE_KEY, the three
  *      fields individually
  *
  * Returns [projectId, clientEmail, privateKey]; any unresolved field is
@@ -103,7 +103,7 @@ if (!function_exists('loadFcmServiceAccount')) {
         $email = (string) ($_ENV['FCM_CLIENT_EMAIL'] ?? '') ?: $email;
         $key = (string) ($_ENV['FCM_PRIVATE_KEY'] ?? '') ?: $key;
 
-        // Env-stored private keys often have literal "\n" — normalise to
+        // Env-stored private keys often have literal "\n", normalise to
         // real newlines so the PEM parses.
         if ($key !== '') {
             $key = str_replace('\n', "\n", $key);
@@ -146,7 +146,7 @@ return [
     },
 
     /**
-     * The Doctrine EntityManager — main entry point for DB work.
+     * The Doctrine EntityManager, main entry point for DB work.
      * Slim controllers and services type-hint EntityManagerInterface
      * and PHP-DI provides this concrete instance.
      */
@@ -158,14 +158,14 @@ return [
 
         // Automatic audit trail: record create/update/delete for entity
         // mutations (customer + vendor self-service actions that have no explicit
-        // AuditEmitter call). Best-effort — a wiring failure must not stop the EM.
+        // AuditEmitter call). Best-effort, a wiring failure must not stop the EM.
         try {
             $em->getEventManager()->addEventListener(
                 [\Doctrine\ORM\Events::onFlush, \Doctrine\ORM\Events::postFlush],
                 $c->get(\Bayti\Api\Domain\Audit\EntityAuditListener::class),
             );
         } catch (\Throwable) {
-            // Listener unavailable — the app still runs, just without auto-audit.
+            // Listener unavailable, the app still runs, just without auto-audit.
         }
 
         return $em;
@@ -187,19 +187,19 @@ return [
     ResponseFactoryInterface::class => static fn (): ResponseFactoryInterface => new ResponseFactory(),
 
     // -------------------------------------------------------------------
-    // Auth — JWT settings + service + middlewares
+    // Auth, JWT settings + service + middlewares
     // -------------------------------------------------------------------
 
     /**
      * JwtSettings is built from env vars at container time. The
      * factory throws if JWT_SECRET is missing or too short, which
-     * is exactly what we want — the app should refuse to start
+     * is exactly what we want, the app should refuse to start
      * with a weak signing key.
      */
     JwtSettings::class => static function (): JwtSettings {
         $secret = $_ENV['JWT_SECRET'] ?? '';
         if ($secret === '' || strlen($secret) < 32) {
-            // Specific dev guidance — a fresh checkout with no .env
+            // Specific dev guidance, a fresh checkout with no .env
             // would hit this. Helpful error rather than 'invalid
             // argument: shorter than 32'.
             throw new \RuntimeException(
@@ -214,7 +214,7 @@ return [
             // Refresh tokens ROTATE on every use (RefreshController), so this is
             // a SLIDING window: an active user's session keeps extending and
             // effectively never lapses. Default raised to 1 year (was 7 days)
-            // so even an infrequent user isn't logged out — the session ends on
+            // so even an infrequent user isn't logged out, the session ends on
             // manual logout or a real auth rejection, not from sitting idle.
             // Override with JWT_REFRESH_TOKEN_TTL (seconds).
             refreshTtlSeconds: (int) ($_ENV['JWT_REFRESH_TOKEN_TTL'] ?? 31536000),
@@ -227,15 +227,15 @@ return [
     OptionalAuthMiddleware::class => \DI\autowire(),
 
     // -------------------------------------------------------------------
-    // Social sign-in — Firebase ID-token verifier + SocialIdentity repo
+    // Social sign-in, Firebase ID-token verifier + SocialIdentity repo
     // -------------------------------------------------------------------
 
     /**
-     * SocialIdentityRepository — like every Doctrine repository, it has
+     * SocialIdentityRepository, like every Doctrine repository, it has
      * a required $entityName constructor arg PHP-DI can't guess, so we
      * resolve it through $em->getRepository() at factory time (the
      * established repo pattern in this file). NEVER inject this concrete
-     * repo into an autowired service — services take EntityManagerInterface
+     * repo into an autowired service, services take EntityManagerInterface
      * and pull the repo lazily.
      */
     \Bayti\Api\Domain\User\SocialIdentityRepository::class => static function (
@@ -249,7 +249,7 @@ return [
     },
 
     /**
-     * FirebaseIdTokenVerifier — non-autowirable deps (a PSR-6 cache pool,
+     * FirebaseIdTokenVerifier, non-autowirable deps (a PSR-6 cache pool,
      * a Guzzle client, and a scalar project id), so we build it by hand.
      * Modelled on the FcmHttpV1Sender factory + loadFcmServiceAccount.
      *
@@ -280,7 +280,7 @@ return [
             directory: $c->get('app.rootPath') . '/var/cache/firebase',
         );
 
-        // Bounded timeouts — the cert fetch must never hang a login.
+        // Bounded timeouts, the cert fetch must never hang a login.
         $http = new GuzzleClient([
             'timeout' => 5,
             'connect_timeout' => 3,
@@ -293,26 +293,26 @@ return [
         );
     },
 
-    // M2.1 — AdminAuthMiddleware. Takes ResponseFactory + Logger;
+    // M2.1, AdminAuthMiddleware. Takes ResponseFactory + Logger;
     // both autowire-resolvable.
     \Bayti\Api\Http\Middleware\AdminAuthMiddleware::class => \DI\autowire(),
     \Bayti\Api\Http\Middleware\VendorAuthMiddleware::class => \DI\autowire(),
 
-    // M3.1.7-C — Vendor order surface controllers
+    // M3.1.7-C, Vendor order surface controllers
     \Bayti\Api\Http\Controllers\Vendor\Order\ListVendorOrdersController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\Order\TransitionVendorOrderItemController::class => \DI\autowire(),
 
-    // M3.2.X.6-D — Vendor self-serve onboarding controllers
+    // M3.2.X.6-D, Vendor self-serve onboarding controllers
     \Bayti\Api\Http\Controllers\Vendor\Onboarding\SubmitOnboardingController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\Onboarding\GetOnboardingStatusController::class => \DI\autowire(),
 
-    // M3.1.7-F — Cancel order service + admin/customer controllers
+    // M3.1.7-F, Cancel order service + admin/customer controllers
     \Bayti\Api\Domain\Order\CancelOrderService::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\CancelOrderController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Order\CancelOrderController::class => \DI\autowire(),
 
-    // M3.2.X.18 — Returns request flow
+    // M3.2.X.18, Returns request flow
     //   X.18-B: Flysystem-backed photo storage service
     //   X.18-C: Eligibility + refund calculator services
     //   X.18-D: Customer endpoints (5)
@@ -321,7 +321,7 @@ return [
     \Bayti\Api\Domain\Order\ReturnPhotoStorageService::class => \DI\autowire(),
     // ReturnRequestEligibilityService is bound via factory (not
     // autowire) because its OrderReturnRequestRepository dependency
-    // can't be autowired — Doctrine repositories take an
+    // can't be autowired, Doctrine repositories take an
     // EntityManager + ClassMetadata in their constructor, and
     // ClassMetadata has a required $name parameter PHP-DI can't
     // guess. Pulling the repo through $em->getRepository() at
@@ -345,11 +345,11 @@ return [
     \Bayti\Api\Http\Controllers\Order\GetReturnController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Order\CancelReturnController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Order\ServeReturnPhotoController::class => \DI\autowire(),
-    // X.18-E — Vendor endpoints
+    // X.18-E, Vendor endpoints
     \Bayti\Api\Http\Controllers\Vendor\Order\ListVendorReturnsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorReturnController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\Order\ConfirmReceiptController::class => \DI\autowire(),
-    // X.18-F — Admin endpoints
+    // X.18-F, Admin endpoints
     \Bayti\Api\Http\Controllers\Admin\Order\ListAdminReturnsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\GetAdminReturnController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\ApproveReturnController::class => \DI\autowire(),
@@ -357,13 +357,13 @@ return [
     \Bayti\Api\Http\Controllers\Admin\Order\MarkPickedUpController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\RecordReturnRefundController::class => \DI\autowire(),
 
-    // M3.1.7-G — Dispute persistence + admin endpoints
+    // M3.1.7-G, Dispute persistence + admin endpoints
     \Bayti\Api\Http\Serializers\DisputeSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Dispute\ListDisputesController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Dispute\GetDisputeController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Dispute\ResolveDisputeController::class => \DI\autowire(),
 
-    // M3.1.7-H — Email notifications (mailer + template renderer + orchestrator)
+    // M3.1.7-H, Email notifications (mailer + template renderer + orchestrator)
     //
     // MailerInterface binding selects the implementation based on
     // environment:
@@ -410,15 +410,15 @@ return [
 
     \Bayti\Api\Notification\OrderEmailTemplateRenderer::class => \DI\autowire(),
 
-    // M3.2.X.7-A — LocaleResolver autowired for OrderNotificationService.
+    // M3.2.X.7-A, LocaleResolver autowired for OrderNotificationService.
     // Service object with no dependencies; safe to autowire.
     \Bayti\Api\Notification\LocaleResolver::class => \DI\autowire(),
 
-    // M3.2.X.8-B — PromoCodeResolverService. Holds an optional EM for
+    // M3.2.X.8-B, PromoCodeResolverService. Holds an optional EM for
     // lazy repository resolution per locked pattern #1; direct-
     // injection paths for tests are also accepted via the constructor.
     // Autowiring works because the constructor parameters all have
-    // null defaults — DI passes null for the repo overrides, EM is
+    // null defaults, DI passes null for the repo overrides, EM is
     // resolved through the existing EntityManagerInterface binding.
     \Bayti\Api\Domain\Promo\PromoCodeResolverService::class => static function (
         ContainerInterface $c,
@@ -467,7 +467,7 @@ return [
 
     // PUBLIC account + data deletion request controller. Factory-bound
     // (not autowired) because the $adminRecipients constructor param is a
-    // plain array parsed from ADMIN_NOTIFICATION_EMAILS — PHP-DI can't
+    // plain array parsed from ADMIN_NOTIFICATION_EMAILS, PHP-DI can't
     // autowire a scalar/array. Mirrors the SubmitVendorApplicationController
     // deps otherwise. NO constructor defaults, NO use() closures →
     // compiled-container safe (env read from $_ENV inside the factory).
@@ -496,11 +496,11 @@ return [
 
     // ── Gift-card recipient delivery (email + SMS) ────────────────────
     //
-    // Renderer is a pure service — safe to autowire.
+    // Renderer is a pure service, safe to autowire.
     \Bayti\Api\Notification\GiftCardEmailTemplateRenderer::class => \DI\autowire(),
 
     // SMS sender selection (env-gated). Defaults to NullSmsSender so the
-    // container ALWAYS boots — even in production WITHOUT SMS config —
+    // container ALWAYS boots, even in production WITHOUT SMS config -
     // and gift-card SMS delivery simply no-ops + logs. The real
     // MessageCentral sender is chosen ONLY when the operator explicitly
     // opts in via MESSAGECENTRAL_SMS_ENABLED=true AND the shared
@@ -546,7 +546,7 @@ return [
 
     // Delivery orchestrator. Factory-bound (not autowired) because its
     // logger param has a null-coalesced default and we want an explicit
-    // container logger — also keeps it consistent with the other
+    // container logger, also keeps it consistent with the other
     // notification services in this block.
     \Bayti\Api\Notification\GiftCardDeliveryService::class => static function (
         ContainerInterface $c,
@@ -560,7 +560,7 @@ return [
         );
     },
 
-    // M3.2.Z.4-C — Push notifications (sender + orchestrator).
+    // M3.2.Z.4-C, Push notifications (sender + orchestrator).
     //
     // PushSenderInterface binding selects the implementation based on
     // environment, mirroring the MailerInterface block:
@@ -621,7 +621,7 @@ return [
         );
     },
 
-    // Marketing-push scheduled jobs — push notification_log ledger.
+    // Marketing-push scheduled jobs, push notification_log ledger.
     // Resolves the DBAL Connection from the EntityManager so push log
     // rows (channel='push', user_id, nullable recipient) can be written
     // with raw SQL without remapping the NotificationLog entity.
@@ -637,7 +637,7 @@ return [
     // Automated payment reminders for pending/failed orders
     \Bayti\Api\Domain\Order\PendingOrderReminderFinder::class => \DI\autowire(),
 
-    // M3.2.X.11 — Cart abandonment recovery
+    // M3.2.X.11, Cart abandonment recovery
     \Bayti\Api\Domain\Cart\CartAbandonmentFinder::class => \DI\autowire(),
     \Bayti\Api\Notification\CartEmailTemplateRenderer::class => \DI\autowire(),
     \Bayti\Api\Notification\UnsubscribeTokenIssuer::class => \DI\autowire(),
@@ -656,23 +656,23 @@ return [
         );
     },
 
-    // M3.1.7-D — Admin order surface controllers
+    // M3.1.7-D, Admin order surface controllers
     \Bayti\Api\Http\Controllers\Admin\Order\ListAdminOrdersController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderStatusController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderItemStatusController::class => \DI\autowire(),
 
-    // M3.2.X.17 — Order timeline
+    // M3.2.X.17, Order timeline
     \Bayti\Api\Domain\Order\OrderTimelineBuilder::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\OrderTimelineSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderTimelineController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderTimelineController::class => \DI\autowire(),
 
-    // M3.2.X.4-C — Notification log admin surface
+    // M3.2.X.4-C, Notification log admin surface
     \Bayti\Api\Http\Serializers\NotificationLogSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\NotificationLog\ListNotificationLogsController::class => \DI\autowire(),
 
-    // M3.2.X.8-E — PromoCode admin CRUD surface
+    // M3.2.X.8-E, PromoCode admin CRUD surface
     \Bayti\Api\Http\Serializers\PromoCodeSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\PromoCode\ListPromoCodesController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\PromoCode\GetPromoCodeController::class => \DI\autowire(),
@@ -680,52 +680,52 @@ return [
     \Bayti\Api\Http\Controllers\Admin\PromoCode\UpdatePromoCodeController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\PromoCode\DeletePromoCodeController::class => \DI\autowire(),
 
-    // M3.1.7-E — Refund flow (full + partial)
+    // M3.1.7-E, Refund flow (full + partial)
     \Bayti\Api\Http\Controllers\Admin\Order\RefundOrderController::class => \DI\autowire(),
 
-    // M2.1 — RequestIdMiddleware (added earlier in M1.6.2.B but
+    // M2.1, RequestIdMiddleware (added earlier in M1.6.2.B but
     // listed here for discoverability).
     \Bayti\Api\Http\Middleware\RequestIdMiddleware::class => \DI\autowire(),
     \Bayti\Api\Http\Middleware\CurrencyContextMiddleware::class => \DI\autowire(),
 
-    // M3.2.X.15 — Multi-currency display
+    // M3.2.X.15, Multi-currency display
     \Bayti\Api\Domain\Currency\CurrencyConversionService::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Currency\ListFxRatesController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Currency\UpsertFxRateController::class => \DI\autowire(),
 
-    // M2.1 — Catalog serializers (autowire-friendly, no constructor deps)
+    // M2.1, Catalog serializers (autowire-friendly, no constructor deps)
     \Bayti\Api\Http\Serializers\BrandSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\VendorSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\CategorySerializer::class => \DI\autowire(),
 
-    // M2.1 — Catalog admin controllers (Brand)
+    // M2.1, Catalog admin controllers (Brand)
     \Bayti\Api\Http\Controllers\Admin\Brand\ListBrandsAdminController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Brand\CreateBrandController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Brand\UpdateBrandController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Brand\DeleteBrandController::class => \DI\autowire(),
 
-    // M2.1 — Catalog admin controllers (Vendor)
+    // M2.1, Catalog admin controllers (Vendor)
     \Bayti\Api\Http\Controllers\Admin\Vendor\ListVendorsAdminController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\CreateVendorController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\UpdateVendorController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\DeleteVendorController::class => \DI\autowire(),
 
-    // M3.2.X.6-C — Vendor lifecycle state transition controllers
+    // M3.2.X.6-C, Vendor lifecycle state transition controllers
     \Bayti\Api\Http\Controllers\Admin\Vendor\ApproveVendorController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\SuspendVendorController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\ReactivateVendorController::class => \DI\autowire(),
 
-    // M3.2.X.14 — Vendor performance metrics
+    // M3.2.X.14, Vendor performance metrics
     \Bayti\Api\Domain\Catalog\VendorMetricsCalculator::class => \DI\autowire(),
 
-    // M3.2.X.13 — Vendor analytics dashboard
+    // M3.2.X.13, Vendor analytics dashboard
     \Bayti\Api\Domain\Catalog\VendorAnalyticsCalculator::class => \DI\autowire(),
     \Bayti\Api\Domain\Catalog\VendorDashboardCalculator::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\VendorAnalyticsSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorAnalyticsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfAnalyticsController::class => \DI\autowire(),
 
-    // M3.2.X.12 — Recommendations engine
+    // M3.2.X.12, Recommendations engine
     \Bayti\Api\Domain\Catalog\CoPurchaseAffinityCalculator::class => \DI\autowire(),
     \Bayti\Api\Domain\Catalog\CategoryAffinityCalculator::class => \DI\autowire(),
     \Bayti\Api\Domain\Catalog\RecommendationsService::class => \DI\autowire(),
@@ -739,13 +739,13 @@ return [
     \Bayti\Api\Http\Controllers\Admin\Vendor\ListAdminVendorMetricsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfMetricsController::class => \DI\autowire(),
 
-    // M2.1 — Catalog admin controllers (Category)
+    // M2.1, Catalog admin controllers (Category)
     \Bayti\Api\Http\Controllers\Admin\Category\ListCategoriesAdminController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Category\CreateCategoryController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Category\UpdateCategoryController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Category\DeleteCategoryController::class => \DI\autowire(),
 
-    // M2.1 — Catalog public read controllers
+    // M2.1, Catalog public read controllers
     \Bayti\Api\Http\Controllers\Catalog\ListBrandsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\GetBrandController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\ListVendorsController::class => \DI\autowire(),
@@ -754,10 +754,10 @@ return [
     \Bayti\Api\Http\Controllers\Catalog\ListCategoriesController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\GetCategoryController::class => \DI\autowire(),
 
-    // M2.2 — Product endpoints (Day 2 of 10-day rollout)
+    // M2.2, Product endpoints (Day 2 of 10-day rollout)
     \Bayti\Api\Http\Serializers\ProductSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\CartSerializer::class => \DI\autowire(),
-    // M3.2.X.8-C — Cart-quote price breakdown shape (subtotal + delivery
+    // M3.2.X.8-C, Cart-quote price breakdown shape (subtotal + delivery
     // + discount + total + optional applied_promo block).
     \Bayti\Api\Http\Serializers\CartQuoteSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\OrderSerializer::class => \DI\autowire(),
@@ -766,14 +766,14 @@ return [
     \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\GetSitemapDataController::class => \DI\autowire(),
 
-    // M3.2.X.10 — Faceted search backend
+    // M3.2.X.10, Faceted search backend
     \Bayti\Api\Domain\Catalog\FacetAggregator::class => \DI\autowire(),
     \Bayti\Api\Domain\Catalog\ProductFilterParser::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\FacetsSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\ListFacetsController::class => \DI\autowire(),
 
     // -------------------------------------------------------------------
-    // OTP — provider selection + service
+    // OTP, provider selection + service
     // -------------------------------------------------------------------
 
     /**
@@ -784,7 +784,7 @@ return [
      *
      * Override via SMS_PROVIDER=messagecentral if a developer wants
      * to test against the real CPaaS from their machine. NOT a way
-     * to use in-memory in prod — production refuses if creds are
+     * to use in-memory in prod, production refuses if creds are
      * missing.
      */
     OtpProvider::class => static function (): OtpProvider {
@@ -825,13 +825,13 @@ return [
     },
 
     /**
-     * Local email-OTP provider — generates + emails + persists the
+     * Local email-OTP provider, generates + emails + persists the
      * email-channel OTP. Autowires: EntityManagerInterface (bound
      * above), MailerInterface (NullMailer in dev/test, ZeptoMail in
-     * prod — bound in the notification block), LoggerInterface.
+     * prod, bound in the notification block), LoggerInterface.
      */
     \Bayti\Api\Infrastructure\Otp\LocalEmailOtpProvider::class => \DI\autowire()
-        // Bind the logger explicitly via get() — the constructor has a
+        // Bind the logger explicitly via get(), the constructor has a
         // `LoggerInterface $logger = new NullLogger()` default, and PHP-DI's
         // COMPILED container cannot serialise a literal object default
         // ("objects cannot be compiled"). MessageCentral/InMemory providers
@@ -841,7 +841,7 @@ return [
 
     /**
      * OTP abuse-hardening thresholds, read from env with documented
-     * defaults (0 disables a given check). Plain scalar value object —
+     * defaults (0 disables a given check). Plain scalar value object -
      * the factory returns OtpRateLimitConfig::fromEnv() with no use()
      * capture, so it compiles cleanly under PHP-DI's compiled container.
      */
@@ -850,7 +850,7 @@ return [
     },
 
     /**
-     * OtpService — autowired, but with config + logger bound explicitly.
+     * OtpService, autowired, but with config + logger bound explicitly.
      * The constructor declares `?OtpRateLimitConfig = null` and
      * `?LoggerInterface = null` (null defaults keep the compiled
      * container happy AND let tests construct without them). Autowiring
@@ -862,18 +862,18 @@ return [
         ->constructorParameter('logger', \DI\get(\Psr\Log\LoggerInterface::class)),
 
     // -------------------------------------------------------------------
-    // M1.6.1.C — audit log
+    // M1.6.1.C, audit log
     // -------------------------------------------------------------------
 
     /**
-     * AuditEmitter is autowired — pulls EntityManagerInterface +
+     * AuditEmitter is autowired, pulls EntityManagerInterface +
      * Psr\Log\LoggerInterface from DI. Controllers inject it
      * explicitly to record mutating actions.
      */
     \Bayti\Api\Domain\Audit\AuditEmitter::class => \DI\autowire(),
 
     // -------------------------------------------------------------------
-    // Logger — Monolog instance bound to PSR-3 LoggerInterface
+    // Logger, Monolog instance bound to PSR-3 LoggerInterface
     // -------------------------------------------------------------------
 
     /**
@@ -904,16 +904,16 @@ return [
     },
 
     // -------------------------------------------------------------------
-    // Object storage — Flysystem (M3.2.X.18-B)
+    // Object storage, Flysystem (M3.2.X.18-B)
     // -------------------------------------------------------------------
 
     /**
-     * FilesystemOperator — file/blob storage abstraction.
+     * FilesystemOperator, file/blob storage abstraction.
      *
      * v1 of this binding (M3.2.X.18-B) uses LocalFilesystemAdapter
      * rooted at apps/api/var/uploads/. The same FilesystemOperator
      * surface lets us swap to Cloudflare R2 (S3-compatible; configured
-     * in .env.example as R2_BUCKET) by replacing this factory body —
+     * in .env.example as R2_BUCKET) by replacing this factory body -
      * no consumer-side changes.
      *
      * Why Flysystem and not raw PHP filesystem calls:
@@ -947,7 +947,7 @@ return [
     \League\Flysystem\FilesystemOperator::class => static function (ContainerInterface $c): \League\Flysystem\FilesystemOperator {
         $uploadsRoot = dirname(__DIR__) . '/var/uploads';
         // Public visibility: 0644 files, 0755 dirs, and crucially the
-        // default for NEW directories is PUBLIC (0755) — Flysystem's own
+        // default for NEW directories is PUBLIC (0755), Flysystem's own
         // default is PRIVATE (0700), which makes created subdirectories
         // un-traversable by the web-server user and yields 403s on served
         // uploads. Files inherit 0644 so the web server can read them.
@@ -962,7 +962,7 @@ return [
         return new \League\Flysystem\Filesystem($adapter);
     },
 
-    // Image upload service — product images + vendor logo/cover (Phase 1)
+    // Image upload service, product images + vendor logo/cover (Phase 1)
     // Wraps FilesystemOperator with path-scheme helpers and mime/size
     // validation. Swap to R2: change the FilesystemOperator binding above
     // (AwsS3V3Adapter); this binding needs no change.
@@ -983,16 +983,16 @@ return [
         ->constructorParameter('logger', \DI\get(\Psr\Log\LoggerInterface::class)),
     \Bayti\Api\Http\Serializers\ChatSerializer::class => \DI\autowire(),
 
-    // Gift card repositories (M3.5) — autowire suffices; all deps are
+    // Gift card repositories (M3.5), autowire suffices; all deps are
     // EntityManagerInterface which is already bound above.
     \Bayti\Api\Domain\GiftCard\GiftCardRepository::class => \DI\autowire(),
 
     // -------------------------------------------------------------------
-    // Cache / shared state — Redis in production, in-memory in tests
+    // Cache / shared state, Redis in production, in-memory in tests
     // -------------------------------------------------------------------
 
     /**
-     * KeyValueStore — used for OTP rate-limit counters (M1.6.1.A) and
+     * KeyValueStore, used for OTP rate-limit counters (M1.6.1.A) and
      * future per-IP rate limiting (M2+) and other cross-worker state.
      *
      * Production: REDIS_DSN in .env points to localhost Redis. Format:
@@ -1005,17 +1005,17 @@ return [
      *
      * Local dev: either run Redis locally and set REDIS_DSN, or leave
      * it unset and accept InMemory limitations (no cross-process
-     * sharing — fine for solo dev).
+     * sharing, fine for solo dev).
      */
     KeyValueStore::class => static function (ContainerInterface $c): KeyValueStore {
         $dsn = $_ENV['REDIS_DSN'] ?? '';
 
         if ($dsn === '') {
-            // No Redis configured — fall back to in-memory.
+            // No Redis configured, fall back to in-memory.
             // Production should ALWAYS have REDIS_DSN set; if it
             // doesn't, the symptom (rate limits don't survive worker
             // restarts) will be obvious quickly. Adding a hard fail
-            // here in production is M1.6 followup — for now, we lean
+            // here in production is M1.6 followup, for now, we lean
             // toward "still functional, just less robust" over "won't
             // boot at all if env is missing one var."
             return new InMemoryKeyValueStore();
@@ -1047,11 +1047,11 @@ return [
     },
 
     // -------------------------------------------------------------------
-    // HTTP layer — request validator + error middleware
+    // HTTP layer, request validator + error middleware
     // -------------------------------------------------------------------
 
     /**
-     * symfony/validator instance — set up to read constraints from
+     * symfony/validator instance, set up to read constraints from
      * PHP attributes on DTOs. PHP-DI then injects this into
      * RequestValidator wherever needed.
      */
@@ -1066,13 +1066,13 @@ return [
     /**
      * Outermost JSON error middleware. Catches HttpException + any
      * uncaught Throwable; renders the {error: {...}} envelope.
-     * Debug mode is on for non-prod environments — gives developers
+     * Debug mode is on for non-prod environments, gives developers
      * stack frames in 500 responses without leaking them in prod.
      */
     ApiErrorMiddleware::class => static function (ContainerInterface $c): ApiErrorMiddleware {
         $env = $_ENV['APP_ENV'] ?? 'dev';
 
-        // Resolve logger defensively — if the logger binding fails for
+        // Resolve logger defensively, if the logger binding fails for
         // any reason (filesystem issues writing to var/logs), still
         // construct the error middleware with a NullLogger so the
         // app can boot. We always want error handling available even
@@ -1093,37 +1093,37 @@ return [
     },
 
     // -------------------------------------------------------------------
-    // Controllers — autowired, but listed for discoverability.
+    // Controllers, autowired, but listed for discoverability.
     // -------------------------------------------------------------------
 
     HealthController::class => static function (ContainerInterface $c): HealthController {
         // Explicit factory rather than autowire(). Two reasons:
         //
         // 1. PHP-DI's autowiring for ?Type = null parameters is
-        //    ambiguous — sometimes it injects the type, sometimes
+        //    ambiguous, sometimes it injects the type, sometimes
         //    the default. Explicit construction removes the doubt.
         //
         // 2. Connection construction itself could fail in test or
         //    misconfigured environments (no DB driver available,
-        //    DSN parse error, etc.). We catch that and pass null —
+        //    DSN parse error, etc.). We catch that and pass null -
         //    liveness endpoint still works without DB; readiness
         //    will report 'no connection injected' degraded state.
         $connection = null;
         try {
             $connection = $c->get(Connection::class);
         } catch (\Throwable) {
-            // No DB available — liveness still works; readiness
+            // No DB available, liveness still works; readiness
             // will return degraded with empty checks.
         }
 
-        // KeyValueStore (Redis or InMemory). Same defensive resolution —
+        // KeyValueStore (Redis or InMemory). Same defensive resolution -
         // if the cache binding fails (DSN parse error, etc.), we
         // proceed without a cache check rather than blow up health.
         $cache = null;
         try {
             $cache = $c->get(\Bayti\Api\Infrastructure\Cache\KeyValueStore::class);
         } catch (\Throwable) {
-            // No cache binding — readiness simply omits the redis check.
+            // No cache binding, readiness simply omits the redis check.
         }
 
         return new HealthController(
@@ -1133,19 +1133,19 @@ return [
         );
     },
 
-    // M1.4.2 — auth controllers (read-only / no-OTP)
+    // M1.4.2, auth controllers (read-only / no-OTP)
     \Bayti\Api\Http\Serializers\UserSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\ValidateEmailController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\ValidatePhoneController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\LoginController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\MeController::class => \DI\autowire(),
 
-    // M1.4.3 — OTP issuance
+    // M1.4.3, OTP issuance
     \Bayti\Api\Http\Controllers\Auth\RegisterController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\SendOtpController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\ConfirmController::class => \DI\autowire(),
 
-    // Phone-first registration (4 anonymous endpoints) — autowire;
+    // Phone-first registration (4 anonymous endpoints), autowire;
     // all deps (RequestValidator, EntityManagerInterface, OtpService,
     // JwtService, UserSerializer) are already bound.
     \Bayti\Api\Http\Controllers\Auth\RegisterInitiateController::class => \DI\autowire(),
@@ -1153,24 +1153,24 @@ return [
     \Bayti\Api\Http\Controllers\Auth\RegisterSubmitController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\RegisterConfirmEmailController::class => \DI\autowire(),
 
-    // M1.4.4 — password reset
+    // M1.4.4, password reset
     \Bayti\Api\Http\Controllers\Auth\ResetController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\ResetConfirmController::class => \DI\autowire(),
 
-    // Passwordless OTP login — autowire (constructor deps are all
+    // Passwordless OTP login, autowire (constructor deps are all
     // container-resolvable services: RequestValidator, EntityManager,
     // OtpService, JwtService, UserSerializer). No object-default ctor
     // params, so PHP-DI's prod compile is happy.
     \Bayti\Api\Http\Controllers\Auth\OtpLoginSendController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\OtpLoginVerifyController::class => \DI\autowire(),
 
-    // M1.4.5 — token lifecycle
+    // M1.4.5, token lifecycle
     \Bayti\Api\Http\Controllers\Auth\RefreshController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\LogoutController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\LogoutAllController::class => \DI\autowire(),
 
     // -------------------------------------------------------------------
-    // M3.1.6c — Payment gateway (Q9=A: v3 talks to Noon directly)
+    // M3.1.6c, Payment gateway (Q9=A: v3 talks to Noon directly)
     // -------------------------------------------------------------------
     //
     // PaymentGatewayInterface is the only contract callers depend on
@@ -1221,7 +1221,7 @@ return [
         }
 
         $http = new GuzzleClient([
-            // base_uri unused — adapter passes absolute URL per call
+            // base_uri unused, adapter passes absolute URL per call
             'timeout' => 15,
             'connect_timeout' => 5,
         ]);
@@ -1253,7 +1253,7 @@ return [
         //
         // The retrieve-order-before-acting pattern in NoonWebhookController
         // remains the load-bearing safety mechanism regardless of which
-        // verifier is bound — even with LoggingOnlyVerifier accepting
+        // verifier is bound, even with LoggingOnlyVerifier accepting
         // everything, a spoofed webhook cannot make us mark an order
         // paid because Noon's GET_ORDER is the source of truth.
         //
@@ -1269,7 +1269,7 @@ return [
         //      checking is now enforced
         //
         // If the algorithm turns out non-HMAC-SHA256, swap the verifier
-        // class in the `true` branch — interface contract is unchanged.
+        // class in the `true` branch, interface contract is unchanged.
 
         $logger = new \Psr\Log\NullLogger();
         try {
@@ -1289,7 +1289,7 @@ return [
         // Real signature verification path.
         $secret = (string) ($_ENV['NOON_WEBHOOK_SECRET'] ?? '');
         if ($secret === '') {
-            // Don't silently degrade — operators who flip the flag
+            // Don't silently degrade, operators who flip the flag
             // expect verification. Failing fast surfaces the missing
             // env var clearly rather than letting webhooks be accepted
             // unchecked.
@@ -1303,7 +1303,7 @@ return [
         return new \Bayti\Api\Payment\Noon\HmacSha256SignatureVerifier($secret);
     },
 
-    // M3.1.7 rollout aid — gated raw (body+signature) webhook capture so
+    // M3.1.7 rollout aid, gated raw (body+signature) webhook capture so
     // `bin/console noon:confirm-signature` can confirm Noon's signing
     // algorithm from real traffic. OFF by default; flip
     // NOON_WEBHOOK_CAPTURE=true for a short window during rollout, then
@@ -1323,7 +1323,7 @@ return [
             // Continue with NullLogger
         }
 
-        // apps/api/var/captures — gitignored (/var/), not web-served.
+        // apps/api/var/captures, gitignored (/var/), not web-served.
         $captureDir = dirname(__DIR__) . '/var/captures';
 
         return new \Bayti\Api\Payment\Noon\NoonWebhookCaptureRecorder(

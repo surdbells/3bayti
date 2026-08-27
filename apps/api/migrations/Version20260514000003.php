@@ -8,17 +8,17 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.1.6a — schema for cart + customer orders + checkout (Noon Hosted Checkout).
+ * M3.1.6a, schema for cart + customer orders + checkout (Noon Hosted Checkout).
  *
  * Creates the foundation for Stream B of the M3.1 migration:
  *
- *   1. carts          — server-side cart per user (with legacy_cart_code compat)
- *   2. cart_items     — line items with snapshotted price + variant attributes
- *   3. orders         — finalized orders (after successful payment)
- *   4. order_items    — order line items (cart items snapshotted at checkout)
- *   5. order_addresses — billing + shipping address per order (1:N via type enum)
- *   6. payment_transactions — Noon transactions (one or more per order — INITIATE, SALE, REFUND etc.)
- *   7. payment_webhook_events — append-only Noon webhook audit log
+ *   1. carts         , server-side cart per user (with legacy_cart_code compat)
+ *   2. cart_items    , line items with snapshotted price + variant attributes
+ *   3. orders        , finalized orders (after successful payment)
+ *   4. order_items   , order line items (cart items snapshotted at checkout)
+ *   5. order_addresses, billing + shipping address per order (1:N via type enum)
+ *   6. payment_transactions, Noon transactions (one or more per order, INITIATE, SALE, REFUND etc.)
+ *   7. payment_webhook_events, append-only Noon webhook audit log
  *
  * Why these seven together in one migration
  * ==========================================
@@ -34,7 +34,7 @@ use Doctrine\Migrations\AbstractMigration;
  *     where the legacy cart_code didn't tie to a user).
  *   - Guest user: device-local cart in mobile; merged to server cart via
  *     POST /v3/cart/merge on sign-in (M3.1.6d). No anonymous-session
- *     cart token in v3 — device-local handles guest case.
+ *     cart token in v3, device-local handles guest case.
  *   - One active cart per user (UNIQUE INDEX where status='active').
  *     Cart status transitions: 'active' → 'converted' (became an order)
  *     → archived. Stale-cart cleanup is a future cron job.
@@ -49,45 +49,45 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * Order schema rationale
  * ======================
- *   - legacy_order_id BIGINT UNIQUE NULLABLE — same compat pattern as
+ *   - legacy_order_id BIGINT UNIQUE NULLABLE, same compat pattern as
  *     legacy_product_id / legacy_vendor_id / legacy_label_id / legacy_style_id
  *     established across M2-M3.1.5.5. Allows by-legacy-id endpoints
  *     during the strangler-fig window.
  *
- *   - order_reference VARCHAR(32) UNIQUE — the v3-internal canonical
+ *   - order_reference VARCHAR(32) UNIQUE, the v3-internal canonical
  *     identifier, also used as Noon's `merchant_reference`. Format:
  *     "3BAY-{yyyymmdd}-{6char_random}" e.g. "3BAY-20260514-A7B3C2".
  *     Application-generated (not DB-sequence) so it's predictable +
  *     URL-safe + collision-resistant via random suffix.
  *
  *     NOTE: Noon's docs say "Please contact our support team to enable
- *     the uniqueness of the merchant order reference field" — by default
+ *     the uniqueness of the merchant order reference field", by default
  *     Noon does NOT enforce uniqueness on the reference. Action item
  *     for the operator: email Noon support to enable it. Meanwhile,
  *     our UNIQUE constraint here enforces it at v3 level regardless.
  *
- *   - status VARCHAR(32) — string enum (not smallint) because the
+ *   - status VARCHAR(32), string enum (not smallint) because the
  *     state machine has many states and humans inspect orders in psql
  *     frequently; readable values beat compact encoding. Constrained
  *     by CHECK (...). States locked:
- *       'pending_payment' — Noon INITIATE called, awaiting webview return
- *       'paid'            — Noon webhook confirmed + GET ORDER verified
- *       'fulfilling'      — at least one vendor accepted; some items in motion
+ *       'pending_payment', Noon INITIATE called, awaiting webview return
+ *       'paid'           , Noon webhook confirmed + GET ORDER verified
+ *       'fulfilling'     , at least one vendor accepted; some items in motion
  *                           (added in M3.1.7 vendor flows; declared now for
  *                           the CHECK constraint to be complete)
- *       'shipped'         — all items shipped
- *       'delivered'       — all items delivered
- *       'cancelled'       — order cancelled before fulfillment
- *       'refunded'        — full or partial refund processed
- *       'failed'          — Noon webhook returned failure / order expired
+ *       'shipped'        , all items shipped
+ *       'delivered'      , all items delivered
+ *       'cancelled'      , order cancelled before fulfillment
+ *       'refunded'       , full or partial refund processed
+ *       'failed'         , Noon webhook returned failure / order expired
  *
  *   - subtotal + delivery_fee + discount + total: all DECIMAL(10,2) AED.
  *     We do NOT auto-recompute total from subtotal + delivery_fee - discount
- *     at the DB level (CHECK constraint or generated column) — small rounding
+ *     at the DB level (CHECK constraint or generated column), small rounding
  *     differences in vendor settlement could cause spurious failures. Total
  *     is the source of truth, captured at checkout time.
  *
- *   - paid_at TIMESTAMPTZ NULL — set when status transitions to 'paid'.
+ *   - paid_at TIMESTAMPTZ NULL, set when status transitions to 'paid'.
  *     Distinct from updated_at (which bumps on every state change).
  *
  * order_addresses schema rationale
@@ -98,7 +98,7 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * Why not denormalize onto orders table directly?
  *   - Future support for split shipments (multiple shipping addresses for
- *     one order — different items shipping to different addresses) is
+ *     one order, different items shipping to different addresses) is
  *     a natural extension if we keep order_addresses as a join.
  *   - Address snapshot at checkout (not FK to a user_addresses table)
  *     because user address book can change after the order; the order
@@ -108,33 +108,33 @@ use Doctrine\Migrations\AbstractMigration;
  * ======================================
  * Records every API interaction with the payment provider (Noon) for an
  * order. Multiple rows per order possible: INITIATE creates row 1, SALE
- * creates row 2 (or extends row 1 — TBD by Noon's flow), REFUND creates
+ * creates row 2 (or extends row 1, TBD by Noon's flow), REFUND creates
  * row 3, etc.
  *
- *   - provider VARCHAR(32) — 'noon' for now; pluggable per C11 (Stripe,
+ *   - provider VARCHAR(32), 'noon' for now; pluggable per C11 (Stripe,
  *     Tap, etc. would be additional values).
- *   - operation VARCHAR(32) — Noon API operations: 'INITIATE', 'SALE',
+ *   - operation VARCHAR(32), Noon API operations: 'INITIATE', 'SALE',
  *     'AUTHORIZE', 'CAPTURE', 'REVERSE', 'REFUND', 'CANCEL',
  *     'GET_ORDER', 'GET_ORDER_BY_REFERENCE'.
  *     Match Noon's apiOperation values directly.
- *   - provider_order_ref VARCHAR(64) — Noon's `orderId` (their internal
+ *   - provider_order_ref VARCHAR(64), Noon's `orderId` (their internal
  *     12-digit number; can be 16-digit for KSA/EGY local endpoints).
  *     INDEXED for webhook → transaction lookup.
- *   - status VARCHAR(32) — Noon's order status string ('STARTED',
+ *   - status VARCHAR(32), Noon's order status string ('STARTED',
  *     'PENDING', 'AUTHORIZED', 'CAPTURED', 'FAILED', 'CANCELLED',
  *     'REVERSED', 'EXPIRED'). Distinct from orders.status which is
  *     v3's higher-level state.
- *   - amount + currency — what this specific transaction was for
+ *   - amount + currency, what this specific transaction was for
  *     (full sale amount for SALE, refund amount for REFUND, etc.).
- *   - noon_result_code INTEGER — Noon's resultCode field (0 = success;
+ *   - noon_result_code INTEGER, Noon's resultCode field (0 = success;
  *     19012 = duplicate reference; etc.). Stored as the integer Noon
  *     returns, so we can grep / analyze later.
- *   - request_payload + response_payload JSONB — exact request + response
+ *   - request_payload + response_payload JSONB, exact request + response
  *     for audit / debugging. Privacy: card details are NOT in these
  *     (Noon's hosted checkout keeps card data on Noon's side; our
  *     request payload doesn't carry it; their response is the order
  *     confirmation, also card-free).
- *   - idempotency_key VARCHAR(128) UNIQUE — for v3-side dedup of
+ *   - idempotency_key VARCHAR(128) UNIQUE, for v3-side dedup of
  *     duplicate INITIATE attempts. Format = order_reference + ':' +
  *     operation. Same order + same operation = same key = no duplicate
  *     transaction record.
@@ -146,22 +146,22 @@ use Doctrine\Migrations\AbstractMigration;
  *   2. Forensics if a payment dispute later requires evidence
  *   3. Debugging the "signature unknown" gap M3.1.6 ships with
  *
- *   - idempotency_key VARCHAR(128) UNIQUE — Noon's eventId if present,
- *     otherwise hash(payload) — controller computes one or the other.
+ *   - idempotency_key VARCHAR(128) UNIQUE, Noon's eventId if present,
+ *     otherwise hash(payload), controller computes one or the other.
  *     UNIQUE means re-processing the same webhook is a no-op INSERT
  *     conflict, NOT a duplicate state transition.
- *   - signature_header TEXT — the raw signature header value Noon sent.
+ *   - signature_header TEXT, the raw signature header value Noon sent.
  *     Stored even when verification is logging-only (M3.1.6) so M3.1.7's
  *     empirical verification work has historical data to test against.
- *   - signature_verified BOOLEAN — false during M3.1.6 logging-only
+ *   - signature_verified BOOLEAN, false during M3.1.6 logging-only
  *     phase (every row); true/false based on actual verification once
  *     M3.1.7 binds HmacSha256SignatureVerifier.
- *   - payload JSONB — exact bytes Noon sent. Used by the retrieve-order
+ *   - payload JSONB, exact bytes Noon sent. Used by the retrieve-order
  *     safety net: even if the payload claims "paid", we still call
  *     Noon GET ORDER before transitioning state.
- *   - processed_at TIMESTAMPTZ — when our handler finished. NULL if
+ *   - processed_at TIMESTAMPTZ, when our handler finished. NULL if
  *     processing failed (allows retry logic to find unprocessed events).
- *   - order_id BIGINT NULL — populated when we successfully match the
+ *   - order_id BIGINT NULL, populated when we successfully match the
  *     webhook to a v3 order. NULL = orphan webhook (no matching order
  *     reference; logged as warning but not failure).
  *
@@ -295,7 +295,7 @@ final class Version20260514000003 extends AbstractMigration
         //
         // Snapshotted from cart_items at checkout. vendor_id is FROZEN
         // here even though products.vendor_id can technically be updated
-        // — once an order is placed, the vendor relationship for THAT
+        //, once an order is placed, the vendor relationship for THAT
         // line item is set in stone for fulfillment + commission.
         $this->addSql(<<<'SQL'
             CREATE TABLE order_items (

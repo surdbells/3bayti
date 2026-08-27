@@ -1,8 +1,8 @@
-/* ui-gift-card — themed gift-card visual.
+/* ui-gift-card, themed gift-card visual.
    Colours come from the per-theme palette set as --gc-* custom
    properties on the host element; the motif SVG inherits --gc-accent
    via `color`. Intentionally rich/dark (distinct from the cream
-   storefront) — these read as premium gift cards. */
+   storefront), these read as premium gift cards. */
 
 :host {
   display: block;
@@ -145,7 +145,7 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* Luxury recipient photo — framed circle, top-end corner. */
+/* Luxury recipient photo, framed circle, top-end corner. */
 .gc--has-photo .gc__photo {
   position: absolute;
   top: clamp(14px, 4.5%, 22px);

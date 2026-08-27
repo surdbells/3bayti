@@ -17,7 +17,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/admin/top-stores
  *
- * The 10 highest-performing stores ranked by units sold — every
+ * The 10 highest-performing stores ranked by units sold, every
  * order_items row whose parent order reached a real sale state
  * (paid/fulfilling/shipped/delivered; cancelled/refunded/failed/
  * pending_payment are excluded). Feeds the admin "Top performers"

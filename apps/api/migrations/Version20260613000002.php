@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * F3 — Admin↔vendor direct messages: the `vendor_messages` table.
+ * F3, Admin↔vendor direct messages: the `vendor_messages` table.
  *
  * A lightweight one-directional message from platform admins to a vendor
  * (the vendor's "inbox"). The admin send-side (SendVendorMessageController,

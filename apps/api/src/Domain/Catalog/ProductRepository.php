@@ -51,7 +51,7 @@ class ProductRepository extends EntityRepository
      *
      * Mobile catalog cards are built by `legacyProductCardFromV3List`
      * (apps/mobile catalog-response.transforms.ts), which sets
-     * `product_id = legacy_product_id ?? v3 id` — i.e. the LEGACY id for
+     * `product_id = legacy_product_id ?? v3 id`, i.e. the LEGACY id for
      * any migrated product, falling back to the v3 primary key only for
      * v3-native products with no legacy row. Endpoints that take that
      * card id (wishlist add/move/remove) must therefore resolve in the
@@ -104,7 +104,7 @@ class ProductRepository extends EntityRepository
      * tie-break still applies.
      *
      * If 'relevance' is passed without a search query, falls back to
-     * 'newest' (the no-search default) — ranking against no query
+     * 'newest' (the no-search default), ranking against no query
      * would produce zero values for all rows.
      *
      * @return array{items: list<Product>, total: int}
@@ -112,7 +112,7 @@ class ProductRepository extends EntityRepository
     /**
      * Vendor-owned product list for the seller's own catalog management.
      *
-     * Unlike findActivePaginated (storefront — active products only), this
+     * Unlike findActivePaginated (storefront, active products only), this
      * returns the vendor's products in ALL states (draft, inactive,
      * out-of-stock) so the vendor can see and edit everything they own.
      * Scoped strictly to the given v3 vendor id.
@@ -122,7 +122,7 @@ class ProductRepository extends EntityRepository
      */
     /**
      * A single product owned by the vendor, regardless of status (draft,
-     * inactive, etc.) — for the vendor's own detail/preview view.
+     * inactive, etc.), for the vendor's own detail/preview view.
      */
     public function findOneByIdForVendor(int $id, int $vendorId): ?Product
     {
@@ -152,7 +152,7 @@ class ProductRepository extends EntityRepository
             $qb->andWhere('p.status = :status')->setParameter('status', $status);
         } else {
             // Vendors never see soft-deleted products (kept only for order
-            // history) — exclude them from the default, unfiltered list.
+            // history), exclude them from the default, unfiltered list.
             $qb->andWhere('p.status != :softDeleted')
                ->setParameter('softDeleted', Product::STATUS_SOFT_DELETED);
         }
@@ -191,7 +191,7 @@ class ProductRepository extends EntityRepository
     }
 
     /**
-     * Admin GLOBAL product list — every vendor, every status (so the admin
+     * Admin GLOBAL product list, every vendor, every status (so the admin
      * catalogue can see and manage DRAFTS, which the public
      * findActivePaginated hides). Optional filters: vendorId or vendorSlug,
      * status, stock_status, search, pagination. Soft-deleted rows are
@@ -316,7 +316,7 @@ class ProductRepository extends EntityRepository
         }
 
         // Refining filters: sizes, colors. JSONB "contains ANY of the
-        // requested values" — same semantics FacetAggregator applies, so
+        // requested values", same semantics FacetAggregator applies, so
         // the listing and the facet counts agree. JSONB_EXISTS_ANY is a
         // custom DQL function (config/doctrine.php) wrapping
         // `jsonb_exists_any(<col>, array[:values]::text[])`; the params are
@@ -343,18 +343,18 @@ class ProductRepository extends EntityRepository
             // "on sale" only when it carries a sale_price that is present
             // AND strictly below its regular price. This matches the
             // operator's definition used everywhere (mobile discounted page,
-            // card sale rendering) — the legacy `is_sale` boolean could be
+            // card sale rendering), the legacy `is_sale` boolean could be
             // set independently of the prices and so returned products that
             // weren't genuinely discounted.
             $qb->andWhere('p.salePrice IS NOT NULL AND p.salePrice < p.price');
         }
 
-        // In-stock filter: mirrors Product::isInStock() — stock_status is
+        // In-stock filter: mirrors Product::isInStock(), stock_status is
         // authoritative (oversell wins, else available unless explicitly
         // out_of_stock). Legacy-migrated products tracked stock by
         // stock_status with a 0 quantity, so the old `stockQuantity > 0`
-        // test wrongly hid them — which is why featured-vendor cards showed
-        // fewer than their EMBEDDED_PRODUCTS_PER_VENDOR products. Opt-in —
+        // test wrongly hid them, which is why featured-vendor cards showed
+        // fewer than their EMBEDDED_PRODUCTS_PER_VENDOR products. Opt-in -
         // callers that omit it are unaffected.
         if (!empty($filters['inStock'])) {
             $qb->andWhere('(p.allowOversell = TRUE OR p.stockStatus != :inStockOut)')
@@ -403,7 +403,7 @@ class ProductRepository extends EntityRepository
             // backslash as its default escape char, and $term has its wildcards
             // backslash-escaped above, so matching is identical. The literal
             // ESCAPE '\' inside this raw-DQL predicate corrupted the cloned
-            // COUNT query's DQL->SQL parameter mapping — Postgres rejected every
+            // COUNT query's DQL->SQL parameter mapping, Postgres rejected every
             // search with HY093 "parameter was not defined". Distinct param
             // names per column are kept (one bound value per placeholder).
             $like = '%' . $term . '%';
@@ -441,7 +441,7 @@ class ProductRepository extends EntityRepository
         //   ORDER BY md5(<seed> || '-' || id)
         // (SEEDED_RAND DQL function). The md5 key is a pure function of
         // (seed, id), so for a fixed seed the total order over the whole
-        // result set is fixed — LIMIT/OFFSET then walk that single stable
+        // result set is fixed, LIMIT/OFFSET then walk that single stable
         // order and infinite scroll never duplicates or skips a product.
         // Change the seed and the whole order reshuffles.
         //
@@ -469,7 +469,7 @@ class ProductRepository extends EntityRepository
         // 'best_seller' (M3.2.X.1) needs a LEFT JOIN onto an aggregate
         // of order_items filtered by:
         //   - orders.status IN (paid, fulfilling, shipped, delivered)
-        //     [excludes pending_payment / failed / cancelled / refunded —
+        //     [excludes pending_payment / failed / cancelled / refunded -
         //     per locked Q-Order-Status = B]
         //   - orders.paid_at >= NOW() - INTERVAL '30 days'
         //     [last-30-days window per locked Q-Window = B; paid_at
@@ -522,9 +522,9 @@ class ProductRepository extends EntityRepository
             // first; everything else (description / store / category
             // matches) falls back to newest. :searchTerm is the same
             // bound, escaped, lower-cased '%term%' used by the WHERE
-            // clause above (guaranteed present — relevance only survives
+            // clause above (guaranteed present, relevance only survives
             // when $hasSearch is true).
-            // Own param (:stRel) so no named parameter is ever used twice —
+            // Own param (:stRel) so no named parameter is ever used twice -
             // keeps every placeholder a single bound value (see HY093 note above).
             $qb->addSelect(
                 "CASE WHEN LOWER(p.name) LIKE :stRel THEN 0 ELSE 1 END AS HIDDEN relevanceRank"
@@ -554,7 +554,7 @@ class ProductRepository extends EntityRepository
     }
 
     /**
-     * Raw product count for a category — NO isActive filter, NO
+     * Raw product count for a category, NO isActive filter, NO
      * status filter, NO vendor approval filter. Just `WHERE category = :id`.
      *
      * Used by GET /v3/categories/:slug (M3.2.X.3-C) to populate
@@ -565,7 +565,7 @@ class ProductRepository extends EntityRepository
      *     Raw join count. Informational; reflects total category
      *     associations regardless of vendor/product status.
      *   - meta.total_products (findActivePaginated total):
-     *     Filtered count. What apps/web displays to users — only
+     *     Filtered count. What apps/web displays to users, only
      *     active products from active vendors.
      *
      * Why a separate method
@@ -577,7 +577,7 @@ class ProductRepository extends EntityRepository
      *
      * Performance
      * ===========
-     * COUNT-only query — no row materialization. Cheap even for
+     * COUNT-only query, no row materialization. Cheap even for
      * categories with thousands of products. Single integer
      * round-trip.
      */

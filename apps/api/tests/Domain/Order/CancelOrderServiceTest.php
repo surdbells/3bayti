@@ -49,7 +49,7 @@ final class CancelOrderServiceTest extends TestCase
         $this->setProp($order, 'status', Order::STATUS_PENDING_PAYMENT);
 
         // The push fan-out (second call in the post-commit fan-out) throws
-        // an uncaught \Throwable — simulating the issue-#7 fault that
+        // an uncaught \Throwable, simulating the issue-#7 fault that
         // ApiErrorMiddleware turned into a generic 500.
         $service = $this->makeService(
             order: $order,
@@ -76,7 +76,7 @@ final class CancelOrderServiceTest extends TestCase
     #[Test]
     public function pendingPaymentCancelSucceedsWhenNotificationsAllSucceed(): void
     {
-        // Baseline: nothing throws — cancel succeeds. Guards against the
+        // Baseline: nothing throws, cancel succeeds. Guards against the
         // try/catch accidentally swallowing the success path.
         $user = $this->makeUser();
         $order = $this->makeOrder($user);
@@ -180,7 +180,7 @@ final class CancelOrderServiceTest extends TestCase
 
     /**
      * A PushNotificationService double whose orderCancelled() throws an
-     * uncaught \Throwable from outside the service's own per-token guards —
+     * uncaught \Throwable from outside the service's own per-token guards -
      * standing in for any dependency fault (e.g. a null-deref on a
      * never-paid order) that escapes the fan-out. CancelOrderService must
      * catch it. PushNotificationService is not final, so we subclass it.

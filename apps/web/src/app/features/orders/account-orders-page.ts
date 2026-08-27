@@ -14,7 +14,7 @@ import { ToastService } from '../../shared/forms';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
- * /account/orders — paginated order history.
+ * /account/orders, paginated order history.
  *
  * Auth-gated. Bottom-of-list "Load more" button advances the
  * accumulator (Q-Pagination=B from the Y.2 plan: load-more, not

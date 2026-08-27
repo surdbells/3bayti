@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Bayti\Api\Infrastructure\Otp;
 
 /**
- * OTP delivery + verification provider — abstracts the CPaaS.
+ * OTP delivery + verification provider, abstracts the CPaaS.
  *
  * Implementations:
- *   - InMemoryOtpProvider — used in dev + tests; no real network
+ *   - InMemoryOtpProvider, used in dev + tests; no real network
  *     calls; tracks verifications in-memory and accepts a known
  *     test code (default '000000') for predictable test flows.
- *   - MessageCentralOtpProvider — production adapter; HTTP calls
+ *   - MessageCentralOtpProvider, production adapter; HTTP calls
  *     to MessageCentral CPaaS for both send and verify.
  *
  * The provider does NOT touch the database. It only handles the
@@ -59,7 +59,7 @@ interface OtpProvider
      *              (typically 5 retries) and returns false once
      *              exhausted; we propagate that as false here.
      *              Callers don't need to distinguish "wrong code"
-     *              from "out of attempts" — both are "user can't
+     *              from "out of attempts", both are "user can't
      *              proceed; ask them to request a new OTP".
      *
      * @throws OtpProviderException When the CPaaS itself fails

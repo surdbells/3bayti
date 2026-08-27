@@ -27,7 +27,7 @@ import { authMatchGuard, authActivateGuard, guestActivateGuard } from './auth.gu
  *     - returns true when anonymous
  *     - returns UrlTree based on returnUrl when authenticated AND
  *       returnUrl is in-app
- *     - rejects external returnUrl (open-redirect defense — both
+ *     - rejects external returnUrl (open-redirect defense, both
  *       'https://evil/' and '//evil/' must NOT redirect)
  *     - falls back to '/' when returnUrl is missing
  */
@@ -154,7 +154,7 @@ describe('authActivateGuard (CanActivate)', () => {
     );
     const serialised = router.serializeUrl(result as UrlTree);
     /* URL-encoded ?step=2#shipping should be visible in the returnUrl
-       query parameter — Angular's serializer percent-encodes # and ?
+       query parameter, Angular's serializer percent-encodes # and ?
        inside query values. */
     expect(serialised).toContain('returnUrl=');
     expect(decodeURIComponent(serialised.split('returnUrl=')[1] ?? '')).toBe('/checkout?step=2#shipping');

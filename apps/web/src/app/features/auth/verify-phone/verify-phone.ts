@@ -34,19 +34,19 @@ const PHONE_STORAGE_KEY = 'bayti_pending_verification_phone';
 const RESEND_COOLDOWN_SECONDS = 30;
 
 /**
- * Verify phone page — /verify-phone.
+ * Verify phone page, /verify-phone.
  *
  * Reached from /register after a successful account creation, or from
  * /login when the user logs in with is_phone_verified=false.
  *
  * Query params
  * ------------
- *   verification_id  REQUIRED — opaque token from the API's /register
+ *   verification_id  REQUIRED, opaque token from the API's /register
  *                    or /send-otp. Used in the /confirm call.
- *   phone            OPTIONAL — the phone number (E.164) so we can
+ *   phone            OPTIONAL, the phone number (E.164) so we can
  *                    show a masked version. If absent, the page shows
  *                    'your phone' instead.
- *   from             OPTIONAL — 'register' | 'login' — affects
+ *   from             OPTIONAL, 'register' | 'login', affects
  *                    secondary copy (whether to show 'back to login'
  *                    or 'back to register').
  *
@@ -58,7 +58,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
  * would have to start over.
  *
  * sessionStorage is per-tab. localStorage would persist across tabs
- * and reopens — probably too sticky for a 10-minute OTP window.
+ * and reopens, probably too sticky for a 10-minute OTP window.
  *
  * Resend cooldown
  * ---------------
@@ -80,7 +80,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
  * -------------
  * Single text input, maxlength=6, inputmode='numeric', autocomplete='one-time-code'.
  * 'one-time-code' triggers iOS's SMS auto-fill prompt when an SMS
- * arrives — important for the GCC market where iOS share is high.
+ * arrives, important for the GCC market where iOS share is high.
  *
  * a11y
  * ----
@@ -286,7 +286,7 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
     phoneTaken: 'auth.verifyPhone.errors.phoneTaken',
   };
 
-  /** Masked phone — '+971•••••4567' shape. */
+  /** Masked phone, '+971•••••4567' shape. */
   protected readonly maskedPhone = computed(() => {
     const p = this.phone();
     if (p === null) return 'your phone';
@@ -304,7 +304,7 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
 
   /**
    * A signed-in but unverified user can request an OTP to their phone on
-   * the spot — we have their email via currentUser. This is the path for
+   * the spot, we have their email via currentUser. This is the path for
    * the post-registration nudges (account banner, checkout gate, header
    * badge) which route here WITHOUT a verification_id; previously that
    * dead-ended at "Verification session missing".
@@ -364,7 +364,7 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
     }
 
     /* Nudge flow (account / checkout / header badge) hands over no phone
-       query param — fall back to the signed-in user's phone so the
+       query param, fall back to the signed-in user's phone so the
        masked display still works. */
     if (this.phone() === null) {
       const userPhone = this.auth.currentUser()?.phone ?? null;
@@ -374,7 +374,7 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
     }
 
     /* If an already-verified user lands here (e.g. a stale nudge link),
-       there is nothing to verify — send them on to where they were
+       there is nothing to verify, send them on to where they were
        headed rather than showing a confusing screen. */
     if (this.verificationId() === null) {
       const user = this.auth.currentUser();
@@ -440,7 +440,7 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
 
     /* Phone-after-social verifies through PhoneService (Bearer /me/phone/verify)
        rather than the BFF registration /confirm. The user is already signed in;
-       there's no token pair to issue — just flip is_phone_verified. */
+       there's no token pair to issue, just flip is_phone_verified. */
     if (this.isSocial()) {
       await this.submitSocialOtp(vid);
       return;
@@ -653,7 +653,7 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
     try {
       sessionStorage.setItem(key, value);
     } catch {
-      /* Quota / disabled — silently ignore. */
+      /* Quota / disabled, silently ignore. */
     }
   }
 
@@ -707,7 +707,7 @@ const VERIFY_ERROR_MAP: Record<string, ApiErrorMapping> = {
 };
 
 /* Phone-after-social: POST /me/phone surfaces CONFLICT_PHONE_TAKEN when the
-   number is already on another account — land it on the phone field. */
+   number is already on another account, land it on the phone field. */
 const SOCIAL_PHONE_ERROR_MAP: Record<string, ApiErrorMapping> = {
   [AUTH_ERROR_CODES.CONFLICT_PHONE_TAKEN]: { field: 'phone', key: 'phoneTaken' },
   [AUTH_ERROR_CODES.OTP_RATE_LIMITED]: { field: null, key: 'rateLimited' },

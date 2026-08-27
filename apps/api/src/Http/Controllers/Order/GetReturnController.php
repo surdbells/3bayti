@@ -23,7 +23,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Returns the customer-facing detail of a single return request.
  *
  * Authorization: customer must own the underlying order. 404 on
- * cross-user — matches the cancel/cancel pattern (Q-Authorization=A,
+ * cross-user, matches the cancel/cancel pattern (Q-Authorization=A,
  * never leak existence via 403).
  *
  * Response shape: { data: customer-shape }
@@ -72,7 +72,7 @@ final class GetReturnController
             throw HttpException::notFound('Return request not found.');
         }
 
-        // Cross-user 404 (defense in depth — never leak existence).
+        // Cross-user 404 (defense in depth, never leak existence).
         if ($returnRequest->getCustomer()->getId() !== $user->getId()) {
             throw HttpException::notFound('Return request not found.');
         }

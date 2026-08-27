@@ -101,7 +101,7 @@ export class SearchPage implements OnInit, OnDestroy {
   }
   /** Per-product image-loaded tracking for the m6d card skeleton overlay */
   imageLoaded: { [key: number]: boolean } = {};
-  /** Debounce timer for onInputChange — prevents firing a search request
+  /** Debounce timer for onInputChange, prevents firing a search request
       on every keystroke. Reset on each input change, fires after 300ms
       of inactivity. */
   private searchTimer: any = null;
@@ -164,10 +164,10 @@ export class SearchPage implements OnInit, OnDestroy {
     this.ui_controls.is_empty = false;
     this.imageLoaded = {};
     // Direct v3 (GET /v3/products via 'GET /mobile/search'). Public catalog
-    // read — no auth token. The search request transform maps the legacy
+    // read, no auth token. The search request transform maps the legacy
     // body's `search` field to the v3 `q` query param; pass it explicitly.
     // The response transform still applies via get_v3, so response.data keeps
-    // the legacy Search[] shape — subscribe logic below is unchanged.
+    // the legacy Search[] shape, subscribe logic below is unchanged.
     this.networkAdapter.get_v3('GET /mobile/search', { queryParams: { q: this.search.search } })
       .subscribe(({
         next: (response: any) => {
@@ -280,7 +280,7 @@ export class SearchPage implements OnInit, OnDestroy {
       clearTimeout(this.searchTimer);
       this.searchTimer = null;
     }
-    /* Empty input — clear results immediately, show initial prompt */
+    /* Empty input, clear results immediately, show initial prompt */
     if (!value || !value.trim()) {
       this.products = [];
       this.imageLoaded = {};
@@ -288,7 +288,7 @@ export class SearchPage implements OnInit, OnDestroy {
       this.ui_controls.is_empty = false;
       return;
     }
-    /* Non-empty input — debounce the actual network call */
+    /* Non-empty input, debounce the actual network call */
     this.searchTimer = setTimeout(() => {
       this.searchProduct();
       this.searchTimer = null;

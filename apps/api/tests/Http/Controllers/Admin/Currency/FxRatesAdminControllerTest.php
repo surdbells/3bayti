@@ -23,8 +23,8 @@ use Psr\Log\NullLogger;
 /**
  * HTTP-level tests for the M3.2.X.15-F admin fx-rates endpoints.
  *
- *   GET /v3/admin/fx-rates              — list (admin only)
- *   PUT /v3/admin/fx-rates/{target}     — upsert with audit
+ *   GET /v3/admin/fx-rates             , list (admin only)
+ *   PUT /v3/admin/fx-rates/{target}    , upsert with audit
  *
  * Strategy: mirror ResolveDisputeControllerTest. Inject mock EM
  * with capturing audit-log repo and a fake FxRateRepository
@@ -104,7 +104,7 @@ final class FxRatesAdminControllerTest extends HttpTestCase
     }
 
     // =================================================================
-    // UPSERT — update path
+    // UPSERT, update path
     // =================================================================
 
     #[Test]
@@ -168,7 +168,7 @@ final class FxRatesAdminControllerTest extends HttpTestCase
     }
 
     // =================================================================
-    // UPSERT — validation errors
+    // UPSERT, validation errors
     // =================================================================
 
     #[Test]

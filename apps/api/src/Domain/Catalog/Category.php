@@ -9,7 +9,7 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * A product category — node in the adjacency-list tree.
+ * A product category, node in the adjacency-list tree.
  *
  * Tree shape
  * ----------
@@ -112,7 +112,7 @@ class Category
 
     /**
      * Denormalised full path: '/clothing/womens/abayas'.
-     * Maintained by application — see class docblock.
+     * Maintained by application, see class docblock.
      */
     #[ORM\Column(type: 'string', length: 500)]
     private string $path;
@@ -127,7 +127,7 @@ class Category
         $this->parent = $parent;
         // Path is computed from slug + parent at construction.
         // If parent's path is empty (i.e., we're being built before
-        // the parent has its own path set — shouldn't happen via
+        // the parent has its own path set, shouldn't happen via
         // normal flows, but defensive), we still produce a valid
         // string.
         $this->path = $this->computePath();
@@ -152,7 +152,7 @@ class Category
 
         $parentPath = $this->parent->getPath();
         // Defensive: if parent has empty/missing path, fall back to
-        // root behaviour — better a sane fallback than a malformed path.
+        // root behaviour, better a sane fallback than a malformed path.
         if ($parentPath === '') {
             return '/' . $this->slug;
         }

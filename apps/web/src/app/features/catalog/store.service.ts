@@ -20,14 +20,14 @@ export const DESIGNER_PAGE_SIZE = 24;
  *  batches of 10 rather than dumping every store at once. */
 export const STORE_DIRECTORY_PAGE_SIZE = 10;
 
-/** Result of a paginated product fetch — items plus whether more exist. */
+/** Result of a paginated product fetch, items plus whether more exist. */
 export interface StoreProductsPage {
   items: Product[];
   hasMore: boolean;
 }
 
 /**
- * StoreService — storefront reads for the store directory and
+ * StoreService, storefront reads for the store directory and
  * per-store pages (Y.4). All endpoints are public catalog reads, so
  * this goes through RoutedHttpClient (like home-data.service.ts), NOT
  * the Bearer-bound direct client used by cart/orders/checkout.
@@ -42,7 +42,7 @@ export interface StoreProductsPage {
  *   - isLoadingList()
  *
  * Single-store detail and per-store products are NOT held in
- * service signals — the detail page owns those (two store pages
+ * service signals, the detail page owns those (two store pages
  * could be open in different tabs; per-page ownership avoids
  * cross-contamination), exactly as the order-detail page does.
  */
@@ -119,7 +119,7 @@ export class StoreService {
     return env.data;
   }
 
-  /** A page of a store's products. Stateless — the detail page
+  /** A page of a store's products. Stateless, the detail page
    *  owns the accumulator. */
   async listProducts(
     slug: string,
@@ -140,7 +140,7 @@ export class StoreService {
   }
 
   /**
-   * A store's published size guide (public, by slug). Stateless — the PDP's
+   * A store's published size guide (public, by slug). Stateless, the PDP's
    * size-guide modal owns the result. Returns the rows as-is; an empty array
    * means the store has no chart (the modal shows its empty state). A 404
    * (unknown slug) propagates so the caller can degrade to the empty state.
@@ -158,7 +158,7 @@ export class StoreService {
   }
 
   /**
-   * A page of a store's public (approved) reviews, by slug. Stateless — the
+   * A page of a store's public (approved) reviews, by slug. Stateless, the
    * store-reviews page owns the accumulator. Mirrors the mobile store-reviews
    * list. `total` (from meta) drives hasMore so the page can load more until
    * everything is shown.

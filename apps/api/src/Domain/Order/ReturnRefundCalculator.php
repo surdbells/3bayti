@@ -44,7 +44,7 @@ namespace Bayti\Api\Domain\Order;
  *     happen given the per-item line subtotals, but the calculator
  *     clamps pro-rated discount to never exceed the order's discount
  *
- * The calculator is pure — no DB, no DI, no time. Easy to unit-test
+ * The calculator is pure, no DB, no DI, no time. Easy to unit-test
  * exhaustively and reused by the admin endpoint (X.18-F) to pre-fill
  * the refund DTO with the suggested amount.
  */
@@ -79,7 +79,7 @@ final class ReturnRefundCalculator
             return $returnedSubtotal;
         }
 
-        // Defensive: zero subtotal — shouldn't happen but don't div/0.
+        // Defensive: zero subtotal, shouldn't happen but don't div/0.
         if (bccomp($orderSubtotal, '0', 2) <= 0) {
             return $returnedSubtotal;
         }
@@ -98,7 +98,7 @@ final class ReturnRefundCalculator
 
         $refund = bcsub($returnedSubtotal, $proRated, 2);
 
-        // Can't refund negative — but with the clamp above this can't
+        // Can't refund negative, but with the clamp above this can't
         // happen unless returnedSubtotal < pro_rated, which itself can
         // only happen if line_subtotals exceed orderSubtotal (also
         // can't happen with normal items). Defensive anyway:

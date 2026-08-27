@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Sidenav
+   Abayti Design System, Sidenav
    The persistent app navigation on the left (desktop) /
    off-canvas drawer (mobile). Uses espresso dark treatment.
    ========================================================================= */
@@ -196,7 +196,7 @@
   font-weight: var(--ax-fw-semibold);
 }
 
-/* Active state — brown highlight + subtle vertical bar */
+/* Active state, brown highlight + subtle vertical bar */
 .ax-sidenav-link.ax-sidenav-link-active,
 .ax-sidenav-link.active {
   background-color: var(--ax-color-bg-sidenav-active);
@@ -221,7 +221,7 @@
 }
 
 
-/* Sidenav footer — user card */
+/* Sidenav footer, user card */
 .ax-sidenav-footer {
   flex-shrink: 0;
   padding: var(--ax-space-3);

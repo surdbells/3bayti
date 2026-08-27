@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * v3 customer Follow — the `vendor_follow` table.
+ * v3 customer Follow, the `vendor_follow` table.
  *
  * One row per (user, vendor) the user follows. Net-new; replaces the
  * legacy /customer/follow + /customer/unfollow endpoints.
@@ -20,12 +20,12 @@ use Doctrine\Migrations\AbstractMigration;
  *   vendor_id   BIGINT NOT NULL  → vendors(id)  ON DELETE CASCADE
  *   created_at  TIMESTAMPTZ NOT NULL
  *
- * UNIQUE (user_id, vendor_id) — a vendor is followed at most once per
+ * UNIQUE (user_id, vendor_id), a vendor is followed at most once per
  *   user; makes POST idempotent (controller checks then no-ops, the DB
  *   constraint guards against races).
- * INDEX (user_id, created_at) — hot read: a user's followed vendors,
+ * INDEX (user_id, created_at), hot read: a user's followed vendors,
  *   newest first.
- * INDEX (vendor_id) — follower lookups / counts per vendor.
+ * INDEX (vendor_id), follower lookups / counts per vendor.
  */
 final class Version20260615000001 extends AbstractMigration
 {

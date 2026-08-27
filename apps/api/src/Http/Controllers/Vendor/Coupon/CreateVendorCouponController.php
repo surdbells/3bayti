@@ -21,7 +21,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** POST /v3/vendor/coupons — Create a vendor-owned promo code. */
+/** POST /v3/vendor/coupons, Create a vendor-owned promo code. */
 final class CreateVendorCouponController
 {
     use Responder;

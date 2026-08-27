@@ -17,7 +17,7 @@ import { environment } from '../../../environments/environment';
 /**
  * Route `data` contract for a curated product listing. One component
  * powers several "view all, sorted by X" pages (Best Sellers, New
- * Arrivals) — each route supplies its own sort + copy keys so we don't
+ * Arrivals), each route supplies its own sort + copy keys so we don't
  * duplicate the grid/pagination/SEO plumbing.
  */
 export interface ProductListingRouteData {
@@ -32,7 +32,7 @@ export interface ProductListingRouteData {
   /** Crawler-facing English meta description. */
   seoDescription: string;
   /**
-   * When true, this listing is restricted to on-sale products — the sale
+   * When true, this listing is restricted to on-sale products, the sale
    * filter is forced on every load (grid + facets + load-more) regardless
    * of the user's other filter selections. Powers the /discounted route.
    */
@@ -40,7 +40,7 @@ export interface ProductListingRouteData {
 }
 
 /**
- * /best-sellers, /new-arrivals — curated product listings.
+ * /best-sellers, /new-arrivals, curated product listings.
  *
  * A product grid sorted by the route's `sort`, with the shared FilterBar
  * (size / colour / price / sort) above it and "load more" pagination.
@@ -135,7 +135,7 @@ export class ProductListingPageComponent implements OnInit {
   /** Live filter state (sort + facet selections); drives the FilterBar. */
   protected readonly activeFilters = signal<CatalogFilters>({ sort: 'newest' });
 
-  /** The route's default sort — used to keep it out of the URL when unchanged. */
+  /** The route's default sort, used to keep it out of the URL when unchanged. */
   private baseSort: CatalogSort = 'newest';
   /** When true, every load pins the sale filter on (the /discounted route). */
   private saleOnly = false;

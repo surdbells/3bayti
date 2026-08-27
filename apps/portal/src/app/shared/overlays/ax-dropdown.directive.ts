@@ -21,7 +21,7 @@ type AxDropdownAlign = 'start' | 'end';
 
 /**
  * Menu-style dropdown. Different from AxPopover:
- *   - Uses the .ax-dropdown-menu panel styling (Phase 1) — menu aesthetic.
+ *   - Uses the .ax-dropdown-menu panel styling (Phase 1), menu aesthetic.
  *   - Auto-closes when a [axDropdownItem] inside the menu is clicked.
  *   - Closes on outside click, Escape.
  *
@@ -97,7 +97,7 @@ export class AxDropdownDirective implements OnDestroy {
       if (event.key === 'Escape') { event.preventDefault(); this.close(); }
     });
 
-    // Listen for clicks on items inside the menu — close on any item click
+    // Listen for clicks on items inside the menu, close on any item click
     this.overlayRef.overlayElement.addEventListener('click', this.onMenuClick);
   }
 
@@ -128,8 +128,8 @@ export class AxDropdownDirective implements OnDestroy {
 /**
  * Marker directive for menu items. Clicking one closes the parent dropdown.
  * Use on <a>, <button>, or any clickable element inside a dropdown template.
- * (The directive itself is optional — .ax-dropdown-item class has the same
- * effect — but it is clearer in templates and future-proofs us if we ever
+ * (The directive itself is optional, .ax-dropdown-item class has the same
+ * effect, but it is clearer in templates and future-proofs us if we ever
  * change the trigger logic.)
  */
 @Directive({

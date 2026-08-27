@@ -10,7 +10,7 @@ import type {
 import { EMPTY_CHECKOUT_STATE } from './checkout.types';
 
 /**
- * CheckoutService — multi-step checkout state machine.
+ * CheckoutService, multi-step checkout state machine.
  *
  * Holds in-progress state (selected addresses, promo code) in
  * sessionStorage, exposes signals for the UI, and offers the
@@ -128,7 +128,7 @@ export class CheckoutService {
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(state));
     } catch {
-      /* Quota exceeded — silently ignore. State will not survive
+      /* Quota exceeded, silently ignore. State will not survive
          refresh but the in-memory signal stays valid. */
     }
   }

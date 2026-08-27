@@ -11,7 +11,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Platform user — the unified record that covers customers, vendors,
+ * Platform user, the unified record that covers customers, vendors,
  * and admins. Roles are flag-driven (is_customer, is_vendor, is_admin,
  * is_finance, is_support, is_sub_admin) per the existing legacy schema.
  * One person can hold multiple roles simultaneously: a customer who
@@ -31,7 +31,7 @@ use Doctrine\ORM\Mapping as ORM;
  * Password hashes
  * ---------------
  * Legacy backend uses PHP's `password_hash()` / `password_verify()`
- * with the default bcrypt algorithm. These hashes are portable —
+ * with the default bcrypt algorithm. These hashes are portable -
  * Doctrine can store them as VARCHAR(255) and verify with the same
  * password_verify() call, so existing mobile-app users will be able
  * to log into the new web without resetting their passwords.
@@ -95,7 +95,7 @@ class User
 
     /**
      * Primary identifier. Unique across the platform. Required for
-     * login (per Decision A.6.4 — email-first identifier).
+     * login (per Decision A.6.4, email-first identifier).
      */
     #[ORM\Column(type: 'string', length: 255, unique: true)]
     private string $email;
@@ -103,10 +103,10 @@ class User
     /**
      * Phone number, E.164-ish format (with country code). Used for
      * OTP delivery during registration confirmation and password reset.
-     * Unique across the platform — no two accounts share a phone.
+     * Unique across the platform, no two accounts share a phone.
      */
     /**
-     * Phone — nullable + non-unique to preserve legacy data fidelity.
+     * Phone, nullable + non-unique to preserve legacy data fidelity.
      *
      * v3 originally enforced phone NOT NULL UNIQUE. Migration relaxed
      * both constraints (see Version20260512000003) because:
@@ -123,7 +123,7 @@ class User
      * A phone number awaiting OTP verification (the "pending-phone" model).
      * SetPhoneController stores the requested new number here WITHOUT touching
      * `phone`; VerifyPhoneController promotes it on OTP success and clears it.
-     * So an abandoned change never alters — or un-verifies — the active phone.
+     * So an abandoned change never alters, or un-verifies, the active phone.
      */
     #[ORM\Column(name: 'pending_phone', type: 'string', length: 25, nullable: true)]
     private ?string $pendingPhone = null;
@@ -137,7 +137,7 @@ class User
     private string $countryCode = 'AE';
 
     // -------------------------------------------------------------------
-    // Profile fields (M1.7.0+) — additive, mostly nullable
+    // Profile fields (M1.7.0+), additive, mostly nullable
     // -------------------------------------------------------------------
 
     /**
@@ -162,14 +162,14 @@ class User
     private ?string $gender = null;
 
     /**
-     * Birth date. DATE type — no time component, no timezone.
+     * Birth date. DATE type, no time component, no timezone.
      * Used for birthday promotions (M3) and age-gated products.
      */
     #[ORM\Column(type: 'date_immutable', nullable: true)]
     private ?DateTimeImmutable $dob = null;
 
     /**
-     * Profile picture — the full public URL of the uploaded avatar
+     * Profile picture, the full public URL of the uploaded avatar
      * (Flysystem public store under avatars/user-{id}/...). Null until the
      * user uploads one; the API serves a placeholder URL in that case.
      */
@@ -177,7 +177,7 @@ class User
     private ?string $avatarUrl = null;
 
     /**
-     * BCP 47 locale identifier — 'en', 'ar', 'ar-AE', etc. Used to:
+     * BCP 47 locale identifier, 'en', 'ar', 'ar-AE', etc. Used to:
      *   - Localise transactional emails (M3)
      *   - Pick SMS templates (M1.3 already supports per-locale)
      *   - Inform UI direction hints (LTR vs RTL)
@@ -190,7 +190,7 @@ class User
     private string $locale = 'en';
 
     /**
-     * IANA timezone identifier — 'Asia/Dubai', 'Europe/London', etc.
+     * IANA timezone identifier, 'Asia/Dubai', 'Europe/London', etc.
      * Used to display order timestamps in the user's local time and
      * for "ordered N hours ago" relative formatting.
      *
@@ -212,7 +212,7 @@ class User
     private ?string $passwordHash = null;
 
     /**
-     * Audit field — when did the user last change their password?
+     * Audit field, when did the user last change their password?
      * Used by:
      *   - "Change password" notifications ("password last changed 90 days ago")
      *   - Force-rotate flow (admin can require a user to reset on next login)
@@ -252,7 +252,7 @@ class User
     private bool $isSupport = false;
 
     /**
-     * "Sub-admin" — admin with reduced scope (legacy concept).
+     * "Sub-admin", admin with reduced scope (legacy concept).
      * Renamed from `_sub_admin` for consistency with other booleans.
      */
     #[ORM\Column(name: 'is_sub_admin', type: 'boolean', options: ['default' => false])]
@@ -265,7 +265,7 @@ class User
      *
      * Q-OptOutHandling = A locked: scope is *marketing* emails only.
      * Transactional emails (order confirmations, shipping updates,
-     * payment failures, refunds, etc.) IGNORE this flag — those are
+     * payment failures, refunds, etc.) IGNORE this flag, those are
      * required for the service to function and aren't marketing
      * under UAE PDPL / Bahrain PDPL / Saudi PDPL.
      *
@@ -283,13 +283,13 @@ class User
      * Marketing PUSH opt-out flag. FALSE by default (opt-in posture),
      * the push counterpart to marketing_emails_opt_out.
      *
-     * Scope is *marketing* push only — the three marketing pushes:
+     * Scope is *marketing* push only, the three marketing pushes:
      *   - cart.abandoned
      *   - order.review_prompt
      *   - re_engagement.nudge
      *
      * Order-lifecycle pushes (placed, paid, shipped, delivered, etc.)
-     * IGNORE this flag — they are transactional and always send. The
+     * IGNORE this flag, they are transactional and always send. The
      * PushNotificationService checks this flag at the marketing-method
      * layer (early-return) before fanning out to device tokens.
      *
@@ -314,7 +314,7 @@ class User
     /**
      * Is the vendor's store currently visible/active?
      * Vendors can self-toggle (vacation mode); admins can force
-     * deactivate. Distinct from approval — an approved store can
+     * deactivate. Distinct from approval, an approved store can
      * still be inactive.
      */
     #[ORM\Column(name: 'is_store_active', type: 'boolean', options: ['default' => false])]
@@ -343,7 +343,7 @@ class User
     /**
      * Master active flag. Account-level disable (e.g. fraud,
      * policy violation, user-requested deactivation). Distinct from
-     * soft-delete (`deleted_at`) — an inactive account can be
+     * soft-delete (`deleted_at`), an inactive account can be
      * reactivated by an admin without restoring data, while a deleted
      * account requires a separate restore flow.
      */
@@ -351,7 +351,7 @@ class User
     private bool $isActive = true;
 
     /**
-     * Has the user enabled 2FA? Currently a placeholder — 2FA
+     * Has the user enabled 2FA? Currently a placeholder, 2FA
      * implementation is post-M1 (M5 hardening). Carried forward from
      * legacy schema so column-mapping pgloader migration doesn't
      * complain about missing fields.
@@ -363,7 +363,7 @@ class User
      * Force a password change on next sign-in. Set when the account was
      * provisioned WITH a temporary password we handed out (e.g. an admin
      * approving a seller application), so the holder must replace it before
-     * doing anything else. Cleared automatically by setPasswordHash() — i.e.
+     * doing anything else. Cleared automatically by setPasswordHash(), i.e.
      * the moment they actually set their own password, via any flow.
      */
     #[ORM\Column(name: 'must_change_password', type: 'boolean', options: ['default' => false])]
@@ -583,7 +583,7 @@ class User
     public function getRefreshTokens(): Collection { return $this->refreshTokens; }
 
     // -------------------------------------------------------------------
-    // Mutators (deliberately narrow — no public setId, no setEmail
+    // Mutators (deliberately narrow, no public setId, no setEmail
     // until we've thought through what email-change requires)
     // -------------------------------------------------------------------
 
@@ -622,7 +622,7 @@ class User
         //
         // setTime(0, 0, 0) is the unambiguous way to do this.
         // (Earlier we tried createFromFormat('Y-m-d', ...) which applies
-        // the CURRENT time when no time format token is given — bit us
+        // the CURRENT time when no time format token is given, bit us
         // in CI.)
         $this->dob = $dob?->setTime(0, 0, 0);
     }
@@ -652,7 +652,7 @@ class User
         $this->passwordHash = $hash;
         $this->passwordChangedAt = new DateTimeImmutable();
         // Setting a (new) password satisfies any "must change" requirement,
-        // whatever flow got us here — change-password, reset, admin reset.
+        // whatever flow got us here, change-password, reset, admin reset.
         $this->mustChangePassword = false;
     }
 
@@ -674,7 +674,7 @@ class User
 
     /**
      * Set (or change) the phone number. A new number is always
-     * unverified until the user confirms an OTP — so this resets
+     * unverified until the user confirms an OTP, so this resets
      * is_phone_verified to false. Empty string normalises to null.
      *
      * Used by the post-social-sign-in "add a phone" flow
@@ -757,7 +757,7 @@ class User
     }
 
     /**
-     * For the migration/CDC layer only — sets the legacy id once.
+     * For the migration/CDC layer only, sets the legacy id once.
      * Once set, it doesn't change.
      */
     public function bindLegacyId(int $legacyUserId): void

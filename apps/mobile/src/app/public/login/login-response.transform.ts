@@ -9,7 +9,7 @@
  * back into the legacy `{response_code, status, message, data}`
  * shape so call sites don't care which backend served them.
  *
- * BUT — the *contents* of `data` are different between backends:
+ * BUT, the *contents* of `data` are different between backends:
  *
  *   Legacy POST /users/login -> data = { id, token, first_name, ..., is_vendor, is_store_active, ... }
  *   v3 POST /v3/auth/login   -> data = { access_token, refresh_token, ..., user: { id, email, ..., roles: [...] } }
@@ -62,7 +62,7 @@
  *   undefined. Two of three pages still talk to the legacy backend
  *   for now (M3.1.5+ migrates them); the legacy endpoints fetch
  *   their own state and don't depend on the cached blob. The
- *   checkout page is the highest-risk consumer — flagged in the
+ *   checkout page is the highest-risk consumer, flagged in the
  *   M3.1.3 completion runbook for device-test verification.
  *
  * Legacy-passthrough behaviour
@@ -78,7 +78,7 @@
  *
  * Defensive: returns null for inputs that match neither shape.
  * Caller decides what to do (the login handler treats null as
- * "fall back to storing response.data as-is" — preserving today's
+ * "fall back to storing response.data as-is", preserving today's
  * behaviour for unexpected shapes rather than masking with empty
  * fields).
  */

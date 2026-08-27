@@ -12,7 +12,7 @@ use RuntimeException;
  * Wraps a mysqli connection to the legacy production MySQL.
  *
  * Reads credentials from environment variables (set via .env on the
- * production server). All queries are read-only — this class deliberately
+ * production server). All queries are read-only, this class deliberately
  * has no write methods. The legacy DB stays unchanged during migration.
  *
  * Required env vars (loaded via Bootstrap):
@@ -72,7 +72,7 @@ final class LegacyDb
     }
 
     /**
-     * Eager fetch — load all rows into memory. Use only for small tables
+     * Eager fetch, load all rows into memory. Use only for small tables
      * (< 1000 rows). Use iterate() for anything larger.
      *
      * @return list<array<string, mixed>>
@@ -92,7 +92,7 @@ final class LegacyDb
     }
 
     /**
-     * Streaming fetch — yields one row at a time without loading all
+     * Streaming fetch, yields one row at a time without loading all
      * rows into memory. Required for the users (9316 rows) and products
      * (2165 rows) iterations.
      *
@@ -100,7 +100,7 @@ final class LegacyDb
      */
     public function iterate(string $sql): iterable
     {
-        // MYSQLI_USE_RESULT = unbuffered — server holds the rows
+        // MYSQLI_USE_RESULT = unbuffered, server holds the rows
         $result = $this->conn->query($sql, MYSQLI_USE_RESULT);
         if (!$result instanceof mysqli_result) {
             return;
@@ -115,7 +115,7 @@ final class LegacyDb
     }
 
     /**
-     * Quick count helper — wraps "SELECT COUNT(*) FROM ...".
+     * Quick count helper, wraps "SELECT COUNT(*) FROM ...".
      */
     public function count(string $table, string $where = '1=1'): int
     {
@@ -130,7 +130,7 @@ final class LegacyDb
      * ===============
      * Some migration steps target legacy tables whose names/shapes
      * weren't fully understood when the v3 migration scripts were
-     * written (M3.1.5.5c — labels + styles). Rather than hard-fail
+     * written (M3.1.5.5c, labels + styles). Rather than hard-fail
      * the entire migration when an unfamiliar table is missing, the
      * step probes for the table and logs-and-skips gracefully when
      * absent.
@@ -171,7 +171,7 @@ final class LegacyDb
      * to prepared statements via the existing fetchOne/fetchAll
      * surface, and the only callers here are tableExists/columnExists
      * with operator-controlled identifiers (not user input). Still,
-     * defense in depth — drop anything outside a safe identifier
+     * defense in depth, drop anything outside a safe identifier
      * character set.
      */
     private function escape(string $value): string

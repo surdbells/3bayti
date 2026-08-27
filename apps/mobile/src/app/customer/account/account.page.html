@@ -120,7 +120,7 @@
   <app-add-phone-banner></app-add-phone-banner>
 
   <!--
-    Gift-card promo — compact by default, tap the row to expand.
+    Gift-card promo, compact by default, tap the row to expand.
     The gift-card BALANCE is nested inside this card (a line under the
     heading + a tappable row when expanded) rather than sitting above it as
     its own widget, so having a balance costs no extra page height.
@@ -141,7 +141,7 @@
         <span class="gift-promo__compact">
           <span class="gift-promo__eyebrow">{{ 'gift_cards' | translate }}</span>
           <span class="gift-promo__heading">{{ 'gift_promo_heading' | translate }}</span>
-          <!-- Balance inline in the collapsed header — no extra height. -->
+          <!-- Balance inline in the collapsed header, no extra height. -->
           @if (activeGiftCards.length > 0) {
             <span class="gift-promo__balance">
               {{ 'gift_card_balance_label' | translate }}: <strong>AED {{ totalGiftCardBalance }}</strong>
@@ -218,7 +218,7 @@
                 (error)="onImageError('best-' + best_seller.product_id)"
                 [src]="cfImage(best_seller.image_1, 'card')"
                 alt="{{best_seller.product_name}}" />
-              <!-- SALE flag (top-left) — only when genuinely discounted -->
+              <!-- SALE flag (top-left), only when genuinely discounted -->
               @if(best_seller.sale_price && +best_seller.sale_price > 0 && +best_seller.sale_price < +best_seller.price){
                 <span class="m6d-flag-badge m6d-flag-badge--sale">{{ 'badge_sale' | translate }}</span>
               }
@@ -272,7 +272,7 @@
                 (error)="onImageError('new-' + new_arrival.product_id)"
                 [src]="cfImage(new_arrival.image_1, 'card')"
                 alt="{{new_arrival.product_name}}" />
-              <!-- SALE flag (top-left) — only when genuinely discounted -->
+              <!-- SALE flag (top-left), only when genuinely discounted -->
               @if(new_arrival.sale_price && +new_arrival.sale_price > 0 && +new_arrival.sale_price < +new_arrival.price){
                 <span class="m6d-flag-badge m6d-flag-badge--sale">{{ 'badge_sale' | translate }}</span>
               }

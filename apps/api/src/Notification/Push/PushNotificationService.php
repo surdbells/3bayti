@@ -30,14 +30,14 @@ use Psr\Log\NullLogger;
  * locale is resolved per send via LocaleResolver::normalizeToShortTag
  * (the same short-tag normalization the email OrderNotificationService
  * uses) and the matching copy is chosen. Unknown / unsupported locales
- * fall back to English. Resolution is at SEND time, not snapshot time —
+ * fall back to English. Resolution is at SEND time, not snapshot time -
  * same rationale as the email locale resolver.
  *
  * Marketing opt-out
  * -----------------
  * The three marketing methods (cartAbandoned, orderReviewPrompt,
  * reEngagementNudge) early-return when the recipient has
- * marketing_push_opt_out = true. Order-lifecycle pushes IGNORE the flag —
+ * marketing_push_opt_out = true. Order-lifecycle pushes IGNORE the flag -
  * they are transactional and always send.
  *
  * Fan-out + pruning
@@ -77,7 +77,7 @@ class PushNotificationService
     }
 
     // -----------------------------------------------------------------
-    // Lifecycle hooks — mirror OrderNotificationService customer events
+    // Lifecycle hooks, mirror OrderNotificationService customer events
     // (transactional: ALWAYS send, ignore marketing opt-out)
     // -----------------------------------------------------------------
 
@@ -116,7 +116,7 @@ class PushNotificationService
      * or that a failed charge can be retried. Fired by the
      * orders:send-payment-reminders cron, not a lifecycle transition.
      *
-     * Transactional — it concerns the customer's own unfinished order, so
+     * Transactional, it concerns the customer's own unfinished order, so
      * (like orderPlaced / orderPaymentFailed) it is NOT gated on the
      * marketing-push opt-out. Deep-links to /orders/{order_id} via the
      * order.payment_reminder type, where the app offers "Complete payment".
@@ -225,7 +225,7 @@ class PushNotificationService
     }
 
     /**
-     * Generic order status-change push — the counterpart to
+     * Generic order status-change push, the counterpart to
      * OrderNotificationService::orderStatusChanged. Fired by the admin
      * order-status override endpoint when the new status has no
      * dedicated lifecycle push. Deep-links to /orders/{order_id} via the
@@ -340,7 +340,7 @@ class PushNotificationService
 
         $orderReference = $conversation->getOrder()->getOrderReference();
         // Title is the counterparty's name (locale-independent); the body
-        // is the message preview the sender wrote — also content, not copy.
+        // is the message preview the sender wrote, also content, not copy.
         $message = new PushMessage(
             title: $counterpartyName,
             body: mb_substr($preview, 0, 140),
@@ -367,7 +367,7 @@ class PushNotificationService
     // -----------------------------------------------------------------
 
     /**
-     * Abandoned-cart recovery nudge. Marketing — skipped if the cart
+     * Abandoned-cart recovery nudge. Marketing, skipped if the cart
      * owner opted out of marketing push. Deep-links to /cart.
      * Never throws.
      */
@@ -413,7 +413,7 @@ class PushNotificationService
     }
 
     /**
-     * Post-delivery review prompt. Marketing — skipped if the customer
+     * Post-delivery review prompt. Marketing, skipped if the customer
      * opted out of marketing push. Deep-links to /orders/{order_id}.
      * Never throws.
      */
@@ -461,7 +461,7 @@ class PushNotificationService
     }
 
     /**
-     * Generic re-engagement nudge for lapsed users. Marketing — skipped
+     * Generic re-engagement nudge for lapsed users. Marketing, skipped
      * if the user opted out of marketing push. No deep-link payload;
      * the app routes it to the home/shop tab. Never throws.
      */
@@ -522,7 +522,7 @@ class PushNotificationService
 
         $tokens = $this->activeTokensFor($user);
         if ($tokens === []) {
-            // Nothing to do — customer has no registered devices.
+            // Nothing to do, customer has no registered devices.
             return;
         }
 

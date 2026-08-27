@@ -14,7 +14,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 
-/** POST /v3/admin/users/{id}/roles — body { role_ids: [int] }. Replaces the user's roles. */
+/** POST /v3/admin/users/{id}/roles, body { role_ids: [int] }. Replaces the user's roles. */
 final class AssignUserRolesController
 {
     use Responder;

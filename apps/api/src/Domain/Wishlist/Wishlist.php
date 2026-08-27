@@ -12,11 +12,11 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * A single saved product on a user's wishlist.
  *
- * One row per (user, product) — the unique index in the migration
+ * One row per (user, product), the unique index in the migration
  * enforces "saved at most once". Net-new in M3.2.Y.6 (Q6.4:
  * products-only).
  *
- * Only created_at is tracked (no updated_at) — a wishlist entry is
+ * Only created_at is tracked (no updated_at), a wishlist entry is
  * immutable: it's either there or it isn't. Toggling "saved" is a
  * create/delete, never an update, so there is nothing to re-stamp.
  */

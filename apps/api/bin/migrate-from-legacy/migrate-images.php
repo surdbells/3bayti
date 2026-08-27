@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Image migration — copies legacy product images and vendor logos
+ * Image migration, copies legacy product images and vendor logos
  * to local Flysystem storage and updates the URL columns in PostgreSQL.
  *
  * Source
@@ -15,7 +15,7 @@ declare(strict_types=1);
  *
  * Alternatively, if --ssh-copy is provided (see below), the script
  * reads files directly via the local filesystem path on the same
- * or mounted server — zero HTTP overhead.
+ * or mounted server, zero HTTP overhead.
  *
  * Idempotent
  * ----------
@@ -146,7 +146,7 @@ function fetchBytes(string $url, ?string $diskBase): string|false
     }
 
     // The product import dropped the 'products_images/' path segment when
-    // building legacy URLs (it assumed the host already contained it — it
+    // building legacy URLs (it assumed the host already contained it, it
     // doesn't), so many stored URLs 404 as
     //   …/vendors/products/<file>           (broken)
     // while the file actually lives at
@@ -283,7 +283,7 @@ if (!$vendorsOnly) {
 
             $result = migrateUrl($primaryUrl, $sPath, $storage, $uploadsBase, $sshCopy, $dryRun);
             if ($result === null) {
-                $newPrimary = $primaryUrl; // skip — already migrated
+                $newPrimary = $primaryUrl; // skip, already migrated
                 $stats['product_skipped']++;
             } elseif ($result === false) {
                 $stats['errors']++;

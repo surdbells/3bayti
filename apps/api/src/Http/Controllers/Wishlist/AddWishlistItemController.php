@@ -25,15 +25,15 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * POST /v3/me/wishlist  body { product_id } — save a product.
+ * POST /v3/me/wishlist  body { product_id }, save a product.
  *
  * Idempotent (Q6.3): if the product is already saved, this is a no-op
- * success — NOT a 409. New save → 201; already-saved → 200. Both
+ * success, NOT a 409. New save → 201; already-saved → 200. Both
  * return the saved product in the same { data: <product listShape> }
  * shape, so the client can update its UI uniformly.
  *
  * The product must exist and be active (404 PRODUCT_NOT_FOUND
- * otherwise) — you can't wishlist a delisted/nonexistent product.
+ * otherwise), you can't wishlist a delisted/nonexistent product.
  */
 final class AddWishlistItemController
 {
@@ -65,7 +65,7 @@ final class AddWishlistItemController
         $input = $this->validator->parse($request, AddWishlistItemInput::class);
 
         // Mobile cards carry the LEGACY product id (legacy_product_id ??
-        // v3 id), so resolve in that same precedence — a straight
+        // v3 id), so resolve in that same precedence, a straight
         // EntityManager::find by v3 PK 404s every migrated product.
         /** @var ProductRepository $productRepo */
         $productRepo = $this->em->getRepository(Product::class);

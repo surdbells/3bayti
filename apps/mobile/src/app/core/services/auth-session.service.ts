@@ -9,7 +9,7 @@ import { LocalCartService } from './local-cart.service';
 import { PendingOrdersService } from './pending-orders.service';
 
 /**
- * AuthSessionService — single source of truth for terminating the
+ * AuthSessionService, single source of truth for terminating the
  * authenticated session on this device.
  *
  * Prior to this service the two logout handlers (settings.page.signOut
@@ -19,10 +19,10 @@ import { PendingOrdersService } from './pending-orders.service';
  * FCM token kept receiving pushes. logout() below does the full teardown:
  *
  *   1. Deactivate this device's push token (PushManager.onSignedOutReadingToken)
- *      BEFORE clearing — it reads the still-valid auth token from
+ *      BEFORE clearing, it reads the still-valid auth token from
  *      Preferences('user'). Wrapped in try/catch (best-effort, no-op on web).
  *   2. POST /v3/auth/logout { refresh_token } with the access token as the
- *      bearer — revokes the RefreshToken row server-side. BEST-EFFORT:
+ *      bearer, revokes the RefreshToken row server-side. BEST-EFFORT:
  *      errors are swallowed so logout still works offline / on a dead token.
  *   3. Remove Preferences('user') + Preferences('keep_session').
  *   4. Clear the guest local cart for a clean next session.
@@ -39,12 +39,12 @@ export class AuthSessionService {
   ) {}
 
   /**
-   * Fully terminate the session on this device. Resilient — every remote
+   * Fully terminate the session on this device. Resilient, every remote
    * step is best-effort so the local teardown + redirect always run, even
    * offline or with an already-invalid token.
    */
   async logout(): Promise<void> {
-    // (a) Read the user blob — holds both the access token and refresh_token.
+    // (a) Read the user blob, holds both the access token and refresh_token.
     let token = '';
     let refreshToken = '';
     try {
@@ -55,7 +55,7 @@ export class AuthSessionService {
         refreshToken = blob?.refresh_token ?? '';
       }
     } catch {
-      /* malformed blob — proceed with local teardown anyway */
+      /* malformed blob, proceed with local teardown anyway */
     }
 
     // (b) Deactivate this device's FCM token while the auth token is still
@@ -66,7 +66,7 @@ export class AuthSessionService {
       /* push deactivation is best-effort */
     }
 
-    // (c) Revoke the server-side RefreshToken. BEST-EFFORT — swallow errors
+    // (c) Revoke the server-side RefreshToken. BEST-EFFORT, swallow errors
     //     so logout works offline or with a dead token.
     if (token && refreshToken) {
       try {
@@ -78,7 +78,7 @@ export class AuthSessionService {
           ),
         );
       } catch {
-        /* offline / already-revoked — local teardown still proceeds */
+        /* offline / already-revoked, local teardown still proceeds */
       }
     }
 

@@ -16,7 +16,7 @@ import { SkeletonShimmerComponent } from './skeleton-shimmer';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
- * ProductStrip — horizontal-scrolling row of product cards.
+ * ProductStrip, horizontal-scrolling row of product cards.
  *
  * The signature home-page surface (Phase 1). Used for "Featured",
  * "Best sellers", "New arrivals" sections. Same pattern works on
@@ -29,7 +29,7 @@ import { TranslatePipe } from '@ngx-translate/core';
  *   - Cards scroll horizontally; CSS scroll-snap aligns each card
  *     to a starting position so swipes/scrolls land on whole cards
  *   - Desktop: hover-revealed left/right arrow buttons (CSS hover);
- *     touch devices skip them entirely (industry consensus —
+ *     touch devices skip them entirely (industry consensus -
  *     arrows on touch are noisy chrome)
  *   - Mobile: peek of next card visible at the right edge invites
  *     the user to swipe (no buttons)
@@ -43,7 +43,7 @@ import { TranslatePipe } from '@ngx-translate/core';
  * entirely if there's no content).
  *
  * Arrows render only after view init (showArrows starts false) so the
- * initial paint omits them until scroll state is computed — avoids a
+ * initial paint omits them until scroll state is computed, avoids a
  * flash of arrows before edge detection runs.
  */
 @Component({
@@ -130,7 +130,7 @@ import { TranslatePipe } from '@ngx-translate/core';
   styleUrl: './product-strip.scss',
 })
 export class ProductStripComponent implements AfterViewInit, OnDestroy {
-  /** Section heading — e.g. "This week's edit", "Best sellers". */
+  /** Section heading, e.g. "This week's edit", "Best sellers". */
   @Input({ required: true }) heading!: string;
 
   /**
@@ -140,7 +140,7 @@ export class ProductStripComponent implements AfterViewInit, OnDestroy {
    */
   @Input() eyebrow: string | null = null;
 
-  /** Optional "View all" link target — e.g. /best-sellers. */
+  /** Optional "View all" link target, e.g. /best-sellers. */
   @Input() viewAllUrl: string | null = null;
 
   /** Products to render. */
@@ -150,7 +150,7 @@ export class ProductStripComponent implements AfterViewInit, OnDestroy {
   @Input() loading = false;
 
   /**
-   * Compact density — pins each card to the Top Sellers rail width
+   * Compact density, pins each card to the Top Sellers rail width
    * (180px, 216px ≥1280px) so the home page's strips read consistently
    * with the ranked rail (web-uplift #8). Default (false) keeps the
    * larger editorial sizing used on the PDP related-products strip.
@@ -170,7 +170,7 @@ export class ProductStripComponent implements AfterViewInit, OnDestroy {
   readonly atEnd = signal(false);
 
   ngAfterViewInit(): void {
-    /* Reveal arrows now that the view exists — avoids the FOUC where
+    /* Reveal arrows now that the view exists, avoids the FOUC where
      * arrows briefly flash before scroll-state is computed. */
     this.showArrows.set(true);
     /* Initialise edge state from current scroll position. */
@@ -178,7 +178,7 @@ export class ProductStripComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    /* Nothing to clean up — scroll listener is template-bound. */
+    /* Nothing to clean up, scroll listener is template-bound. */
   }
 
   /**
@@ -197,7 +197,7 @@ export class ProductStripComponent implements AfterViewInit, OnDestroy {
    * Scroll by approximately one card width in the given direction
    * (-1 = left, +1 = right). The "card width" is computed from the
    * first child element's offsetWidth + the gap (read from CSS).
-   * We don't need pixel-perfect — the scroll-snap on the track makes
+   * We don't need pixel-perfect, the scroll-snap on the track makes
    * sure the result aligns to a card boundary.
    */
   scrollByCard(direction: -1 | 1): void {

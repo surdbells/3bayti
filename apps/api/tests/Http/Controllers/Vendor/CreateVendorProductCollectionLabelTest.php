@@ -20,7 +20,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 
 /**
- * Bug 3 — the product create flow must persist the chosen collection_id and
+ * Bug 3, the product create flow must persist the chosen collection_id and
  * label_id (previously the picker selections were dropped entirely).
  */
 #[CoversClass(CreateVendorProductController::class)]

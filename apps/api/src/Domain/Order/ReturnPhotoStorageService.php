@@ -34,7 +34,7 @@ use Psr\Http\Message\UploadedFileInterface;
  * uploads + persists in the same transaction); we accept 0 as a
  * sentinel and use `pending` as the directory name in that case.
  * The path is captured at OrderReturnRequestPhoto creation time
- * so the in-flight path is permanent — no rename later.
+ * so the in-flight path is permanent, no rename later.
  *
  * Why pre-resolve the path before persisting
  * ===========================================
@@ -49,17 +49,17 @@ use Psr\Http\Message\UploadedFileInterface;
  * we have an orphan blob on disk. The operator playbook's
  * orphan-cleanup cron sweeps these out periodically (matches
  * blob paths against the photos table; deletes blobs with no
- * row). This is acceptable for v1 — the blobs are small and
+ * row). This is acceptable for v1, the blobs are small and
  * the cleanup window is configurable.
  *
  * Mime detection
  * ==============
  * We trust the client-declared Content-Type header for the upload
- * mime check (sufficient for evidence photos — a malicious client
+ * mime check (sufficient for evidence photos, a malicious client
  * lying about mime gets a blob stored under .jpg with non-image
  * bytes; admin reviewer sees a broken image and can deny). For
  * stronger detection, future work can read the first bytes and
- * verify the magic number — but v1 is reasonable.
+ * verify the magic number, but v1 is reasonable.
  */
 final class ReturnPhotoStorageService
 {
@@ -176,7 +176,7 @@ final class ReturnPhotoStorageService
 
     /**
      * Delete a stored photo blob. Used by test cleanup and the
-     * orphan-cleanup cron. Idempotent — silently no-ops if the
+     * orphan-cleanup cron. Idempotent, silently no-ops if the
      * path is already gone.
      */
     public function delete(string $storagePath): void
@@ -184,7 +184,7 @@ final class ReturnPhotoStorageService
         try {
             $this->filesystem->delete($storagePath);
         } catch (FilesystemException) {
-            // Idempotent — already gone is fine.
+            // Idempotent, already gone is fine.
         }
     }
 
@@ -192,7 +192,7 @@ final class ReturnPhotoStorageService
      * Check whether a stored blob exists at the given path. Used
      * by the orphan-cleanup cron to identify table rows whose
      * blob has gone missing (cleanup direction is the other way
-     * — find blobs with no row — but this is the symmetric primitive).
+     *, find blobs with no row, but this is the symmetric primitive).
      */
     public function exists(string $storagePath): bool
     {
@@ -212,7 +212,7 @@ final class ReturnPhotoStorageService
         $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         $yearMonth = $now->format('Y/m');
         // ULID is time-sortable + collision-safe. Trim implementation
-        // — we don't pull a ULID library; generate from time + random.
+        //, we don't pull a ULID library; generate from time + random.
         $ulid = $this->generateUlid();
         $idSegment = $returnRequestId > 0 ? (string) $returnRequestId : 'pending';
         return "return-photos/{$yearMonth}/{$idSegment}/{$ulid}.{$extension}";

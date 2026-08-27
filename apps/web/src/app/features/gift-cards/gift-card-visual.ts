@@ -10,16 +10,16 @@ import {
 } from './gift-card.model';
 
 /**
- * `ui-gift-card` — the themed gift-card visual.
+ * `ui-gift-card`, the themed gift-card visual.
  *
  * Renders in two modes from the same template:
- *   • Preview  — pass `theme` (+ optional amount / recipient / photo)
+ *   • Preview , pass `theme` (+ optional amount / recipient / photo)
  *                before any card exists, for the purchase configurator.
- *   • Real     — pass a full `card` (or the granular fields) to show an
+ *   • Real    , pass a full `card` (or the granular fields) to show an
  *                owned/received card with its code, balance and status.
  *
  * Each theme drives a decorative SVG motif (sunburst / rings / star /
- * bloom / seal / medallion) and an exact colour palette — mirrored from
+ * bloom / seal / medallion) and an exact colour palette, mirrored from
  * the server THEME_META so preview needs no round-trip. The motif is
  * inline SVG (kept out of the SCSS budget); the layout/typography live
  * in the stylesheet.

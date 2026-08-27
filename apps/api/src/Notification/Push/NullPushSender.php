@@ -36,7 +36,7 @@ final class NullPushSender implements PushSenderInterface
         ]));
     }
 
-    /** Log only the last 6 chars of a token — never the full secret. */
+    /** Log only the last 6 chars of a token, never the full secret. */
     private function tokenSuffix(string $token): string
     {
         return strlen($token) <= 6 ? $token : '…' . substr($token, -6);

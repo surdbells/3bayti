@@ -21,7 +21,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 
 /**
- * GET /v3/vendor/products — verifies the vendor product-management shape
+ * GET /v3/vendor/products, verifies the vendor product-management shape
  * (status, stock, category name, flat image/price keys) and that filter
  * query params are forwarded to the repository.
  */

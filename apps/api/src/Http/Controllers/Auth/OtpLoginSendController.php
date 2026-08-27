@@ -56,7 +56,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   - No user with that phone / email
  *   - User exists but is_active = false (disabled account can't log in)
  *   - User exists but is_phone_verified = false (registration not
- *     completed — there is no usable session to mint yet)
+ *     completed, there is no usable session to mint yet)
  *   - channel=email but the user has no stored phone is irrelevant
  *     here (email channel sends to the email); channel=phone but the
  *     stored phone is null yields a fake vid (nothing to SMS).

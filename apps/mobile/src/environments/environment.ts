@@ -6,7 +6,7 @@ export const environment = {
   production: false,
 
   /* Fallback app version shown in the UI (e.g. Settings footer) when the
-   * native Capacitor App.getInfo() is unavailable — e.g. on the web/dev
+   * native Capacitor App.getInfo() is unavailable, e.g. on the web/dev
    * platform where getInfo() is unimplemented and throws. On a real device
    * the runtime native version (CFBundleShortVersionString / versionName)
    * supersedes this. Keep in sync with apps/mobile/package.json "version". */
@@ -16,7 +16,7 @@ export const environment = {
    *
    * The key below is for development. It MUST be restricted in
    * Google Cloud Console:
-   *   - Application restrictions: HTTP referrers — limit to localhost
+   *   - Application restrictions: HTTP referrers, limit to localhost
    *     (http://localhost, capacitor://localhost, https://localhost)
    *   - API restrictions: Places API (New) only
    *
@@ -42,7 +42,7 @@ export const environment = {
    *
    * If empty (current default until URL is provided), the app skips the
    * remote check and falls through to a local store-version comparison
-   * only — which is currently a no-op since no min-version threshold
+   * only, which is currently a no-op since no min-version threshold
    * is configured locally.
    *
    * Failing safe: if the JSON fetch fails, returns malformed data, or

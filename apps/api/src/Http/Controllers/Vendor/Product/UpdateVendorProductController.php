@@ -73,7 +73,7 @@ final class UpdateVendorProductController
             throw HttpException::notFound('Product not found.');
         }
 
-        // Ownership check — product's vendor must be owned by this user.
+        // Ownership check, product's vendor must be owned by this user.
         if (!in_array($product->getVendor()->getId(), $vendorIds, true)) {
             throw HttpException::forbidden('You do not own this product.');
         }

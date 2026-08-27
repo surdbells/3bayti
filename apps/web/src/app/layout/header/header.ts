@@ -88,7 +88,7 @@ export class HeaderComponent {
    * is the top of the IA); New In precedes Best Sellers so the freshest
    * catalogue reads first. Gift Cards links to the gift-card storefront.
    *
-   * Text-only in the tidied nav (icons removed) — `key` survives purely as
+   * Text-only in the tidied nav (icons removed), `key` survives purely as
    * the stable `data-testid` slug. The "Discounted" entry is rendered
    * separately (after a divider) so it reads as a distinct, accented item.
    */
@@ -107,7 +107,7 @@ export class HeaderComponent {
   /** Global search overlay open state (driven by the header search trigger). */
   protected readonly searchOpen = signal(false);
 
-  /** True once the page has scrolled past the top — drives the condensed,
+  /** True once the page has scrolled past the top, drives the condensed,
    *  elevated header + the slightly smaller logo. */
   protected readonly scrolled = signal(false);
 
@@ -126,7 +126,7 @@ export class HeaderComponent {
   );
 
   /**
-   * True only on the home route ("/") — drives the FLOATING transparent
+   * True only on the home route ("/"), drives the FLOATING transparent
    * header that overlays the hero. On every other route the header stays
    * solid as before. Strips query/fragment so "/?ref=x" still counts as
    * home. When scrolled, `.is-scrolled` overrides back to the solid
@@ -141,12 +141,12 @@ export class HeaderComponent {
    *  events into a single read-per-frame (passive + throttled). */
   private scrollRaf = 0;
 
-  /** Close button inside the drawer — focused when the drawer opens. */
+  /** Close button inside the drawer, focused when the drawer opens. */
   private readonly drawerCloseBtn = viewChild<ElementRef<HTMLButtonElement>>('drawerClose');
 
-  /** Current user (or null when logged out) — for the user menu. */
+  /** Current user (or null when logged out), for the user menu. */
   protected readonly currentUser = this.auth.currentUser;
-  /** Authenticated state — for choosing which CTAs to render. */
+  /** Authenticated state, for choosing which CTAs to render. */
   protected readonly isAuthenticated = this.auth.isAuthenticated;
 
   /** True when the logged-out audience CTAs should be visible. */
@@ -154,7 +154,7 @@ export class HeaderComponent {
 
   /**
    * True when a signed-in user still needs to verify their phone. Drives
-   * the header reminder badge — phone verification is required before
+   * the header reminder badge, phone verification is required before
    * placing an order (mirrored by the /account reminder + checkout gate).
    */
   protected readonly needsPhoneVerification = computed(
@@ -201,7 +201,7 @@ export class HeaderComponent {
 
   constructor() {
     // Passive + rAF-throttled scroll listener. Registered manually (rather
-    // than via @HostListener) so we can mark it `{ passive: true }` — the
+    // than via @HostListener) so we can mark it `{ passive: true }`, the
     // handler never calls preventDefault, so this lets the browser keep
     // scrolling on the compositor thread. Guarded behind DOCUMENT.defaultView
     // so it stays inert during SSR. Torn down on destroy.
@@ -213,7 +213,7 @@ export class HeaderComponent {
     if (!win) return;
 
     const onScroll = (): void => {
-      if (this.scrollRaf) return; // already a frame pending — coalesce.
+      if (this.scrollRaf) return; // already a frame pending, coalesce.
       this.scrollRaf = win.requestAnimationFrame(() => {
         this.scrollRaf = 0;
         // >12px keeps the floating bar from flickering on tiny scrolls /

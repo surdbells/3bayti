@@ -46,7 +46,7 @@ use Psr\Log\LoggerInterface;
  * ------------------
  * After the item transition, Order::recomputeStatusFromItems() rolls
  * the order's status up (e.g. all items delivered → order delivered).
- * The rollup is idempotent — re-running doesn't drift state.
+ * The rollup is idempotent, re-running doesn't drift state.
  *
  * Response
  * --------
@@ -100,7 +100,7 @@ final class TransitionVendorOrderItemController
         $input = $this->validator->parse($request, TransitionOrderItemInput::class);
         $newStatus = $input->status;
         if ($newStatus === null) {
-            // Defensive — validator should already have rejected this.
+            // Defensive, validator should already have rejected this.
             throw HttpException::businessRuleViolation(
                 'invalid_status',
                 'status is required.',
@@ -129,7 +129,7 @@ final class TransitionVendorOrderItemController
         foreach ($order->getItems() as $candidate) {
             if ($candidate->getId() === $itemId) {
                 if (!isset($vendorIdSet[$candidate->getVendor()->getId() ?? -1])) {
-                    // Wrong vendor — return 404 not 403
+                    // Wrong vendor, return 404 not 403
                     throw HttpException::notFound('Order item not found.');
                 }
                 $item = $candidate;
@@ -140,7 +140,7 @@ final class TransitionVendorOrderItemController
             throw HttpException::notFound('Order item not found.');
         }
 
-        // M3.2.X.17-B — snapshot before-state for audit emission.
+        // M3.2.X.17-B, snapshot before-state for audit emission.
         // The audit captures item-status transitions so the X.17
         // order-timeline endpoint can surface vendor-driven changes.
         // Notes flow through as audit context, not just structured logs.
@@ -178,7 +178,7 @@ final class TransitionVendorOrderItemController
 
         $this->em->flush();
 
-        // M3.2.X.17-B — emit audit on the item-status transition. The
+        // M3.2.X.17-B, emit audit on the item-status transition. The
         // builder's classifyAuditType() recognizes the before/after.
         // item_status shape and emits a 'order.item_status_changed'
         // timeline event with the vendor as actor.
@@ -221,7 +221,7 @@ final class TransitionVendorOrderItemController
 
         // Notify the customer of every line-item state change (email +
         // push). Per-item: the customer wants to know as each piece moves
-        // — confirmed, preparing, shipped, delivered, or rejected.
+        //, confirmed, preparing, shipped, delivered, or rejected.
         if ($newStatus === OrderItem::ITEM_STATUS_ACCEPTED) {
             $this->notifications->itemAccepted($order, $item);
             $this->pushNotifications->itemAccepted($order);

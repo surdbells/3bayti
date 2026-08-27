@@ -17,7 +17,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * GET /v3/vendors/{vendorId}/reviews[?limit=&offset=] — public
+ * GET /v3/vendors/{vendorId}/reviews[?limit=&offset=], public
  * (approved) reviews across all of a vendor's products PLUS store-level
  * (product IS NULL) reviews, newest first. No auth; pending/rejected/spam
  * stay hidden.

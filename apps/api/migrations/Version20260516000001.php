@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.2.X.2-A — Add is_featured column to vendors.
+ * M3.2.X.2-A, Add is_featured column to vendors.
  *
  * Background
  * ==========
@@ -42,7 +42,7 @@ use Doctrine\Migrations\AbstractMigration;
  * Featured vendors are FEW (4-12 typical). A plain index over is_featured
  * would be useless (one boolean column, tiny selectivity for false=most).
  * A partial index on `WHERE is_featured = true` is the right shape but
- * we skip it for the launch — at 60 total vendors, a full scan filtered
+ * we skip it for the launch, at 60 total vendors, a full scan filtered
  * by is_active AND is_featured is faster than touching an index.
  *
  * If/when vendor count grows past ~5,000 we add:
@@ -56,7 +56,7 @@ use Doctrine\Migrations\AbstractMigration;
  * Rollback safety
  * ---------------
  * down() drops the column. Any vendor that was flagged is_featured = true
- * before rollback loses that flag — accepted because rollback is an
+ * before rollback loses that flag, accepted because rollback is an
  * exceptional operation and the curation can be re-applied via admin UI.
  */
 final class Version20260516000001 extends AbstractMigration
@@ -81,7 +81,7 @@ final class Version20260516000001 extends AbstractMigration
                 ADD COLUMN is_featured BOOLEAN NOT NULL DEFAULT FALSE
         SQL);
 
-        // No index — see class docblock for rationale. If profiling
+        // No index, see class docblock for rationale. If profiling
         // post-launch shows the featured-vendors query is slow, add:
         //   CREATE INDEX idx_vendors_featured_active
         //     ON vendors (name ASC)

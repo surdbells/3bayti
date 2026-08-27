@@ -222,7 +222,7 @@ final class NoonPaymentGatewayTest extends TestCase
 
     public function testInitiateCheckoutOnDuplicateReferenceRaisesDuplicateRefException(): void
     {
-        // Noon resultCode 19012 — caller looks up the existing order.
+        // Noon resultCode 19012, caller looks up the existing order.
         $this->mock->append(new Response(200, [], json_encode([
             'resultCode' => 19012,
             'message' => 'Duplicate reference',

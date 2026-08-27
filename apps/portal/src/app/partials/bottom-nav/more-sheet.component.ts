@@ -19,7 +19,7 @@ interface MoreSheetSection {
 /**
  * Curated "More" menu rendered as a bottom sheet on mobile.
  *
- * Mirrors the secondary routes from the sidenav — i.e. everything that ISN'T
+ * Mirrors the secondary routes from the sidenav, i.e. everything that ISN'T
  * already in the bottom nav (Dashboard, Products, Orders, Coupons live there).
  */
 @Component({

@@ -85,7 +85,7 @@ final class GetAdminOrderController
             context: ['context' => 'admin_order_detail'],
         );
 
-        // M3.2.X.18-H — Embed return summaries inline. Admin sees
+        // M3.2.X.18-H, Embed return summaries inline. Admin sees
         // every return on the order, not customer-scoped.
         $returns = [];
         try {
@@ -98,7 +98,7 @@ final class GetAdminOrderController
 
         // Gift-card purchase orders carry no real items; resolve the linked
         // card (one lookup, only when there are no real items) so the serializer
-        // synthesizes the "Gift Card" line — matching the orders list + the
+        // synthesizes the "Gift Card" line, matching the orders list + the
         // customer order detail.
         $giftCard = null;
         if ($order->getItems()->isEmpty()) {
@@ -110,7 +110,7 @@ final class GetAdminOrderController
         $shape = $this->serializer->adminDetailShape($order, $returns, $giftCard);
 
         // The customer's saved body measurements (profile) so admins see the
-        // same authoritative set the vendor fulfils against — independent of the
+        // same authoritative set the vendor fulfils against, independent of the
         // per-item `measurement`/`extra_measurement` snapshot, which is only
         // captured for custom-size lines (and absent on legacy-migrated orders).
         /** @var MeasurementRepository $measurementRepo */

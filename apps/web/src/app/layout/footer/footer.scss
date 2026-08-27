@@ -1,4 +1,4 @@
-/* SiteFooter — global page footer
+/* SiteFooter, global page footer
  * ================================
  * Content-only. Brand block + 4 link columns + bottom row.
  *
@@ -231,7 +231,7 @@
   background: var(--color-bg-canvas);
 }
 
-/* H1.1 — wordmark logo replaces the text brand name. Keep the anchor (it is
+/* H1.1, wordmark logo replaces the text brand name. Keep the anchor (it is
    an e2e visibility marker + carries the accessible label). */
 .site-footer__brand-name {
   display: inline-flex;

@@ -22,7 +22,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/vendor/products/{id}
  *
- * A single product owned by the authenticated vendor — ANY status (draft,
+ * A single product owned by the authenticated vendor, ANY status (draft,
  * inactive, out-of-stock), unlike the storefront GET /v3/products/{slug}
  * which 404s on non-active products. Backs the vendor product preview
  * drawer (which previously called GET /v3/products/by-legacy-id/{id} with

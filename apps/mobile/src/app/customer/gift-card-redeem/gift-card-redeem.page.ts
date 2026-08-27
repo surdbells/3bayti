@@ -66,7 +66,7 @@ export class GiftCardRedeemPage {
 
   /**
    * Paste a gift-card code from the clipboard, normalised exactly like typing
-   * it — so a code shared over email/SMS drops in without manual cleanup.
+   * it, so a code shared over email/SMS drops in without manual cleanup.
    */
   async pasteCode(): Promise<void> {
     const text = await this.clipboard.read();
@@ -88,7 +88,7 @@ export class GiftCardRedeemPage {
     const raw = this.code.replace(/-/g, '');
     if (raw.length !== 16) { this.notify.error(this.i18n.t('gift_card_redeem_full_code_required')); return; }
     this.ui.checking = true;
-    // PUBLIC endpoint — no authToken. Send the normalized (de-hyphenated) code.
+    // PUBLIC endpoint, no authToken. Send the normalized (de-hyphenated) code.
     // v3-direct surfaces HTTP errors through the SUCCESS channel as a legacy
     // envelope ({ status:'error', message, data:null }); only network-level
     // failures hit `error`.
@@ -123,7 +123,7 @@ export class GiftCardRedeemPage {
         }
         // v3-direct surfaces HTTP errors through this success channel as a
         // legacy envelope ({ response_code, status:'error', message }). Redeem
-        // requires auth — on 401 send the user to login, returning here (web
+        // requires auth, on 401 send the user to login, returning here (web
         // uses returnUrl=/gift-cards/redeem).
         if (res?.response_code === 401) {
           this.router.navigate(['/login'], { queryParams: { returnUrl: '/gift-cards/redeem' } });

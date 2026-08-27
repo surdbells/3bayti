@@ -71,7 +71,7 @@ final class ListVendorNotificationsController
     }
 
     /**
-     * Contact emails for every store the user owns — the feed is scoped to
+     * Contact emails for every store the user owns, the feed is scoped to
      * notifications addressed to these.
      *
      * @return list<string>
@@ -85,7 +85,7 @@ final class ListVendorNotificationsController
             try {
                 $email = $vendor->getContactEmail();
             } catch (\Error) {
-                continue; // contactEmail uninitialised — skip
+                continue; // contactEmail uninitialised, skip
             }
             if ($email !== '') {
                 $emails[strtolower($email)] = $email;

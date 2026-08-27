@@ -13,7 +13,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** GET /v3/vendor/store/payment — bank / payout settings for the vendor's store. */
+/** GET /v3/vendor/store/payment, bank / payout settings for the vendor's store. */
 final class GetVendorPaymentController
 {
     use Responder;

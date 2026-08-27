@@ -13,7 +13,7 @@ use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * The promo code resolver — the heart of the M3.2.X.8 engine.
+ * The promo code resolver, the heart of the M3.2.X.8 engine.
  *
  * Two surfaces:
  *
@@ -21,14 +21,14 @@ use Doctrine\ORM\EntityManagerInterface;
  *     The validation chain. Looks up the code by normalized text,
  *     walks 10 ordered rules, computes the discount amount on success.
  *     Throws PromoNotApplicableException with a structured error code
- *     on any rule failure — caller maps to HTTP 422 via the
+ *     on any rule failure, caller maps to HTTP 422 via the
  *     exception's toHttpException().
  *
  *   recordRedemption(PromoCode, User, Order, string): PromoRedemption
  *     Persists the attribution row. Called by InitiateCheckoutController
  *     inside the checkout EM transaction AFTER resolveForCart succeeded
  *     AND the order has been flushed (so the redemption's FK to
- *     orders.id is real). Does NOT flush — the controller's outer
+ *     orders.id is real). Does NOT flush, the controller's outer
  *     transaction owns commit semantics.
  *
  * The 10-rule chain (in order; first failure stops)
@@ -57,7 +57,7 @@ use Doctrine\ORM\EntityManagerInterface;
  * than silently discounting nothing.
  *
  * The "effective" counts on rules 8 and 9 exclude redemptions on
- * orders in cancelled/failed states — so a customer whose first
+ * orders in cancelled/failed states, so a customer whose first
  * attempt failed at the gateway doesn't burn their one allowed
  * redemption. See PromoRedemptionRepository::STATUSES_EXCLUDED_FROM_COUNT.
  *
@@ -94,7 +94,7 @@ final class PromoCodeResolverService
         private readonly ?EntityManagerInterface $em = null,
         // Optional direct-injection paths for tests. When null, the
         // service resolves repositories lazily from $em. When set,
-        // these win — convenient for unit tests that supply
+        // these win, convenient for unit tests that supply
         // hand-rolled fakes.
         private readonly ?PromoCodeRepository $promoCodeRepository = null,
         private readonly ?PromoRedemptionRepository $promoRedemptionRepository = null,
@@ -110,24 +110,24 @@ final class PromoCodeResolverService
      */
     public function resolveForCart(Cart $cart, User $user, string $rawCode): PromoResolution
     {
-        // Rule 1 — Normalize + non-empty check
+        // Rule 1, Normalize + non-empty check
         $normalized = PromoCode::normalizeCode($rawCode);
         if ($normalized === '') {
             throw PromoNotApplicableException::notFound($rawCode);
         }
 
-        // Rule 2 — Catalog lookup
+        // Rule 2, Catalog lookup
         $promo = $this->resolvePromoCodeRepository()?->findByNormalizedCode($normalized);
         if ($promo === null) {
             throw PromoNotApplicableException::notFound($rawCode);
         }
 
-        // Rule 3 — Active flag
+        // Rule 3, Active flag
         if (!$promo->isActive()) {
             throw PromoNotApplicableException::inactive($promo->getCode());
         }
 
-        // Rules 4 + 5 — Time-window bracket
+        // Rules 4 + 5, Time-window bracket
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $validFrom = $promo->getValidFrom();
         if ($validFrom !== null && $now < $validFrom) {
@@ -138,7 +138,7 @@ final class PromoCodeResolverService
             throw PromoNotApplicableException::expired($promo->getCode(), $validUntil);
         }
 
-        // Rule 6 — Currency match (case-insensitive defense in depth)
+        // Rule 6, Currency match (case-insensitive defense in depth)
         if (strtoupper($promo->getCurrency()) !== strtoupper($cart->getCurrency())) {
             throw PromoNotApplicableException::currencyMismatch(
                 $promo->getCode(),
@@ -147,7 +147,7 @@ final class PromoCodeResolverService
             );
         }
 
-        // Vendor scope — a coupon owned by a vendor (vendor_id set) discounts
+        // Vendor scope, a coupon owned by a vendor (vendor_id set) discounts
         // ONLY that vendor's items; a platform-wide code (vendor_id null)
         // discounts the whole cart. Everything downstream (the min-subtotal
         // gate below and the discount amount in rule 10) works off this
@@ -164,7 +164,7 @@ final class PromoCodeResolverService
             }
         }
 
-        // Rule 7 — Min subtotal check (against the applicable subtotal)
+        // Rule 7, Min subtotal check (against the applicable subtotal)
         $minSubtotal = $promo->getMinSubtotal();
         if ($minSubtotal !== null && bccomp($applicableSubtotal, $minSubtotal, 2) < 0) {
             throw PromoNotApplicableException::minSubtotalNotMet(
@@ -174,7 +174,7 @@ final class PromoCodeResolverService
             );
         }
 
-        // Rules 8 + 9 — Usage limit enforcement
+        // Rules 8 + 9, Usage limit enforcement
         $redemptions = $this->resolvePromoRedemptionRepository();
         $globalLimit = $promo->getUsageLimitGlobal();
         if ($globalLimit !== null && $redemptions !== null) {
@@ -198,7 +198,7 @@ final class PromoCodeResolverService
             }
         }
 
-        // Rule 10 — Compute discount amount with type-aware clamping
+        // Rule 10, Compute discount amount with type-aware clamping
         $discountAmount = $this->computeDiscountAmount($promo, $applicableSubtotal);
 
         return new PromoResolution(
@@ -242,7 +242,7 @@ final class PromoCodeResolverService
      *
      * For DISCOUNT_TYPE_FIXED_AMOUNT:
      *   raw = discount_value
-     *   clamp at min(raw, subtotal) — can't discount more than the cart
+     *   clamp at min(raw, subtotal), can't discount more than the cart
      *
      * Both branches return a DECIMAL(10,2) string. Order's
      * computeTotal already floors the total at zero, so a discount
@@ -268,7 +268,7 @@ final class PromoCodeResolverService
             return $raw;
         }
 
-        // DISCOUNT_TYPE_FIXED_AMOUNT — clamp at cart subtotal so the
+        // DISCOUNT_TYPE_FIXED_AMOUNT, clamp at cart subtotal so the
         // recorded discount_amount never exceeds the gross.
         $raw = $promo->getDiscountValue();
         if (bccomp($raw, $cartSubtotal, 2) > 0) {

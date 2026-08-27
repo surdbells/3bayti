@@ -120,7 +120,7 @@ final class RejectVendorApplicationController
 
     /**
      * Email the applicant that their application was not approved.
-     * Non-blocking — a mailer failure never fails the rejection.
+     * Non-blocking, a mailer failure never fails the rejection.
      */
     private function notifyApplicant(VendorApplication $application): void
     {

@@ -16,13 +16,13 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * Vendor label CRUD — all four operations in one controller, routed
+ * Vendor label CRUD, all four operations in one controller, routed
  * by HTTP method, to keep the namespace tidy. M3.4-D.
  *
- *   GET    /v3/vendor/labels         — list active labels
- *   POST   /v3/vendor/labels         — create label
- *   PUT    /v3/vendor/labels/{id}    — rename label
- *   DELETE /v3/vendor/labels/{id}    — soft-delete (setActive(false))
+ *   GET    /v3/vendor/labels        , list active labels
+ *   POST   /v3/vendor/labels        , create label
+ *   PUT    /v3/vendor/labels/{id}   , rename label
+ *   DELETE /v3/vendor/labels/{id}   , soft-delete (setActive(false))
  */
 final class VendorLabelCrudController
 {

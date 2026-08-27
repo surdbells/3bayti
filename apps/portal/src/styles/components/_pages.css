@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Public & auth page layouts (Phase 6)
+   Abayti Design System, Public & auth page layouts (Phase 6)
 
    Shared auth shell for login/register/reset, plus the full home-page
    marketing layout (hero, features, steps, pricing, testimonials, FAQ).
@@ -8,7 +8,7 @@
 
 /* ============== AUTH SHELL ============== */
 /*
-  Two-column layout — editorial image on the left, form card on the right.
+  Two-column layout, editorial image on the left, form card on the right.
   Collapses to a single column below lg (form only; image hidden).
 */
 
@@ -615,7 +615,7 @@
 
 
 /* ============== HOME: FAQ ============== */
-/* FAQ reuses the .ax-accordion from Phase 3 — no extra styling needed,
+/* FAQ reuses the .ax-accordion from Phase 3, no extra styling needed,
    just a wrapper to center and constrain the max width. */
 
 .ax-home-faq {

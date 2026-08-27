@@ -85,7 +85,7 @@ final class GetBillingAddressControllerTest extends HttpTestCase
             ])
         );
 
-        // 200, not 404 — see GetBillingAddressController docblock.
+        // 200, not 404, see GetBillingAddressController docblock.
         // "Not set" is a valid state; null in the response signals it.
         self::assertSame(200, $response->getStatusCode());
         $body = $this->jsonBody($response);

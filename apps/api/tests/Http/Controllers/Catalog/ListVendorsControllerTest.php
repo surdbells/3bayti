@@ -15,11 +15,11 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
- * Coverage for GET /v3/vendors (Stores H2.A) — the store directory.
+ * Coverage for GET /v3/vendors (Stores H2.A), the store directory.
  *
  * Verifies:
  *   - Happy path: active vendors + embedded products + rating in
- *     directoryShape (a publicShape superset — id/logo/cover/is_verified
+ *     directoryShape (a publicShape superset, id/logo/cover/is_verified
  *     PLUS rating + product thumbnails)
  *   - Honest pagination: has_more derived from the repo's total, not the
  *     length of the returned page
@@ -63,7 +63,7 @@ final class ListVendorsControllerTest extends HttpTestCase
 
         $productRepo = $this->createMock(ProductRepository::class);
         // findActivePaginated is called once per vendor on the page (N+1 by
-        // design, bounded by limit — matching the Spotlight endpoint).
+        // design, bounded by limit, matching the Spotlight endpoint).
         $productRepo->expects(self::exactly(2))
             ->method('findActivePaginated')
             ->willReturnCallback(function (array $filters) use ($vendor1, $vendor2, $product1, $product2): array {
@@ -94,7 +94,7 @@ final class ListVendorsControllerTest extends HttpTestCase
         self::assertArrayHasKey('data', $body);
         self::assertCount(2, $body['data']);
 
-        // directoryShape superset — first card carries every publicShape
+        // directoryShape superset, first card carries every publicShape
         // field PLUS rating + product thumbnails.
         $first = $body['data'][0];
         self::assertSame('almas-fashion', $first['slug']);
@@ -109,7 +109,7 @@ final class ListVendorsControllerTest extends HttpTestCase
         self::assertSame('silk-abaya', $first['products'][0]['slug']);
         self::assertSame('https://cdn.example/silk.jpg', $first['products'][0]['image_url']);
 
-        // Second card — null rating preserved (zero approved reviews).
+        // Second card, null rating preserved (zero approved reviews).
         self::assertSame('beit-co', $body['data'][1]['slug']);
         self::assertNull($body['data'][1]['rating']);
         self::assertSame(0, $body['data'][1]['rating_count']);

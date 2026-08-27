@@ -52,7 +52,7 @@ class MeasurementRepository extends EntityRepository
 
     /**
      * Get the default (categoryId IS NULL) measurement row for a user.
-     * This is what most callers want — the catch-all measurements
+     * This is what most callers want, the catch-all measurements
      * that apply when no category-specific row exists.
      */
     public function findDefaultForUser(User $user): ?Measurement

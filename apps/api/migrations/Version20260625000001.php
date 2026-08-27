@@ -27,7 +27,7 @@ use Doctrine\Migrations\AbstractMigration;
  * the source of truth, no accumulation). Runs inside Doctrine's default
  * per-migration transaction (plain UPDATE, no CREATE EXTENSION / CONCURRENTLY).
  *
- * down(): no-op — this is a data backfill; there is no meaningful inverse
+ * down(): no-op, this is a data backfill; there is no meaningful inverse
  * (the prior, drifted values are not worth restoring).
  */
 final class Version20260625000001 extends AbstractMigration

@@ -41,7 +41,7 @@ export class UserProfileComponent implements OnInit {
   };
 
   get_single = { id: 0, token: '' };
-  // NOTE: phone is intentionally NOT part of the profile-update payload — the
+  // NOTE: phone is intentionally NOT part of the profile-update payload, the
   // profile endpoint ignores it. Phone changes go through the OTP-verified
   // change-phone flow below (POST /me/phone → POST /me/phone/verify).
   update_single = {

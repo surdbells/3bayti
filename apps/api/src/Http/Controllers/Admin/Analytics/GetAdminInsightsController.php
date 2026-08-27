@@ -31,7 +31,7 @@ final class GetAdminInsightsController
     private const SALE = "'paid', 'fulfilling', 'shipped', 'delivered'";
 
     /**
-     * Exclude synthetic gift-card PURCHASE orders — they aren't product sales
+     * Exclude synthetic gift-card PURCHASE orders, they aren't product sales
      * (no order_items, so they'd inflate the order count but not units). Mirrors
      * GetAdminPlatformAnalyticsController so the dashboard's two order KPIs agree.
      * Requires the orders table to be referenced/aliased as `orders`.
@@ -129,7 +129,7 @@ final class GetAdminInsightsController
             $statusRows,
         );
 
-        // At-risk (not window-bound — these need attention whenever they exist).
+        // At-risk (not window-bound, these need attention whenever they exist).
         $pendingPayment = (int) $conn->fetchOne("SELECT COUNT(*) FROM orders WHERE status = 'pending_payment'");
         $stuck = (int) $conn->fetchOne(
             "SELECT COUNT(*) FROM orders WHERE status = 'fulfilling' AND created_at < :cut",

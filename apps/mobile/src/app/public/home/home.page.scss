@@ -1,5 +1,5 @@
 /* ============================================================================
-   Home (public/logged-out) — Tier 1 redesign
+   Home (public/logged-out), Tier 1 redesign
    ============================================================================ */
 
 :host {
@@ -106,7 +106,7 @@ ion-content.page-bg {
   overflow: hidden;
 }
 
-/* Vendor name chip — replaces <tui-chip> */
+/* Vendor name chip, replaces <tui-chip> */
 .vendor-name-chip {
   display: inline-flex;
   align-items: center;
@@ -140,7 +140,7 @@ ion-content.page-bg {
   }
 }
 
-/* Vendor rating chip — replaces <ion-chip outline> */
+/* Vendor rating chip, replaces <ion-chip outline> */
 .vendor-rating-chip {
   display: inline-flex;
   align-items: center;
@@ -159,7 +159,7 @@ ion-content.page-bg {
   -webkit-appearance: none;
 
   ax-icon {
-    color: #d6a800;  /* gold star — keep as a literal accent, not a token */
+    color: #d6a800;  /* gold star, keep as a literal accent, not a token */
     font-size: 12px;
   }
 
@@ -259,12 +259,12 @@ ion-content.page-bg {
 }
 
 /* ============================================================================
-   Premium public header — page-scoped (overrides M7 chrome for this page)
+   Premium public header, page-scoped (overrides M7 chrome for this page)
    ============================================================================ */
 
 ion-header.public-header {
   background: var(--ax-color-bg-surface);
-  /* No manual padding-top here — ion-toolbar handles its own safe-area
+  /* No manual padding-top here, ion-toolbar handles its own safe-area
      inset, and the header's bg color extends into that inset region
      for visual continuity. */
   border-bottom: 1px solid rgba(46, 36, 28, 0.08);

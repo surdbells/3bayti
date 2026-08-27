@@ -40,7 +40,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * correctly with limit/offset infinite-scroll. An unknown / empty value is
  * ignored (treated as "all").
  *
- * type: optional order-type filter — "product" (only orders with a real
+ * type: optional order-type filter, "product" (only orders with a real
  * product line; excludes gift-card purchases) or "gift_card" ("card" is
  * accepted as an alias; only synthetic gift-card purchase orders). Applied
  * SERVER-SIDE and composes with `status` + pagination. Absent / any other
@@ -111,7 +111,7 @@ final class ListOrdersController
         // synthesizing the "Gift Card" line for gift-card purchase
         // orders (those with zero real items) never triggers an N+1.
         // Keyed by order_reference == gift_cards.purchase_order_reference.
-        // Skip the gift-card lookup entirely for an empty page — no orders
+        // Skip the gift-card lookup entirely for an empty page, no orders
         // means no lines to synthesize, and it avoids a needless query.
         $giftCardMap = [];
         if ($list !== []) {

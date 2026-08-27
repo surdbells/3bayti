@@ -13,7 +13,7 @@ export class Products {
     public price: string,
     public collection: number,
     public sale_price: string,
-    // Vendor slug — storefront nav is slug-based (legacy ids discarded).
+    // Vendor slug, storefront nav is slug-based (legacy ids discarded).
     public vendor_slug: string = ''
   ){  }
 }

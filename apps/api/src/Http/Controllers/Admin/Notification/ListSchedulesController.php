@@ -15,7 +15,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** GET /v3/admin/notification-schedules — paginated schedule list. */
+/** GET /v3/admin/notification-schedules, paginated schedule list. */
 final class ListSchedulesController
 {
     use Responder;

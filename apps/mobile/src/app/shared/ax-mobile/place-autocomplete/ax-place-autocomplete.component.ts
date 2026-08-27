@@ -1,5 +1,5 @@
 /**
- * AxPlaceAutocompleteComponent — address autocomplete via Google Places (New).
+ * AxPlaceAutocompleteComponent, address autocomplete via Google Places (New).
  *
  * Drop-in replacement for <ax-text-field> when an address is being captured.
  * Behavior:
@@ -11,7 +11,7 @@
  *     or the network call fails. (placeSelected) just doesn't fire in that
  *     case; the consumer can save the typed text as-is.
  *
- * The visible <input> remains a normal text field — ngModel two-way binds the
+ * The visible <input> remains a normal text field, ngModel two-way binds the
  * RAW text. Consumers should NOT rely on ngModel alone if they want structured
  * data; they need (placeSelected) too.
  *
@@ -86,7 +86,7 @@ export class AxPlaceAutocompleteComponent implements ControlValueAccessor, OnDes
   /**
    * Fired when the user taps a suggestion AND the Place Details fetch
    * succeeds. Consumers use this for structured data (street, city, area,
-   * lat/lng). Not fired for typed text — only for selection events.
+   * lat/lng). Not fired for typed text, only for selection events.
    */
   @Output() placeSelected = new EventEmitter<PlaceDetails>();
 
@@ -96,7 +96,7 @@ export class AxPlaceAutocompleteComponent implements ControlValueAccessor, OnDes
   /** Internal raw text. ngModel mirrors this. */
   value = '';
 
-  /** Current suggestions list — drives the dropdown render. */
+  /** Current suggestions list, drives the dropdown render. */
   suggestions: PlaceSuggestion[] = [];
 
   /** True while an autocomplete request is in flight (for the spinner). */
@@ -163,7 +163,7 @@ export class AxPlaceAutocompleteComponent implements ControlValueAccessor, OnDes
     this.onChange(text);
 
     if (!this.isAvailable) {
-      /* No autocomplete — just pass through. */
+      /* No autocomplete, just pass through. */
       return;
     }
 
@@ -184,7 +184,7 @@ export class AxPlaceAutocompleteComponent implements ControlValueAccessor, OnDes
   }
 
   onBlur(): void {
-    /* Don't close the dropdown if a tap on a suggestion is in-flight —
+    /* Don't close the dropdown if a tap on a suggestion is in-flight -
        the click handler will close it after the details fetch resolves.
        Without this, the blur fires before the click and the dropdown
        closes before the user's tap can register. */

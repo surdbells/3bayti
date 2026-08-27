@@ -12,7 +12,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * Health-check endpoints — TWO of them, deliberately split.
+ * Health-check endpoints, TWO of them, deliberately split.
  *
  * Why two endpoints (liveness vs readiness)
  * -----------------------------------------
@@ -24,7 +24,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   to decide whether to KILL AND RESTART the container.
  *
  *   Critically, this endpoint does NOT touch the database. A DB
- *   outage shouldn't trigger container restarts — restarting would
+ *   outage shouldn't trigger container restarts, restarting would
  *   just produce more containers that all fail their checks against
  *   the same broken DB. Better to stay up and let users see a 503
  *   with a helpful error.
@@ -66,9 +66,9 @@ final class HealthController
     use Responder;
 
     /**
-     * @param ?Connection $connection Optional — only injected for the
+     * @param ?Connection $connection Optional, only injected for the
      *                                /ready route. Liveness can run
-     *                                without a working container —
+     *                                without a working container -
      *                                actually it MUST run without one,
      *                                or we couldn't health-check a
      *                                broken DB instance.
@@ -90,7 +90,7 @@ final class HealthController
     }
 
     /**
-     * GET /v3/health — liveness. No external dependencies.
+     * GET /v3/health, liveness. No external dependencies.
      */
     public function liveness(ServerRequestInterface $request): ResponseInterface
     {
@@ -100,7 +100,7 @@ final class HealthController
     }
 
     /**
-     * GET /v3/health/ready — readiness. Includes DB ping.
+     * GET /v3/health/ready, readiness. Includes DB ping.
      */
     public function readiness(ServerRequestInterface $request): ResponseInterface
     {
@@ -129,15 +129,15 @@ final class HealthController
         }
 
         // Redis (KeyValueStore) ping. Only included if a cache is
-        // bound — tests that don't wire one don't see the key in
+        // bound, tests that don't wire one don't see the key in
         // the response. ping() is the explicit "does not throw"
-        // method on KeyValueStore — returns false on any failure.
+        // method on KeyValueStore, returns false on any failure.
         //
         // Failed Redis ping marks the WHOLE readiness as degraded
         // (allOk=false → 503). Trade-off: this is correct behaviour
         // for "should we route traffic here?" but it does mean a
         // Redis outage takes the API out of rotation. Worth flagging
-        // — if Redis is down and the API is fail-open at the OTP
+        //, if Redis is down and the API is fail-open at the OTP
         // layer (per M1.6.1.A design), should /ready also be more
         // tolerant? Probably yes, but defaulting to strict is the
         // safer choice; revisit if Redis flakiness becomes an issue.

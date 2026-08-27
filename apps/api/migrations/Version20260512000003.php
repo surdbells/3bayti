@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Day 4 of 10-day rollout — relax users schema for legacy data + create
+ * Day 4 of 10-day rollout, relax users schema for legacy data + create
  * migration_email_conflicts table.
  *
  * Why relax `users.phone`?
@@ -53,7 +53,7 @@ final class Version20260512000003 extends AbstractMigration
     public function up(Schema $schema): void
     {
         // ============================================================
-        // Relax users.phone — allow NULL, drop UNIQUE
+        // Relax users.phone, allow NULL, drop UNIQUE
         // ============================================================
 
         // Drop the UNIQUE constraint. PostgreSQL named it
@@ -86,7 +86,7 @@ final class Version20260512000003 extends AbstractMigration
         $this->addSql('ALTER TABLE users ALTER COLUMN phone DROP NOT NULL');
 
         // ============================================================
-        // migration_email_conflicts — track legacy email duplicates
+        // migration_email_conflicts, track legacy email duplicates
         // ============================================================
 
         $this->addSql(<<<SQL
@@ -114,6 +114,6 @@ final class Version20260512000003 extends AbstractMigration
     {
         $this->addSql('DROP TABLE IF EXISTS migration_email_conflicts');
         // Re-tightening phone constraints could fail if NULL or duplicate
-        // rows exist — we skip the reverse here. Manual cleanup if rollback needed.
+        // rows exist, we skip the reverse here. Manual cleanup if rollback needed.
     }
 }

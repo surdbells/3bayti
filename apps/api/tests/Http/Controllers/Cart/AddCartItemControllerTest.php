@@ -473,7 +473,7 @@ final class AddCartItemControllerTest extends HttpTestCase
                 'product_id' => 100,
                 'quantity' => 1,
                 'size' => 'CUSTOM',
-                /* no measurement — allowed for a size-optional category */
+                /* no measurement, allowed for a size-optional category */
             ], [
                 'Authorization' => 'Bearer ' . $pair->accessToken,
             ])

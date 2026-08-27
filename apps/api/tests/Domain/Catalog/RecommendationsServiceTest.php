@@ -81,7 +81,7 @@ final class RecommendationsServiceTest extends TestCase
     public function popularFallbackExcludesSourceProduct(): void
     {
         // Verify the SQL excludes the source product id from the
-        // popular query — a product cannot be its own fallback rec
+        // popular query, a product cannot be its own fallback rec
         $captured = $this->captureSql();
         $service = new RecommendationsService($captured['em'], new InMemoryLogger());
         $service->getRecommendationsForProduct(100);
@@ -110,7 +110,7 @@ final class RecommendationsServiceTest extends TestCase
             ],
             popularProducts: [
                 200 => $this->makeProduct(200),
-                // 300 missing — simulates deletion
+                // 300 missing, simulates deletion
             ],
         );
 
@@ -238,7 +238,7 @@ final class RecommendationsServiceTest extends TestCase
         // returns empty (user has bought everything in category)
         $service = $this->makeUserService(
             topCategoryRow: ['category_id' => 7, 'units' => 12],
-            categoryProducts: [],  // empty — user bought it all
+            categoryProducts: [],  // empty, user bought it all
             categoryProductEntities: [],
             popularRows: [['product_id' => 999, 'units_sold' => 100]],
             popularProductEntities: [999 => $this->makeProduct(999)],
@@ -296,7 +296,7 @@ final class RecommendationsServiceTest extends TestCase
         $recRepo = $this->createMock(ProductRecommendationRepository::class);
 
         // Build the Product entity map for findBy.
-        // findBy returns combined results — but each test only
+        // findBy returns combined results, but each test only
         // exercises one path, so this is safe.
         $productRepo = $this->createMock(ProductRepository::class);
         $productRepo->method('findBy')->willReturnCallback(

@@ -71,7 +71,7 @@ test.describe('Product detail', () => {
 
     const title = await page.title();
     // Real products use the pattern "<Name> by <Vendor> · 3bayti".
-    // We don't pin the exact text — just verify it doesn't fall back
+    // We don't pin the exact text, just verify it doesn't fall back
     // to the runtime-SSR placeholder "Product · 3bayti".
     expect(title).not.toBe('Product · 3bayti');
     expect(title.toLowerCase()).toContain('3bayti');

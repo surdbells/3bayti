@@ -47,7 +47,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Auto-default behaviour
  * ----------------------
  * If the user has NO addresses yet, the first one we create becomes
- * the default automatically — regardless of the `is_default` flag in
+ * the default automatically, regardless of the `is_default` flag in
  * the request. This avoids the "user has 1 address but no default"
  * UX glitch where checkout has to prompt to pick a default.
  *
@@ -61,7 +61,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Address count limit
  * -------------------
  * 50 addresses per user. Anything above starts to suggest abuse
- * (testing, scraping). 50 is generous — most users have 1-3,
+ * (testing, scraping). 50 is generous, most users have 1-3,
  * corporate users have ~10. The limit is checked here, not at the
  * DB level.
  */
@@ -128,7 +128,7 @@ final class CreateAddressController
             label: $input->label,
         );
 
-        // Default-flag handling — three cases:
+        // Default-flag handling, three cases:
         //
         //   1. First address ever: auto-default (set both flags).
         //   2. User explicitly set is_default=true: unset previous
@@ -152,7 +152,7 @@ final class CreateAddressController
             $addresses->save($address);
         }
 
-        // M1.6.1.C — record the create in audit log. Snapshot post-save
+        // M1.6.1.C, record the create in audit log. Snapshot post-save
         // so we capture the final defaults state too.
         $this->audit->recordCreate(
             request: $request,

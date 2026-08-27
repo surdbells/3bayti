@@ -54,7 +54,7 @@ final class ComplianceDocumentServiceTest extends TestCase
     public function realStoragePathIsNotMistakenForBase64(): void
     {
         // A genuine storage path contains '-' and '.', which aren't in the
-        // base64 alphabet — so a missing file returns null, not a bogus data URL.
+        // base64 alphabet, so a missing file returns null, not a bogus data URL.
         self::assertNull($this->service()->readAsDataUrl('compliance/vendor-5/front-abc123.jpg'));
     }
 
@@ -92,7 +92,7 @@ final class ComplianceDocumentServiceTest extends TestCase
     #[Test]
     public function openForDownloadToleratesWhitespaceInBase64(): void
     {
-        // MIME-chunked base64 (newlines every 76 chars) — how some legacy rows
+        // MIME-chunked base64 (newlines every 76 chars), how some legacy rows
         // stored it. Strict base64_decode used to reject this → "not found".
         $jpeg = "\xFF\xD8\xFF\xE0" . str_repeat("\x03", 300);
         $chunked = chunk_split(base64_encode($jpeg), 76, "\n");

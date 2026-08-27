@@ -3,7 +3,7 @@ import { NgFor, NgClass } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
- * CheckoutStepperComponent — 3-step progress indicator.
+ * CheckoutStepperComponent, 3-step progress indicator.
  *
  * Renders three circle+label pairs joined by connector lines:
  *   1. Shipping  2. Review  3. Payment

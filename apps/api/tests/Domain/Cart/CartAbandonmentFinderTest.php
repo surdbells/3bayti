@@ -225,7 +225,7 @@ final class CartAbandonmentFinderTest extends TestCase
         $connection->method('executeQuery')->willReturnCallback(
             function () use (&$callIdx): Result {
                 if ($callIdx === 0) {
-                    usleep(510_000);  // 510ms — over the 500ms threshold
+                    usleep(510_000);  // 510ms, over the 500ms threshold
                 }
                 $callIdx++;
                 $r = $this->createMock(Result::class);

@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Phone-first registration step 3: with a verified phone (proven by
  * the registration_token), the user supplies their email + password
  * (+ optional names). The phone + country_code come from the TOKEN,
- * not the body — the client cannot register an account against a phone
+ * not the body, the client cannot register an account against a phone
  * it didn't verify.
  *
  * Password rules mirror RegisterInput (min 8 chars, NIST SP 800-63B).
@@ -51,10 +51,10 @@ final class RegisterSubmitInput
         $this->registration_token = trim($registration_token);
         // Canonicalise the email ONCE (lowercase + trim). User lookup is
         // case-insensitive but the OTP dedup/cooldown/rate-limit keys are
-        // case-sensitive — normalising here keeps a case-variant from
+        // case-sensitive, normalising here keeps a case-variant from
         // bypassing dedup and double-emailing the same registration code.
         $this->email = strtolower(trim($email));
-        $this->password = $password; // Do NOT trim — passwords with whitespace are valid.
+        $this->password = $password; // Do NOT trim, passwords with whitespace are valid.
         $this->first_name = $first_name !== null ? trim($first_name) : null;
         $this->last_name = $last_name !== null ? trim($last_name) : null;
     }

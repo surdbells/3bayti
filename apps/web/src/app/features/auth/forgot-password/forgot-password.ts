@@ -27,13 +27,13 @@ import {
 import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
 
 /**
- * UX submit cooldown — blocks back-to-back reset requests. Matches the 30s
+ * UX submit cooldown, blocks back-to-back reset requests. Matches the 30s
  * resend cooldown used across the other OTP surfaces (login/register/verify).
  */
 const RESEND_COOLDOWN_SECONDS = 30;
 
 /**
- * Forgot password page — /forgot-password. TWO-CHANNEL reset request (web
+ * Forgot password page, /forgot-password. TWO-CHANNEL reset request (web
  * parity with the mobile reset flow, issue #8).
  *
  * A channel toggle (Email | Phone) drives which identifier the user enters:
@@ -44,7 +44,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
  *
  * Anti-enumeration protocol
  * -------------------------
- * /v3/auth/reset ALWAYS returns 200 with a verification_id — even when the
+ * /v3/auth/reset ALWAYS returns 200 with a verification_id, even when the
  * identifier isn't registered (the API uses a 'fake-' prefix). The frontend
  * MUST NOT distinguish: we route to /reset-password regardless, and the OTP
  * confirm step fails the same way as a bad code.
@@ -178,7 +178,7 @@ export class ForgotPasswordComponent implements OnDestroy {
   protected readonly cooldown = signal(0);
   /**
    * True while a server-reflected OTP lockout (429 OTP_RATE_LIMITED) is in
-   * effect — drives the rate-limit banner. Shares the `cooldown` countdown.
+   * effect, drives the rate-limit banner. Shares the `cooldown` countdown.
    */
   protected readonly lockedOut = signal(false);
 
@@ -260,7 +260,7 @@ export class ForgotPasswordComponent implements OnDestroy {
          (e.g. browser back from /reset-password). */
       this.startCooldown();
 
-      /* Always navigate — even for unregistered identifiers (anti-enumeration;
+      /* Always navigate, even for unregistered identifiers (anti-enumeration;
          the API returns a 'fake-' verification_id which the confirm step
          rejects as an invalid code). */
       await this.router.navigate(['/reset-password'], {

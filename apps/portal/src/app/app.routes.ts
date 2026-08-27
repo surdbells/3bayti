@@ -330,7 +330,7 @@ export const routes: Routes = [
     title: 'Edit product'
   },
   {
-    // Numeric-looking detail view — MUST stay after the literal new/edit
+    // Numeric-looking detail view, MUST stay after the literal new/edit
     // routes above so /admin/products/new isn't captured by :id.
     path: 'admin/products/:id',
     loadComponent: () => import('./backend/admin-view-product/admin-view-product.component').then(m => m.AdminViewProductComponent),
@@ -418,7 +418,7 @@ export const routes: Routes = [
     title: 'Order'
   },
   {
-    // Admin Coupons & Discounts — oversight of every promo code + platform-wide
+    // Admin Coupons & Discounts, oversight of every promo code + platform-wide
     // code creation. Backed by /admin/promo-codes (coupons.* permissions).
     path: 'admin/coupons',
     loadComponent: () => import('./backend/admin-coupons/admin-coupon-list.component').then(m => m.AdminCouponListComponent),

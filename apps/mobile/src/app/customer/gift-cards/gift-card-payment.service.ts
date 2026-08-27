@@ -10,7 +10,7 @@ import { I18nService } from '../../i18n.service';
  * Encapsulates the Noon checkout sequence used by both the purchase page
  * (gift-cards.page) and the wallet (my-gift-cards.page → "Complete payment"):
  *
- *   1. POST /checkout/initiate { gift_card_purchase_id }  (idempotent — returns
+ *   1. POST /checkout/initiate { gift_card_purchase_id }  (idempotent, returns
  *      the cached checkout URL, so calling it again RESUMES an unpaid card)
  *   2. open the returned checkout_url in the in-app browser webview
  *   3. poll GET /checkout/status/:order_reference until paid/failed
@@ -53,10 +53,10 @@ export class GiftCardPaymentService {
       next: (res: any) => {
         // The MobileNetworkAdapter surfaces HTTP-level errors (422/4xx/5xx)
         // through the SUCCESS channel as { response_code, status: 'error',
-        // message, data: null }. So an actionable failure — e.g. "No billing
+        // message, data: null }. So an actionable failure, e.g. "No billing
         // address on file. Please add one before checking out." or "Your
         // billing address is incomplete (missing: …)" from
-        // InitiateCheckoutController — arrives HERE, not in `error`. The old
+        // InitiateCheckoutController, arrives HERE, not in `error`. The old
         // code only looked at res.data.url (null on error) and showed the
         // generic "could not start payment" toast, masking the real reason.
         // Detect the error envelope and surface the server message instead.
@@ -66,7 +66,7 @@ export class GiftCardPaymentService {
           return;
         }
 
-        // Gateway skipped (denomination = 0 — shouldn't happen but handle it).
+        // Gateway skipped (denomination = 0, shouldn't happen but handle it).
         if (res?.data?.gateway_skipped === true) {
           this.notify.success(this.i18n.t('gc_activated'));
           (handlers.onGatewaySkipped ?? handlers.onPaid)();
@@ -124,7 +124,7 @@ export class GiftCardPaymentService {
         //   Web:     {WEB_APP_URL}/checkout/return?ref={ref}
         // The API return endpoint 302-redirects to the web page, and the
         // InAppBrowser surfaces the FINAL committed URL after the redirect
-        // resolves — so matching only the API prefix left the user stuck on a
+        // resolves, so matching only the API prefix left the user stuck on a
         // blank "Pay for gift card" webview after a successful payment. Match
         // the web return page too (host-agnostic: path + ?ref), same fix as
         // the product checkout page. Whichever surfaces first wins.
@@ -169,7 +169,7 @@ export class GiftCardPaymentService {
     attempts = 0,
   ): void {
     if (attempts > 12) { // 12 × 2.5s = 30s timeout
-      // Unknown outcome — the webhook may still land. Don't claim success or
+      // Unknown outcome, the webhook may still land. Don't claim success or
       // failure, and do NOT bounce back to the purchase wizard (that risks a
       // duplicate card). Route to the wallet (My Gift Cards) where the card
       // shows its real state (pending -> "Complete payment", or active), with
@@ -193,12 +193,12 @@ export class GiftCardPaymentService {
             this.notify.error(this.i18n.t('gc_error_payment_incomplete'));
             (handlers.onFailed ?? handlers.onPaid)();
           } else {
-            // Not yet terminal — poll again.
+            // Not yet terminal, poll again.
             this.pollGiftCardPayment(orderReference, giftCardId, authToken, handlers, attempts + 1);
           }
         },
         error: () => {
-          // Network error — retry.
+          // Network error, retry.
           this.pollGiftCardPayment(orderReference, giftCardId, authToken, handlers, attempts + 1);
         },
       });

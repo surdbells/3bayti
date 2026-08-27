@@ -220,7 +220,7 @@ describe('HeaderComponent (auth-aware)', () => {
         expect(a, id).not.toBeNull();
         const href = a!.getAttribute('href') ?? a!.getAttribute('ng-reflect-router-link') ?? '';
         expect(href, id).toMatch(re);
-        // Tidied nav is text-only — no icon glyph should be rendered.
+        // Tidied nav is text-only, no icon glyph should be rendered.
         expect(a!.querySelector('app-nav-icon'), `${id} icon removed`).toBeNull();
       }
     });

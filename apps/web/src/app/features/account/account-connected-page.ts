@@ -16,15 +16,15 @@ import { SocialAuthService, type SocialProvider } from '../../core/auth/social-a
 const PROVIDERS: SocialProvider[] = ['google', 'apple'];
 
 /**
- * /account/connected — Connected accounts.
+ * /account/connected, Connected accounts.
  *
  * Lists the user's Google/Apple links (GET /me/social-identities) with a
  * Link / Unlink control per provider.
  *
- *   Link   — run the Firebase popup (SocialAuthService) for a FRESH id_token,
+ *   Link  , run the Firebase popup (SocialAuthService) for a FRESH id_token,
  *            then POST /me/social-identities. 409 CONFLICT_DUPLICATE (the
  *            provider account belongs to someone else) → inline message.
- *   Unlink — DELETE /me/social-identities/:provider. 422
+ *   Unlink, DELETE /me/social-identities/:provider. 422
  *            BUSINESS_RULE_VIOLATION (last sign-in method) → clear message;
  *            404 (already gone) → just refresh the list.
  *
@@ -180,7 +180,7 @@ export class AccountConnectedPageComponent implements OnInit {
       this.toast.success('account.connected.linked');
       await this.reload();
     } catch (err) {
-      /* 409 CONFLICT_DUPLICATE — the provider account is linked elsewhere. */
+      /* 409 CONFLICT_DUPLICATE, the provider account is linked elsewhere. */
       if (errorCodeOf(err) === 'CONFLICT_DUPLICATE') {
         this.toast.error('account.connected.errors.alreadyLinked');
       } else if (isNetworkError(err)) {
@@ -201,13 +201,13 @@ export class AccountConnectedPageComponent implements OnInit {
       this.toast.success('account.connected.unlinked');
       await this.reload();
     } catch (err) {
-      /* 422 BUSINESS_RULE_VIOLATION — removing the only sign-in method. */
+      /* 422 BUSINESS_RULE_VIOLATION, removing the only sign-in method. */
       if (errorCodeOf(err) === 'BUSINESS_RULE_VIOLATION') {
         this.toast.error('account.connected.errors.lastMethod');
       } else if (isNetworkError(err)) {
         this.toast.error('common.errors.network');
       } else {
-        /* 404 (already unlinked) or anything else — just resync. */
+        /* 404 (already unlinked) or anything else, just resync. */
         await this.reload();
       }
     } finally {

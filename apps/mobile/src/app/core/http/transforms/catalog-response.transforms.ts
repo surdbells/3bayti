@@ -1,5 +1,5 @@
 /**
- * Catalog response transforms — v3 shape to legacy shape.
+ * Catalog response transforms, v3 shape to legacy shape.
  *
  * Why this file exists
  * ====================
@@ -19,18 +19,18 @@
  * ===================
  * Most catalog endpoints fall into one of three response categories:
  *
- *   listShape          — array of products (cards): new_arrivals,
+ *   listShape         , array of products (cards): new_arrivals,
  *                        new_arrivals_listing, featured, explore_listing,
  *                        category_listing, vendors_products_listing,
  *                        store_latest
  *
- *   detailShape        — single product with full size/color/image
+ *   detailShape       , single product with full size/color/image
  *                        detail: single_product, singleProductUtility
  *
- *   vendorShape        — vendor metadata: read_vendor
+ *   vendorShape       , vendor metadata: read_vendor
  *
  * The transforms below produce one mobile-shaped object (or array)
- * per category. They are PURE — no I/O, no side effects, deterministic.
+ * per category. They are PURE, no I/O, no side effects, deterministic.
  *
  * Retirement
  * ==========
@@ -82,7 +82,7 @@ function asNumber(v: unknown, fallback = 0): number {
 }
 
 /**
- * Like asNumber but preserves null/missing — used for fields where
+ * Like asNumber but preserves null/missing, used for fields where
  * "no value" is semantically distinct from "zero" (e.g. label_id
  * NULL means "product has no label"; label_id 0 isn't a valid id).
  */
@@ -110,7 +110,7 @@ function flatPrice(v: unknown): number {
 
 /**
  * Extract a flat image URL string from v3's
- * `{url, alt, width, height}` shape. v3 returns null when no image —
+ * `{url, alt, width, height}` shape. v3 returns null when no image -
  * we surface empty string so mobile's `[src]="..."` binding produces
  * an inert src attribute rather than `[src]="null"`.
  */
@@ -125,7 +125,7 @@ function flatImageUrl(v: unknown): string {
  * Build a list of v3 image URLs from the detail-shape `images` array.
  * v3 always returns an array; we surface a list of bare URLs so
  * legacy callers that did `.split(',')` can be migrated to direct
- * array access in their page logic (or — for M3.1.5 — we surface as
+ * array access in their page logic (or, for M3.1.5, we surface as
  * a comma-joined string to match legacy's wire shape exactly).
  */
 function imagesAsCsvString(v: unknown): string {
@@ -144,7 +144,7 @@ function imagesAsCsvString(v: unknown): string {
 /**
  * Build a comma-separated colors string from v3's array of
  * `{label, hex_code, in_stock}` objects. Same rationale as
- * imagesAsCsvString — legacy page code does `.split(',')`.
+ * imagesAsCsvString, legacy page code does `.split(',')`.
  */
 function colorsAsCsvString(v: unknown): string {
   if (!Array.isArray(v)) return '';
@@ -171,7 +171,7 @@ function vendorName(v: unknown): string {
 }
 
 /**
- * Format price as the legacy `price_formated` string — amount only ("299"
+ * Format price as the legacy `price_formated` string, amount only ("299"
  * / "299.50"), no currency prefix. The PDP (the sole consumer) renders its
  * own Dirham glyph in front of this value, so emitting the currency here
  * would double it ("Ð AED 490"). We synthesize from v3's structured price.
@@ -193,7 +193,7 @@ function formatPrice(price: unknown): string {
 
 /**
  * Mapping table for the 22 legacy size_* boolean flags. Mirrors the
- * SIZE_COLUMN_MAP in apps/api/src/Migration/MigrationSteps.php — kept
+ * SIZE_COLUMN_MAP in apps/api/src/Migration/MigrationSteps.php, kept
  * in sync by convention. Each entry maps a mobile field key to the
  * v3 size-label string the migration emitted.
  *
@@ -242,7 +242,7 @@ function synthesizeSizeFlags(v3Sizes: unknown): Record<string, boolean> {
     const normalized = label.toUpperCase();
     for (const [flagKey, labelValue] of Object.entries(SIZE_FLAG_TO_LABEL)) {
       if (labelValue === normalized) {
-        // Made-to-measure (CUSTOM) is order-based, not stock-based — surface it
+        // Made-to-measure (CUSTOM) is order-based, not stock-based, surface it
         // whenever offered, even for a product carrying no inventory. Standard
         // sizes still require in_stock.
         flags[flagKey] = flagKey === 'size_custom' ? true : (inStock === true);
@@ -282,19 +282,19 @@ function legacyProductCardFromV3List(item: unknown): Record<string, unknown> {
     // card templates can test `sale_price > 0 && sale_price < price`.
     sale_price: item['sale_price'] != null ? flatPrice(item['sale_price']) : null,
     store_name: vendorName(item['vendor']),
-    // Vendor legacy store id — the vendor badge navigates to the storefront
+    // Vendor legacy store id, the vendor badge navigates to the storefront
     // via /vendors?id={id} (GET /v3/vendors/by-legacy-id/{id}), exactly like
     // the working featured-vendor card (account.page.html). The two consumers
     // read DIFFERENT field names off the card: the search page reads `store`
     // (search.page.html), the explore/vertican card reads `store_id`
     // (vertican.page.html). Emit BOTH from the same legacy id so each
     // navigates identically. 0 when the vendor has no legacy row (v3-native),
-    // matching featuredShape's null store_id — the storefront guard skips a
+    // matching featuredShape's null store_id, the storefront guard skips a
     // by-legacy-id/0 fetch. Requires ProductSerializer::listShape to embed
     // vendor.legacy_id.
     store: isRecord(item['vendor']) ? asNumber(item['vendor']['legacy_id'], 0) : 0,
     store_id: isRecord(item['vendor']) ? asNumber(item['vendor']['legacy_id'], 0) : 0,
-    // Vendor slug — the storefront now navigates by slug (works for v3-native
+    // Vendor slug, the storefront now navigates by slug (works for v3-native
     // stores that have no legacy id). See vendors.page.
     vendor_slug: isRecord(item['vendor']) ? asString(item['vendor']['slug']) : '',
     // Secondary bindings some pages may use (vendors.page reads
@@ -317,7 +317,7 @@ function legacyProductCardFromV3List(item: unknown): Record<string, unknown> {
     // Pass-through fields that are useful and unambiguous:
     slug: asString(item['slug']),
     in_stock: item['in_stock'] === true,
-    // M3.1.5.5 — vendors.page filters products by tapped label via
+    // M3.1.5.5, vendors.page filters products by tapped label via
     // `@if(category.id === product.collection)`. The v3 list shape
     // surfaces label_id under products_by_labels (added in M3.1.5.5g
     // to ProductSerializer.listShape); map it to legacy field name
@@ -361,11 +361,11 @@ export function transformProductListResponse(data: unknown): unknown {
  *   - category_id, category_name (v3 emits category_slug only)
  *   - delivery_time, custom_delivery_time, extra_msmt,
  *     require_extra_msmt (entity has the data but serializer doesn't
- *     surface it — could be added in M4 hardening if mobile UX
+ *     surface it, could be added in M4 hardening if mobile UX
  *     regresses noticeably)
- *   - store (legacy integer store_id) — v3 emits vendor: {slug, name};
+ *   - store (legacy integer store_id), v3 emits vendor: {slug, name};
  *     no integer id is exposed
- *   - stock_status (string) — v3 emits in_stock (boolean); we coerce
+ *   - stock_status (string), v3 emits in_stock (boolean); we coerce
  *     'in_stock' or 'out_of_stock' as a best-effort string
  *
  * For each gap, the transform emits a safe default (empty string,
@@ -379,7 +379,7 @@ export function transformProductDetailResponse(data: unknown): unknown {
   const sizeFlags = synthesizeSizeFlags(data['sizes']);
 
   return {
-    // Legacy id pair — mobile reads BOTH product_id and product:
+    // Legacy id pair, mobile reads BOTH product_id and product:
     product_id: asNumber(data['id']),
     product: asNumber(data['id']),
 
@@ -388,27 +388,27 @@ export function transformProductDetailResponse(data: unknown): unknown {
     name: asString(data['name']),
     description: asString(data['description']),
 
-    // Pricing — flat number for arithmetic + formatted string for display:
+    // Pricing, flat number for arithmetic + formatted string for display:
     price: flatPrice(data['price']),
     price_formated: formatPrice(data['price']),
     sale_price: data['sale_price'] !== null ? flatPrice(data['sale_price']) : null,
 
-    // Images — primary URL + CSV of all (legacy did `.split(',')` so
+    // Images, primary URL + CSV of all (legacy did `.split(',')` so
     // we surface a CSV string to keep that pattern working):
     image_1: flatImageUrl(data['primary_image']),
     images: imagesAsCsvString(data['images']),
 
-    // Colors — CSV string (same rationale as images):
+    // Colors, CSV string (same rationale as images):
     colors: colorsAsCsvString(data['colors']),
 
-    // Stock — coerce boolean to legacy string label:
+    // Stock, coerce boolean to legacy string label:
     stock_status: data['in_stock'] === true ? 'in_stock' : 'out_of_stock',
     in_stock: data['in_stock'] === true,
 
-    // Vendor — legacy mobile reads `single.store` as a numeric LEGACY
+    // Vendor, legacy mobile reads `single.store` as a numeric LEGACY
     // store id, used to resolve the store's published size guide via
     // GET /v3/vendors/by-legacy-id/{store}/size-chart. Use ONLY the
-    // legacy_id (not the v3 id) — the size-chart route resolves by legacy
+    // legacy_id (not the v3 id), the size-chart route resolves by legacy
     // id, so a v3-native vendor with no legacy_id must stay 0 so the PDP
     // guard skips the fetch (a v3 id there would 404 the by-legacy-id route).
     store: isRecord(data['vendor'])
@@ -417,12 +417,12 @@ export function transformProductDetailResponse(data: unknown): unknown {
     vendor_slug: isRecord(data['vendor']) ? asString(data['vendor']['slug']) : '',
     store_name: vendorName(data['vendor']),
 
-    // Category — v3 exposes only slug; legacy id/name are gaps:
+    // Category, v3 exposes only slug; legacy id/name are gaps:
     category_id: 0,
     category_name: '',
     category_slug: asString(data['category_slug']),
 
-    // Delivery — v3 detailShape carries a `delivery_info` object
+    // Delivery, v3 detailShape carries a `delivery_info` object
     // ({ time, custom_time, note }, migrated from the legacy delivery_time/
     // custom_delivery_time/delivery_note). Map back to the flat fields the
     // PDP renders. `time` is the legacy window ('1-3', '4-7', 'custom', …);
@@ -432,7 +432,7 @@ export function transformProductDetailResponse(data: unknown): unknown {
     extra_msmt: asString(data['measurement_instructions']),
     require_extra_msmt: data['requires_measurement'] === true,
 
-    // Size flags — 22 booleans synthesized from v3's sizes array:
+    // Size flags, 22 booleans synthesized from v3's sizes array:
     ...sizeFlags,
 
     // Slug for callers that want to navigate by slug:
@@ -456,14 +456,14 @@ export function transformProductDetailResponse(data: unknown): unknown {
  * Gaps:
  *   - tagline: not in v3 (legacy-only field). Emit empty string.
  *   - following: not in v3 (it's user-relational and requires a
- *     separate per-user query — out of scope for this anonymous read).
+ *     separate per-user query, out of scope for this anonymous read).
  *     Emit false so the page shows the "Follow" button rather than
  *     "Unfollow"; minor UX regression flagged in device test.
  */
 export function transformVendorResponse(data: unknown): unknown {
   if (!isRecord(data)) return {};
   return {
-    // v3 numeric primary key — REQUIRED by the Follow/Unfollow buttons.
+    // v3 numeric primary key, REQUIRED by the Follow/Unfollow buttons.
     // POST/DELETE /v3/me/following/{vendorId} resolves the vendor via a
     // v3-PK lookup (em->find), NOT the legacy store id the page is keyed
     // off. Surfacing it here lets the vendor page send the correct id and
@@ -568,15 +568,15 @@ export function transformMeasurementsReadResponse(data: unknown): unknown {
 }
 
 /* ============================================================== *
- * M3.1.5.5 — List shape for vendor labels + styles
+ * M3.1.5.5, List shape for vendor labels + styles
  * ============================================================== */
 
 /**
  * v3 vendor-labels list -> legacy `categories` array shape used by
  * vendors.page. Mobile binds:
- *   `category.id` — number, matched against `product.collection`
+ *   `category.id`, number, matched against `product.collection`
  *                   in the products-by-labels filter
- *   `category.name` — display name
+ *   `category.name`, display name
  *
  * v3 emits {id, slug, name, display_order}. We forward `id` (forced
  * to number) and `name`; slug + display_order pass through for any
@@ -606,11 +606,11 @@ function legacyCategoryFromV3Label(item: unknown): Record<string, unknown> {
 /**
  * v3 styles list -> legacy styles array shape used by styles.page.
  * Mobile binds:
- *   `style.id` — number
- *   `style.style_name` — display name (note the underscore — legacy
+ *   `style.id`, number
+ *   `style.style_name`, display name (note the underscore, legacy
  *                        field, not `name`)
- *   `style.total_price` — string from v3 DECIMAL
- *   `style.products[0..2].image` — image URL strings
+ *   `style.total_price`, string from v3 DECIMAL
+ *   `style.products[0..2].image`, image URL strings
  *
  * v3 emits {id, slug, name, description, cover_image_url,
  *           style_type, total_price, products: [{id, slug, name,
@@ -638,11 +638,11 @@ export function transformStylesListResponse(data: unknown): unknown {
  * Backs the style-view deep-link / hard-reload path: when router state is
  * wiped, the page re-fetches the style by slug and rebuilds it. v3 returns
  * a SINGLE style object under `data` (detailShape), so this reshapes one
- * object via the same mapper the list uses — keeping the legacy
+ * object via the same mapper the list uses, keeping the legacy
  * {style_name, total_price, products[].{image, product_id, ...}} shape
  * (incl. legacy_product_id on each product) identical to the list path.
  *
- * Returns {} if data isn't an object (defensive — the page treats a
+ * Returns {} if data isn't an object (defensive, the page treats a
  * missing id as "not found" and stays on the loading/empty state).
  */
 export function transformStyleDetailResponse(data: unknown): unknown {
@@ -706,7 +706,7 @@ function legacyStyleProductFromV3Product(item: unknown): Record<string, unknown>
  *
  * Previously this endpoint was (incorrectly) routed to /v3/products and
  * mapped with transformProductListResponse, yielding a flat product list
- * with no `.products` array — so the store template rendered nothing.
+ * with no `.products` array, so the store template rendered nothing.
  */
 export function transformFeaturedVendorsResponse(data: unknown): unknown {
   if (!Array.isArray(data)) return [];
@@ -737,7 +737,7 @@ export function transformFeaturedVendorsResponse(data: unknown): unknown {
 }
 
 /* ============================================================== *
- * Registry — keyed by routeKey
+ * Registry, keyed by routeKey
  * ============================================================== */
 
 export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
@@ -750,7 +750,7 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
   // legacy card bindings. Same mapper as new-arrivals.
   'GET /mobile/best-sellers': transformProductListResponse,
   'GET /mobile/best-sellers-listing': transformProductListResponse,
-  // Featured = "Trending stores" — a vendor list with embedded products,
+  // Featured = "Trending stores", a vendor list with embedded products,
   // NOT a flat product list (see transformFeaturedVendorsResponse).
   'GET /mobile/featured': transformFeaturedVendorsResponse,
   // Paginated PUBLIC store directory (GET /v3/vendors). directoryShape now
@@ -778,7 +778,7 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
   'GET /mobile/products-by-labels': transformProductListResponse, // products list
   'GET /mobile/store-labels': transformVendorLabelsResponse,      // labels list
   'GET /mobile/styles-list': transformStylesListResponse,         // styles list
-  // "My Styles" tab — owner-scoped styles list (GET /v3/me/styles). Same
+  // "My Styles" tab, owner-scoped styles list (GET /v3/me/styles). Same
   // v3 styles shape as styles-list, so it MUST use the same transform to
   // produce the legacy {style_name, total_price, products[].image} shape.
   'GET /mobile/my-styles': transformStylesListResponse,           // styles list (owner-scoped)

@@ -30,24 +30,24 @@ use Psr\Http\Message\ServerRequestInterface;
  * ----------------------------------
  * The tuple (user_id, category_id) uniquely identifies a measurement
  * set. There's no scenario where the user creates "another default
- * measurement" — they have one default OR none. Same for any given
+ * measurement", they have one default OR none. Same for any given
  * category. So PUT is genuinely idempotent:
  *
  *   - First PUT: creates the row
  *   - Subsequent PUTs: replace values + notes on the same row
  *
- * No POST endpoint because there's nothing to POST — every
+ * No POST endpoint because there's nothing to POST, every
  * "creation" is keyed by a category, which is in the URL.
  *
  * Why full replace not partial
  * ----------------------------
- * Measurements are tightly correlated — changing 'bust' often means
+ * Measurements are tightly correlated, changing 'bust' often means
  * 'arm' and 'hip' need updating too. PATCH semantics ("update only
  * the fields you send") would let users leave inconsistent partial
  * data. PUT forces them to send the complete current set.
  *
  * If a user wants to clear all measurements, they PUT with empty
- * `values: {}` (which is valid — see UpsertMeasurementsInput).
+ * `values: {}` (which is valid, see UpsertMeasurementsInput).
  *
  * Response
  * --------
@@ -105,10 +105,10 @@ final class UpsertMeasurementsController
         $existing = $repo->findForUserAndCategory($user, $categoryId);
 
         if ($existing !== null) {
-            // M1.6.1.C — capture pre-mutation state for the diff.
+            // M1.6.1.C, capture pre-mutation state for the diff.
             $beforeSnapshot = $this->audit->snapshot($existing);
 
-            // Update path — full replace of values + notes (PUT
+            // Update path, full replace of values + notes (PUT
             // semantics, not partial). Use setValues/setNotes
             // directly rather than update() because update() treats
             // null as 'no change' which conflicts with PUT 'authoritative
@@ -126,7 +126,7 @@ final class UpsertMeasurementsController
                 afterSnapshot: $this->audit->snapshot($measurement),
             );
         } else {
-            // Create path — new row.
+            // Create path, new row.
             $measurement = new Measurement(
                 user: $user,
                 values: $input->valuesAsFloats(),

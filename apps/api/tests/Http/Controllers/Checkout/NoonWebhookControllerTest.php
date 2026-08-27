@@ -28,7 +28,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        // Default bindings — tests rebind their own when they care.
+        // Default bindings, tests rebind their own when they care.
         $this->bind(PaymentGatewayInterface::class, $this->createMock(PaymentGatewayInterface::class));
     }
 
@@ -171,7 +171,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
         $txRepo->method('findByProviderOrderRef')->with('123456789012')->willReturn($tx);
 
         // The paid transition detects gift-card PURCHASE orders (to suppress
-        // vendor-facing side effects) via getRepository(GiftCard::class) — an
+        // vendor-facing side effects) via getRepository(GiftCard::class), an
         // UNGUARDED lookup on the paid path. Stub it (no matching card → this
         // is a normal product order) so the EM mock's non-nullable return type
         // is satisfied. This is the ONLY test that exercises the paid branch.
@@ -215,7 +215,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
     {
         // Noon's real WEBHOOK notification is a FLAT payload with the order
         // id at the top level as `orderId` (+ merchant ref as `orderReference`)
-        // — NOT the nested result.order.id shape the API RESPONSE uses. This
+        //, NOT the nested result.order.id shape the API RESPONSE uses. This
         // is the shape observed in production sandbox traffic. Regression
         // guard: an earlier version only read result.order.id, so every real
         // webhook resolved to no_match and orders were never confirmed.
@@ -269,7 +269,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
         $response = $this->handle(
             $this->jsonRequest('POST', '/v3/payment/webhook/noon', [
                 'eventType' => 'SALE',
-                // Numeric orderId (as Noon sends it) — must be coerced to the
+                // Numeric orderId (as Noon sends it), must be coerced to the
                 // string form stored in payment_transactions.provider_order_ref.
                 'orderId' => 886482671413,
                 'orderReference' => 'V3-1785406275341-1ad4',
@@ -278,7 +278,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
 
         self::assertSame(200, $response->getStatusCode());
         // Reaching a terminal transition proves the order was found from the
-        // flat orderId — a miss would have returned no_match with status unchanged.
+        // flat orderId, a miss would have returned no_match with status unchanged.
         self::assertSame(Order::STATUS_FAILED, $order->getStatus());
     }
 
@@ -287,7 +287,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
     {
         // Noon's REAL webhook body is a signed JWT wrapped in an envelope:
         // {"data":"<header>.<payload>.<sig>"}. The order id (orderId) and our
-        // reference (merchantOrderRef) live inside the JWT payload — the outer
+        // reference (merchantOrderRef) live inside the JWT payload, the outer
         // JSON only has `data`. The controller must decode the JWT and match
         // off its claims; otherwise every real webhook is no_match.
         $user = $this->makeUser(id: 7);
@@ -298,7 +298,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
         $verifier->method('verify')->willReturn(true);
         $this->bind(NoonWebhookSignatureVerifier::class, $verifier);
 
-        // Terminal FAILED outcome — the point is to prove the order was MATCHED
+        // Terminal FAILED outcome, the point is to prove the order was MATCHED
         // from inside the JWT, not to exercise the paid-path side effects.
         $gateway = $this->createMock(PaymentGatewayInterface::class);
         $gateway->expects(self::once())
@@ -392,7 +392,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
         $verifier->method('verify')->willReturn(true);
         $this->bind(NoonWebhookSignatureVerifier::class, $verifier);
 
-        // retrieveOrder must NEVER be called — the verified JWT is authoritative.
+        // retrieveOrder must NEVER be called, the verified JWT is authoritative.
         $gateway = $this->createMock(PaymentGatewayInterface::class);
         $gateway->expects(self::never())->method('retrieveOrder');
         $this->bind(PaymentGatewayInterface::class, $gateway);
@@ -435,7 +435,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
     #[Test]
     public function fallsBackToRetrieveOrderWhenJwtSignatureInvalid(): void
     {
-        // A JWT signed with the WRONG secret must NOT be trusted — the
+        // A JWT signed with the WRONG secret must NOT be trusted, the
         // controller falls back to retrieve-order-before-acting.
         $_ENV['NOON_WEBHOOK_SECRET'] = 's3cr3t-key';
 
@@ -619,7 +619,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
         $verifier->method('verify')->willReturn(true);
         $this->bind(NoonWebhookSignatureVerifier::class, $verifier);
 
-        // Gateway returns AUTHORIZED — terminal=false, paid=false
+        // Gateway returns AUTHORIZED, terminal=false, paid=false
         $gateway = $this->createMock(PaymentGatewayInterface::class);
         $gateway->method('retrieveOrder')->willReturn(new OrderStatusResponse(
             providerOrderRef: '123456789012',
@@ -659,12 +659,12 @@ final class NoonWebhookControllerTest extends HttpTestCase
         );
 
         self::assertSame(200, $response->getStatusCode());
-        // Order status should NOT have moved — AUTHORIZED is transient.
+        // Order status should NOT have moved, AUTHORIZED is transient.
         self::assertSame($originalStatus, $order->getStatus());
     }
 
     // ==================================================================
-    // signature_verified audit flag — must reflect whether the bound
+    // signature_verified audit flag, must reflect whether the bound
     // verifier actually performed a cryptographic check, not merely
     // that it accepted the event.
     // ==================================================================
@@ -756,7 +756,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
     }
 
     // ==================================================================
-    // M3.2.X.5-A — Observability hook for unknown dispute-shaped events
+    // M3.2.X.5-A, Observability hook for unknown dispute-shaped events
     // ==================================================================
 
     #[Test]
@@ -812,7 +812,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
     #[Test]
     public function emitsWarningForUnknownChargebackShapedEventType(): void
     {
-        // Same hook — 'chargeback' substring should also trigger.
+        // Same hook, 'chargeback' substring should also trigger.
         $logger = $this->makeCapturingLogger();
         $this->bind(\Psr\Log\LoggerInterface::class, $logger);
 
@@ -856,7 +856,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
     public function doesNotWarnForKnownDisputeEventType(): void
     {
         // A known dispute eventType (in DISPUTE_EVENT_TYPES) must NOT
-        // emit the unknown-dispute warning — that would be noise.
+        // emit the unknown-dispute warning, that would be noise.
         $logger = $this->makeCapturingLogger();
         $this->bind(\Psr\Log\LoggerInterface::class, $logger);
 
@@ -901,7 +901,7 @@ final class NoonWebhookControllerTest extends HttpTestCase
     public function doesNotWarnForUnrelatedEventType(): void
     {
         // Standard non-dispute eventType (e.g. 'order.captured') must
-        // NOT emit the warning either — the hook only triggers on
+        // NOT emit the warning either, the hook only triggers on
         // 'dispute' or 'chargeback' substring.
         $logger = $this->makeCapturingLogger();
         $this->bind(\Psr\Log\LoggerInterface::class, $logger);

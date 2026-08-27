@@ -1,7 +1,7 @@
 /**
  * Support contact constants.
  *
- * The ONLY support channel on the storefront is WhatsApp — one number
+ * The ONLY support channel on the storefront is WhatsApp, one number
  * shared by customers and vendors. Centralised here so it is never
  * scattered across components.
  *

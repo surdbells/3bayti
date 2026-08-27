@@ -35,7 +35,7 @@ use Slim\Psr7\Factory\ServerRequestFactory;
 final class ProductSerializerCurrencyTest extends TestCase
 {
     // =================================================================
-    // Backward compatibility — pre-X.15 single-amount shape
+    // Backward compatibility, pre-X.15 single-amount shape
     // =================================================================
 
     #[Test]
@@ -117,7 +117,7 @@ final class ProductSerializerCurrencyTest extends TestCase
     #[Test]
     public function salePriceAlsoConverts(): void
     {
-        // 200 AED * 0.27225 = 54.45 — clean
+        // 200 AED * 0.27225 = 54.45, clean
         $service = $this->makeService(rates: [
             $this->makeRate('AED', 'USD', '0.27225000'),
         ]);
@@ -198,7 +198,7 @@ final class ProductSerializerCurrencyTest extends TestCase
             ->configureFromRequest($request)
             ->listShape($this->makeProduct(price: '100.00'));
 
-        // 100 * 0.25180 = 25.18 — clean
+        // 100 * 0.25180 = 25.18, clean
         self::assertSame(25.18, $shape['price']['amount']);
         self::assertSame('EUR', $shape['price']['currency']);
     }
@@ -239,7 +239,7 @@ final class ProductSerializerCurrencyTest extends TestCase
             ->createServerRequest('GET', '/v3/products')
             ->withAttribute(
                 CurrencyContextMiddleware::ATTR_DISPLAY_CURRENCY,
-                'USD',  // wrong type — a string, not a Currency enum
+                'USD',  // wrong type, a string, not a Currency enum
             );
 
         $shape = $serializer

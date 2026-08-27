@@ -10,7 +10,7 @@ import { SeoService } from '../../core/seo/seo.service';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
- * 404 Not Found page — the catch-all `**` route (declared last in
+ * 404 Not Found page, the catch-all `**` route (declared last in
  * app.routes.ts).
  *
  * This is a CLIENT route, not a top-level 404.html asset: Cloudflare

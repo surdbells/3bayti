@@ -20,7 +20,7 @@ use PHPUnit\Framework\TestCase;
  * products whose vendor is BOTH is_active = TRUE AND status = APPROVED.
  *
  * CI has no PostgreSQL (the JSONB_EXISTS_ANY / TSMATCH DQL functions are
- * Postgres-only — see HttpTestCase), so we can't execute the query against
+ * Postgres-only, see HttpTestCase), so we can't execute the query against
  * a real database. Instead we drive findActivePaginated through a mocked
  * EntityManager that hands back a REAL Doctrine QueryBuilder, capture the
  * DQL the repository produces, and assert the vendor-gating join + WHERE
@@ -37,7 +37,7 @@ final class ProductRepositoryActiveVendorGatingTest extends TestCase
     {
         $dql = $this->captureFindActivePaginatedDql([]);
 
-        // Inner join onto the vendor relation — products with no/inactive
+        // Inner join onto the vendor relation, products with no/inactive
         // vendor are dropped entirely.
         self::assertMatchesRegularExpression(
             '/INNER JOIN\s+p\.vendor\s+v\b/i',
@@ -216,7 +216,7 @@ final class ProductRepositoryActiveVendorGatingTest extends TestCase
         // Return the item query (last createQuery call); it carries the
         // full join/where/orderBy shape. The count query has the same
         // joins + where but a COUNT select, so either works for the
-        // gating assertions — we use the last for completeness.
+        // gating assertions, we use the last for completeness.
         self::assertNotEmpty($captured, 'findActivePaginated produced no DQL.');
         return (string) end($captured);
     }

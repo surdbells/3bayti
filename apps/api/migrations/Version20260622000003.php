@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Storefront search overhaul (SEARCH #4) — make GET /v3/products `q`
+ * Storefront search overhaul (SEARCH #4), make GET /v3/products `q`
  * respond to short / prefix queries and widen its scope.
  *
  * Why
@@ -18,7 +18,7 @@ use Doctrine\Migrations\AbstractMigration;
  * `websearch_to_tsquery`. Two problems for a consumer search box:
  *
  *   1. Lexeme-only matching. tsquery matches whole stemmed lexemes,
- *      so a 2-character query ("ab", "si") matches nothing — the
+ *      so a 2-character query ("ab", "si") matches nothing, the
  *      term never becomes a complete lexeme. Mobile fires search from
  *      2 chars, so the common case returned an empty list.
  *
@@ -78,7 +78,7 @@ final class Version20260622000003 extends AbstractMigration
         // and attempting CREATE EXTENSION here cannot be made safe: the project
         // runs migrations all-or-nothing (every migration must be
         // transactional), and a failed CREATE inside that transaction aborts
-        // the whole run. So this migration NEVER creates the extension — it
+        // the whole run. So this migration NEVER creates the extension, it
         // builds the trigram indexes only when pg_trgm is ALREADY present, and
         // otherwise skips them with a warning. The ILIKE search works unindexed;
         // the indexes are a pure accelerator. To enable them, have a DB
@@ -132,6 +132,6 @@ final class Version20260622000003 extends AbstractMigration
         $this->addSql('DROP INDEX IF EXISTS idx_vendors_name_trgm');
         $this->addSql('DROP INDEX IF EXISTS idx_categories_name_trgm');
 
-        // Intentionally NOT dropping the pg_trgm extension — see docblock.
+        // Intentionally NOT dropping the pg_trgm extension, see docblock.
     }
 }

@@ -15,7 +15,7 @@ import { apiErrorMessage } from '../../shared/http/api-error';
 type Audience = 'all' | 'customers' | 'vendors' | 'admins';
 
 /**
- * Admin push broadcast composer — parity with (and a real UI for) the
+ * Admin push broadcast composer, parity with (and a real UI for) the
  * legacy admin/send_notifications.php. Sends a push notification to a
  * chosen audience via POST /admin/notifications and reports the delivery
  * summary returned by the API.
@@ -75,7 +75,7 @@ export class NotificationsComponent implements OnInit {
   /** Live audience summary (count + device split) for the selected audience. */
   audiencePreview: { total: number; android: number; ios: number } | null = null;
   audiencePreviewLoading = false;
-  /** Broadcast id from the last send — links the summary to its detail page. */
+  /** Broadcast id from the last send, links the summary to its detail page. */
   lastBroadcastId: number | null = null;
 
   ngOnInit() {

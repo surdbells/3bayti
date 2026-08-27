@@ -9,10 +9,10 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * A product brand — simple lookup table.
+ * A product brand, simple lookup table.
  *
  * Brand is intentionally lightweight. Many catalog brands are
- * "Nike, Adidas, etc." — just a name, a slug, a logo. No category
+ * "Nike, Adidas, etc.", just a name, a slug, a logo. No category
  * relationships, no per-brand configuration.
  *
  * Optional FK from products

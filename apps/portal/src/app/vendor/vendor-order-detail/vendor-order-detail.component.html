@@ -43,7 +43,7 @@
                 <span *ngIf="item.subtotal"> · {{ money(item.subtotal) }}</span>
               </div>
 
-              <!-- Measurements + customer note — everything the vendor needs to make/pack the item. -->
+              <!-- Measurements + customer note, everything the vendor needs to make/pack the item. -->
               <ng-container *ngIf="measurementPairs(item) as pairs">
                 <div *ngIf="pairs.length" class="voi-detail">
                   <div class="voi-detail-label">Measurements</div>
@@ -152,7 +152,7 @@
     </div>
   </div>
 
-  <!-- Product detail modal — the exact item the customer ordered. -->
+  <!-- Product detail modal, the exact item the customer ordered. -->
   <div class="voi-modal-backdrop" *ngIf="selectedItem() as it" (click)="closeItem()">
     <div class="voi-modal" role="dialog" aria-modal="true" [attr.aria-label]="it.product_name"
       (click)="$event.stopPropagation()">

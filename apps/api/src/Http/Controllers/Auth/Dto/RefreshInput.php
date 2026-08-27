@@ -9,7 +9,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * Input for POST /v3/auth/refresh.
  *
- * Single field — the refresh token. The client presents this when
+ * Single field, the refresh token. The client presents this when
  * its access token has expired (or is about to). On success we
  * issue a fresh access + refresh pair and revoke the presented
  * refresh token (single-use rotation, Decision A.6.1).

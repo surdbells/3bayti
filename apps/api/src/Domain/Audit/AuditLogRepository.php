@@ -35,7 +35,7 @@ class AuditLogRepository extends EntityRepository
      * but the audit "we tried to update X and it failed" survives.
      *
      * For the typical happy path, this is one extra round-trip per
-     * audited action — acceptable. Audited actions are user-initiated
+     * audited action, acceptable. Audited actions are user-initiated
      * mutations, not hot-path reads.
      *
      * Caveat: doesn't fully isolate from outer transaction. If the
@@ -87,7 +87,7 @@ class AuditLogRepository extends EntityRepository
      * `$filters` keys (all optional): action (string), subjectTypes (list of
      * strings → IN), userId (int), subjectId (int), dateFrom / dateTo (ISO
      * YYYY-MM-DD, inclusive UTC), search (matched against subject type / IP /
-     * request id, and — when numeric — subject id / user id).
+     * request id, and, when numeric, subject id / user id).
      *
      * @param array<string, mixed> $filters
      * @return array{0: AuditLog[], 1: int} [rows, totalMatching]
@@ -112,7 +112,7 @@ class AuditLogRepository extends EntityRepository
     }
 
     /**
-     * Count matching rows grouped by action — for the summary stat bar. The
+     * Count matching rows grouped by action, for the summary stat bar. The
      * `action` filter is intentionally ignored so the breakdown stays complete
      * (picking an action doesn't collapse the distribution to a single bar).
      *
@@ -137,7 +137,7 @@ class AuditLogRepository extends EntityRepository
     }
 
     /**
-     * Distinct subject types present in the log — powers the subject-type
+     * Distinct subject types present in the log, powers the subject-type
      * filter's option list. Unfiltered so the dropdown is stable.
      *
      * @return list<string>
@@ -172,8 +172,8 @@ class AuditLogRepository extends EntityRepository
         }
         if (!empty($f['actor'])) {
             // Match the actor by name or email. audit_log.user_id has no FK, so
-            // resolve matching user ids via a subquery (System rows — null
-            // user_id — never match, which is the intent when filtering by actor).
+            // resolve matching user ids via a subquery (System rows, null
+            // user_id, never match, which is the intent when filtering by actor).
             $qb->andWhere(
                 'a.userId IN (SELECT u2.id FROM ' . User::class . ' u2 '
                 . "WHERE LOWER(u2.email) LIKE :actor OR LOWER(CONCAT(u2.firstName, ' ', u2.lastName)) LIKE :actor)",

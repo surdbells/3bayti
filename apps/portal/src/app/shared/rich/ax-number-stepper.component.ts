@@ -96,7 +96,7 @@ export class AxNumberStepperComponent implements ControlValueAccessor {
     const input = event.target as HTMLInputElement;
     const raw = input.value;
     if (raw === '') {
-      // Don't coerce to 0 yet — let the user finish typing
+      // Don't coerce to 0 yet, let the user finish typing
       return;
     }
     const parsed = Number(raw);

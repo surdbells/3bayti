@@ -13,7 +13,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** PATCH /v3/admin/notification-templates/{id}/status — activate/deactivate. */
+/** PATCH /v3/admin/notification-templates/{id}/status, activate/deactivate. */
 final class SetTemplateStatusController
 {
     use Responder;

@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * users.must_change_password — force a password change on next sign-in.
+ * users.must_change_password, force a password change on next sign-in.
  *
  * Set when an account is provisioned with a temporary password we handed the
  * holder (admin approving a seller application, or resending credentials), so

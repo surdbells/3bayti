@@ -19,7 +19,7 @@ import {
 } from './locale.types';
 
 /**
- * LocaleService — chooses and applies the active locale.
+ * LocaleService, chooses and applies the active locale.
  *
  * Resolution precedence (highest to lowest)
  * ------------------------------------------
@@ -44,7 +44,7 @@ export class LocaleService {
   private readonly document = inject(DOCUMENT);
   private readonly translate = inject(TranslateService);
 
-  /* Current locale — signal so views can react. Components inject the
+  /* Current locale, signal so views can react. Components inject the
      service and bind to `current` directly, or to `dir` / `lang` for
      attribute bindings. */
   private readonly _current = signal<Locale>(DEFAULT_LOCALE);
@@ -81,7 +81,7 @@ export class LocaleService {
    * Activate a locale and actually wait for its JSON to load.
    *
    * `TranslateService.use()` returns an Observable (not a Promise), so a bare
-   * `await use()` would resolve immediately without waiting — leaving the first
+   * `await use()` would resolve immediately without waiting, leaving the first
    * paint (and this promise's consumers) racing the translation load. We wrap
    * it in `firstValueFrom` so the wait is real, and swallow load errors so a
    * failed/empty fetch degrades to fallback strings rather than blocking the
@@ -91,7 +91,7 @@ export class LocaleService {
     try {
       await firstValueFrom(this.translate.use(locale));
     } catch {
-      /* Translation load failed — let the app render with fallback lang / keys
+      /* Translation load failed, let the app render with fallback lang / keys
          rather than hang on startup or a locale switch. */
     }
   }
@@ -203,10 +203,10 @@ export class LocaleService {
    * Build a `name=value; ...attributes` cookie string.
    *
    * Attributes:
-   *   - Path=/             — visible to every route (BFF + client)
-   *   - Max-Age=31536000   — 1 year (long-lived; user choice persists)
-   *   - SameSite=Lax       — locale isn't security-sensitive; Lax is fine
-   *   - Secure (https only) — sent only over HTTPS
+   *   - Path=/            , visible to every route (BFF + client)
+   *   - Max-Age=31536000  , 1 year (long-lived; user choice persists)
+   *   - SameSite=Lax      , locale isn't security-sensitive; Lax is fine
+   *   - Secure (https only), sent only over HTTPS
    *
    * We don't set HttpOnly because the app reads this cookie client-side
    * to resolve the locale.

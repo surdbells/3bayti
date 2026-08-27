@@ -174,7 +174,7 @@ final class SocialLoginControllerTest extends HttpTestCase
 
         $userRepo = $this->createMock(UserRepository::class);
         // Even if a user with that email exists, an UNVERIFIED email must
-        // NOT be used to auto-link — so findByEmail must never be the
+        // NOT be used to auto-link, so findByEmail must never be the
         // basis for linking. We assert createUser path by capturing save().
         $userRepo->method('save')->willReturnCallback(
             function (User $u) use (&$created) {

@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Misc primitives
+   Abayti Design System, Misc primitives
    .ax-badge, .ax-chip, .ax-avatar, .ax-avatar-group, .ax-divider, .ax-spinner
    ========================================================================= */
 
@@ -136,7 +136,7 @@
 .ax-avatar-status-offline::after { background-color: var(--ax-color-border-strong); }
 
 
-/* Avatar group — overlapping */
+/* Avatar group, overlapping */
 .ax-avatar-group {
   display: inline-flex;
 }

@@ -17,12 +17,12 @@ import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
  * A gift-card order is a synthetic order with no line items and no vendor, so
  * the product success screen (with its "view order" / "message vendor"
  * actions) doesn't fit. This screen confirms the payment and shows the card
- * the buyer just funded: value, code, recipient and expiry — plus whether we
+ * the buyer just funded: value, code, recipient and expiry, plus whether we
  * will deliver it or they should share the code themselves.
  *
  * The card is passed via router state when the caller already has it;
  * otherwise it is fetched by id from GET /gift-cards/mine. A failed fetch is
- * NOT an error state — payment already succeeded, so we still confirm and
+ * NOT an error state, payment already succeeded, so we still confirm and
  * point the buyer to their wallet.
  */
 @Component({
@@ -112,7 +112,7 @@ export class GiftCardSuccessPage implements OnInit {
       await navigator.clipboard.writeText(code);
       this.notify.success(this.i18n.t('gcs_code_copied'));
     } catch {
-      /* Clipboard unavailable (older webview) — the code is on screen anyway. */
+      /* Clipboard unavailable (older webview), the code is on screen anyway. */
     }
   }
 

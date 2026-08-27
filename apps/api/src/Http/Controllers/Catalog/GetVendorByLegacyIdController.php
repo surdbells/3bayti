@@ -19,7 +19,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * GET /v3/vendors/by-legacy-id/{id}
  *
  * Mobile-compatibility shim during the M3.1.5 strangler-fig flip.
- * See GetProductByLegacyIdController for full rationale — same
+ * See GetProductByLegacyIdController for full rationale, same
  * pattern: mobile sends a legacy integer id (here as `store_id`),
  * we resolve it via VendorRepository::findByLegacyId and return the
  * same response shape as the slug-based controller.

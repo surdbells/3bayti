@@ -25,7 +25,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Why this exists: the only other v3 size-chart endpoint
  * (GET /v3/vendor/measurements, VendorSizeChartController::list) is
- * vendor-self-scoped — it resolves the vendor from the caller's JWT and
+ * vendor-self-scoped, it resolves the vendor from the caller's JWT and
  * 403s for non-vendors. A shopper viewing a store's size guide is neither
  * authed-as-that-vendor nor allowed to see any other store's chart through
  * that route, so this PUBLIC by-legacy-id variant fills the gap.

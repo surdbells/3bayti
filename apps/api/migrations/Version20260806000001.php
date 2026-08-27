@@ -13,7 +13,7 @@ use Doctrine\Migrations\AbstractMigration;
  * Previously the cart was marked 'converted' at checkout *initiate* (before
  * payment), so a customer who cancelled out of the payment page lost their
  * cart. We now keep the cart active through the pending-payment window and
- * only convert it once payment actually succeeds — the paid-transition handlers
+ * only convert it once payment actually succeeds, the paid-transition handlers
  * convert `order.cart`. The link is nullable: gift-card *purchase* orders have
  * no cart, so their cart_id stays NULL and nothing is converted for them.
  *

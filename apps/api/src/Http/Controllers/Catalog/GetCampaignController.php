@@ -18,7 +18,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/campaigns/{slug}
  *
- * A single campaign by slug with all its products — backs the storefront
+ * A single campaign by slug with all its products, backs the storefront
  * "view all" page for a deals / flash-sale campaign. Public, no auth.
  * 404 when the slug is unknown.
  *

@@ -8,7 +8,7 @@ use Bayti\Api\Domain\Notification\DeviceToken;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Input for POST /v3/me/device-tokens — register (upsert) a device's
+ * Input for POST /v3/me/device-tokens, register (upsert) a device's
  * push token.
  *
  * token is the FCM registration token (required, non-empty). platform

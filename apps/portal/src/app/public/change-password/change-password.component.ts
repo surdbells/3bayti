@@ -57,7 +57,7 @@ export class ChangePasswordComponent {
       new_password: this.new_password,
     }).subscribe({
       next: (res: any) => {
-        // The endpoint rotates tokens — carry the fresh pair into the session
+        // The endpoint rotates tokens, carry the fresh pair into the session
         // and clear the must-change flag so the guards let the user through.
         patchSession({
           token: res?.access_token,

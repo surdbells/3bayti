@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Data display primitives
+   Abayti Design System, Data display primitives
    Progress, skeleton, breadcrumb, pagination, extended table styles.
    ========================================================================= */
 
@@ -30,7 +30,7 @@
 .ax-progress-sm { height: 0.25rem; }
 .ax-progress-lg { height: 0.75rem; }
 
-/* Indeterminate — runs a slider across the track */
+/* Indeterminate, runs a slider across the track */
 .ax-progress-indeterminate .ax-progress-bar {
   width: 30% !important;
   animation: ax-progress-slide 1.5s infinite var(--ax-ease-in-out);
@@ -40,7 +40,7 @@
   100% { transform: translateX(calc(100% / 0.3 * 1)); }
 }
 
-/* Circular progress (SVG-based — gets its own class on the SVG root) */
+/* Circular progress (SVG-based, gets its own class on the SVG root) */
 .ax-progress-circle {
   display: inline-block;
   transform: rotate(-90deg);
@@ -236,7 +236,7 @@
 }
 
 
-/* ============== TABLE — extended (builds on Phase 1 .ax-table) ============== */
+/* ============== TABLE, extended (builds on Phase 1 .ax-table) ============== */
 
 /* Sortable header cells */
 .ax-table th.ax-th-sortable {
@@ -320,7 +320,7 @@
   pointer-events: none;
 }
 
-/* Responsive — stack rows at <md */
+/* Responsive, stack rows at <md */
 @media (max-width: 767.98px) {
   .ax-table-responsive thead {
     display: none;

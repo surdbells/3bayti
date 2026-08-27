@@ -13,7 +13,7 @@ import { NgIf } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
- * ConfirmModal — a reusable, accessible confirmation dialog.
+ * ConfirmModal, a reusable, accessible confirmation dialog.
  *
  * Replaces ad-hoc native window.confirm() calls (order cancel, return
  * request, address delete) with a styled, on-brand, keyboard- and
@@ -24,7 +24,7 @@ import { TranslatePipe } from '@ngx-translate/core';
  * ----------------------------
  * The host owns the open/closed state via the `open` input and reacts
  * to (confirm)/(cancel) outputs. The modal itself holds no business
- * state — it just renders and emits intent. This keeps it trivially
+ * state, it just renders and emits intent. This keeps it trivially
  * reusable and testable.
  *
  * Accessibility

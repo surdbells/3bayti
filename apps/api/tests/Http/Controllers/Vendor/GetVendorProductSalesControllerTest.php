@@ -20,7 +20,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 
 /**
- * GET /v3/vendor/products/{id}/sales — per-product sales, owner-scoped.
+ * GET /v3/vendor/products/{id}/sales, per-product sales, owner-scoped.
  * Connection mocked to feed the aggregate queries.
  */
 #[CoversClass(GetVendorProductSalesController::class)]

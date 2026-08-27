@@ -36,7 +36,7 @@ class SocialIdentityRepository extends EntityRepository
     }
 
     /**
-     * Every social identity linked to a user — backs the
+     * Every social identity linked to a user, backs the
      * GET /v3/me/social-identities "connected accounts" list and the
      * "would unlinking leave them with no sign-in method?" guard on
      * DELETE.

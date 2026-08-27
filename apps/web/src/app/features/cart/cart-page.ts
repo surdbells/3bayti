@@ -17,7 +17,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
- * Cart page — `/cart`.
+ * Cart page, `/cart`.
  *
  * Full cart view used by both guests and authenticated users.
  *
@@ -31,7 +31,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
  *
  * Promo code
  * ----------
- * For authenticated users only — the /v3/cart/quote endpoint requires
+ * For authenticated users only, the /v3/cart/quote endpoint requires
  * auth. Guests see a small "Sign in to apply a promo code" nudge in
  * place of the field. This avoids a confusing UX where the field is
  * visible but rejects every input.
@@ -47,7 +47,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
  * ----------------
  * +/- buttons and a numeric input. Min 1, max 99 (server-enforced too).
  * Each change calls CartService.updateQty which debounces locally per
- * line — adjacent rapid clicks coalesce into a single API call.
+ * line, adjacent rapid clicks coalesce into a single API call.
  *
  * a11y
  * ----
@@ -317,7 +317,7 @@ export class CartPageComponent implements OnInit {
   protected readonly isLoading = this.cart.isLoading;
   protected readonly isAuthenticated = this.auth.isAuthenticated;
 
-  /** Latest quote response — drives the breakdown when present. */
+  /** Latest quote response, drives the breakdown when present. */
   private readonly _quote = signal<CartQuoteResponse | null>(null);
   protected readonly quoteBreakdown = computed(() => this._quote()?.breakdown ?? null);
   protected readonly hasQuote = computed(() => this._quote() !== null);
@@ -393,7 +393,7 @@ export class CartPageComponent implements OnInit {
       await this.cart.updateQty(item.id, qty);
       /* After a quantity change, re-quote (auth only) with the active
          promo so the breakdown stays accurate. Silently no-op on
-         failure — the toast UX would be noisy. */
+         failure, the toast UX would be noisy. */
       await this.refreshQuote();
     } catch {
       this.toast.error('cart.page.errors.updateFailed');

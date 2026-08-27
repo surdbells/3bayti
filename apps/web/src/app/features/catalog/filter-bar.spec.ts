@@ -24,7 +24,7 @@ function makeFacets(): Facets {
 }
 
 /**
- * Host wrapper — the component uses signal inputs, which this repo's
+ * Host wrapper, the component uses signal inputs, which this repo's
  * vitest/unit-test toolchain can't drive via componentRef.setInput
  * (see gift-card-visual.ts). Binding through a host template is the
  * standard alternative and exercises the real input/output contract.
@@ -117,7 +117,7 @@ describe('FilterBarComponent', () => {
     fixture.detectChanges();
 
     const radios = el.querySelectorAll('[data-testid="pop-sort"] input[type="radio"]');
-    // CATALOG_SORTS order: newest, oldest, price_asc, ... — pick price_asc (index 2)
+    // CATALOG_SORTS order: newest, oldest, price_asc, ..., pick price_asc (index 2)
     (radios[2] as HTMLInputElement).dispatchEvent(new Event('change', { bubbles: true }));
 
     expect(host.emitted[0].sort).toBe('price_asc');

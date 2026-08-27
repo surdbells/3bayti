@@ -39,7 +39,7 @@ final class PushSenderAdaptersTest extends TestCase
 
         self::assertCount(1, $records);
         self::assertSame('push.would_send', $records[0]['message']);
-        // Never logs the full token — only a suffix.
+        // Never logs the full token, only a suffix.
         self::assertSame('…567890', $records[0]['context']['token_suffix']);
         self::assertSame(['k'], $records[0]['context']['data_keys']);
     }

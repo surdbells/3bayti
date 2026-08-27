@@ -9,19 +9,19 @@ namespace Bayti\Api\Domain\Currency;
  *
  * AED is the canonical settlement currency for every Cart, Order,
  * payment, payout, and refund in the system. The other cases
- * here are DISPLAY ONLY — they affect ProductSerializer output
+ * here are DISPLAY ONLY, they affect ProductSerializer output
  * when a customer queries with ?currency=XXX, nothing else.
  *
  * Q-Currencies = A locked: AED + 4 most-likely tourist origins
- *   AED — UAE Dirham (base currency)
- *   USD — US Dollar (global default)
- *   EUR — Euro (European tourist origin)
- *   SAR — Saudi Riyal (largest GCC neighbour traffic)
- *   GBP — British Pound (UK tourist + UAE expat traffic)
+ *   AED, UAE Dirham (base currency)
+ *   USD, US Dollar (global default)
+ *   EUR, Euro (European tourist origin)
+ *   SAR, Saudi Riyal (largest GCC neighbour traffic)
+ *   GBP, British Pound (UK tourist + UAE expat traffic)
  *
  * Future GCC currencies (BHD, KWD, OMR, QAR) and additional
  * tourist origins (CAD, AUD, CHF) are operator follow-up #28
- * — add cases here + INSERT seed rows + the conversion service
+ *, add cases here + INSERT seed rows + the conversion service
  * automatically picks them up.
  *
  * Q-FallbackBehavior = B locked: tryFrom() returning null at
@@ -47,7 +47,7 @@ enum Currency: string
 
     /**
      * Best-effort parse. Returns AED for null / empty / unknown
-     * input — the locked Q-FallbackBehavior behaviour.
+     * input, the locked Q-FallbackBehavior behaviour.
      */
     public static function fromQueryParamOrAed(mixed $raw): self
     {

@@ -21,7 +21,7 @@ namespace Bayti\Api\Domain\User;
  * send-otp resend, password reset, validate-phone) inherits the
  * behaviour without per-controller catches.
  *
- * We deliberately keep the public message generic — it does not reveal
+ * We deliberately keep the public message generic, it does not reveal
  * which limit tripped or the exact counters, only the retry-after the
  * client needs to drive its lockout countdown.
  */

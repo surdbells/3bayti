@@ -1,5 +1,5 @@
 /* =============================================================================
-   PlacesService — wraps the Google Places API (New)
+   PlacesService, wraps the Google Places API (New)
    -----------------------------------------------------------------------------
    Ported verbatim from apps/mobile/src/app/service/places.service.ts. The
    mobile implementation is pure fetch() against the Places API (New) with no
@@ -61,7 +61,7 @@ export interface PlaceDetails {
   formattedAddress: string;
   addressComponents: PlaceAddressComponent[];
   location: { latitude: number; longitude: number };
-  /* Convenience extracted fields — populated via parseAddressComponents()
+  /* Convenience extracted fields, populated via parseAddressComponents()
      in this service. */
   street: string | null;
   city: string | null;
@@ -73,11 +73,11 @@ export interface PlaceDetails {
 /* A single suggestion returned from the Autocomplete endpoint. */
 export interface PlaceSuggestion {
   placeId: string;
-  /* Full text — e.g. "Sheikh Zayed Road, Dubai - United Arab Emirates" */
+  /* Full text, e.g. "Sheikh Zayed Road, Dubai - United Arab Emirates" */
   fullText: string;
-  /* Main text — e.g. "Sheikh Zayed Road" — bold first line in UI */
+  /* Main text, e.g. "Sheikh Zayed Road", bold first line in UI */
   mainText: string;
-  /* Secondary text — e.g. "Dubai - United Arab Emirates" — second line */
+  /* Secondary text, e.g. "Dubai - United Arab Emirates", second line */
   secondaryText: string;
 }
 

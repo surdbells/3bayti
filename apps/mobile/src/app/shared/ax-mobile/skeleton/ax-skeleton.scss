@@ -1,5 +1,5 @@
 /* =========================================================================
-   ax-skeleton — shared shimmer styles for all skeleton primitives
+   ax-skeleton, shared shimmer styles for all skeleton primitives
    ========================================================================= */
 
 @keyframes ax-skeleton-shimmer {
@@ -38,7 +38,7 @@
 
   &--line {
     border-radius: var(--ax-radius-sm);
-    /* Lines should default to looking like text — slight vertical
+    /* Lines should default to looking like text, slight vertical
        rhythm matching line-height. */
     vertical-align: middle;
   }

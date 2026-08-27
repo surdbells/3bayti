@@ -39,7 +39,7 @@ final class MigrationSteps
 {
     /**
      * When true, the steps that support it (the size-charts / wishlist
-     * backfills) roll their transaction back instead of committing —
+     * backfills) roll their transaction back instead of committing -
      * mirrors the `--dry-run` flag of the standalone CLI scripts. The
      * migrate-all orchestrator leaves this false (commit). The older
      * steps (categories/users/vendors/products/...) ignore this flag.
@@ -302,7 +302,7 @@ final class MigrationSteps
                     // established legacy customers the old platform authenticated
                     // by phone OTP, and OTP login refuses to dispatch a code to an
                     // unverified user (see Version20260812000003 for the backfill of
-                    // rows imported before this). is_email_verified stays FALSE —
+                    // rows imported before this). is_email_verified stays FALSE -
                     // login doesn't depend on it and we don't assert email ownership.
                     try {
                         $this->conn->executeStatement(
@@ -381,7 +381,7 @@ final class MigrationSteps
                     }
                     $migrated++;
                 } else {
-                    // UPDATE — email + password_changed_at stable
+                    // UPDATE, email + password_changed_at stable
                     $changes = [];
                     $set = [];
                     $params = ['legacy_id' => $legacyId];
@@ -638,7 +638,7 @@ final class MigrationSteps
                                 'is_verified' => $isStoreApproved ? 'true' : 'false',
                                 'is_approved' => $isStoreApproved ? 'true' : 'false',
                                 // Lifecycle status must track the legacy approval, not
-                                // default to 'pending' — otherwise a legacy-approved store
+                                // default to 'pending', otherwise a legacy-approved store
                                 // imports as pending and the admin stores list shows
                                 // "Approval pending" for an operating vendor.
                                 'status' => $isStoreApproved ? 'approved' : 'pending',
@@ -665,7 +665,7 @@ final class MigrationSteps
                     $this->log->info('vendors', $userId, "INSERT as '{$slug}' ({$storeName})" . ($isSynthetic ? ' [SYNTHETIC]' : ''));
                     $migrated++;
                 } else {
-                    // UPDATE — slug + owner stable
+                    // UPDATE, slug + owner stable
                     $changes = [];
                     if ($existingVendor['name'] !== $storeName) {
                         $changes['name'] = ['from' => $existingVendor['name'], 'to' => $storeName];
@@ -1245,15 +1245,15 @@ final class MigrationSteps
         echo "===== migrate-vendor-labels =====\n";
 
         // The legacy schema for labels is not fully understood from
-        // the v3 codebase alone — Phase 0 reconnaissance in M3.1.5.5
+        // the v3 codebase alone, Phase 0 reconnaissance in M3.1.5.5
         // couldn't identify the exact legacy table name. Probe two
         // candidates that match the legacy naming convention; skip
         // gracefully if neither exists.
         //
-        // CANDIDATE 1: `labels` — singular-table convention used by
+        // CANDIDATE 1: `labels`, singular-table convention used by
         //   the legacy `category` table (already migrated). Most
         //   likely match.
-        // CANDIDATE 2: `vendor_collections` — alternative based on
+        // CANDIDATE 2: `vendor_collections`, alternative based on
         //   the legacy endpoint name (read_vendor_collection).
         //
         // Operator can extend this list by editing the array if
@@ -1281,7 +1281,7 @@ final class MigrationSteps
             ];
         }
 
-        // Column probe — different legacy schemas may have used
+        // Column probe, different legacy schemas may have used
         // `id` vs `label_id` for the PK, `vendor_id` vs `store_id`
         // for the vendor FK, etc. Use the columns we find.
         $idCol = $this->legacy->columnExists($sourceTable, 'label_id') ? 'label_id'
@@ -1316,7 +1316,7 @@ final class MigrationSteps
         // Reserve already-present slugs so we don't collide. Note:
         // slugs are per-vendor-unique, not globally, so the slugger's
         // global reservation is over-strict here. For M3.1.5.5
-        // pragmatism, accept the over-strict behaviour — slug
+        // pragmatism, accept the over-strict behaviour, slug
         // collisions across vendors are rare and the slugger appends
         // a numeric suffix when needed.
         foreach ($this->conn->fetchAllAssociative('SELECT slug FROM vendor_labels') as $row) {
@@ -1463,8 +1463,8 @@ final class MigrationSteps
         // exact legacy schema for styles isn't fully understood.
         // Candidates based on naming conventions visible in the
         // legacy codebase:
-        //   CANDIDATE 1: `styles` — most likely.
-        //   CANDIDATE 2: `stylist` — alternative based on mobile
+        //   CANDIDATE 1: `styles`, most likely.
+        //   CANDIDATE 2: `stylist`, alternative based on mobile
         //                folder name (customer/styles/).
         $candidates = ['styles', 'collections', 'stylist'];
         $sourceTable = null;
@@ -1637,25 +1637,25 @@ final class MigrationSteps
     }
 
     // ===================================================================
-    // M3.1.6h — Order migration (single step: orders + items + addresses)
+    // M3.1.6h, Order migration (single step: orders + items + addresses)
     // ===================================================================
     //
     // Legacy model (verified against the production dump, Aug 2026):
     //
-    //   ec_cart_items    — combined cart + order-line table.
+    //   ec_cart_items   , combined cart + order-line table.
     //                        cart_code = 'PND'   → live cart (skipped)
     //                        cart_code = 'TRN-…' → a placed order; the rows
     //                        sharing one TRN are the lines of that order.
-    //   payment_attempts — the order/checkout HEADER, joined on cart_code.
+    //   payment_attempts, the order/checkout HEADER, joined on cart_code.
     //                        Holds the delivery address, delivery_fee,
     //                        total_paid, cart_status ('paid'|'pending'),
     //                        paymentType and the raw Noon response.
     //
-    // v3 mapping — all done in THIS one method. The former separate
+    // v3 mapping, all done in THIS one method. The former separate
     // migrateOrderItems / migrateOrderAddresses steps were removed: the
     // legacy DB has no normalised order_items / order_addresses tables, and
-    // both matched orders on legacy_order_id — a column migrateOrders never
-    // populated — so they were permanent no-ops (0 rows, every run).
+    // both matched orders on legacy_order_id, a column migrateOrders never
+    // populated, so they were permanent no-ops (0 rows, every run).
     //
     //   1 TRN cart_code                     → 1 orders row
     //       order_reference = cart_code, legacy_order_id = payment.order_id
@@ -1671,12 +1671,12 @@ final class MigrationSteps
     //
     // Idempotent: an order whose order_reference already exists is skipped,
     // so re-running only inserts orders placed since the last run. Carts
-    // (PND) are intentionally NOT migrated — transient state; users re-add
+    // (PND) are intentionally NOT migrated, transient state; users re-add
     // items in v3 on first login.
     //
     // Honours --dry-run (setDryRun): each order is inserted inside its own
     // transaction and rolled back, so counts are exact with zero writes.
-    // Per-order transactions also isolate failures — one bad order cannot
+    // Per-order transactions also isolate failures, one bad order cannot
     // abort the whole batch (important on Postgres, where a failed statement
     // poisons the surrounding transaction).
 
@@ -1736,7 +1736,7 @@ final class MigrationSteps
         foreach ($groups as $trnCode => $items) {
             $ref = substr((string) $trnCode, 0, 32);
 
-            // Idempotency — skip orders already migrated.
+            // Idempotency, skip orders already migrated.
             if ($this->conn->fetchOne('SELECT id FROM orders WHERE order_reference = ?', [$ref]) !== false) {
                 $skipped++;
                 continue;
@@ -1756,7 +1756,7 @@ final class MigrationSteps
             $v3UserId = (int) $userRow['id'];
             $pay = $paymentByCart[(string) $trnCode] ?? null;
 
-            // Totals — subtotal from line items, fee + charged total from header.
+            // Totals, subtotal from line items, fee + charged total from header.
             $subtotal = '0.00';
             $discount = '0.00';
             foreach ($items as $it) {
@@ -1774,7 +1774,7 @@ final class MigrationSteps
             // Status + paid_at. cart_status drives the paid/unpaid axis;
             // item statuses drive fulfilment. An order is only
             // 'pending_payment' when there is no paid attempt AND no
-            // fulfilment progress — a delivered order carrying a stale
+            // fulfilment progress, a delivered order carrying a stale
             // 'pending' attempt still reads as delivered.
             $isPaid = $pay !== null && strtolower(trim((string) ($pay['cart_status'] ?? ''))) === 'paid';
             $createdAt = (string) ($first['_item_added'] ?? ($pay['created'] ?? date('Y-m-d H:i:s')));
@@ -1979,7 +1979,7 @@ final class MigrationSteps
         }
 
         // Most-advanced fulfilment wins. A paid order with some (not all)
-        // cancelled lines is still 'paid' — the remaining lines fulfil.
+        // cancelled lines is still 'paid', the remaining lines fulfil.
         $priority = ['refunded', 'delivered', 'shipped', 'preparing', 'accepted', 'returned', 'pending'];
         foreach ($priority as $s) {
             if (in_array($s, $statuses, true)) {
@@ -1996,7 +1996,7 @@ final class MigrationSteps
     }
 
     // ===================================================================
-    // M3.1.6h — Helpers (shared by migrateOrders)
+    // M3.1.6h, Helpers (shared by migrateOrders)
     // ===================================================================
 
     /** @param list<string> $candidates */

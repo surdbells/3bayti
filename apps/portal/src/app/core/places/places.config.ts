@@ -11,6 +11,6 @@
  */
 export const GOOGLE_PLACES = {
   apiKey: 'AIzaSyAHERMyCn9KfrhZF5zpKynzLp0SjXpQpKU',
-  /** Region bias — UAE, per current product scope. */
+  /** Region bias, UAE, per current product scope. */
   regions: ['AE'],
 };

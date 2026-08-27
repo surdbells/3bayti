@@ -108,7 +108,7 @@ final class WebhookSignatureVerifierTest extends TestCase
 
     public function testHmacSha256IsCryptographic(): void
     {
-        // Real HMAC verifier — a passing verify() means the signature
+        // Real HMAC verifier, a passing verify() means the signature
         // checked out, so the controller records signature_verified=true.
         self::assertTrue((new HmacSha256SignatureVerifier('any-secret'))->isCryptographic());
     }

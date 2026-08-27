@@ -23,11 +23,11 @@ const GENDERS: ProfileGender[] = ['male', 'female', 'other', 'prefer_not_to_say'
 const LOCALES = ['en', 'ar', 'en-AE', 'ar-AE'];
 
 /**
- * /account/profile — edit the authenticated user's profile.
+ * /account/profile, edit the authenticated user's profile.
  *
  * Editable (mirrors apps/api UpdateProfileInput exactly):
  *   first_name, last_name, gender, dob, locale.
- * Read-only display: email + phone (with verified badges) — changed
+ * Read-only display: email + phone (with verified badges), changed
  * via dedicated verified-contact flows, not this endpoint.
  *
  * Submit sends ONLY changed fields (diff against the loaded baseline),
@@ -514,7 +514,7 @@ export class AccountProfilePageComponent implements OnInit {
 
     const patch = this.buildPatch();
     if (Object.keys(patch).length === 0) {
-      /* Nothing changed — no API call, gentle confirmation. */
+      /* Nothing changed, no API call, gentle confirmation. */
       this.toast.info('account.profile.noChanges');
       return;
     }

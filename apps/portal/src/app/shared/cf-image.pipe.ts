@@ -4,7 +4,7 @@ import { cfImage, CF_PRESETS, type CfImageOptions } from './image-transform';
 export type CfPresetName = keyof typeof CF_PRESETS;
 
 /**
- * Angular pipe — apply Cloudflare image transforms in templates.
+ * Angular pipe, apply Cloudflare image transforms in templates.
  *
  * Usage:
  *   <!-- Named preset (recommended) -->
@@ -18,7 +18,7 @@ export type CfPresetName = keyof typeof CF_PRESETS;
  * Available presets: card, thumb, detail, gallery, cover, logo, hero
  * (see CF_PRESETS in image-transform.ts for exact widths/quality values).
  *
- * The pipe is pure — Angular only re-evaluates when the URL or preset
+ * The pipe is pure, Angular only re-evaluates when the URL or preset
  * reference changes. No performance cost in list rendering.
  *
  * Import in standalone component:

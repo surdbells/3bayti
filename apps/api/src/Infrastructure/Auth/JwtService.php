@@ -57,7 +57,7 @@ use Ramsey\Uuid\Uuid;
  * modes are oracle leaks (an attacker can probe to learn things
  * about the token format). If the controller wants finer-grained
  * info for logging, it can pass an out-parameter or use the named
- * verifyOrThrow* variants — but the default UX is opaque.
+ * verifyOrThrow* variants, but the default UX is opaque.
  */
 final class JwtService
 {
@@ -70,12 +70,12 @@ final class JwtService
      * phone-OTP verification and account creation in the phone-first
      * registration flow. DISTINCT from access/refresh so a registration
      * token can never be presented as a session token (and vice versa)
-     * — verifyAccessToken/verifyRefreshToken reject this audience, and
+     *, verifyAccessToken/verifyRefreshToken reject this audience, and
      * verifyRegistrationToken rejects access/refresh tokens.
      */
     public const AUDIENCE_REGISTER = 'register';
 
-    /** Lifetime of a registration token — 15 minutes. */
+    /** Lifetime of a registration token, 15 minutes. */
     public const REGISTRATION_TTL_SECONDS = 900;
 
     public function __construct(
@@ -96,13 +96,13 @@ final class JwtService
     {
         $now = new DateTimeImmutable();
 
-        // Access token — short-lived, role-laden, stateless.
+        // Access token, short-lived, role-laden, stateless.
         $accessExp = $now->modify("+{$this->settings->accessTtlSeconds} seconds");
         $accessJti = (string) Uuid::uuid7();
         $accessPayload = $this->buildAccessPayload($user, $now, $accessExp, $accessJti, $impersonatorId);
         $accessToken = JWT::encode($accessPayload, $this->settings->signingSecret, self::ALGORITHM);
 
-        // Refresh token — long-lived, opaque, server-validated.
+        // Refresh token, long-lived, opaque, server-validated.
         $refreshExp = $now->modify("+{$this->settings->refreshTtlSeconds} seconds");
         $refreshJti = (string) Uuid::uuid7();
         $refreshPayload = $this->buildRefreshPayload($user, $now, $refreshExp, $refreshJti, $impersonatorId);
@@ -126,12 +126,12 @@ final class JwtService
      * (/register/verify-phone), we hand back this token. The user then
      * presents it to /register/submit, which extracts the phone from
      * the (signature-verified) token rather than trusting a
-     * client-supplied phone — so a client cannot create an account for
+     * client-supplied phone, so a client cannot create an account for
      * a phone they didn't verify.
      *
      * NOT a session token: aud='register', no roles/email/sub. It
      * carries a 'phone' + 'country_code' + 'purpose'='register' claim.
-     * sub is '0' (no user exists yet) — present only to satisfy the
+     * sub is '0' (no user exists yet), present only to satisfy the
      * shared verify() required-claims check.
      */
     public function issueRegistrationToken(string $phone, string $countryCode): string
@@ -157,7 +157,7 @@ final class JwtService
     /**
      * Verify a registration token and return its bound phone +
      * country_code, or null on ANY failure (bad signature, expired,
-     * wrong audience, missing claims) — same no-oracle-leak contract
+     * wrong audience, missing claims), same no-oracle-leak contract
      * as the access/refresh verifiers.
      *
      * @return array{phone: string, country_code: string}|null
@@ -206,9 +206,9 @@ final class JwtService
      * Verify an access token. Returns null on any failure (invalid
      * signature, expired, wrong audience, malformed, etc.).
      *
-     * Does NOT check pwd_changed_at against the database — that's
+     * Does NOT check pwd_changed_at against the database, that's
      * the AuthMiddleware's job (it has the User looked up anyway).
-     * Also does NOT check the user's is_active state — also middleware.
+     * Also does NOT check the user's is_active state, also middleware.
      * This method's job is: 'is the token cryptographically valid
      * AND not expired AND for the right audience'.
      */
@@ -220,7 +220,7 @@ final class JwtService
     /**
      * Verify a refresh token. Returns null on failure.
      *
-     * Does NOT check the database for revocation — that's done by
+     * Does NOT check the database for revocation, that's done by
      * the /v3/auth/refresh handler (which needs the row anyway to
      * mark it revoked + issue a new pair).
      */
@@ -256,7 +256,7 @@ final class JwtService
             'roles' => $this->extractActiveRoles($user),
         ];
 
-        // pwd_changed_at — only present when the user has actually
+        // pwd_changed_at, only present when the user has actually
         // changed their password. Tokens for never-changed-password
         // users (new accounts) skip the field; AuthMiddleware treats
         // a missing claim as 'always valid', a present claim as
@@ -265,7 +265,7 @@ final class JwtService
             $payload['pwd_changed_at'] = $user->getPasswordChangedAt()->getTimestamp();
         }
 
-        // imp_by — set on an admin impersonation session so the app can show a
+        // imp_by, set on an admin impersonation session so the app can show a
         // banner and the audit trail records who is acting as this user.
         if ($impersonatorId !== null) {
             $payload['imp_by'] = $impersonatorId;
@@ -284,7 +284,7 @@ final class JwtService
         string $jti,
         ?int $impersonatorId = null,
     ): array {
-        // Refresh tokens stay minimal — just the standard claims.
+        // Refresh tokens stay minimal, just the standard claims.
         // The lookup happens in user_refresh_tokens by jti, where we
         // also fetch the user_id. Including roles/email in refresh
         // tokens would make their payload bigger without benefit
@@ -321,7 +321,7 @@ final class JwtService
     }
 
     /**
-     * Generic verify path — used by both access and refresh.
+     * Generic verify path, used by both access and refresh.
      * Returns null on ANY failure (no oracle leak).
      */
     private function verify(string $token, string $expectedAudience): ?TokenClaims
@@ -352,13 +352,13 @@ final class JwtService
             return null;
         }
 
-        // Issuer check — protects against tokens from other issuers
+        // Issuer check, protects against tokens from other issuers
         // signed with leaked secrets.
         if ($decoded->iss !== $this->settings->issuer) {
             return null;
         }
 
-        // Audience check — distinguishes access from refresh.
+        // Audience check, distinguishes access from refresh.
         if ($decoded->aud !== $expectedAudience) {
             return null;
         }

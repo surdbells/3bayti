@@ -9,12 +9,12 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * Input for POST /v3/auth/login.
  *
- * Email-first identifier per Decision A.6.4 — the frontend collects
+ * Email-first identifier per Decision A.6.4, the frontend collects
  * the email; phone-as-username is a future enhancement (post-M1).
  *
  * Password constraints
  * --------------------
- * Validation here is intentionally MINIMAL — just NotBlank.
+ * Validation here is intentionally MINIMAL, just NotBlank.
  *
  *   1. Strong password rules belong on REGISTRATION, not LOGIN.
  *      Putting `Length(min:8)` on login means existing users with
@@ -32,7 +32,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * the lowercase normalisation; we just clean whitespace here so
  * '  alice@example.com ' doesn't fail the Email constraint.
  *
- * Password is NOT trimmed — passwords with leading/trailing spaces
+ * Password is NOT trimmed, passwords with leading/trailing spaces
  * are valid (some legacy systems generated them) and trimming would
  * break login for those users.
  */
@@ -48,6 +48,6 @@ final class LoginInput
     public function __construct(string $email = '', string $password = '')
     {
         $this->email = trim($email);
-        $this->password = $password; // Do NOT trim — see class docblock.
+        $this->password = $password; // Do NOT trim, see class docblock.
     }
 }

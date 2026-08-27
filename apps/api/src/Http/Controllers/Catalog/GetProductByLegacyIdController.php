@@ -27,11 +27,11 @@ use Psr\Http\Message\ServerRequestInterface;
  * canonical product detail endpoint. New consumers should use it.
  *
  * The mobile app (M3.1.5-era) was built against the legacy backend,
- * which identified products by integer ids — the original primary
+ * which identified products by integer ids, the original primary
  * key from the legacy WordPress/CodeIgniter schema. The migration
  * preserved those ids in the `legacy_product_id` column.
  *
- * Rather than force mobile to cache a slug map locally (fragile —
+ * Rather than force mobile to cache a slug map locally (fragile -
  * stale on category renames, requires download-then-resolve flow),
  * we accept the legacy id at this dedicated endpoint and resolve it
  * server-side. The response shape is IDENTICAL to GetProductController.
@@ -39,7 +39,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * This endpoint will be retired when mobile is rebuilt against slug
  * semantics in a future phase (M3.1.10+).
  *
- * Behaviour: same as GetProductController — 404 for unknown id,
+ * Behaviour: same as GetProductController, 404 for unknown id,
  * inactive, draft, or soft-deleted products. Returns detailShape with
  * up to 10 recent approved reviews.
  *
@@ -73,7 +73,7 @@ final class GetProductByLegacyIdController
         if ($rawId === '' || !ctype_digit($rawId)) {
             // Slim's route pattern doesn't constrain to digits, so we
             // validate here. Non-numeric ids are treated as "not found"
-            // rather than 400 — they could be slug-like strings someone
+            // rather than 400, they could be slug-like strings someone
             // accidentally routed through this endpoint, and a 404
             // response is the most useful default.
             throw HttpException::notFound('Product not found.');

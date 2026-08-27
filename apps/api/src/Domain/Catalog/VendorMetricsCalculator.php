@@ -11,14 +11,14 @@ use Psr\Log\LoggerInterface;
  * Compute vendor performance metrics over a rolling window
  * (M3.2.X.14-A).
  *
- * Four metrics, all derived from existing order/return/dispute data —
+ * Four metrics, all derived from existing order/return/dispute data -
  * no new tables, no schema migration. Each is a rate (0.0-1.0) plus
  * the numerator and denominator so the UI can show '23 of 245 orders'
  * not just '9.4%'.
  *
  * Window semantics
  * ================
- * The window anchors on `orders.paid_at` (not created_at) — an order
+ * The window anchors on `orders.paid_at` (not created_at), an order
  * that sat in pending_payment for days before paying didn't actually
  * become work for the vendor until paid. Window length is caller-
  * supplied (X.14 Q-Window = C, defaults to 30 days, range 7-365 in
@@ -29,7 +29,7 @@ use Psr\Log\LoggerInterface;
  *
  * fulfillment_rate (Q-FulfillmentDef = A):
  *   delivered_items / total_items
- *   "delivered" only — shipped-but-not-delivered is in-flight,
+ *   "delivered" only, shipped-but-not-delivered is in-flight,
  *   not yet success.
  *
  * cancellation_rate (Q-CancellationDef = B):
@@ -42,7 +42,7 @@ use Psr\Log\LoggerInterface;
  *   approved_returns / total_items
  *   Source: order_return_requests WHERE status IN (approved,
  *   picked_up, delivered_to_vendor, refunded). Customer-submitted
- *   but admin-denied returns don't count — that would penalize
+ *   but admin-denied returns don't count, that would penalize
  *   vendors for invalid return claims.
  *
  *   Note: numerator counts return-request *items* (rows in
@@ -62,7 +62,7 @@ use Psr\Log\LoggerInterface;
  * ==========================================
  * Vendors with 0 items in the window: all 4 rates return null in
  * the 'value' field, with the underlying counts as 0. The UI then
- * shows '—' rather than misleading '0%'.
+ * shows '-' rather than misleading '0%'.
  *
  * Performance posture
  * ===================
@@ -108,7 +108,7 @@ class VendorMetricsCalculator
 
     /**
      * OrderItem statuses considered "cancelled by vendor" (Q-CancellationDef = B).
-     * Only the vendor's own rejection counts — not customer or admin
+     * Only the vendor's own rejection counts, not customer or admin
      * cancellations.
      */
     private const REJECTED_ITEM_STATUSES = ['rejected'];

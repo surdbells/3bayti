@@ -31,20 +31,20 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Failure modes
  * -------------
- *   - 409 CONFLICT_PHONE_TAKEN — phone already registered
- *   - 422 VALIDATION_FAILED    — body shape errors
- *   - 429 OTP_RATE_LIMITED     — phone hit hourly cap
- *   - 502 OTP_PROVIDER_ERROR   — MessageCentral down/refusing
+ *   - 409 CONFLICT_PHONE_TAKEN, phone already registered
+ *   - 422 VALIDATION_FAILED   , body shape errors
+ *   - 429 OTP_RATE_LIMITED    , phone hit hourly cap
+ *   - 502 OTP_PROVIDER_ERROR  , MessageCentral down/refusing
  *
  * Unlike the existing /register (which creates the User row up front),
- * NO user is created here — the account is created later at
+ * NO user is created here, the account is created later at
  * /register/submit once email + password are collected. This endpoint
  * only verifies the phone is free + reachable.
  *
  * Anti-enumeration note: we return an explicit 409 when the phone is
  * taken (matching the existing /register behaviour). The phone-first
  * flow is a deliberate UX choice and the conflict is surfaced for the
- * same reason /register surfaces it — phone-uniqueness is a hard
+ * same reason /register surfaces it, phone-uniqueness is a hard
  * registration constraint the user must see to proceed.
  */
 final class RegisterInitiateController

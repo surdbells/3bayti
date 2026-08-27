@@ -7,7 +7,7 @@
  * build time in .angular/cache. Running `npx vitest run` directly uses
  * Vitest's default discovery, which:
  *   1. Picks up e2e/*.spec.ts (Playwright files) and crashes on
- *      `test.describe()` — Playwright's test is not Vitest's test.
+ *      `test.describe()`, Playwright's test is not Vitest's test.
  *   2. Has no Angular TestBed setup, so tests that call
  *      TestBed.configureTestingModule() throw "initTestEnvironment first".
  *   3. Has globals:false, so specs that use bare describe/it/expect
@@ -17,7 +17,7 @@
  *
  * CI note
  * -------
- * CI runs `pnpm --filter @3bayti/web test:e2e` (Playwright) — not vitest.
+ * CI runs `pnpm --filter @3bayti/web test:e2e` (Playwright), not vitest.
  * This config is for local development quality checks:
  *   npx vitest run          # all unit tests
  *   npx vitest watch        # watch mode
@@ -81,7 +81,7 @@ function angularSpecDecoratorMetadata(): Plugin {
     enforce: 'pre',
     transform(code: string, id: string) {
       if (!id.endsWith('.ts') && !id.endsWith('.tsx')) return null;
-      // Skip node_modules — they're already compiled
+      // Skip node_modules, they're already compiled
       if (id.includes('node_modules')) return null;
 
       const isSpec = id.endsWith('.spec.ts');
@@ -130,7 +130,7 @@ export default defineConfig({
 
     // --- Include / exclude ---------------------------------------------------
 
-    // Only pick up spec files inside src/ — never touch e2e/ (those are
+    // Only pick up spec files inside src/, never touch e2e/ (those are
     // Playwright files that use a different test() API and fail in Vitest).
     include: ['src/**/*.spec.ts'],
 

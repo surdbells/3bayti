@@ -19,7 +19,7 @@ import {
 } from './measurement.service';
 
 /**
- * /account/measurements — the customer's default body measurements,
+ * /account/measurements, the customer's default body measurements,
  * used to power tailored fit across the catalogue.
  *
  * Six standard tailoring fields (bust/chest, waist, hips, shoulder,

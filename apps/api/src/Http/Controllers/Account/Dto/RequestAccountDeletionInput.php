@@ -15,7 +15,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * This is the web-facing account + data deletion request form required
  * by Google Play. It is intentionally NOT auth-gated (social-only
  * accounts can't authenticate a DELETE) and does NOT confirm whether an
- * account exists (anti-enumeration — see the controller).
+ * account exists (anti-enumeration, see the controller).
  *
  * Email is lowercased + trimmed in the constructor (mirrors the vendor
  * application DTO); phone is whitespace/format-stripped.

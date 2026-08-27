@@ -124,7 +124,7 @@ export class StoreReviewsPage implements OnInit, OnDestroy {
   get_reviews() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
-    // Direct v3 (GET /v3/vendors/:vendorId/reviews) — public list of a
+    // Direct v3 (GET /v3/vendors/:vendorId/reviews), public list of a
     // store's approved reviews, no authToken. The legacy request transform
     // (transformVendorReviewsListRequest) moved the store id from the body
     // (store_id/store) into the vendorId path param; replicated here. The

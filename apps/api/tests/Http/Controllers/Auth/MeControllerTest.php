@@ -72,7 +72,7 @@ final class MeControllerTest extends HttpTestCase
     {
         $user = $this->makeUser(id: 7);
 
-        // User row is gone — AuthMiddleware should 401.
+        // User row is gone, AuthMiddleware should 401.
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->willReturn(null);
 

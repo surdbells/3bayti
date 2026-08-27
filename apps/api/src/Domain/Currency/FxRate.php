@@ -47,7 +47,7 @@ class FxRate
     private string $targetCode;
 
     /**
-     * Decimal as string — Doctrine `decimal` type returns strings
+     * Decimal as string, Doctrine `decimal` type returns strings
      * which is what we want for bcmath in the conversion service.
      */
     #[ORM\Column(name: 'rate', type: 'decimal', precision: 18, scale: 8)]
@@ -107,7 +107,7 @@ class FxRate
                 "Rate must be a non-negative decimal string; got: {$rate}",
             );
         }
-        // Defensive range check — 0 would zero all prices; > 1000
+        // Defensive range check, 0 would zero all prices; > 1000
         // means someone typo'd a base/target inversion (e.g.
         // 367.0 instead of 0.272 for AED→USD).
         $cmp0 = bccomp($rate, '0', 8);

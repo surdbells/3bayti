@@ -20,13 +20,13 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * POST /v3/me/following/{vendorId} — follow a vendor.
+ * POST /v3/me/following/{vendorId}, follow a vendor.
  *
  * Idempotent: if already following, this is a no-op success (200), not a
  * 409. New follow → 201. Both return the followed vendor in the same
  * { data: <vendor publicShape> } shape so the client updates uniformly.
  *
- * The vendor must exist and be active (404 otherwise) — you can't follow
+ * The vendor must exist and be active (404 otherwise), you can't follow
  * a delisted/nonexistent store.
  */
 final class FollowVendorController

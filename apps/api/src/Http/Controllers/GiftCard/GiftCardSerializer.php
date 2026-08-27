@@ -149,7 +149,7 @@ final class GiftCardSerializer
     // full ordered ledger + delivery block.
 
     /**
-     * Lean admin LIST row. No ledger, no theme metadata — keeps the
+     * Lean admin LIST row. No ledger, no theme metadata, keeps the
      * paginated payload small. The buyer/recipient are flattened to the
      * fields an admin table needs to render + search against.
      *
@@ -219,7 +219,7 @@ final class GiftCardSerializer
         $data['purchase_order_reference'] = $card->getPurchaseOrderReference();
         $data['updated_at']        = $card->getUpdatedAt()->format(\DateTimeInterface::ATOM);
 
-        // Delivery status block — recipient + channel + timestamps.
+        // Delivery status block, recipient + channel + timestamps.
         $data['delivery'] = [
             'recipient_email'    => $card->getRecipientEmail(),
             'recipient_phone'    => $card->getRecipientPhone(),
@@ -230,7 +230,7 @@ final class GiftCardSerializer
             'delivered'          => $card->getEmailDeliveredAt() !== null || $card->getSmsDeliveredAt() !== null,
         ];
 
-        // Full ordered ledger (ASC by id — append-only, so chronological).
+        // Full ordered ledger (ASC by id, append-only, so chronological).
         $data['ledger'] = array_map(
             static fn(GiftCardTransaction $tx) => self::ledgerRow($tx),
             $card->getTransactions()->toArray(),
@@ -240,7 +240,7 @@ final class GiftCardSerializer
     }
 
     /**
-     * Shape a single ledger row — shared by the detail ledger + the
+     * Shape a single ledger row, shared by the detail ledger + the
      * adjust/void action responses (which return the new row).
      *
      * @return array<string,mixed>
@@ -318,7 +318,7 @@ final class GiftCardSerializer
     }
 
     /**
-     * All theme metadata — used by the mobile GET /v3/gift-cards/themes endpoint.
+     * All theme metadata, used by the mobile GET /v3/gift-cards/themes endpoint.
      * @return array<string,array<string,mixed>>
      */
     public static function allThemes(): array

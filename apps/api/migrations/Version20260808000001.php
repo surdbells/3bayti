@@ -14,7 +14,7 @@ use Doctrine\Migrations\AbstractMigration;
  * and a short key (session_key VARCHAR(255)). A signed bundle from
  * `@capgo/cli bundle encrypt` supplies an RSA-encrypted checksum (512 hex for
  * RSA-2048) and an RSA-wrapped session key (~370 chars), both of which overflow
- * those columns — the insert failed with "value too long", surfacing as a 500
+ * those columns, the insert failed with "value too long", surfacing as a 500
  * from POST /v3/admin/ota/bundles. Widen both to 2048 (room for RSA-4096 too).
  */
 final class Version20260808000001 extends AbstractMigration

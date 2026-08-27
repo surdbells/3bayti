@@ -1,5 +1,5 @@
 /**
- * Catalog domain types — matched to the v2 OpenAPI spec
+ * Catalog domain types, matched to the v2 OpenAPI spec
  * (docs/api-v2.openapi.yaml).
  *
  * The shape here is what GET /v2/products and GET /v2/products/:slug
@@ -9,7 +9,7 @@
  * `?` is used liberally because:
  *   - The OpenAPI spec marks several fields nullable
  *   - The backend may not yet populate every documented field (the
- *     existing data has gaps — vendors with no logo, products with no
+ *     existing data has gaps, vendors with no logo, products with no
  *     SKU, etc.). Defensive client code keeps rendering working when
  *     fields are missing, instead of throwing.
  */
@@ -161,7 +161,7 @@ export function mapPublicReview(r: PublicReview): ProductReview {
 }
 
 /**
- * Full product detail — what the PDP route receives.
+ * Full product detail, what the PDP route receives.
  * Extends Product with the heavy fields not needed in card grids.
  */
 export interface ProductDetail extends Product {

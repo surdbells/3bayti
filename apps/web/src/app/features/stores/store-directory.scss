@@ -67,7 +67,7 @@
   padding: 0;
   margin: 0;
   display: grid;
-  /* Match the Spotlight grid so directory + featured cards align —
+  /* Match the Spotlight grid so directory + featured cards align -
      ~3 per row at desktop widths, collapsing toward 1 on mobile. */
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;

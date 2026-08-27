@@ -33,7 +33,7 @@ final class ValidatePhoneInput
 
     public function __construct(string $phone = '')
     {
-        // Strip spaces, hyphens, parens — common in user-typed phone
+        // Strip spaces, hyphens, parens, common in user-typed phone
         // numbers. After this, the Regex either matches a clean
         // E.164 string or fails clearly.
         $this->phone = preg_replace('/[\s\-()]/', '', $phone) ?? '';

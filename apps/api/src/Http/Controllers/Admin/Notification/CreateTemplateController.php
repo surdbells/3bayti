@@ -17,7 +17,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** POST /v3/admin/notification-templates — create a message template. */
+/** POST /v3/admin/notification-templates, create a message template. */
 final class CreateTemplateController
 {
     use Responder;

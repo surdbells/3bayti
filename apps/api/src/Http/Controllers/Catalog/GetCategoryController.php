@@ -24,7 +24,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Returns:
  *   - data: full CategoryDetail (publicShape + image object + icon_name
  *           + product_count + children + embedded products array)
- *   - meta: { total_products, page_size } — apps/web-specific envelope
+ *   - meta: { total_products, page_size }, apps/web-specific envelope
  *           (NOT the standard PaginatedEnvelope shape; this endpoint
  *           uses a custom meta to match the apps/web contract exactly)
  *
@@ -107,7 +107,7 @@ final class GetCategoryController
 
         // Fetch first page of active products (Q-Sort = A: newest first).
         // findActivePaginated returns ['items' => list<Product>, 'total' => int]
-        // where 'total' is the COUNT after the isActive WHERE filter —
+        // where 'total' is the COUNT after the isActive WHERE filter -
         // exactly what apps/web wants as meta.total_products.
         $productsResult = $productRepo->findActivePaginated([
             'categoryId' => $category->getId(),
@@ -116,7 +116,7 @@ final class GetCategoryController
             'offset' => 0,
         ]);
 
-        // Direct children — kept emitting per Q-Children = A
+        // Direct children, kept emitting per Q-Children = A
         // (admin tool depends on this field).
         $children = $categoryRepo->findChildren($category);
 
@@ -125,7 +125,7 @@ final class GetCategoryController
         $data['children'] = $this->serializer->publicShapeMany($children);
         $data['products'] = $this->productSerializer->configureFromRequest($request)->listShapeMany($productsResult['items']);
 
-        // Build the meta block — apps/web-specific shape.
+        // Build the meta block, apps/web-specific shape.
         // NOT PaginatedEnvelope::build (which emits {total, limit,
         // offset, has_more}); apps/web's CategoryDetailMeta is
         // {total_products, page_size} per category.model.ts.

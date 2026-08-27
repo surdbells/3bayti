@@ -10,7 +10,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
 /**
  * Input for POST /v3/auth/otp-login/send.
  *
- * Passwordless login — request an OTP to a phone or email the user
+ * Passwordless login, request an OTP to a phone or email the user
  * already owns. The user supplies:
  *   - channel: 'phone' | 'email'
  *   - phone + country_code  (channel=phone)
@@ -26,7 +26,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
  * (a verification_id) whether or not the identifier maps to a real,
  * active user. See OtpLoginSendController for the rationale.
  *
- * Phone normalisation mirrors RegisterInitiateInput / ResetInput —
+ * Phone normalisation mirrors RegisterInitiateInput / ResetInput -
  * strip spaces / hyphens / parens before validating E.164. country_code
  * is optional and defaults to 'AE' (carried for symmetry with the rest
  * of the auth surface; the lookup keys on the E.164 phone itself).
@@ -80,7 +80,7 @@ final class OtpLoginSendInput
             : null;
         // Canonicalise the email at the boundary: lowercase + trim, ONCE.
         // User resolution is case-insensitive, but the OTP dedup / cooldown
-        // / rate-limit keys are case-SENSITIVE — without this, a case
+        // / rate-limit keys are case-SENSITIVE, without this, a case
         // variant (User@x vs user@x) bypasses dedup and double-emails.
         // Lowercasing here keeps user lookup, the dedup key, the stored
         // OtpAttempt.email, and the counters all on one canonical address.

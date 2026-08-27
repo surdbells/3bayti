@@ -1,5 +1,5 @@
 /**
- * AxIconComponent — abayti's icon primitive.
+ * AxIconComponent, abayti's icon primitive.
  *
  * Thin wrapper around lucide-angular's <lucide-icon> with M2-aligned
  * token defaults: editorial stroke 1.5, size tokens xs/sm/md/lg/xl,
@@ -83,7 +83,7 @@ export class AxIconComponent {
 
   /**
    * Resolves the icon symbol from AX_ICON_SET. Returns undefined if
-   * the name isn't registered — the *ngIf in the template prevents
+   * the name isn't registered, the *ngIf in the template prevents
    * <lucide-icon> from being created at all in that case (avoids
    * lucide throwing 'icon not provided' which cascades into routing
    * errors in Ionic).

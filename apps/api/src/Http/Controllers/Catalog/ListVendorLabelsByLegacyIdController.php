@@ -20,7 +20,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/vendors/by-legacy-id/{id}/labels
  *
- * Mobile-compatibility shim during the M3.1.5.5 strangler-fig flip —
+ * Mobile-compatibility shim during the M3.1.5.5 strangler-fig flip -
  * same response as ListVendorLabelsController (the slug variant) but
  * the vendor is resolved via legacy_vendor_id.
  *

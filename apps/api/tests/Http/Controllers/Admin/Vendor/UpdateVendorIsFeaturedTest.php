@@ -107,7 +107,7 @@ final class UpdateVendorIsFeaturedTest extends HttpTestCase
 
         $this->bindEm($admin, $vendor);
 
-        // PUT without is_featured key — admin only wants to update name
+        // PUT without is_featured key, admin only wants to update name
         $response = $this->makePut($admin, '/v3/admin/vendors/42', [
             'name' => 'Almas Fashion Renamed',
             'contact_email' => 'almas@example.com',

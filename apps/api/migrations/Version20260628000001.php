@@ -8,18 +8,18 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Social sign-in foundation — `social_identities` table.
+ * Social sign-in foundation, `social_identities` table.
  *
  * Backs Google + Apple federated login (via Firebase ID tokens). Each
  * row links a verified provider account (provider + provider_uid) to a
  * platform user. A user may have many social identities (e.g. both
  * Google and Apple) but a given (provider, provider_uid) pair maps to
- * at most one user — enforced by the UNIQUE(provider, provider_uid)
+ * at most one user, enforced by the UNIQUE(provider, provider_uid)
  * constraint, which is also what makes the "find or create" login flow
  * race-safe.
  *
  * ON DELETE CASCADE: when a user is hard-deleted, their social links go
- * with them. (Soft-delete leaves the rows in place — the app filters by
+ * with them. (Soft-delete leaves the rows in place, the app filters by
  * users.deleted_at, not by removing identity rows.)
  *
  * Provider CHECK: only 'google' / 'apple' for now. Widening to more

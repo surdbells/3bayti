@@ -22,7 +22,7 @@ import type {
 } from './cart.types';
 
 /**
- * CartService — single source of truth for the customer's cart.
+ * CartService, single source of truth for the customer's cart.
  *
  * Two backing stores, chosen by auth state:
  *
@@ -52,7 +52,7 @@ import type {
  *
  * On the reverse transition (true → false / logout), we drop the
  * cart signal back to a clean empty guest cart. We do NOT seed
- * localStorage from the server cart at logout — that would be
+ * localStorage from the server cart at logout, that would be
  * surprising behaviour (a signed-out user finding items they only
  * added while signed in).
  *
@@ -85,7 +85,7 @@ const EMPTY_CART: Cart = {
 };
 
 /**
- * Response shape of POST /v3/cart/resolve — the public endpoint that
+ * Response shape of POST /v3/cart/resolve, the public endpoint that
  * prices a guest's device-local cart server-side. `cart` is the standard
  * Cart shape (same as GET /v3/cart) with current names/images/prices;
  * `removed` lists product_ids that no longer resolve (deleted/inactive)
@@ -97,7 +97,7 @@ interface GuestCartResolveResponse {
 }
 
 /**
- * Envelope for the authenticated cart endpoints — GET /v3/cart and
+ * Envelope for the authenticated cart endpoints, GET /v3/cart and
  * POST /v3/cart/merge both wrap the cart as `{ cart: ... }` (same as
  * /resolve and /quote). The cart must be read off `.cart`; setting the
  * envelope directly as the Cart leaves `items` undefined and the drawer
@@ -118,7 +118,7 @@ interface ResolvedLineInfo {
 
 /**
  * Actual response of POST /v3/cart/quote: a `{ data }` envelope whose
- * body is the pricing breakdown — it does NOT carry the cart/items.
+ * body is the pricing breakdown, it does NOT carry the cart/items.
  * (CartQuoteSerializer::shape.) The client maps this into the flatter
  * CartQuoteResponse the pages consume.
  */
@@ -233,7 +233,7 @@ export class CartService {
         await firstValueFrom(
           this.http.post<Cart>(`${V3_BASE}/v3/cart/items`, input),
         );
-        /* The POST response is NOT a reliable full cart — it can come back
+        /* The POST response is NOT a reliable full cart, it can come back
            without the populated `items` array, which left the drawer empty
            right after adding while signed in. Load the authoritative cart so
            the drawer + badge reflect the new line. Consistent with
@@ -345,15 +345,15 @@ export class CartService {
     if (!this.auth.isAuthenticated()) {
       /* Instant synthesized cart (cached prices for known lines), then
          await the server resolve so the returned cart carries
-         authoritative prices — the cart page calls refresh() on init. */
+         authoritative prices, the cart page calls refresh() on init. */
       this._cart.set(this.loadGuestCart());
       await this.refreshGuestCart();
       return this._cart();
     }
     return this.runWithLoading(async () => {
       /* Self-healing guest merge: if a device-local cart survived
-         sign-in — first sign-in, or a prior merge that failed
-         transiently — merge it before loading the server cart.
+         sign-in, first sign-in, or a prior merge that failed
+         transiently, merge it before loading the server cart.
          Idempotent: on success localStorage is cleared so this no-ops
          thereafter; on failure localStorage is retained and the next
          refresh() retries, so guest items are never lost. Gated on a
@@ -373,7 +373,7 @@ export class CartService {
    * breakdown + promo validity for the totals UI.
    *
    * The quote endpoint returns ONLY pricing ({ data: { subtotal,
-   * delivery_fee, discount, total, applied_promo } }) — it does NOT
+   * delivery_fee, discount, total, applied_promo } }), it does NOT
    * return the cart, so this MUST NOT touch the cart signal. (A previous
    * version set `_cart` from a non-existent `response.cart`, wiping the
    * cart and blanking the review page.) Cart items come from the
@@ -436,11 +436,11 @@ export class CartService {
    *     localStorage is KEPT, so the items aren't lost and the next
    *     refresh() retries the merge. We never let a failed merge leave
    *     the user staring at an empty server cart with their items
-   *     orphaned in localStorage — that was the "cart disappeared on
+   *     orphaned in localStorage, that was the "cart disappeared on
    *     login" bug.
    *
    * Called from refresh()'s authenticated branch, so it must not open
-   * its own loading scope — refresh() owns that.
+   * its own loading scope, refresh() owns that.
    */
   private async mergeGuestCartIfPresent(): Promise<void> {
     const guest = this.loadGuestCartRaw();
@@ -474,7 +474,7 @@ export class CartService {
       const raw = localStorage.getItem(GUEST_CART_KEY);
       if (raw === null) return { items: [], currency: 'AED' };
       const parsed = JSON.parse(raw) as GuestCart;
-      /* Defensive validation — if storage is corrupted, treat as empty. */
+      /* Defensive validation, if storage is corrupted, treat as empty. */
       if (typeof parsed !== 'object' || !Array.isArray(parsed.items)) {
         return { items: [], currency: 'AED' };
       }
@@ -489,7 +489,7 @@ export class CartService {
     try {
       localStorage.setItem(GUEST_CART_KEY, JSON.stringify(guest));
     } catch {
-      /* Quota exceeded — silently ignore. The user will see the
+      /* Quota exceeded, silently ignore. The user will see the
          current cart state but it won't survive a reload. */
     }
   }
@@ -512,7 +512,7 @@ export class CartService {
    * later. The synthetic id (index + 1) is the stable handle the UI
    * passes back to updateQty / removeItem.
    *
-   * This is a display convenience only — refreshGuestCart() is the
+   * This is a display convenience only, refreshGuestCart() is the
    * source of authoritative pricing, and the merge call on sign-in
    * sends just the AddCartItemInput shape for the API to re-resolve.
    */
@@ -562,7 +562,7 @@ export class CartService {
    *     publish, so a slow earlier resolve can't overwrite a newer
    *     cart (e.g. two quick adds).
    *   - On failure (offline / 5xx) we keep the synthesized cart already
-   *     in the signal — the drawer still opens with the local data.
+   *     in the signal, the drawer still opens with the local data.
    *
    * Reconciliation:
    *   - Lines are matched back to localStorage by variantKey so the
@@ -576,7 +576,7 @@ export class CartService {
 
     const guest = this.loadGuestCartRaw();
     if (guest.items.length === 0) {
-      /* Nothing to price — the caller already set an empty synthesized
+      /* Nothing to price, the caller already set an empty synthesized
          cart; clear any stale cache so a future add starts fresh. */
       this.resolvedLineCache.clear();
       return;
@@ -592,7 +592,7 @@ export class CartService {
         ),
       );
 
-      /* A newer resolve started after us — discard this (now stale)
+      /* A newer resolve started after us, discard this (now stale)
          result without touching the signal or localStorage. */
       if (seq !== this.resolveSeq) return;
 

@@ -28,7 +28,7 @@ import { axNotificationHaptic, axNotificationId } from './ax-notification.utils'
 
 @Injectable({ providedIn: 'root' })
 export class AxNotificationService {
-  /** Internal config — mutable via setters. */
+  /** Internal config, mutable via setters. */
   private _config: Required<AxNotificationConfig> = { ...AX_NOTIFICATION_DEFAULT_CONFIG };
 
   /**

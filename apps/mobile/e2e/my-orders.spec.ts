@@ -6,7 +6,7 @@ import { mockAuthenticatedUser } from './utils/preferences-mock';
  *
  * This page was modified in M3.1.7-I (added customer cancel button).
  * These tests verify the page renders for an authenticated customer
- * without backing API calls — the backend is mocked at the network
+ * without backing API calls, the backend is mocked at the network
  * layer so we don't depend on a running backend in CI.
  */
 

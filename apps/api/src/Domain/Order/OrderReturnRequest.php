@@ -31,16 +31,16 @@ use Doctrine\ORM\Mapping as ORM;
  *    pending ──────┤
  *                  └─→ approved → picked_up → delivered_to_vendor → refunded (terminal)
  *                         ↑
- *                    cancelled (terminal — customer-initiated only, before approved)
+ *                    cancelled (terminal, customer-initiated only, before approved)
  *
  * State transitions are enforced by the mark*() methods on this
- * entity — illegal transitions throw \DomainException.
+ * entity, illegal transitions throw \DomainException.
  *
  * Q-VendorRole decision (locked):
  *   Vendor does NOT approve/deny. Admin makes that decision based on
  *   the photo evidence the customer attached. Vendor's only action
  *   is confirmReceived() once the goods arrive back at their
- *   warehouse — that transitions the request to delivered_to_vendor.
+ *   warehouse, that transitions the request to delivered_to_vendor.
  *
  * Q-Refund decision (locked):
  *   The refund is a manual operational record, not a call to the
@@ -51,7 +51,7 @@ use Doctrine\ORM\Mapping as ORM;
  * Multi-vendor orders
  * ===================
  * A single OrderReturnRequest can span items from multiple vendors
- * — see the items collection. Each OrderReturnRequestItem carries a
+ *, see the items collection. Each OrderReturnRequestItem carries a
  * denormalized vendor_id so vendor-facing queries can filter without
  * joining through order_items. The request itself stays unified
  * (one customer-facing entity), but vendor-portal endpoints filter
@@ -301,7 +301,7 @@ class OrderReturnRequest
     /**
      * Admin records the manual refund and transitions to terminal.
      * Allowed only from `delivered_to_vendor`. The refund entity is
-     * passed in by the controller — created via OrderReturnRefund
+     * passed in by the controller, created via OrderReturnRefund
      * with the manual-method fields the admin supplied.
      */
     public function markRefunded(OrderReturnRefund $refund): void

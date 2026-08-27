@@ -67,7 +67,7 @@ final class UpdateLocationControllerTest extends HttpTestCase
 
         self::assertSame(200, $response->getStatusCode());
         $body = $this->jsonBody($response);
-        // Response wraps the location data — see controller docblock
+        // Response wraps the location data, see controller docblock
         // for why we deviate from 0e.2 contract (which said 'user').
         self::assertArrayHasKey('location', $body);
         self::assertSame(25.276987, $body['location']['latitude']);
@@ -287,7 +287,7 @@ final class UpdateLocationControllerTest extends HttpTestCase
 
         $response = $this->handle(
             $this->jsonRequest('PATCH', '/v3/me/location', [
-                'latitude' => 25.0,  // longitude missing — partial coords
+                'latitude' => 25.0,  // longitude missing, partial coords
             ], [
                 'Authorization' => 'Bearer ' . $pair->accessToken,
             ])

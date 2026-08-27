@@ -63,7 +63,7 @@ final class CreatePromoCodeInput
     public readonly string $discount_value;
 
     /**
-     * ISO 4217 currency code. Optional — defaults to AED. Always
+     * ISO 4217 currency code. Optional, defaults to AED. Always
      * upper-cased in the constructor for canonical storage.
      */
     #[Assert\Length(

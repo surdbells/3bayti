@@ -86,7 +86,7 @@ final class InMemoryKeyValueStoreTest extends TestCase
     public function setWithTtlExpiresValue(): void
     {
         $store = new InMemoryKeyValueStore();
-        // TTL of 1s — set, then we'd need to wait. Simpler: set
+        // TTL of 1s, set, then we'd need to wait. Simpler: set
         // negative TTL via direct trick (set with TTL=0 = no
         // expiry; we need to manipulate internal state).
         // Skip the time-travel test here; the behavior is exercised
@@ -110,7 +110,7 @@ final class InMemoryKeyValueStoreTest extends TestCase
         $store = new InMemoryKeyValueStore();
         $store->set('lock', 'owner', 60);
 
-        // Second claim loses — and must NOT clobber the existing value.
+        // Second claim loses, and must NOT clobber the existing value.
         self::assertFalse($store->setIfAbsent('lock', 'intruder', 60));
         self::assertSame('owner', $store->get('lock'));
     }

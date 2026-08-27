@@ -44,7 +44,7 @@ import { apiErrorMessage } from '../../core/http/api-error';
  * Per-item buttons are shown ONLY when the transition is legal from
  * the current item status, mirroring the server's state machine
  * enforced in OrderItem::legalTransitions(). The server is still
- * authoritative — if a stale client tries an illegal transition,
+ * authoritative, if a stale client tries an illegal transition,
  * it gets a 422 with allowed_transitions in the details payload.
  */
 interface VendorOrderItem {
@@ -198,9 +198,9 @@ export class VendorOrderDetailPage implements OnInit {
   }
 
   // ===================================================================
-  // State machine — which transitions show as buttons for an item
+  // State machine, which transitions show as buttons for an item
   // ===================================================================
-  // Mirrors backend OrderItem::legalTransitions() — but limited to the
+  // Mirrors backend OrderItem::legalTransitions(), but limited to the
   // vendor-allowed subset (no cancelled/returned/refunded buttons).
   // Server is authoritative; this is just UX gating.
   // ===================================================================

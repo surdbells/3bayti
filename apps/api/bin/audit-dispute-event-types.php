@@ -4,7 +4,7 @@
 declare(strict_types=1);
 
 /**
- * 3bayti API — Dispute eventType audit (M3.2.X.5-A)
+ * 3bayti API, Dispute eventType audit (M3.2.X.5-A)
  * ==================================================
  *
  * Read-only operator script. Enumerates every distinct `event_type`
@@ -23,7 +23,7 @@ declare(strict_types=1);
  * actually emits. Until we observe a real dispute event from Noon,
  * we don't know whether our constant is right. This script lets
  * operators check that question retrospectively against production
- * data — if real disputes have already arrived using different
+ * data, if real disputes have already arrived using different
  * strings, the warning hook in NoonWebhookController would have
  * surfaced them, but this script gives a one-shot audit of the
  * full history.
@@ -53,9 +53,9 @@ declare(strict_types=1);
  *   php bin/audit-dispute-event-types.php
  *
  * Exit codes:
- *   0  — no suspicious unknown dispute-shaped types found
- *   1  — bootstrapping failure
- *   2  — suspicious dispute-shaped types found (operator should
+ *   0 , no suspicious unknown dispute-shaped types found
+ *   1 , bootstrapping failure
+ *   2 , suspicious dispute-shaped types found (operator should
  *        add them to DISPUTE_EVENT_TYPES + backfill OrderDispute
  *        rows for the affected events)
  */
@@ -194,7 +194,7 @@ if ($suspicious === []) {
  */
 function fetchEventTypeStats(Connection $conn): array
 {
-    // PostgreSQL — uses standard SQL aggregates. The received_at
+    // PostgreSQL, uses standard SQL aggregates. The received_at
     // column is the canonical insert timestamp on payment_webhook_events.
     $sql = <<<SQL
         SELECT

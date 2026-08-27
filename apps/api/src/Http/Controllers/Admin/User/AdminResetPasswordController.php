@@ -25,14 +25,14 @@ use Psr\Log\LoggerInterface;
  * PATCH /v3/admin/users/{id}/password
  *
  * Admin-initiated password reset for another user's account. Unlike the
- * self-service change, this does not require the target's current password —
+ * self-service change, this does not require the target's current password -
  * an admin is overriding it (locked-out staff, compromised credential).
  *
  * Security properties (matching the self-service flow):
  *   1. setPasswordHash() bumps password_changed_at, which invalidates every
  *      existing ACCESS token for the target on their next request.
  *   2. All of the target's REFRESH tokens are revoked, so they can't mint a
- *      new access token — every session is terminated.
+ *      new access token, every session is terminated.
  *   Together: an admin reset fully kicks the target out everywhere, which is
  *   the correct default for a credential-rotation / lockout-recovery action.
  *
@@ -40,7 +40,7 @@ use Psr\Log\LoggerInterface;
  * revocation commit atomically. Guarded by AdminAuthMiddleware + Auth; the
  * acting admin and target are recorded in the audit log.
  *
- * Returns 200 with the target's public profile (no tokens — the admin is not
+ * Returns 200 with the target's public profile (no tokens, the admin is not
  * the target, so there is nothing to re-issue for this session).
  */
 final class AdminResetPasswordController

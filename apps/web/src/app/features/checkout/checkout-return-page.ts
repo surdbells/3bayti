@@ -14,7 +14,7 @@ import { CheckoutStepperComponent } from './checkout-stepper';
 import { CheckoutService, CheckoutStatusService } from '../../core/checkout';
 
 /**
- * /checkout/return — payment outcome resolver.
+ * /checkout/return, payment outcome resolver.
  *
  * Landing chain:
  *   Noon hosted checkout → 302 from {API}/v3/checkout/return/{ref}
@@ -44,7 +44,7 @@ import { CheckoutService, CheckoutStatusService } from '../../core/checkout';
  * Checkout state cleanup
  * ----------------------
  * Cleared ONLY on the paid branch (mirrors Y.2-G's success page,
- * which also clears — clearing twice is harmless and idempotent).
+ * which also clears, clearing twice is harmless and idempotent).
  * On failure/timeout we KEEP the checkout state so "Try again" lands
  * the shopper back on /checkout/review with their addresses + promo
  * intact (Q3.4).
@@ -169,7 +169,7 @@ export class CheckoutReturnPageComponent implements OnInit {
 
     const ref = this.route.snapshot.queryParamMap.get('ref');
     if (ref === null || ref.trim() === '') {
-      /* No reference — can't confirm anything. Treat as failure. */
+      /* No reference, can't confirm anything. Treat as failure. */
       this._phase.set('failed');
       return;
     }

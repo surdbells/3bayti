@@ -18,7 +18,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * GET /v3/me/reviews[?limit=&offset=] — the authenticated user's own
+ * GET /v3/me/reviews[?limit=&offset=], the authenticated user's own
  * reviews (any status), newest first. Uses the author "mine" shape so
  * the app can show moderation status + link back to the product.
  */

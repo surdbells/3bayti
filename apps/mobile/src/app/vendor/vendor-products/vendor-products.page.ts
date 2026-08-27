@@ -36,7 +36,7 @@ import { I18nService } from '../../i18n.service';
  *   PUT /v3/vendor/products/{id}                 -> partial update
  *
  * Editing is intentionally shallow (price, stock status, publish/unpublish).
- * Full create/edit (images, variants, category) stays on the portal/web —
+ * Full create/edit (images, variants, category) stays on the portal/web -
  * the API's PUT applies only the fields present, so a single field can be
  * patched without touching the rest of the product.
  */

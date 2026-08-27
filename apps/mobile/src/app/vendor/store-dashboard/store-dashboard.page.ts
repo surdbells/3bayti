@@ -178,7 +178,7 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
       store: this.networkAdapter.get_v3('GET /vendor/store', {
         authToken: this.userToken,
       }),
-      // Unread chat count — separate endpoint (the dashboard calculator
+      // Unread chat count, separate endpoint (the dashboard calculator
       // doesn't include it). Resilient: a chat failure must not blank the
       // whole dashboard, so swallow errors to a null result here.
       unread: this.networkAdapter.get_v3('GET /vendor/chat/unread-count', {
@@ -218,7 +218,7 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
             active_products: catalog.active ?? 0,
             out_of_stock: catalog.out_of_stock ?? 0,
             low_stock_items: catalog.low_stock ?? 0,
-            // Sales — period revenue is the 30-day default window = "this month"
+            // Sales, period revenue is the 30-day default window = "this month"
             monthly_earnings: sales.revenue ?? 0,
             total_earnings: sales.all_time_revenue ?? 0,
             completed_orders: sales.orders ?? 0,
@@ -257,7 +257,7 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
     this.router.navigate([path]);
   }
 
-  /** These vendor screens aren't built yet — surface an honest toast instead
+  /** These vendor screens aren't built yet, surface an honest toast instead
    *  of navigating to a non-existent route (which dead-ended on a blank page). */
   async comingSoon(): Promise<void> {
     const toast = await this.toastCtrl.create({

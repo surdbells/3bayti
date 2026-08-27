@@ -12,7 +12,7 @@ use Psr\Log\NullLogger;
 /**
  * Creates the order-scoped chat threads for an order: one conversation per
  * order item, each seeded with a system message that lays out the full
- * order details. Idempotent — re-running for the same order skips items
+ * order details. Idempotent, re-running for the same order skips items
  * that already have a conversation (the unique order_item_id index is the
  * final backstop), so it is safe to call from a payment webhook that may
  * be retried.

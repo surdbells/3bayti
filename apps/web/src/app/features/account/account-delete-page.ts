@@ -14,7 +14,7 @@ import { ProfileService } from './profile.service';
 import { AuthService } from '../../core/auth/auth.service';
 
 /**
- * /account/delete — delete the account (the account "danger zone").
+ * /account/delete, delete the account (the account "danger zone").
  *
  * Two-gate flow:
  *   1. The user types their current password (re-auth, Q6.2).
@@ -155,7 +155,7 @@ export class AccountDeletePageComponent {
     this._showConfirm.set(false);
   }
 
-  /** Confirmed in the modal — perform the deletion. */
+  /** Confirmed in the modal, perform the deletion. */
   protected async onConfirmed(): Promise<void> {
     const { current_password } = this.form.getRawValue();
     try {

@@ -46,7 +46,7 @@ const ACTION_META: Record<string, { label: string; badge: string; dot: string }>
 };
 
 /**
- * Admin audit-log console — a filterable, paginated view of the append-only
+ * Admin audit-log console, a filterable, paginated view of the append-only
  * audit_log table (who did what to which entity, when, from where). A summary
  * bar shows the action breakdown for the current filter; each row opens a
  * detail modal with a field-level before/after diff.

@@ -8,7 +8,7 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * ProductImage — individual image record for a product.
+ * ProductImage, individual image record for a product.
  *
  * Separate from `Product.images` JSONB array because:
  *  - Alt text, dimensions, ordering need typed columns
@@ -22,7 +22,7 @@ use Doctrine\ORM\Mapping as ORM;
  * Product.images array exists for cheap card-rendering reads that don't
  * need full per-image metadata.
  *
- * Cascade rules: ON DELETE CASCADE — if a product is hard-deleted (rare;
+ * Cascade rules: ON DELETE CASCADE, if a product is hard-deleted (rare;
  * normally we soft-delete), its images go with it. Soft-delete on Product
  * does NOT remove images (we keep them for forensic / audit purposes).
  */

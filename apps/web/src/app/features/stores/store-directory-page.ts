@@ -13,18 +13,18 @@ import type { Store } from '../catalog/store.model';
 import type { FeaturedVendor } from '../catalog/store-card';
 
 /**
- * /store — the store directory.
+ * /store, the store directory.
  *
  * Public storefront page (no auth guard). Two sections:
- *   1. Store Spotlight — featured stores rendered with the
+ *   1. Store Spotlight, featured stores rendered with the
  *      existing StoreCard (embedded product thumbnails + rating).
- *   2. All stores — a plain A-Z grid of every active store,
+ *   2. All stores, a plain A-Z grid of every active store,
  *      with load-more pagination.
  *
  * Data
  * ----
  *   - getFeatured() for the spotlight strip (fails soft: an error or
- *     empty result simply hides the strip — the directory below is
+ *     empty result simply hides the strip, the directory below is
  *     the real content).
  *   - StoreService directory accumulator for the grid (reset +
  *     loadMore on init; load-more button when hasMore).
@@ -136,7 +136,7 @@ export class StoreDirectoryPageComponent implements OnInit {
   protected readonly featured = this._featured.asReadonly();
 
   async ngOnInit(): Promise<void> {
-    /* Featured strip — fail soft (hide on error/empty). Fired without
+    /* Featured strip, fail soft (hide on error/empty). Fired without
        await so the directory load isn't blocked behind it. */
     void this.loadFeatured();
 

@@ -170,7 +170,7 @@ final class ListVendorProductsByLegacyIdControllerTest extends HttpTestCase
     /**
      * Vendor with a forced internal id (the Doctrine PK). Required because
      * the controller passes $vendor->getId() into the product filter, and
-     * an unpersisted Vendor's id is null. We use reflection — same pattern
+     * an unpersisted Vendor's id is null. We use reflection, same pattern
      * as HttpTestCase::makeUser uses for User.
      */
     private function makeVendorWithInternalId(string $slug, int $internalId): Vendor

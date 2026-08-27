@@ -18,7 +18,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * --------------------
  * Same as RegisterInput: min 8 chars. NIST SP 800-63B "user-chosen
  * secret" minimum. We don't enforce complexity rules (mixed case,
- * numbers, symbols) per NIST guidance — those reduce password
+ * numbers, symbols) per NIST guidance, those reduce password
  * entropy without improving security in practice (users pick
  * 'Password1!' to satisfy them).
  *
@@ -61,6 +61,6 @@ final class ResetConfirmInput
     ) {
         $this->verification_id = trim($verification_id);
         $this->code = trim($code);
-        $this->new_password = $new_password; // Do NOT trim — passwords can contain whitespace.
+        $this->new_password = $new_password; // Do NOT trim, passwords can contain whitespace.
     }
 }

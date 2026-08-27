@@ -1,4 +1,4 @@
-/* ProductStrip — horizontal-scrolling product row
+/* ProductStrip, horizontal-scrolling product row
  * ================================================
  * The signature home-page surface. Used for "Featured", "Best sellers",
  * "New arrivals" and (later) /designer/:slug, /search results.
@@ -23,7 +23,7 @@
 .strip {
   margin: 0;
   padding: 0;
-  /* The outer .strip is bounded to the page container — same alignment
+  /* The outer .strip is bounded to the page container, same alignment
      as categories/designers/footer. Internal scroll happens within
      this bounded viewport, so the leftmost card sits at the same
      x-position as the categories grid above and the designers grid
@@ -41,7 +41,7 @@
   gap: 24px;
   margin-bottom: 32px;
   /* Header padding aligns the strip's heading row with categories and
-     designer section headers — same gutter as the rest of the page. */
+     designer section headers, same gutter as the rest of the page. */
   padding: 0 var(--page-padding-x);
 }
 
@@ -132,7 +132,7 @@
   scroll-snap-type: x mandatory;
   scroll-padding-left: var(--page-padding-x);
   scroll-behavior: smooth;
-  /* Hide the native scrollbar — desktop uses arrow buttons, mobile
+  /* Hide the native scrollbar, desktop uses arrow buttons, mobile
    * uses touch. The scrollbar would clutter the premium aesthetic. */
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -165,7 +165,7 @@
 
 @media (min-width: 640px) {
   .strip__item {
-    /* Tablet: ~3 cards visible. Same calculation as before — container
+    /* Tablet: ~3 cards visible. Same calculation as before, container
      * width at 640-1280px is essentially viewport-width, gutters are
      * 24px, so the card width math is unchanged. */
     width: calc((100vw - 48px - 48px) / 3);
@@ -175,7 +175,7 @@
 
 @media (min-width: 1280px) {
   .strip__item {
-    /* Desktop: ~3 cards visible with right peek (W3 round-2 — was 4
+    /* Desktop: ~3 cards visible with right peek (W3 round-2, was 4
      * per row, felt cramped). Now each card is meaningfully larger,
      * giving products more "showcase" feel.
      *
@@ -225,7 +225,7 @@
   display: block;
 }
 
-/* The first skeleton inside each item is the image placeholder —
+/* The first skeleton inside each item is the image placeholder -
  * it gets the 14px radius and breathing margin matching the card's
  * image inset. The remaining shimmers (text lines) sit below. */
 .strip__item--skeleton ui-skeleton-shimmer:first-child {
@@ -252,7 +252,7 @@
   padding: 0;
   z-index: 3;
   color: var(--color-brand-700);
-  /* Floating shadow — same language across strip arrows, carousel
+  /* Floating shadow, same language across strip arrows, carousel
    * arrows and dot indicators. See --shadow-floating in styles.scss. */
   box-shadow: var(--shadow-floating);
   transition:

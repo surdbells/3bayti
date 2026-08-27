@@ -1,4 +1,4 @@
-/* Enterprise data table — composed from ax-* design tokens.
+/* Enterprise data table, composed from ax-* design tokens.
    Inherits .ax-table base styles; adds toolbar, bulk bar, sticky columns,
    column manager, export menu, states, and pagination. */
 
@@ -172,7 +172,7 @@
 .axdt-action-danger { color: var(--ax-color-danger, #dc2626); border-color: var(--ax-color-danger, #dc2626); }
 .axdt-action-danger:hover { background: var(--ax-color-danger-soft, rgba(220, 38, 38, 0.08)); }
 
-/* Overflow action menu — the CDK pane (.ax-dropdown-menu) supplies the
+/* Overflow action menu, the CDK pane (.ax-dropdown-menu) supplies the
    surface chrome (bg/border/shadow/padding); this just lays out the items. */
 .axdt-action-menu { display: flex; flex-direction: column; gap: 0.0625rem; min-width: 10rem; }
 .axdt-action-menu .ax-dropdown-item {
@@ -210,7 +210,7 @@
      and the bars were invisible). */
   background-color: var(--ax-color-bg-muted, #ece7df);
 }
-/* Moving highlight band — the actual shimmer. Lighter sweep reads as a
+/* Moving highlight band, the actual shimmer. Lighter sweep reads as a
    highlight on both light and dark tracks. */
 .axdt-skeleton-bar::after {
   content: '';
@@ -264,7 +264,7 @@
   .axdt-hide-mobile { display: none !important; }
   .axdt-search .ax-input { min-width: 10rem; }
   .axdt-toolbar { flex-direction: column; align-items: stretch; }
-  /* Per-column mobile width (widthMobile) — override the desktop inline width
+  /* Per-column mobile width (widthMobile), override the desktop inline width
      for columns that opt in, so a wide sticky column narrows on phones. */
   th[style*="--axdt-mw"],
   td[style*="--axdt-mw"] { width: var(--axdt-mw) !important; }

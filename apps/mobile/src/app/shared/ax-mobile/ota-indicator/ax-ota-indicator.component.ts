@@ -3,18 +3,18 @@ import { TranslatePipe } from '../../../translate.pipe';
 import { OtaUpdateService } from '../../../core/services/ota-update.service';
 
 /**
- * AxOtaIndicatorComponent — the MANDATORY OTA update sheet.
+ * AxOtaIndicatorComponent, the MANDATORY OTA update sheet.
  *
  * OTA updates are treated as required: the download runs automatically (no
  * approval), the customer just has to be aware it's happening and can't bypass
- * it. So this is a full-screen blocking sheet — no dismiss, no "later":
+ * it. So this is a full-screen blocking sheet, no dismiss, no "later":
  *   - downloading → title + description + live progress bar (percent + ETA)
  *   - ready       → auto-restarts into the new bundle (reload()) after a brief
  *                   beat, with an immediate "Restart now" button too.
  *
  * The scrim blocks interaction with the app behind it. Hardware-back isn't
  * trapped on purpose: backing out just exits the app, and the freshly
- * downloaded bundle applies on the next cold start anyway — so the update can't
+ * downloaded bundle applies on the next cold start anyway, so the update can't
  * actually be skipped.
  *
  * Purely reactive off OtaUpdateService; shows for both the automatic
@@ -88,7 +88,7 @@ export class AxOtaIndicatorComponent {
   constructor() {
     effect(() => {
       const s = this.status();
-      // Auto-apply once the bundle is downloaded — a brief beat so the customer
+      // Auto-apply once the bundle is downloaded, a brief beat so the customer
       // sees it hit 100%, then reload() swaps in the new bundle.
       if (s === 'ready' && !this.restartScheduled) {
         this.restartScheduled = true;

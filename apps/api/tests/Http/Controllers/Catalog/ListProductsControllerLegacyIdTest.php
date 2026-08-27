@@ -23,7 +23,7 @@ use PHPUnit\Framework\Attributes\Test;
  *
  * Doesn't re-test the existing slug-resolution paths; those would
  * belong in a separate ListProductsControllerTest that pre-dates this
- * commit (and doesn't exist yet — could be added in a M4 hardening
+ * commit (and doesn't exist yet, could be added in a M4 hardening
  * pass). The legacy-id tests below add the targeted coverage M3.1.5a
  * was asked to ship.
  */
@@ -131,7 +131,7 @@ final class ListProductsControllerLegacyIdTest extends HttpTestCase
         $vendorRepo = $this->createMock(VendorRepository::class);
         $vendorRepo->method('findByLegacyId')->willReturn(null);
 
-        // findActivePaginated should NOT be called — the controller
+        // findActivePaginated should NOT be called, the controller
         // short-circuits to an empty envelope. Matches the existing
         // unknown-slug behaviour.
         $productRepo = $this->createMock(ProductRepository::class);

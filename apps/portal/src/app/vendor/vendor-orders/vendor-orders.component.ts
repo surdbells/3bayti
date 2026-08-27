@@ -123,7 +123,7 @@ export class VendorOrdersComponent implements OnInit {
     return this.adapter.get_v3('GET /vendor/orders', { query: q }).pipe(
       map((res: any): AxServerFetchResult<OrderRow> => {
         // The API (ListVendorOrdersController) responds with the list nested
-        // under `orders` and the count under `pagination.total` — same shape as
+        // under `orders` and the count under `pagination.total`, same shape as
         // the admin store-orders screen. The previous `res.data` / `res.meta`
         // reads never matched, so every response mapped to an empty array and
         // the table showed "No orders" even when the API returned rows. Read
@@ -157,10 +157,10 @@ export class VendorOrdersComponent implements OnInit {
     // Field names match OrderSerializer::listShape: `date` (ATOM, not
     // `created_at`), `total`/`subtotal`, `product_image` is a URL string
     // snapshot (not an object), and `customer` carries the buyer's name/email
-    // (falls back to "—" only if absent).
+    // (falls back to "-" only if absent).
     // `items` here is already filtered to THIS vendor's lines (server-side, see
     // ListVendorOrdersController::vendorListShape), so the shown total sums only
-    // this store's products — not the customer's whole-order payment (which
+    // this store's products, not the customer's whole-order payment (which
     // includes delivery + any other vendors' items). Matches the detail page.
     const vendorTotal = items.reduce(
       (s: number, i: any) => s + (parseFloat(i.subtotal ?? '0') || 0),

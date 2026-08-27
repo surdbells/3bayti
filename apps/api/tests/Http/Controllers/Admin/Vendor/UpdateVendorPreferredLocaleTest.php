@@ -145,7 +145,7 @@ final class UpdateVendorPreferredLocaleTest extends HttpTestCase
     #[Test]
     public function rejectsRegionTaggedPreferredLocale(): void
     {
-        // DTO accepts only 'en' / 'ar' — no region variants. UAE-
+        // DTO accepts only 'en' / 'ar', no region variants. UAE-
         // region-tagged values like 'ar-AE' should be rejected at the
         // endpoint layer. (User.locale field allows them; Vendor's
         // narrower constraint doesn't.)

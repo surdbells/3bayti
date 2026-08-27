@@ -15,7 +15,7 @@ export class Search {
     public size: string,
     public color: string,
     public is_custom: boolean,
-    // Vendor slug — storefront nav is slug-based (legacy ids discarded).
+    // Vendor slug, storefront nav is slug-based (legacy ids discarded).
     public vendor_slug: string = ''
   ){  }
 }

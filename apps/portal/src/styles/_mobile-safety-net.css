@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Mobile Safety Net
+   Abayti Design System, Mobile Safety Net
    --------------------------------------------------------------------------
    Catches common overflow / cramped-layout patterns across the codebase at
    ≤ 768px so individual pages don't all need per-file mobile overrides.
@@ -45,7 +45,7 @@
   }
 
   /* ───────────────────────────────────────────────────────────
-     3. Make container respect the viewport — defensive cap.
+     3. Make container respect the viewport, defensive cap.
      Some pages set inline width/max-width that exceeds 360px (the
      smallest common phone). Cap any child at 100% of the container.
      This trumps inline styles like style="width: 18rem".
@@ -58,7 +58,7 @@
   }
 
   /* ───────────────────────────────────────────────────────────
-     4. Touch targets — buttons should be at least 40px tall on
+     4. Touch targets, buttons should be at least 40px tall on
      mobile so they're tappable. Many sm buttons are 28px which is
      unusable on touch. .ax-btn-icon (icon-only) gets a slightly
      larger floor.
@@ -73,7 +73,7 @@
 
   /* ───────────────────────────────────────────────────────────
      5. Page-level containers shouldn't have heavy horizontal
-     padding on phones — content gets squeezed.
+     padding on phones, content gets squeezed.
      ─────────────────────────────────────────────────────────── */
   .ax-container,
   .ax-container-narrow,
@@ -106,7 +106,7 @@
 }
 
 /* ───────────────────────────────────────────────────────────
-   Phones only (≤ 480px) — even more defensive.
+   Phones only (≤ 480px), even more defensive.
    ─────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   .ax-grid-cols-12 {

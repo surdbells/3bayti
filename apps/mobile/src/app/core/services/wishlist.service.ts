@@ -11,7 +11,7 @@ export interface WishlistLabel {
 }
 
 /**
- * A saved product (ProductSerializer list shape — only the fields the
+ * A saved product (ProductSerializer list shape, only the fields the
  * mobile wishlist UI needs are typed; the rest pass through).
  */
 export interface WishlistProduct {
@@ -32,7 +32,7 @@ export interface WishlistPage {
 }
 
 /**
- * WishlistService (mobile) — the v3 label-aware wishlist.
+ * WishlistService (mobile), the v3 label-aware wishlist.
  *
  * Replaces the legacy GlobalComponent.readWishlist / addWishlistLabel /
  * readWishlistLabel "closets" endpoints with the v3 /v3/me/wishlist

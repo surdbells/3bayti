@@ -20,12 +20,12 @@ use Psr\Http\Message\ServerRequestInterface;
  * GET /v3/cart/gift-wallet
  *
  * Preview applying the customer's whole gift-card WALLET to their current
- * cart — the one-tap alternative to typing a single card code. Pure read,
+ * cart, the one-tap alternative to typing a single card code. Pure read,
  * no debit (that happens at POST /v3/checkout/initiate with
  * use_gift_wallet=true).
  *
  * The cart total here is the item subtotal (delivery/discount are computed
- * at checkout) — the exact split is reconciled at initiate, mirroring the
+ * at checkout), the exact split is reconciled at initiate, mirroring the
  * single-card preview (POST /v3/cart/gift-card).
  *
  * Response:
@@ -65,7 +65,7 @@ final class PreviewGiftWalletForCartController
             throw HttpException::badRequest('Your cart is empty.');
         }
 
-        // The payable total the wallet must cover — subtotal PLUS delivery,
+        // The payable total the wallet must cover, subtotal PLUS delivery,
         // the same arithmetic checkout uses (Order::computeTotal). Sizing the
         // draw off the item subtotal alone under-applied the wallet: a card
         // that covers the whole order still showed a delivery-fee remainder.

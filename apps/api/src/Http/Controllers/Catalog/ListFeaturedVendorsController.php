@@ -27,7 +27,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * ================
  *   ?limit=4    (default 4; clamped to [1..12] per Q-LimitClamp=A)
  *
- * No offset/pagination — Spotlight is a curated surface. has_more
+ * No offset/pagination, Spotlight is a curated surface. has_more
  * is always false in the response meta. If business later wants
  * paginated featured vendors, this is a future enhancement.
  *
@@ -159,7 +159,7 @@ final class ListFeaturedVendorsController
         }
 
         // Still nothing (no verified vendors either) → valid empty
-        // envelope. Don't 404 — an unpopulated storefront is a legitimate
+        // envelope. Don't 404, an unpopulated storefront is a legitimate
         // state distinct from endpoint failure.
         if ($vendorRows === []) {
             return $this->ok(PaginatedEnvelope::build(

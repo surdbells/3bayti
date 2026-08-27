@@ -45,7 +45,7 @@ export class AnalyticsService {
       win.dataLayer.push(arguments);
     };
     win.gtag('js', new Date());
-    /* send_page_view:false — we emit page_view manually per SPA route. */
+    /* send_page_view:false, we emit page_view manually per SPA route. */
     win.gtag('config', id, { send_page_view: false });
 
     this.router.events

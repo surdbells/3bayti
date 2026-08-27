@@ -9,23 +9,23 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * ProductReview — customer review attached to a Product (and via product, a Vendor).
+ * ProductReview, customer review attached to a Product (and via product, a Vendor).
  *
  * Legacy `ec_reviews` table has 12 columns including a product_name string
  * (NOT a product_id). The migration script resolves product_name + store_id
  * → our Product entity by lookup; if it can't resolve, the review is logged
- * + skipped (only 27 rows total — easy to manually handle outliers).
+ * + skipped (only 27 rows total, easy to manually handle outliers).
  *
  * Denormalised reviewer fields (reviewer_name, reviewer_email,
  * product_name_snapshot) are kept so that if a user is deleted/anonymised
  * later, the review's archival value is preserved. The FK to User uses
- * ON DELETE SET NULL — the row stays with anonymised reviewer info.
+ * ON DELETE SET NULL, the row stays with anonymised reviewer info.
  *
  * `status` lifecycle:
- *   - 'pending'   — submitted, not yet moderated
- *   - 'approved'  — visible to public
- *   - 'rejected'  — hidden, reason stored elsewhere
- *   - 'spam'      — flagged by spam filter / moderator
+ *   - 'pending'  , submitted, not yet moderated
+ *   - 'approved' , visible to public
+ *   - 'rejected' , hidden, reason stored elsewhere
+ *   - 'spam'     , flagged by spam filter / moderator
  *
  * `star` is decimal(2,1) to allow half-stars (e.g. 4.5) if the UI supports
  * that later. CHECK constraint enforces 0.0–5.0.

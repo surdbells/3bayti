@@ -21,7 +21,7 @@ type CheckState = 'idle' | 'checking' | 'found' | 'notfound' | 'error';
 type RedeemError = 'none' | 'notRedeemable' | 'notfound' | 'error';
 
 /**
- * /gift-cards/redeem — check a gift card's balance (public) and add it
+ * /gift-cards/redeem, check a gift card's balance (public) and add it
  * to the signed-in account (auth).
  *
  *   - Check:  GET  /v3/gift-cards/balance?code=  (public, minimal shape)

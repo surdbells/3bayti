@@ -1,5 +1,5 @@
 /**
- * Address domain types — mirror apps/api Address DTOs.
+ * Address domain types, mirror apps/api Address DTOs.
  *
  * The API returns addresses for the authenticated user via
  * `/v3/me/addresses`. Each address has a recipient (name + phone),
@@ -40,7 +40,7 @@ export interface CreateAddressInput {
   is_default: boolean;
 }
 
-/** PUT /v3/me/addresses/:id — same fields as create except is_default is
+/** PUT /v3/me/addresses/:id, same fields as create except is_default is
  *  handled via the separate /default endpoint to keep semantics clean. */
 export interface UpdateAddressInput {
   recipient_name: string;
@@ -58,7 +58,7 @@ export interface SetDefaultInput {
   billing?: boolean;
 }
 
-/** UAE emirates list — used in the address form's dropdown. The API
+/** UAE emirates list, used in the address form's dropdown. The API
  *  doesn't constrain emirate to this list (it's a free string), but we
  *  curate the dropdown for UX. Mobile uses the same list. */
 export const UAE_EMIRATES: readonly string[] = [

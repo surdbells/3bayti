@@ -11,7 +11,7 @@ import { SessionManager } from '../../services/session-manager.service';
  * Wraps the sidenav, topbar, bottom-nav (mobile), and a
  * `<main class="ax-main">` slot containing `<ng-content>`.
  *
- * Owns the mobile drawer open/close state internally — the topbar's
+ * Owns the mobile drawer open/close state internally, the topbar's
  * hamburger button toggles it via `(menuToggle)`, and the sidenav reads it
  * via `[isOpen]`. (On phones/tablets the hamburger is hidden and bottom nav
  * is the primary navigation.)

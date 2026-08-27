@@ -22,7 +22,7 @@ final class GetCheckoutStatusControllerTest extends HttpTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        // Default gateway stub — controller doesn't use it but the
+        // Default gateway stub, controller doesn't use it but the
         // /v3/checkout group's siblings do; DI graph needs it.
         $this->bind(PaymentGatewayInterface::class, $this->createMock(PaymentGatewayInterface::class));
     }

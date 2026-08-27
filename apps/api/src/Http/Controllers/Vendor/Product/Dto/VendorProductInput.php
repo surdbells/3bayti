@@ -30,7 +30,7 @@ final class VendorProductInput
     #[Assert\PositiveOrZero(message: 'Cost per item must be zero or positive.')]
     public readonly int|float|null $cost_per_item;
 
-    // Must match Product's stock_status constants exactly — the entity's
+    // Must match Product's stock_status constants exactly, the entity's
     // setStockStatus() throws on anything else. The portal form sends
     // 'on_backorder' (not 'backorder'), so validating 'backorder' here
     // rejected every "On backorder" publish with a generic failure.
@@ -162,7 +162,7 @@ final class VendorProductInput
     }
 
     /**
-     * Sanitised delivery info for Product::setDeliveryInfo() — keeps only the
+     * Sanitised delivery info for Product::setDeliveryInfo(), keeps only the
      * three string fields. Returns null (clear) when nothing usable was sent.
      *
      * @return array{time: ?string, custom_time: ?string, note: ?string}|null

@@ -142,7 +142,7 @@ export class AdminViewOrderComponent implements OnInit {
     if (stored > 0) { return stored; }
     return Math.max(0, this.itemsSubtotal + this.deliveryFee - this.discountAmount);
   }
-  /** Page title — the customer/account name, never the (often absent) nav param. */
+  /** Page title, the customer/account name, never the (often absent) nav param. */
   get orderTitle(): string {
     return this.data?.customer_name
       || this.data?.order_ref
@@ -283,7 +283,7 @@ export class AdminViewOrderComponent implements OnInit {
 
   /**
    * Re-send the ORDER_PLACED_VENDOR ("new order") email to the vendor(s) on
-   * this order — recovery for a bounced/failed first send. Reports the actual
+   * this order, recovery for a bounced/failed first send. Reports the actual
    * outcome (sent / skipped / failed) so the admin knows whether the address
    * still needs fixing.
    */

@@ -12,7 +12,7 @@ use DateTimeInterface;
  *
  * Response shape design
  * ---------------------
- * Measurements are inherently small, bounded data — most users will
+ * Measurements are inherently small, bounded data, most users will
  * have one or two sets, each with a handful of fields. So we
  * serialize the full set inline rather than offering a sparse view
  * or partial projections.
@@ -66,7 +66,7 @@ final class MeasurementSerializer
             if (is_numeric($value)) {
                 $out[$key] = (float) $value;
             }
-            // Skip non-numeric values silently — the validator should
+            // Skip non-numeric values silently, the validator should
             // have rejected these on input, but defensive trim here
             // means a bad row in the DB doesn't blow up serialization.
         }

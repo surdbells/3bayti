@@ -25,17 +25,17 @@ namespace Bayti\Api\Http\Errors;
  *
  * Naming convention
  * -----------------
- * `DOMAIN_REASON` — domain prefix groups related codes; reason
+ * `DOMAIN_REASON`, domain prefix groups related codes; reason
  * describes the failure. E.g. AUTH_*, OTP_*, VALIDATION_*.
  *
- * NOT meant for user-visible messages — those are localised in the
+ * NOT meant for user-visible messages, those are localised in the
  * front-end via the code-to-string mapping. Backend's role is to
  * give a stable code; localisation is the client's problem.
  */
 final class ErrorCodes
 {
     // -------------------------------------------------------------------
-    // AUTH — token + login + session
+    // AUTH, token + login + session
     // -------------------------------------------------------------------
 
     /** Authorization header missing or wrong shape. */
@@ -84,7 +84,7 @@ final class ErrorCodes
     public const VALIDATION_BAD_REQUEST = 'VALIDATION_BAD_REQUEST';
 
     // -------------------------------------------------------------------
-    // CONFLICT — uniqueness violations
+    // CONFLICT, uniqueness violations
     // -------------------------------------------------------------------
 
     /** Email already in use (registration). */
@@ -115,7 +115,7 @@ final class ErrorCodes
      * VendorAuthMiddleware (M3.2.X.6-B) when a pending or suspended-
      * only vendor attempts to access /v3/vendor/* endpoints.
      *
-     * Distinct from FORBIDDEN — FORBIDDEN is a role check ("you're
+     * Distinct from FORBIDDEN, FORBIDDEN is a role check ("you're
      * not a vendor"); VENDOR_NOT_APPROVED is a lifecycle gate
      * ("you're a vendor, but your store isn't approved yet").
      */
@@ -125,7 +125,7 @@ final class ErrorCodes
     public const INTERNAL_ERROR = 'INTERNAL_ERROR';
 
     // -------------------------------------------------------------------
-    // PAYMENT — checkout + refund + cancel
+    // PAYMENT, checkout + refund + cancel
     // -------------------------------------------------------------------
 
     /** Payment provider (Noon, etc.) failed; HTTP 502. Retry-safe. */
@@ -135,12 +135,12 @@ final class ErrorCodes
     public const BUSINESS_RULE_VIOLATION = 'BUSINESS_RULE_VIOLATION';
 
     // -------------------------------------------------------------------
-    // PROMO — promotional code redemption (M3.2.X.8)
+    // PROMO, promotional code redemption (M3.2.X.8)
     //
     // All PROMO_* codes are returned as HTTP 422 by the customer-facing
     // /v3/cart/quote + /v3/checkout/initiate endpoints. The codes are
     // intentionally specific (rather than collapsed to a generic
-    // PROMO_INVALID) so client UI can show actionable messages — a
+    // PROMO_INVALID) so client UI can show actionable messages, a
     // "not yet valid" code may warrant "comes back live on X" whereas
     // an "expired" code warrants a different prompt.
     // -------------------------------------------------------------------

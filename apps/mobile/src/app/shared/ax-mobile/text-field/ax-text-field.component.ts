@@ -1,5 +1,5 @@
 /**
- * AxTextFieldComponent — abayti's text input primitive.
+ * AxTextFieldComponent, abayti's text input primitive.
  *
  * M2-styled input with:
  *   - Label above the input (required, with optional asterisk for required fields)
@@ -154,7 +154,7 @@ export class AxTextFieldComponent implements ControlValueAccessor {
    */
   private onTouched: () => void = () => {};
 
-  /** Computed effective input type — flips to 'text' when password is unmasked. */
+  /** Computed effective input type, flips to 'text' when password is unmasked. */
   get effectiveType(): string {
     if (this.type === 'password' && this.passwordVisible) {
       return 'text';

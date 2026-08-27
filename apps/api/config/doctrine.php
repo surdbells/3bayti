@@ -8,10 +8,10 @@ declare(strict_types=1);
  * Returns an array of bound values consumed by config/di.php to build
  * the Doctrine EntityManager. Two pieces of config:
  *
- *   1. Connection params — built from env vars (.env in dev, DO App
+ *   1. Connection params, built from env vars (.env in dev, DO App
  *      Platform secret store in prod). PostgreSQL 16 driver.
  *
- *   2. ORM setup — mapping driver (attributes, not XML/YAML), entity
+ *   2. ORM setup, mapping driver (attributes, not XML/YAML), entity
  *      directories (`src/Domain/`), proxies + cache toggles based on
  *      APP_ENV.
  *
@@ -38,7 +38,7 @@ return [
         'password' => $_ENV['DB_PASSWORD'] ?? '',
         'charset'  => $_ENV['DB_CHARSET']  ?? 'utf8',
 
-        // SSL configuration — DO Managed Postgres requires SSL by default.
+        // SSL configuration, DO Managed Postgres requires SSL by default.
         // Local Docker Postgres doesn't. Toggle via env.
         'sslmode'  => $_ENV['DB_SSLMODE']  ?? 'prefer',
     ],
@@ -54,24 +54,24 @@ return [
         $config = new Configuration();
 
         // Mapping: read attributes from PHP entity classes under src/Domain.
-        // We do NOT use XML/YAML mappings — attributes keep schema and
+        // We do NOT use XML/YAML mappings, attributes keep schema and
         // entity definitions co-located, which matches how the rest of
         // the codebase uses PHP attributes (Slim routing, swagger-php, etc.).
         $config->setMetadataDriverImpl(new AttributeDriver([
             $rootPath . '/src/Domain',
         ]));
 
-        // Proxy directory — Doctrine generates dynamic proxy classes for
+        // Proxy directory, Doctrine generates dynamic proxy classes for
         // entities (lazy-loaded associations, e.g. Order->user, OrderItem->
         // vendor). Dev regenerates always so entity edits are picked up.
         //
         // Prod uses FILE_NOT_EXISTS_OR_CHANGED (self-healing) rather than
         // NEVER: the old NEVER setting assumed proxies were pre-generated at
-        // deploy, but the deploy pipeline wasn't doing that — so a missing
+        // deploy, but the deploy pipeline wasn't doing that, so a missing
         // proxy file fataled with "Failed to open stream: __CG__*.php" (a
         // high-volume prod error). FILE_NOT_EXISTS_OR_CHANGED generates a
         // proxy on first use if it's missing OR the entity changed since the
-        // proxy was written, then loads the cached file — no fatal, and never
+        // proxy was written, then loads the cached file, no fatal, and never
         // a stale proxy after an entity change. The proxy dir must be writable
         // by php-fpm (same dir the metadata PhpFilesAdapter already writes to).
         $config->setProxyDir($rootPath . '/var/cache/doctrine/proxies');
@@ -82,7 +82,7 @@ return [
                 : ProxyFactory::AUTOGENERATE_FILE_NOT_EXISTS_OR_CHANGED,
         );
 
-        // Caching — array adapter in dev (no persistence between requests
+        // Caching, array adapter in dev (no persistence between requests
         // but no setup either), file-based in prod (faster than no cache,
         // doesn't need Redis). We can swap to RedisAdapter in M5 hardening.
         $cache = $isDev
@@ -100,9 +100,9 @@ return [
 
         // Custom DQL functions for PostgreSQL fulltext search (M3.1.5.5d).
         //
-        // TSMATCH(tsvector, text) → BOOLEAN — wraps `<col> @@ websearch_
+        // TSMATCH(tsvector, text) → BOOLEAN, wraps `<col> @@ websearch_
         //   to_tsquery('english', :q)`. Used in WHERE clauses.
-        // TSRANK(tsvector, text) → FLOAT — wraps `ts_rank(<col>, websearch_
+        // TSRANK(tsvector, text) → FLOAT, wraps `ts_rank(<col>, websearch_
         //   to_tsquery('english', :q))`. Used in ORDER BY clauses.
         //
         // These functions are PostgreSQL-specific; running the
@@ -112,7 +112,7 @@ return [
         // production DB.
         //
         // String function for TSMATCH (returns the @@ expression which
-        // is a boolean — DQL has no boolean function category, so we
+        // is a boolean, DQL has no boolean function category, so we
         // wrap as string and compare to TRUE/FALSE at the call site).
         $config->addCustomStringFunction(
             'TSMATCH',
@@ -124,7 +124,7 @@ return [
             \Bayti\Api\Doctrine\DqlFunction\TsRankFunction::class
         );
 
-        // JSONB_EXISTS_ANY(jsonb_column, :values) → BOOLEAN — wraps
+        // JSONB_EXISTS_ANY(jsonb_column, :values) → BOOLEAN, wraps
         // `jsonb_exists_any(<col>, array[<values>]::text[])`. Used by the
         // product listing to refine by sizes/colors with "contains ANY of"
         // semantics, mirroring FacetAggregator's raw-SQL clause. Registered
@@ -135,7 +135,7 @@ return [
             \Bayti\Api\Doctrine\DqlFunction\JsonbExistsAnyFunction::class
         );
 
-        // SEEDED_RAND(seed, id) → TEXT — wraps `md5(<seed> || '-' || <id>)`.
+        // SEEDED_RAND(seed, id) → TEXT, wraps `md5(<seed> || '-' || <id>)`.
         // A deterministic per-seed shuffle key used by the EXPLORE feed to
         // order products in a random-looking but pagination-stable way
         // (same seed => same total order across LIMIT/OFFSET pages). Used in

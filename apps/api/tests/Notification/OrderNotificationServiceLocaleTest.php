@@ -92,7 +92,7 @@ final class OrderNotificationServiceLocaleTest extends TestCase
     public function vendorWithArabicPreferenceGetsArabicEmail(): void
     {
         // Customer is English; vendor is Arabic. Each recipient gets
-        // their OWN locale — the resolver picks per-recipient.
+        // their OWN locale, the resolver picks per-recipient.
         $order = $this->makeOrder('V3-MIX-1', customerLocale: 'en');
         $vendor = $this->makeVendor(id: 5, email: 'v1@shops.com', vendorLocale: 'ar');
         $this->addItem($order, $vendor, 'Item A');
@@ -162,7 +162,7 @@ final class OrderNotificationServiceLocaleTest extends TestCase
     {
         // Backwards compat: a service constructed WITHOUT a
         // LocaleResolver (legacy DI / test setup) preserves the
-        // pre-M3.2.X.7 English-only behavior — even for customers
+        // pre-M3.2.X.7 English-only behavior, even for customers
         // who would otherwise prefer Arabic.
         $serviceNoResolver = new OrderNotificationService(
             mailer: $this->mailer,
@@ -181,7 +181,7 @@ final class OrderNotificationServiceLocaleTest extends TestCase
 
         $customerEmail = $this->findSentTo('customer@example.com');
         self::assertNotNull($customerEmail);
-        // English subject — resolver absent means default 'en' path
+        // English subject, resolver absent means default 'en' path
         self::assertStringContainsString('Order V3-NO-RES received', $customerEmail['subject']);
         self::assertStringContainsString('<html lang="en" dir="ltr">', $customerEmail['html_body']);
     }

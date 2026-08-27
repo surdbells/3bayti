@@ -4,17 +4,17 @@ import { CapacitorUpdater } from '@capgo/capacitor-updater';
 
 /**
  * Update lifecycle surfaced to the UI:
- *   idle        — nothing happening
- *   checking    — an on-demand getLatest() is in flight (no bar yet)
- *   downloading — a bundle is streaming; `percent` is 0-100
- *   ready       — a bundle finished downloading and is STAGED for the next
+ *   idle       , nothing happening
+ *   checking   , an on-demand getLatest() is in flight (no bar yet)
+ *   downloading, a bundle is streaming; `percent` is 0-100
+ *   ready      , a bundle finished downloading and is STAGED for the next
  *                 cold start (nothing is hot-swapped mid-session)
- *   failed      — a check/download failed (self-resets to idle)
+ *   failed     , a check/download failed (self-resets to idle)
  */
 export type OtaStatus = 'idle' | 'checking' | 'downloading' | 'ready' | 'failed';
 
 /**
- * OtaUpdateService — a thin, reactive lens over @capgo/capacitor-updater so the
+ * OtaUpdateService, a thin, reactive lens over @capgo/capacitor-updater so the
  * app can show a SILENT, non-intrusive progress indicator and proactively check
  * for a freshly-published bundle (e.g. when the customer lands on the home
  * dashboard) without waiting for the next full app resume.
@@ -22,7 +22,7 @@ export type OtaStatus = 'idle' | 'checking' | 'downloading' | 'ready' | 'failed'
  * Boundaries (deliberately conservative for a live checkout app):
  *   - `autoUpdate: true` (capacitor.config) still owns the automatic
  *     resume-time check/download/apply. This service only OBSERVES its events
- *     (`download` percent, etc.) and adds an on-demand check — it never changes
+ *     (`download` percent, etc.) and adds an on-demand check, it never changes
  *     that mechanism.
  *   - checkNow() only ever STAGES an update via `next()` (applies on the next
  *     cold start). It never calls `set()`/`reload()`, so it can't hot-swap the
@@ -44,7 +44,7 @@ export class OtaUpdateService {
    *  can be estimated. Derived from the percent-over-time rate (the plugin's
    *  download event carries no byte totals). */
   readonly etaSeconds: Signal<number | null> = this._etaSeconds.asReadonly();
-  /** True while a bundle is actively streaming — drives the top progress bar. */
+  /** True while a bundle is actively streaming, drives the top progress bar. */
   readonly isActive = computed(() => this._status() === 'downloading' || this._status() === 'ready');
 
   /** Wall-clock + percent at the start of the current download, for the ETA. */
@@ -83,12 +83,12 @@ export class OtaUpdateService {
       await CapacitorUpdater.addListener('updateFailed', () => this.markFailed());
       await CapacitorUpdater.addListener('downloadFailed', () => this.markFailed());
     } catch {
-      /* observability only — never block boot */
+      /* observability only, never block boot */
     }
   }
 
   /**
-   * On-demand check — call when the customer lands on the dashboard so a
+   * On-demand check, call when the customer lands on the dashboard so a
    * freshly-published bundle is caught without waiting for the next resume.
    * Throttled (5 min), de-duped by version, single-flight, native-only, fully
    * wrapped. Stages the bundle for the next cold start; never hot-swaps.
@@ -122,7 +122,7 @@ export class OtaUpdateService {
         return;
       }
 
-      // Download now — this fires 'download' percent events (the indicator) —
+      // Download now, this fires 'download' percent events (the indicator) -
       // then STAGE it for the next cold start. No reload()/set() mid-session.
       this._percent.set(0);
       this._status.set('downloading');
@@ -166,7 +166,7 @@ export class OtaUpdateService {
   private updateEta(percent: number): void {
     const now = Date.now();
     if (this.dlStartMs === null || percent < this.dlStartPct) {
-      // New (or restarted) download — anchor the rate baseline.
+      // New (or restarted) download, anchor the rate baseline.
       this.dlStartMs = now;
       this.dlStartPct = percent;
       this._etaSeconds.set(null);
@@ -188,7 +188,7 @@ export class OtaUpdateService {
   }
 
   /**
-   * Apply a downloaded (staged) bundle immediately by reloading the web view —
+   * Apply a downloaded (staged) bundle immediately by reloading the web view -
    * user-initiated only (the "Restart now" button), so it can't interrupt a
    * checkout on its own. Native-only, fully wrapped. If it fails, the bundle
    * still applies on the next natural cold start.

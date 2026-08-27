@@ -163,7 +163,7 @@ export class StylesPage implements OnInit, OnDestroy {
    *   personal  -> GET /v3/me/styles               (authed, no ?type)
    *
    * The personal call MUST pass authToken (owner-scoped); the others must
-   * NOT. The user is guaranteed logged in here — getObject() redirects to
+   * NOT. The user is guaranteed logged in here, getObject() redirects to
    * /login when there's no user blob.
    */
   private buildRequest(tab: TabType, offset: number): {
@@ -276,7 +276,7 @@ export class StylesPage implements OnInit, OnDestroy {
     // Paginated read for infinite scroll, advancing offset against the
     // SAME endpoint as the active tab (My Styles paginates /v3/me/styles
     // with authToken; the others paginate /v3/styles anonymously). Shape
-    // unchanged — the response transform still applies via get_v3.
+    // unchanged, the response transform still applies via get_v3.
     const { routeKey, opts } = this.buildRequest(this.activeTab, this.initial.offset);
 
     this.networkAdapter.get_v3(routeKey, opts)
@@ -319,7 +319,7 @@ export class StylesPage implements OnInit, OnDestroy {
   open_style(style: Styles) {
     this.skipReloadOnEnter = true;
     // Navigate by slug (deep-link-safe URL) AND pass the style in router
-    // state (fast path — avoids a re-fetch when coming from the list). On a
+    // state (fast path, avoids a re-fetch when coming from the list). On a
     // hard reload the state is wiped, so style-view re-fetches by the slug.
     this.router.navigate(['/style-view', style.slug], {
       state: { style }

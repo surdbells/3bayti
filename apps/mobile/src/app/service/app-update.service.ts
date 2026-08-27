@@ -1,5 +1,5 @@
 /* =============================================================================
-   AppUpdateService — version check + remote kill-switch + force-update flow
+   AppUpdateService, version check + remote kill-switch + force-update flow
    -----------------------------------------------------------------------------
    Composes two signals to decide whether to FORCE the user to update:
 
@@ -27,7 +27,7 @@
    Failing safe: any error (network, malformed JSON, plugin missing, browser
    build) results in shouldForceUpdate=false. The kill-switch activates updates
    only when ALL conditions are met. This means:
-     - First-time deploy: configUrl is '', so kill-switch is dormant — no force
+     - First-time deploy: configUrl is '', so kill-switch is dormant, no force
      - Remote server down: defaults to no force
      - Plugin returns wrong values: usually no force (the "unknown" path)
 
@@ -47,12 +47,12 @@ import { Preferences } from '@capacitor/preferences';
 import { environment } from '../../environments/environment';
 
 /* JSON shape expected at environment.appUpdate.configUrl. All fields
-   optional in case the file is partial — failing-safe defaults applied. */
+   optional in case the file is partial, failing-safe defaults applied. */
 export interface RemoteAppConfig {
   require_app_update?: boolean;
   /* "hard": no Later button, user must update.
      "soft": Later button visible, dismisses for 24h per version.
-     If absent, defaults to "soft" — more lenient default protects against
+     If absent, defaults to "soft", more lenient default protects against
      accidental hard-prompt deploys when an operator only meant to
      announce that an update was available. */
   force_mode?: 'hard' | 'soft';
@@ -73,7 +73,7 @@ export interface UpdateCheckResult {
   availableVersion: string | null;
   /* The version currently installed on the device. May be missing on web. */
   currentVersion: string | null;
-  /* Whether a non-forced update is also available — informational, not used
+  /* Whether a non-forced update is also available, informational, not used
      by the hard-prompt UI but exposed for future use. */
   updateAvailable: boolean;
   /* Localized force-update message text, prefilled by the remote config or
@@ -100,7 +100,7 @@ export class AppUpdateService {
    * kill-switch + threshold logic. Returns a result object the caller
    * can use to decide whether to render the force-update prompt.
    *
-   * Always resolves — never throws. Errors in any underlying call result
+   * Always resolves, never throws. Errors in any underlying call result
    * in shouldForceUpdate=false (fail safe).
    */
   /* Diagnostic snapshot from the most recent check(). Populated in dev
@@ -149,7 +149,7 @@ export class AppUpdateService {
     log('remote.force_mode: ' + JSON.stringify(remote?.force_mode));
     log('remote.force_update_threshold: ' + JSON.stringify(remote?.force_update_threshold));
 
-    /* DEV OVERRIDE — used to test the prompt UI locally without needing a
+    /* DEV OVERRIDE, used to test the prompt UI locally without needing a
        real Play Store / App Store update available. Enabled by setting
        localStorage.ax_debug_force_update='1' OR ?forceupdate=<version> in
        the URL. NEVER fires for normal users (no UI exposes the flag).
@@ -159,7 +159,7 @@ export class AppUpdateService {
          - updateAvailable = true (overrides UPDATE_NOT_AVAILABLE)
          - availableVersion = the mock version from the flag
 
-       The currentVersion is NOT overridden — uses whatever the plugin
+       The currentVersion is NOT overridden, uses whatever the plugin
        reports. This means cond.belowMin still does a real comparison
        (so e.g. setting mock=0.0.1 won't fire because installed > 0.0.1).
        Set the mock version higher than your installed version to test.
@@ -235,7 +235,7 @@ export class AppUpdateService {
     }
 
     /* In SOFT mode, also check if the user has dismissed this version
-       within the past 24h. If so, suppress the prompt — they get a 24h
+       within the past 24h. If so, suppress the prompt, they get a 24h
        grace period before being asked again. The dismissal record is
        per-version, so a NEWER version surfaces the prompt immediately
        even if a previous dismissal is recent.
@@ -268,7 +268,7 @@ export class AppUpdateService {
    * Per-version key: dismissing v0.0.2 doesn't dismiss v0.0.3 when it
    * eventually releases. The next version's prompt fires immediately.
    *
-   * Failure to write is non-fatal — the user just sees the prompt
+   * Failure to write is non-fatal, the user just sees the prompt
    * again on next launch instead of getting their grace period.
    */
   async markDismissed(version: string): Promise<void> {
@@ -279,14 +279,14 @@ export class AppUpdateService {
         value: new Date().toISOString(),
       });
     } catch {
-      /* Swallow — losing the grace period is annoying but not broken. */
+      /* Swallow, losing the grace period is annoying but not broken. */
     }
   }
 
   /**
    * Check whether the user dismissed this version's prompt within the
    * past DISMISSAL_WINDOW_MS. Returns false on any storage error or
-   * malformed timestamp (failing safe in the conservative direction —
+   * malformed timestamp (failing safe in the conservative direction -
    * a failed read shows the prompt rather than hides it).
    */
   async wasRecentlyDismissed(version: string): Promise<boolean> {
@@ -303,7 +303,7 @@ export class AppUpdateService {
   }
 
   private dismissalKey(version: string): string {
-    /* Sanitize version string for use in a key — though semver chars
+    /* Sanitize version string for use in a key, though semver chars
        (digits + dots) are already safe. Belt-and-suspenders. */
     return `app_update_dismissed_${version.replace(/[^0-9.\-a-z]/gi, '_')}_at`;
   }
@@ -319,7 +319,7 @@ export class AppUpdateService {
    *        ax_debug_mock_version  = e.g. '1.5'  (the fake available version)
    *
    * Production safety:
-   *   - No UI ever sets these — only a dev with browser dev tools / URL
+   *   - No UI ever sets these, only a dev with browser dev tools / URL
    *     access can enable
    *   - Override only injects fake updateAvailable + availableVersion
    *     into storeInfo. The remote kill-switch JSON still has to declare
@@ -352,7 +352,7 @@ export class AppUpdateService {
     return fallback;
   }
 
-  /* 24 hours in ms. The dismissal grace period — how long after tapping
+  /* 24 hours in ms. The dismissal grace period, how long after tapping
      "Later" before the prompt reappears. Per-version, so a new release
      surfaces immediately regardless. */
   private readonly DISMISSAL_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -378,7 +378,7 @@ export class AppUpdateService {
       if (platform === 'android') {
         const info = await plugin.getAppUpdateInfo();
         if (info?.immediateUpdateAllowed) {
-          /* In-app update — Google's flow downloads + installs without
+          /* In-app update, Google's flow downloads + installs without
              leaving our app. User taps Update once, then waits. */
           await plugin.performImmediateUpdate();
           return;
@@ -387,7 +387,7 @@ export class AppUpdateService {
       /* iOS or fallback Android: open the store listing. */
       await plugin.openAppStore();
     } catch (e) {
-      /* Last-ditch fallback — if the plugin fails for any reason, try
+      /* Last-ditch fallback, if the plugin fails for any reason, try
          openAppStore() one more time. If THAT also fails, we're stuck:
          the prompt remains visible, user can try again. */
       try {
@@ -406,7 +406,7 @@ export class AppUpdateService {
      (including `.then`) by treating it as a method invocation. If the
      proxy ever becomes the resolved value of a Promise, the JS engine's
      await machinery checks if the value is "thenable" by accessing
-     `.then` — which triggers a native call to `AppUpdate.then()` and
+     `.then`, which triggers a native call to `AppUpdate.then()` and
      throws "not implemented on android".
 
      Workaround: wrap the proxy in a container object ({plugin}) so the
@@ -468,7 +468,7 @@ export class AppUpdateService {
         currentVersion: info?.currentVersionName ?? null,
         availableVersion: info?.availableVersionName ?? null,
         /* The plugin's UPDATE_AVAILABLE constant is "UPDATE_AVAILABLE" string-typed.
-           We compare against the string for safety — if the enum changes shape
+           We compare against the string for safety, if the enum changes shape
            in a future plugin version, this still degrades to no-update. */
         updateAvailable: info?.updateAvailability === 'UPDATE_AVAILABLE',
       };
@@ -484,7 +484,7 @@ export class AppUpdateService {
   private async fetchRemoteConfig(): Promise<RemoteAppConfig | null> {
     const url = environment.appUpdate?.configUrl;
     if (!url || url.trim() === '') {
-      /* Kill-switch URL not configured — disable the force-update path
+      /* Kill-switch URL not configured, disable the force-update path
          entirely. This is the development default until M87. */
       console.warn('[AppUpdate] remote config URL is empty');
       return null;
@@ -514,7 +514,7 @@ export class AppUpdateService {
       }
       const data = (await resp.json()) as RemoteAppConfig;
       console.log('[AppUpdate] remote config parsed:', JSON.stringify(data));
-      /* Sanity-check the shape — at minimum require_app_update should be a
+      /* Sanity-check the shape, at minimum require_app_update should be a
          boolean if present. Reject obviously malformed payloads. */
       if (data && typeof data === 'object') {
         this.cachedRemote = data;
@@ -574,7 +574,7 @@ function meetsThreshold(
   const majorBump = (m[0] || 0) > (c[0] || 0);
   const minorBump = !majorBump && (m[1] || 0) > (c[1] || 0);
   /* patch bump = current < min by patch only (or any segment we haven't
-     covered with major/minor). No need to compute explicitly — if we got
+     covered with major/minor). No need to compute explicitly, if we got
      here at all, current < min was already verified by the caller. */
 
   switch (threshold) {

@@ -11,7 +11,7 @@
       </header>
 
       @if (loading()) {
-        <!-- Loading state — only briefly visible during client-only fetches.
+        <!-- Loading state, only briefly visible during client-only fetches.
              Prerendered HTML never shows this because data is baked in
              via TransferState. -->
         <ui-text tone="secondary">{{ 'categories.loadingIndex' | translate }}</ui-text>
@@ -27,7 +27,7 @@
                 role="listitem"
                 [attr.aria-label]="'categories.tileAria' | translate:{ name: cat.name, count: cat.product_count }"
               >
-                <!-- Letter avatar — fallback for missing/broken category images.
+                <!-- Letter avatar, fallback for missing/broken category images.
                      When the backend returns real category cover images, this
                      can become an <img> with the letter as fallback alt-state. -->
                 <div class="category-thumb" aria-hidden="true">

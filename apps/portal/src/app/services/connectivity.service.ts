@@ -9,7 +9,7 @@ import { distinctUntilChanged } from 'rxjs/operators';
  * Why not just `navigator.onLine`?
  * --------------------------------
  * `navigator.onLine` (and the `online`/`offline` window events) only report
- * whether a network interface exists — they return `true` on a captive-portal
+ * whether a network interface exists, they return `true` on a captive-portal
  * or internet-less LAN. That's a fast, reliable signal for the *hard* cases
  * (airplane mode, cable pulled, radio off), so we use it as the primary
  * trigger, but we never trust an "online" claim blindly: we CONFIRM it with a
@@ -34,7 +34,7 @@ import { distinctUntilChanged } from 'rxjs/operators';
 export class ConnectivityService implements OnDestroy {
   private readonly zone = inject(NgZone);
 
-  /** API liveness endpoint (no DB) — the cheapest "is the backend there" ping. */
+  /** API liveness endpoint (no DB), the cheapest "is the backend there" ping. */
   private static readonly PROBE_URL = 'https://api-v3.3bayti.ae/v3/health';
   private static readonly PROBE_TIMEOUT_MS = 5_000;
   private static readonly RECHECK_MS = 12_000;
@@ -58,7 +58,7 @@ export class ConnectivityService implements OnDestroy {
       fromEvent(window, 'offline'),
     ).subscribe(() => {
       if (this.navigatorOnline()) {
-        this.verifyReachable(); // "online" is a claim — confirm it.
+        this.verifyReachable(); // "online" is a claim, confirm it.
       } else {
         this.setOnline(false); // "offline" is authoritative.
       }
@@ -119,7 +119,7 @@ export class ConnectivityService implements OnDestroy {
 
   private setOnline(online: boolean): void {
     // Probe continuations can land outside Angular's zone if zone.js isn't
-    // patching fetch — re-enter so async-pipe bindings refresh.
+    // patching fetch, re-enter so async-pipe bindings refresh.
     this.zone.run(() => {
       if (this._online$.value !== online) {
         this._online$.next(online);

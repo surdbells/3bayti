@@ -8,12 +8,12 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Day 1 of 10-day rollout — extend vendors + categories schema to carry
+ * Day 1 of 10-day rollout, extend vendors + categories schema to carry
  * legacy data that doesn't have a v3 home yet.
  *
  * Strategy: add columns nullable, populate during migration, expose
  * through entity getters only where the demo needs them. The rest are
- * "warehoused" — present in DB for forensics + future use, not yet
+ * "warehoused", present in DB for forensics + future use, not yet
  * surfaced through entity properties.
  *
  * This is intentional. The v3 Vendor entity stays focused on what the
@@ -41,14 +41,14 @@ use Doctrine\Migrations\AbstractMigration;
  *   tax_contact_email      → tax_contact_email
  *
  * Status:
- *   store_status (tinyint) → is_store_active (boolean — legacy mapped 1→true)
+ *   store_status (tinyint) → is_store_active (boolean, legacy mapped 1→true)
  *   store_approved (tinyint) → is_store_approved (boolean)
  *
  * Logo/cover:
  *   store_logo (LONGBLOB base64)  → legacy_logo_data_url (LONGTEXT)
  *   store_cover (LONGBLOB base64) → legacy_cover_data_url (LONGTEXT)
  *
- *   These are LONGTEXT (matches PostgreSQL TEXT — unlimited) for the
+ *   These are LONGTEXT (matches PostgreSQL TEXT, unlimited) for the
  *   data-URL strings preserved verbatim from legacy. Once image migration
  *   lands (M5), we move these blobs to a Flysystem store and replace the
  *   logo_url / cover_image_url string columns with CDN URLs. For demo,
@@ -58,7 +58,7 @@ use Doctrine\Migrations\AbstractMigration;
  *   varchar(500) columns because data URLs are far longer than 500 chars.
  *
  * Owner user:
- *   The user record that has is_vendor=1 — preserved as `owner_user_id`
+ *   The user record that has is_vendor=1, preserved as `owner_user_id`
  *   so we can join back to the user for things like login, billing
  *   address (which lives on the user, not the store).
  *
@@ -68,7 +68,7 @@ use Doctrine\Migrations\AbstractMigration;
  *   icon (legacy uses @tui.* refs) → varchar(50) on category
  *
  *   Legacy categories have no slug. Migration generates one. Legacy
- *   categories are flat (no parent_id) — our category table supports
+ *   categories are flat (no parent_id), our category table supports
  *   tree, we just leave parent_id NULL for all 8 migrated categories.
  */
 final class Version20260512000002 extends AbstractMigration
@@ -111,7 +111,7 @@ final class Version20260512000002 extends AbstractMigration
         $this->addSql('ALTER TABLE vendors ADD COLUMN registered_tax_address VARCHAR(500) NULL');
         $this->addSql('ALTER TABLE vendors ADD COLUMN tax_contact_email VARCHAR(255) NULL');
 
-        // Store status (separate from is_active — admin approval flow)
+        // Store status (separate from is_active, admin approval flow)
         $this->addSql('ALTER TABLE vendors ADD COLUMN is_store_approved BOOLEAN NOT NULL DEFAULT FALSE');
 
         // Legacy logo + cover preserved as data-URLs until M5

@@ -21,7 +21,7 @@ namespace Bayti\Api\Domain\Promo;
  * The resolution is "this code applies to this cart for this user
  * with THIS resulting amount". The caller already has the User and
  * Cart references; round-tripping them through the VO would only
- * serve to confuse the contract. The VO is data-out only — the
+ * serve to confuse the contract. The VO is data-out only, the
  * caller decides what to do with it.
  *
  * Why discountAmount is a string

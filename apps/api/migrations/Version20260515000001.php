@@ -8,14 +8,14 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.1.7-G — order_disputes table for chargeback / dispute persistence.
+ * M3.1.7-G, order_disputes table for chargeback / dispute persistence.
  *
  * Why this table
  * ==============
  * Noon emits webhook events when a customer files a dispute (e.g.
  * chargeback through their issuing bank). Without persistence, those
  * events disappear into the webhook event log and operators have no
- * structured surface to triage them — they'd have to query raw_payload
+ * structured surface to triage them, they'd have to query raw_payload
  * blobs out of payment_webhook_events to know what's pending.
  *
  * This table captures one row per dispute lifecycle (open → resolved),
@@ -32,11 +32,11 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * Status semantics
  * ----------------
- *   open           — newly arrived from webhook; no admin action yet
- *   in_review      — admin opened the dispute, gathering evidence
- *   resolved_won   — we won the dispute (customer's claim rejected)
- *   resolved_lost  — we lost the dispute (refund issued by Noon)
- *   withdrawn      — customer withdrew the dispute before resolution
+ *   open          , newly arrived from webhook; no admin action yet
+ *   in_review     , admin opened the dispute, gathering evidence
+ *   resolved_won  , we won the dispute (customer's claim rejected)
+ *   resolved_lost , we lost the dispute (refund issued by Noon)
+ *   withdrawn     , customer withdrew the dispute before resolution
  *
  * order_id nullability
  * --------------------
@@ -128,7 +128,7 @@ final class Version20260515000001 extends AbstractMigration
         $this->addSql('CREATE INDEX idx_order_disputes_provider_order
                        ON order_disputes (provider_order_ref)');
 
-        // Status-only filter restricted to active (non-resolved) disputes —
+        // Status-only filter restricted to active (non-resolved) disputes -
         // most admin queries are "show me the pending ones"
         $this->addSql("CREATE INDEX idx_order_disputes_active
                        ON order_disputes (created_at DESC)

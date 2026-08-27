@@ -1,5 +1,5 @@
 /**
- * Mutation response transforms — v3 mutation response → mobile binding shape.
+ * Mutation response transforms, v3 mutation response → mobile binding shape.
  *
  * Why this file exists
  * ====================
@@ -14,11 +14,11 @@
  *   - response.message = the bill summary { count, subtotal, ... }
  *
  * The adapter's `toLegacyEnvelope` hard-codes `message: ''`, so we
- * can't preserve the legacy shape verbatim — `response.message`
+ * can't preserve the legacy shape verbatim, `response.message`
  * would always be empty for v3 calls.
  *
  * Approach: response transforms return a single object placed inside
- * `data`. For cart, that means `{items, bill}` — cart.page.ts is
+ * `data`. For cart, that means `{items, bill}`, cart.page.ts is
  * updated (Phase B page changes) to read `response.data.items` and
  * `response.data.bill` instead of `response.data` and `response.message`.
  *
@@ -41,10 +41,10 @@
  * MUTATION_REQUEST_TRANSFORMS, but they're separate registries
  * because:
  *   - Some endpoints have a request transform but no response
- *     transform (e.g. DELETE cart-item — request needs path-param
+ *     transform (e.g. DELETE cart-item, request needs path-param
  *     extraction; response is trivially {})
  *   - Some have a response transform but no request transform
- *     (e.g. GET cart — no body to transform, but envelope needs
+ *     (e.g. GET cart, no body to transform, but envelope needs
  *     {items, bill} wrap)
  *   - Coupling them would force fake passthrough functions on
  *     either side
@@ -59,7 +59,7 @@
 import type { ResponseTransform } from './catalog-response.transforms';
 
 /**
- * Helper — defensive object access. Returns {} for non-objects.
+ * Helper, defensive object access. Returns {} for non-objects.
  */
 function asObj(v: unknown): Record<string, unknown> {
   return v !== null && typeof v === 'object' && !Array.isArray(v)
@@ -68,7 +68,7 @@ function asObj(v: unknown): Record<string, unknown> {
 }
 
 /**
- * Helper — defensive array access. Returns [] for non-arrays.
+ * Helper, defensive array access. Returns [] for non-arrays.
  */
 function asArr(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
@@ -137,7 +137,7 @@ export function transformCartListResponse(data: unknown): unknown {
       // Legacy Cart shape (class/cart.ts): `item` is the cart-item id and
       // `product` is the product id. The cart template + the inc/dec/remove
       // controls read cart.item, and open-product + add-to-wishlist read
-      // cart.product — WITHOUT these aliases those values are undefined and
+      // cart.product, WITHOUT these aliases those values are undefined and
       // every control silently no-ops (calls .../items/undefined).
       item: it['id'] ?? 0,
       product_id: it['product_id'] ?? 0,
@@ -145,10 +145,10 @@ export function transformCartListResponse(data: unknown): unknown {
       product_name: it['product_name'] ?? '',
       product_image: it['product_image'] ?? '',
       vendor_id: it['vendor_id'] ?? 0,
-      // Legacy 'store' alias — some templates read item.store directly.
+      // Legacy 'store' alias, some templates read item.store directly.
       // Mirrors the convention M3.1.6e shipped for order items.
       store: it['vendor_id'] ?? 0,
-      // Vendor slug — order pages open the storefront by slug (legacy discarded).
+      // Vendor slug, order pages open the storefront by slug (legacy discarded).
       vendor_slug: it['vendor_slug'] ?? '',
       vendor_name: it['vendor_name'] ?? '',
       quantity: it['quantity'] ?? 0,
@@ -225,7 +225,7 @@ export function transformAddCartResponse(data: unknown): unknown {
  * cart.page.ts mutation-success binding.
  *
  * v3 returns the updated cart. Mobile's cart.page.ts currently
- * calls load_cart() after each mutation to refresh — that pattern
+ * calls load_cart() after each mutation to refresh, that pattern
  * stays, so this transform just signals success without forcing
  * the page to handle the full cart inline.
  *
@@ -234,7 +234,7 @@ export function transformAddCartResponse(data: unknown): unknown {
  */
 export function transformCartItemMutationResponse(data: unknown): unknown {
   const outer = asObj(data);
-  // UpdateCartItem/RemoveCartItem return { cart: listShape } — item_count is
+  // UpdateCartItem/RemoveCartItem return { cart: listShape }, item_count is
   // nested under `cart`, not at the top level.
   const v3 = asObj(outer['cart'] ?? outer);
   const itemCount = typeof v3['item_count'] === 'number' ? v3['item_count'] : 0;
@@ -323,7 +323,7 @@ export function transformInitiatePaymentResponse(data: unknown): unknown {
     idempotent: v3['idempotent'] === true,
     // Gift-card / gift-wallet full cover: the server charged nothing to Noon
     // and marked the order paid at creation, so checkout_url is null. These
-    // MUST pass through — checkout.page.ts branches on gateway_skipped to skip
+    // MUST pass through, checkout.page.ts branches on gateway_skipped to skip
     // the webview and go straight to /success. Without them the page saw an
     // empty url, matched no known shape, and showed "something went wrong".
     gateway_skipped: v3['gateway_skipped'] === true,
@@ -340,12 +340,12 @@ export function transformInitiatePaymentResponse(data: unknown): unknown {
  *     total, currency, paid_at
  *   }
  *
- * Forwarded unchanged — these are exactly the fields the poll
+ * Forwarded unchanged, these are exactly the fields the poll
  * service needs. Included in the registry to document the routing
  * + future-proof if the v3 shape evolves.
  */
 export function transformCheckoutStatusResponse(data: unknown): unknown {
-  // Passthrough — v3 shape is already the binding shape.
+  // Passthrough, v3 shape is already the binding shape.
   const v3 = asObj(data);
   return {
     order_reference: v3['order_reference'] ?? '',
@@ -386,7 +386,7 @@ export function transformOrderListResponse(data: unknown): unknown {
   const v3 = asObj(data);
   const orders = asArr(v3['orders']);
 
-  // Map each order — v3 fields mostly align with mobile expectations,
+  // Map each order, v3 fields mostly align with mobile expectations,
   // but legacy uses `date` while v3 uses `created_at`; forward both.
   const mapped = orders.map((raw) => {
     const o = asObj(raw);
@@ -400,7 +400,7 @@ export function transformOrderListResponse(data: unknown): unknown {
   return {
     // Mobile expects `data` to be the array directly. We're already
     // inside `data` here (toLegacyEnvelope unwrapped), so return
-    // the array directly — but wrap with pagination for callers that
+    // the array directly, but wrap with pagination for callers that
     // want it (my-orders.page handles infinite scroll).
     orders: mapped,
     pagination: v3['pagination'] ?? { limit: 10, offset: 0, count: mapped.length, total: mapped.length },

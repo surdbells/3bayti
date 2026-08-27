@@ -1,6 +1,6 @@
 import { parseSocialAuthError, socialAuthErrorMessage } from './social-auth-error';
 
-/** Identity translate stub — returns the key so assertions can match on it. */
+/** Identity translate stub, returns the key so assertions can match on it. */
 const t = (k: string) => k;
 
 describe('parseSocialAuthError', () => {
@@ -14,7 +14,7 @@ describe('parseSocialAuthError', () => {
   });
 
   it('classifies Google Play Services DEVELOPER_ERROR (10) as a config problem', () => {
-    // The signing SHA not being registered in Firebase — the most likely
+    // The signing SHA not being registered in Firebase, the most likely
     // "fails on some devices" cause.
     expect(parseSocialAuthError({ code: '10', message: 'DEVELOPER_ERROR' }).category).toBe('config');
     expect(parseSocialAuthError({ message: 'com.google...ApiException: 10: ' }).category).toBe('config');
@@ -22,7 +22,7 @@ describe('parseSocialAuthError', () => {
   });
 
   it('does not mistake 1001 / 12500 for the config code 10', () => {
-    // 1001 is a cancel; 12500 is a generic sign-in failure — neither is config.
+    // 1001 is a cancel; 12500 is a generic sign-in failure, neither is config.
     expect(parseSocialAuthError({ code: '12500', message: 'sign in failed' }).category).not.toBe('config');
   });
 

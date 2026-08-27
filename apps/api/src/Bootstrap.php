@@ -37,10 +37,10 @@ final class Bootstrap
 
         // 2. Initialize Sentry as early as possible (right after .env so
         //    we have SENTRY_DSN). Per Sentry docs, this should happen
-        //    before any code that might throw — DI container build,
-        //    routes, etc. — so even bootstrap-time crashes are reported.
+        //    before any code that might throw, DI container build,
+        //    routes, etc., so even bootstrap-time crashes are reported.
         //
-        //    If SENTRY_DSN is unset, init() is skipped — the SDK silently
+        //    If SENTRY_DSN is unset, init() is skipped, the SDK silently
         //    becomes a no-op, captureException() does nothing. That's
         //    deliberate for tests + local dev where we don't want to
         //    pollute Sentry with noise.
@@ -74,23 +74,23 @@ final class Bootstrap
         //    - Routing next (resolves which handler will run)
         //    - RequestId middleware (ensures every request has a
         //      correlation id; M1.6.2.B)
-        //    - Our JSON error middleware OUTERMOST — catches everything
+        //    - Our JSON error middleware OUTERMOST, catches everything
         //      including routing 404s and middleware errors, renders
         //      the standard {error:{code,message,details}} envelope.
         //
         // Slim's add() is LIFO at execution time, so the last add()
         // is the OUTERMOST middleware. Thus order of add() is:
-        //   add(BodyParsing) — INNERMOST
+        //   add(BodyParsing), INNERMOST
         //   add(Routing)
-        //   add(RequestId)   — runs BEFORE error middleware so 5xx
+        //   add(RequestId)  , runs BEFORE error middleware so 5xx
         //                       responses still carry X-Request-Id
-        //   add(ApiError)    — OUTERMOST
+        //   add(ApiError)   , OUTERMOST
         //
         // We don't use Slim's built-in ErrorMiddleware because it
         // renders HTML by default and doesn't speak our error envelope.
         $app->addBodyParsingMiddleware();
         $app->addRoutingMiddleware();
-        // M3.2.X.15-D — Display currency context. Runs on every
+        // M3.2.X.15-D, Display currency context. Runs on every
         // request; pure (just adds an attribute). Catalog
         // controllers read the attribute; non-catalog routes
         // ignore it. Placed inside the request-id frame so the
@@ -120,11 +120,11 @@ final class Bootstrap
      *   - environment: APP_ENV ('prod' / 'dev' / 'test'). Lets us
      *     filter dashboard noise by environment.
      *   - send_default_pii: false. We explicitly DON'T want Sentry's
-     *     default behaviour of capturing IP/user from request — we
+     *     default behaviour of capturing IP/user from request, we
      *     manage that explicitly via setUser() in AuthMiddleware
      *     with our own privacy policy (id + role flags only, no PII).
      *   - traces_sample_rate: 0. Performance monitoring (APM) off
-     *     for now — extra cost, not needed at our scale.
+     *     for now, extra cost, not needed at our scale.
      *
      * Tests & local dev: leave SENTRY_DSN unset → init() is skipped,
      * captureException() becomes no-op.
@@ -133,7 +133,7 @@ final class Bootstrap
     {
         $dsn = $_ENV['SENTRY_DSN'] ?? '';
         if ($dsn === '') {
-            // No DSN — Sentry stays a no-op. Common for tests / local dev.
+            // No DSN, Sentry stays a no-op. Common for tests / local dev.
             return;
         }
 
@@ -144,9 +144,9 @@ final class Bootstrap
             // Privacy: no auto-PII capture. We attach user context
             // explicitly via AuthMiddleware (id + role flags only).
             'send_default_pii' => false,
-            // No APM — defer to M5+ if/when we need traces.
+            // No APM, defer to M5+ if/when we need traces.
             'traces_sample_rate' => 0.0,
-            // Server name useful in self-hosted infra — matches
+            // Server name useful in self-hosted infra, matches
             // hostname to event for "which box" forensics.
             'server_name' => gethostname() ?: 'unknown',
             // Drop EXPECTED client errors before they leave the process.
@@ -158,7 +158,7 @@ final class Bootstrap
     }
 
     /**
-     * Sentry `before_send` hook — drop expected client errors, keep
+     * Sentry `before_send` hook, drop expected client errors, keep
      * genuine server faults.
      *
      * Why this exists
@@ -167,7 +167,7 @@ final class Bootstrap
      * throw {@see \Slim\Exception\HttpNotFoundException}. That exception
      * is NOT our typed {@see \Bayti\Api\Http\Errors\HttpException}, so it
      * falls through ApiErrorMiddleware's `\Throwable` catch-all and was
-     * being reported to Sentry as if it were a server fault — 8,549 of
+     * being reported to Sentry as if it were a server fault, 8,549 of
      * them, drowning real errors.
      *
      * What we drop (return null = don't send)
@@ -176,12 +176,12 @@ final class Bootstrap
      *      subclasses like HttpNotFoundException / HttpMethodNotAllowed /
      *      HttpUnauthorized / HttpForbidden / HttpBadRequest / HttpGone /
      *      HttpTooManyRequests) whose status code is 4xx. These are
-     *      normal control flow — a client asked for something that
+     *      normal control flow, a client asked for something that
      *      doesn't exist / isn't allowed. Slim stores the HTTP status in
      *      the exception's code, so getCode() is 404/401/405/...
      *   2. Our own typed HttpException whose `status` is 4xx (validation
      *      422, not-found 404, unauthorized 401, conflict 409, etc.).
-     *   3. OtpRateLimitException — an expected 429 abuse throttle, never
+     *   3. OtpRateLimitException, an expected 429 abuse throttle, never
      *      our bug.
      *
      * What we KEEP (return the event = send to Sentry)
@@ -191,14 +191,14 @@ final class Bootstrap
      *   - Every other unhandled \Throwable (TypeError, PDOException,
      *     RuntimeException from business logic, ...). These are by
      *     definition unexpected and worth a Sentry event.
-     *   - Events with no exception at all (e.g. captureMessage) — we
+     *   - Events with no exception at all (e.g. captureMessage), we
      *     never suppress those; only exception events are filtered.
      *
      * Conservative by design: we suppress ONLY exception types we can
      * positively identify as expected 4xx control flow. Anything we
      * cannot classify is sent. We never drop a 500.
      *
-     * HTTP responses are unaffected — this hook runs inside the Sentry
+     * HTTP responses are unaffected, this hook runs inside the Sentry
      * SDK and only decides whether to transmit the event. The client
      * still gets its correct 404/4xx from ApiErrorMiddleware.
      */
@@ -208,14 +208,14 @@ final class Bootstrap
     ): ?\Sentry\Event {
         $exception = $hint?->exception;
         if (!$exception instanceof \Throwable) {
-            // Non-exception event (message, transaction, ...) — never
+            // Non-exception event (message, transaction, ...), never
             // our concern here; let it through untouched.
             return $event;
         }
 
         $status = self::expectedClientErrorStatus($exception);
         if ($status !== null && $status >= 400 && $status < 500) {
-            // Expected 4xx client error — drop it.
+            // Expected 4xx client error, drop it.
             return null;
         }
 
@@ -247,7 +247,7 @@ final class Bootstrap
             return $e->getCode();
         }
 
-        // Anything else — unknown. Caller keeps it (sends to Sentry).
+        // Anything else, unknown. Caller keeps it (sends to Sentry).
         return null;
     }
 }

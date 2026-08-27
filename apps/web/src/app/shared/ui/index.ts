@@ -1,5 +1,5 @@
 /**
- * Shared UI primitives — building blocks used across the site.
+ * Shared UI primitives, building blocks used across the site.
  *
  * Import like:
  *   import { ButtonComponent, ContainerComponent, HeadingComponent } from '../shared/ui';

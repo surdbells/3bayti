@@ -39,7 +39,7 @@ use Slim\Psr7\Stream;
  * Anti-enumeration
  * ================
  * The {photoId} segment must belong to the {id} segment's return
- * request. The repo method findByIdAndRequest enforces this — an
+ * request. The repo method findByIdAndRequest enforces this, an
  * attacker who guesses {id} from their own return + a photoId
  * from somewhere else gets 404, not the wrong photo.
  *
@@ -47,7 +47,7 @@ use Slim\Psr7\Stream;
  * ========
  * 200 with Content-Type matching the photo's mime_type +
  * Content-Length set + body streamed via Flysystem readStream.
- * No buffer-the-whole-blob-in-PHP path — large photos pump byte
+ * No buffer-the-whole-blob-in-PHP path, large photos pump byte
  * by byte through the stream.
  */
 final class ServeReturnPhotoController

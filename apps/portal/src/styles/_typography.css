@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Typography
+   Abayti Design System, Typography
    Fraunces for editorial/display headings, Inter for body.
    ========================================================================= */
 
@@ -20,7 +20,7 @@ h4, .ax-h4 { font-size: var(--ax-fs-xl); }
 h5, .ax-h5 { font-size: var(--ax-fs-lg); font-weight: var(--ax-fw-semibold); }
 h6, .ax-h6 { font-size: var(--ax-fs-md); font-weight: var(--ax-fw-semibold); }
 
-/* Display sizes — for hero, auth, marketing contexts */
+/* Display sizes, for hero, auth, marketing contexts */
 .ax-display-xl { font-family: var(--ax-font-display); font-size: var(--ax-fs-6xl); font-weight: var(--ax-fw-semibold); line-height: 1.05; letter-spacing: -0.035em; }
 .ax-display-lg { font-family: var(--ax-font-display); font-size: var(--ax-fs-5xl); font-weight: var(--ax-fw-semibold); line-height: 1.08; letter-spacing: -0.03em; }
 .ax-display-md { font-family: var(--ax-font-display); font-size: var(--ax-fs-4xl); font-weight: var(--ax-fw-semibold); line-height: 1.1; letter-spacing: -0.03em; }
@@ -43,7 +43,7 @@ p {
   color: var(--ax-color-text-tertiary);
 }
 
-/* Eyebrow / overline — for premium section labels */
+/* Eyebrow / overline, for premium section labels */
 .ax-eyebrow {
   font-family: var(--ax-font-body);
   font-size: var(--ax-fs-2xs);
@@ -53,7 +53,7 @@ p {
   color: var(--ax-color-text-brand);
 }
 
-/* Numeric display — for KPI stats, dashboards */
+/* Numeric display, for KPI stats, dashboards */
 .ax-numeric {
   font-family: var(--ax-font-display);
   font-weight: var(--ax-fw-semibold);

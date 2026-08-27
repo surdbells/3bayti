@@ -2,7 +2,7 @@
 
 /* Currency-prefixed price inputs (Price / Cost per item / Sale price).
    Root cause of the "AED25" overlap: the shared .ax-input-group only pads the
-   input by 2.5rem on the left — a value sized for a single icon glyph. The
+   input by 2.5rem on the left, a value sized for a single icon glyph. The
    3-letter "AED" prefix (which also inherited the 1.1em prefix font-size) is
    wider than that, so the typed value started underneath it. Fix: give the
    prefix a normal font-size and reserve enough left padding to clear it. */

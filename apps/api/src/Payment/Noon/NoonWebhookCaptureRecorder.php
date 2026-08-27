@@ -21,7 +21,7 @@ use Psr\Log\NullLogger;
  *     key order / whitespace can differ from the bytes Noon signed, so
  *     hash_hmac() over it won't reproduce the signature.
  *   - LoggingOnlyVerifier logs only SHA-256 hashes of the body and the
- *     signature — one-way, so they can't be fed back into hash_hmac().
+ *     signature, one-way, so they can't be fed back into hash_hmac().
  *
  * This recorder persists the raw pair verbatim so the offline
  * `bin/console noon:confirm-signature` command can brute-force
@@ -32,13 +32,13 @@ use Psr\Log\NullLogger;
  * ------
  *   - OFF by default (NOON_WEBHOOK_CAPTURE unset / false). Intended to
  *     run for a short rollout window, then be switched back off.
- *   - NEVER writes the shared secret — only the body and the signature.
+ *   - NEVER writes the shared secret, only the body and the signature.
  *     The signature is a keyed MAC; revealing it does not reveal the
  *     secret. The webhook body for our integration carries order ref +
  *     amount, not card data (Noon's hosted page owns the PAN).
  *   - Captures land under apps/api/var/captures (gitignored via /var/,
- *     not web-served). Files written 0640, dir 0750 — never world-readable.
- *   - Capture failures are swallowed (logged) — recording must NEVER
+ *     not web-served). Files written 0640, dir 0750, never world-readable.
+ *   - Capture failures are swallowed (logged), recording must NEVER
  *     break webhook receipt, which is the load-bearing payment path.
  */
 final class NoonWebhookCaptureRecorder
@@ -80,7 +80,7 @@ final class NoonWebhookCaptureRecorder
                 'content_type' => $contentType,
                 'signature_header' => $signatureHeader,
                 'body_length' => strlen($rawBody),
-                // Raw bytes exactly as received — this is the whole point.
+                // Raw bytes exactly as received, this is the whole point.
                 'raw_body' => $rawBody,
             ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 

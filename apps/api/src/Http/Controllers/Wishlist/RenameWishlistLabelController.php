@@ -21,7 +21,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * PATCH /v3/me/wishlist/labels/{id}  body { name } — rename a label.
+ * PATCH /v3/me/wishlist/labels/{id}  body { name }, rename a label.
  *
  * 404 if the label isn't found / not owned by the user. 409 if the new
  * name collides with another of the user's labels.

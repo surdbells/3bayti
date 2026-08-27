@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M1.1 — initial schema for users, addresses, measurements, refresh
+ * M1.1, initial schema for users, addresses, measurements, refresh
  * tokens, OTP attempts.
  *
  * This is the first migration on the new PostgreSQL platform. It
@@ -19,7 +19,7 @@ use Doctrine\Migrations\AbstractMigration;
  * -----------
  * - Snake_case column names (matched by Doctrine UnderscoreNamingStrategy)
  * - TIMESTAMPTZ for all timestamps (timezone-aware)
- * - JSONB (not JSON) for the measurements column — supports indexing
+ * - JSONB (not JSON) for the measurements column, supports indexing
  *   and faster equality checks
  * - BIGSERIAL primary keys, prepared for high-volume scenarios
  * - Indexes match the entity's #[ORM\Index] annotations
@@ -129,7 +129,7 @@ final class Version20260507000001 extends AbstractMigration
         $this->addSql('CREATE INDEX idx_addresses_user ON addresses (user_id)');
         $this->addSql('CREATE INDEX idx_addresses_legacy_id ON addresses (legacy_address_id)');
 
-        // Partial unique indexes — at most one default per user, but
+        // Partial unique indexes, at most one default per user, but
         // the default doesn't have to exist (so a partial unique
         // covers both cases without forcing every user to have one).
         $this->addSql(<<<'SQL'
@@ -208,7 +208,7 @@ final class Version20260507000001 extends AbstractMigration
         // user_otp_attempts
         //
         // We don't store the actual 6-digit code or per-attempt
-        // verify counters here — MessageCentral CPaaS handles code
+        // verify counters here, MessageCentral CPaaS handles code
         // generation and verification on their side. We store only
         // the verificationId they return + audit context.
         // -----------------------------------------------------------

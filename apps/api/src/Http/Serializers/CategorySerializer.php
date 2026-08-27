@@ -35,7 +35,7 @@ final class CategorySerializer
     }
 
     /**
-     * Tree shape — same as publicShape but with `children` key
+     * Tree shape, same as publicShape but with `children` key
      * containing the child array.
      *
      * @param Category $c
@@ -76,7 +76,7 @@ final class CategorySerializer
      * Matches the apps/web `CategoryDetail` interface defined in
      * apps/web/src/app/features/categories/category.model.ts.
      * Any field-name change here is a breaking change for the wire
-     * contract — keep them in sync.
+     * contract, keep them in sync.
      *
      * Differences vs publicShape (the new fields apps/web requires)
      * ============================================================
@@ -97,7 +97,7 @@ final class CategorySerializer
      * ====================================================
      * Same separation-of-concerns rationale as VendorSerializer::
      * featuredShape (M3.2.X.2). The serializer must not perform DB
-     * queries — that couples it to the EntityManager and makes it
+     * queries, that couples it to the EntityManager and makes it
      * untestable. The controller computes the count via
      * ProductRepository::countByCategoryRaw, then the serializer
      * shapes the response.
@@ -127,7 +127,7 @@ final class CategorySerializer
             // Apps/web's category-detail component reads icon_name to
             // pick the Lucide icon for the letter-fallback styling.
             'icon_name' => $c->getIcon(),
-            // Raw count — caller-supplied. Apps/web's category.model.ts
+            // Raw count, caller-supplied. Apps/web's category.model.ts
             // distinguishes this from meta.total_products explicitly
             // (raw join vs filtered-by-status count).
             'product_count' => $rawProductCount,

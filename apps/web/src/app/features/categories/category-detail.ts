@@ -28,11 +28,11 @@ import { ProductCardComponent } from '../catalog/product-card';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
- * Category detail page — `/category/:slug`.
+ * Category detail page, `/category/:slug`.
  *
  * Now serves two roles:
  *  1. SSR: fetches category metadata + embedded 20 products from
- *     `/v3/categories/:slug` for SEO (unchanged — crawlers still see
+ *     `/v3/categories/:slug` for SEO (unchanged, crawlers still see
  *     a rich, pre-rendered product grid).
  *  2. Browser: drives a filterable, paginated grid via CatalogService
  *     (GET /v3/products + GET /v3/products/facets). Filter state is

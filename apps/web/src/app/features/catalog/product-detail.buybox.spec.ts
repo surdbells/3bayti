@@ -345,7 +345,7 @@ describe('ProductDetail buy box', () => {
         { authenticated: false },
       ).componentInstance;
       expect(c.isSizeOptional()).toBe(true);
-      // No size selected, not signed in — still addable.
+      // No size selected, not signed in, still addable.
       expect(c.canAddToCart()).toBe(true);
     });
 

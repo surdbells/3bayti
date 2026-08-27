@@ -44,16 +44,16 @@ use Slim\Routing\RouteCollectorProxy;
  * catalog.php, orders.php) and require them all from here. For now we
  * keep them inline grouped by `/v3/<domain>/*`.
  *
- * All routes live under /v3 — that's the new platform's namespace per
+ * All routes live under /v3, that's the new platform's namespace per
  * Decision 9 in docs/roadmap.md. The old /v2 catalog endpoints stay
  * on the legacy PHP backend until M2 ships their /v3 replacements.
  */
 
 return function (App $app): void {
-    // Health checks — split deliberately:
+    // Health checks, split deliberately:
     //
-    //   GET /v3/health        — liveness (no DB; container orchestration)
-    //   GET /v3/health/ready  — readiness (DB ping; deploy gates + monitoring)
+    //   GET /v3/health       , liveness (no DB; container orchestration)
+    //   GET /v3/health/ready , readiness (DB ping; deploy gates + monitoring)
     //
     // See HealthController docblock for the rationale.
     $app->get('/v3/health', [HealthController::class, 'liveness']);
@@ -61,7 +61,7 @@ return function (App $app): void {
 
     // Signed, short-lived serving of private KYC documents (authorised by the
     // HMAC signature in the query, minted inside the authenticated compliance
-    // GET responses — see ComplianceDocumentSigner). No auth middleware: the
+    // GET responses, see ComplianceDocumentSigner). No auth middleware: the
     // signature is the credential.
     $app->get(
         '/v3/compliance-documents/{vendorId:[0-9]+}/{field}',
@@ -69,12 +69,12 @@ return function (App $app): void {
     );
 
     // -------------------------------------------------------------------
-    // M3.2.X.11-G — Marketing-email unsubscribe (public, no auth)
+    // M3.2.X.11-G, Marketing-email unsubscribe (public, no auth)
     //
     // GET /v3/notifications/unsubscribe?token=...
     //
     // Hit from email clients. Signed JWT in the query string is the
-    // only authentication. Returns HTML (not JSON) — the response
+    // only authentication. Returns HTML (not JSON), the response
     // renders in the email client's preview pane / browser.
     // -------------------------------------------------------------------
     $app->get(
@@ -83,54 +83,54 @@ return function (App $app): void {
     );
 
     // -------------------------------------------------------------------
-    // /v3/auth/* — registration, login, password reset, session management
+    // /v3/auth/*, registration, login, password reset, session management
     //
     // Wired up incrementally in M1.4.2-M1.4.5. Each sub-phase adds a few
     // routes here; this group makes the structure visible from one place.
     // -------------------------------------------------------------------
     $app->group('/v3/auth', function (RouteCollectorProxy $group): void {
-        // M1.4.2 — read-only / no-OTP endpoints (anonymous unless noted)
+        // M1.4.2, read-only / no-OTP endpoints (anonymous unless noted)
         $group->post('/validate-email', ValidateEmailController::class);
         $group->post('/validate-phone', ValidatePhoneController::class);
         $group->post('/login', LoginController::class);
         $group->get('/me', MeController::class)
             ->add(AuthMiddleware::class);
 
-        // M1.4.3 — OTP issuance flows (anonymous)
+        // M1.4.3, OTP issuance flows (anonymous)
         $group->post('/register', RegisterController::class);
         $group->post('/send-otp', SendOtpController::class);
         $group->post('/confirm', ConfirmController::class);
 
-        // Phone-first registration (4-step; anonymous). ADDITIVE — the
+        // Phone-first registration (4-step; anonymous). ADDITIVE, the
         // /register + /confirm endpoints above stay intact for the web
         // app + current mobile.
-        //   1. initiate     — check phone free, SMS-OTP
-        //   2. verify-phone — verify SMS-OTP, mint registration token
-        //   3. submit       — create account, email-OTP
-        //   4. confirm-email— verify email-OTP, issue session
+        //   1. initiate    , check phone free, SMS-OTP
+        //   2. verify-phone, verify SMS-OTP, mint registration token
+        //   3. submit      , create account, email-OTP
+        //   4. confirm-email- verify email-OTP, issue session
         $group->post('/register/initiate', \Bayti\Api\Http\Controllers\Auth\RegisterInitiateController::class);
         $group->post('/register/verify-phone', \Bayti\Api\Http\Controllers\Auth\RegisterVerifyPhoneController::class);
         $group->post('/register/submit', \Bayti\Api\Http\Controllers\Auth\RegisterSubmitController::class);
         $group->post('/register/confirm-email', \Bayti\Api\Http\Controllers\Auth\RegisterConfirmEmailController::class);
 
-        // M1.4.4 — password reset flows (anonymous)
+        // M1.4.4, password reset flows (anonymous)
         $group->post('/reset', ResetController::class);
         $group->post('/reset/confirm', ResetConfirmController::class);
 
         // Passwordless OTP login (anonymous). Two-channel (phone SMS /
         // email OTP), anti-enumeration on /send, returns the standard
-        // login envelope on /verify. ADDITIVE — the email+password
+        // login envelope on /verify. ADDITIVE, the email+password
         // /login endpoint above stays unchanged as the fallback.
         $group->post('/otp-login/send', \Bayti\Api\Http\Controllers\Auth\OtpLoginSendController::class);
         $group->post('/otp-login/verify', \Bayti\Api\Http\Controllers\Auth\OtpLoginVerifyController::class);
 
         // Social sign-in (Google / Apple via Firebase ID token; anonymous).
         // Find-or-create on the verified provider identity; returns the
-        // standard login envelope. ADDITIVE — sits alongside password +
+        // standard login envelope. ADDITIVE, sits alongside password +
         // OTP login.
         $group->post('/social', \Bayti\Api\Http\Controllers\Auth\SocialLoginController::class);
 
-        // M1.4.5 — token lifecycle
+        // M1.4.5, token lifecycle
         $group->post('/refresh', RefreshController::class); // anonymous (refresh token in body)
         $group->post('/logout', LogoutController::class)
             ->add(AuthMiddleware::class);
@@ -139,65 +139,65 @@ return function (App $app): void {
     });
 
     // -------------------------------------------------------------------
-    // /v3/upload — authenticated image upload (product images, vendor logo/cover)
+    // /v3/upload, authenticated image upload (product images, vendor logo/cover)
     // One endpoint; context query param selects the storage path:
     //   ?context=product       → products/{vendor-slug}/{ulid}.{ext}
     //   ?context=vendor_logo   → vendors/{vendor-slug}/logo.{ext}
     //   ?context=vendor_cover  → vendors/{vendor-slug}/cover.{ext}
     // Returns {storage_path, url, mime_type, size_bytes}.
-    // Apache serves var/uploads/ under /uploads/ — the URL in the
+    // Apache serves var/uploads/ under /uploads/, the URL in the
     // response is the canonical origin URL; CF image transforms are
     // applied by the front-end wrapper around that URL.
     $app->post('/v3/upload',
         \Bayti\Api\Http\Controllers\Media\UploadImageController::class,
     )->add(\Bayti\Api\Http\Middleware\AuthMiddleware::class);
 
-    // /v3/me/* — current-user-scoped account management
+    // /v3/me/*, current-user-scoped account management
     //
     // Wired up in M1.7. All routes JWT-protected via AuthMiddleware.
-    // The path '/me' is read as "the authenticated user" — sibling to
+    // The path '/me' is read as "the authenticated user", sibling to
     // /v3/auth/me but covers larger surface (profile, addresses,
     // measurements, etc).
     // -------------------------------------------------------------------
     $app->group('/v3/me', function (RouteCollectorProxy $group): void {
-        // M1.7.1 — profile (read + partial update)
+        // M1.7.1, profile (read + partial update)
         $group->get('/profile', GetProfileController::class);
-        // PATCH semantics — JSON Merge Patch (RFC 7396).
+        // PATCH semantics, JSON Merge Patch (RFC 7396).
         // Empty body is a 200 no-op.
         $group->patch('/profile', UpdateProfileController::class);
 
-        // Workstream C — profile picture upload (mobile + portal).
+        // Workstream C, profile picture upload (mobile + portal).
         $group->post('/avatar', \Bayti\Api\Http\Controllers\Me\UpdateMeAvatarController::class);
 
-        // M3.2.X.12-G — Personalized "for-you" recommendations
+        // M3.2.X.12-G, Personalized "for-you" recommendations
         $group->get(
             '/recommendations',
             \Bayti\Api\Http\Controllers\Me\GetMeRecommendationsController::class,
         );
 
-        // M1.7.2 phase A — address read + create
+        // M1.7.2 phase A, address read + create
         $group->get('/addresses', ListAddressesController::class);
         $group->post('/addresses', CreateAddressController::class);
         $group->get('/addresses/{id}', GetAddressController::class);
 
-        // M1.7.2 phase B — address modify + default-flag management
+        // M1.7.2 phase B, address modify + default-flag management
         $group->put('/addresses/{id}', UpdateAddressController::class);
         $group->delete('/addresses/{id}', DeleteAddressController::class);
         $group->patch('/addresses/{id}/default', SetDefaultAddressController::class);
 
-        // M3.1.1c — billing address (singleton convenience accessor).
+        // M3.1.1c, billing address (singleton convenience accessor).
         // Distinct from /addresses; backed by the same `addresses` table
         // but exposes only the user's default-billing row. See ADR at
         // docs/runbooks/m3/m3.1.1b-billing-address-decision.md.
         $group->get('/billing-address', GetBillingAddressController::class);
         $group->patch('/billing-address', UpsertBillingAddressController::class);
 
-        // M3.1.1e — current location (upsert).
+        // M3.1.1e, current location (upsert).
         // Backed by the user_locations table (Version20260514000001).
         // Single row per user; PATCH creates if missing, updates otherwise.
         $group->patch('/location', UpdateLocationController::class);
 
-        // PUSH — marketing push opt-out toggle. Body { marketing_opt_out: bool }.
+        // PUSH, marketing push opt-out toggle. Body { marketing_opt_out: bool }.
         // Flips users.marketing_push_opt_out; returns the refreshed profile.
         // The three marketing pushes (cart.abandoned, order.review_prompt,
         // re_engagement.nudge) are suppressed when opted out; lifecycle
@@ -207,13 +207,13 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Profile\UpdateNotificationPreferencesController::class,
         );
 
-        // M3.1.1f — change password (authenticated, re-auth via current_password).
+        // M3.1.1f, change password (authenticated, re-auth via current_password).
         // Mirrors /v3/auth/reset/confirm's session-handling pattern:
         // revokes all refresh tokens + issues a fresh pair on success.
         // See ChangePasswordController docblock for the full rationale.
         $group->patch('/password', ChangePasswordController::class);
 
-        // Social sign-in — connected Google/Apple accounts management.
+        // Social sign-in, connected Google/Apple accounts management.
         //   GET    list the current user's linked identities
         //   POST   link a fresh provider token to the current user (409
         //          if that identity belongs to someone else)
@@ -222,22 +222,22 @@ return function (App $app): void {
         $group->post('/social-identities', \Bayti\Api\Http\Controllers\Me\LinkSocialIdentityController::class);
         $group->delete('/social-identities/{provider}', \Bayti\Api\Http\Controllers\Me\UnlinkSocialIdentityController::class);
 
-        // Phone-after-social — set/verify a phone on the current account.
+        // Phone-after-social, set/verify a phone on the current account.
         //   POST /phone        send OTP to a new number (stores it unverified)
         //   POST /phone/verify  confirm the OTP → is_phone_verified = true
         // Primary use case: users who signed up via Google/Apple adding a phone.
         $group->post('/phone', \Bayti\Api\Http\Controllers\Me\SetPhoneController::class);
         $group->post('/phone/verify', \Bayti\Api\Http\Controllers\Me\VerifyPhoneController::class);
 
-        // M3.2.Y.6-A — account deletion (authenticated, re-auth via
+        // M3.2.Y.6-A, account deletion (authenticated, re-auth via
         // current_password). Deactivates + soft-deletes the user and
         // revokes all refresh tokens. Order history is retained.
         // See DeleteAccountController docblock for the full rationale.
         $group->delete('', DeleteAccountController::class);
 
-        // M1.7.3 — body measurements (default + per-category sets)
+        // M1.7.3, body measurements (default + per-category sets)
         // Path-segment design: /default for the catch-all, /category/{id}
-        // for category-specific. Same controllers handle both — the
+        // for category-specific. Same controllers handle both, the
         // route definition determines whether {id} is in $args.
         $group->get('/measurements', ListMeasurementsController::class);
         $group->get('/measurements/default', GetMeasurementsController::class);
@@ -247,14 +247,14 @@ return function (App $app): void {
         $group->delete('/measurements/default', DeleteMeasurementsController::class);
         $group->delete('/measurements/category/{id}', DeleteMeasurementsController::class);
 
-        // M3.2.Y.6-C — Wishlist (products-only). GET lists saved
+        // M3.2.Y.6-C, Wishlist (products-only). GET lists saved
         // products (paginated, ProductSerializer list shape); POST is
         // idempotent (already-saved → no-op success, not 409); DELETE
         // by productId is idempotent (always 204).
         $group->get('/wishlist', \Bayti\Api\Http\Controllers\Wishlist\ListWishlistController::class);
         $group->post('/wishlist', \Bayti\Api\Http\Controllers\Wishlist\AddWishlistItemController::class);
 
-        // M3.2.Z.3-API — wishlist labels (Q-Z3=B). Registered BEFORE the
+        // M3.2.Z.3-API, wishlist labels (Q-Z3=B). Registered BEFORE the
         // /wishlist/{productId} routes so 'labels' isn't captured as a
         // product id.
         $group->get('/wishlist/labels', \Bayti\Api\Http\Controllers\Wishlist\ListWishlistLabelsController::class);
@@ -266,7 +266,7 @@ return function (App $app): void {
         $group->patch('/wishlist/{productId:[0-9]+}', \Bayti\Api\Http\Controllers\Wishlist\MoveWishlistItemController::class);
         $group->delete('/wishlist/{productId:[0-9]+}', \Bayti\Api\Http\Controllers\Wishlist\RemoveWishlistItemController::class);
 
-        // M3.2.Z.4-D — Push notification device tokens. Register
+        // M3.2.Z.4-D, Push notification device tokens. Register
         // (upsert) on app launch / token refresh; deactivate on
         // logout / opt-out. Both are idempotent and owner-scoped.
         $group->post('/device-tokens', \Bayti\Api\Http\Controllers\Notification\RegisterDeviceTokenController::class);
@@ -277,12 +277,12 @@ return function (App $app): void {
         $group->post('/following/{vendorId:[0-9]+}', \Bayti\Api\Http\Controllers\Following\FollowVendorController::class);
         $group->delete('/following/{vendorId:[0-9]+}', \Bayti\Api\Http\Controllers\Following\UnfollowVendorController::class);
 
-        // v3 customer reviews — own reviews (replaces legacy
+        // v3 customer reviews, own reviews (replaces legacy
         // /customer/settings/read-reviews + /settings/delete-review).
         $group->get('/reviews', \Bayti\Api\Http\Controllers\Review\ListMyReviewsController::class);
         $group->delete('/reviews/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Review\DeleteMyReviewController::class);
 
-        // v3 customer styles — "My Styles" tab (owner-scoped listing) +
+        // v3 customer styles, "My Styles" tab (owner-scoped listing) +
         // submission (replaces legacy /customer/create_style). GET is
         // registered before POST under the same /v3/me authed group.
         $group->get('/styles', \Bayti\Api\Http\Controllers\Style\ListMyStylesController::class);
@@ -290,13 +290,13 @@ return function (App $app): void {
     })->add(AuthMiddleware::class);
 
     // ===================================================================
-    // M3.1.6d — Cart (authenticated; locked Q7=B server-side per user)
+    // M3.1.6d, Cart (authenticated; locked Q7=B server-side per user)
     // ===================================================================
     //
     // Guests use device-local storage and call POST /v3/cart/merge
     // after sign-in to migrate the device cart into the server. The
     // /merge endpoint is in this group because it requires
-    // authentication — the guest cart payload is in the body, not
+    // authentication, the guest cart payload is in the body, not
     // identified by any guest token (no anonymous-session model
     // per Q7=B).
     $app->group('/v3/cart', function (RouteCollectorProxy $group): void {
@@ -305,11 +305,11 @@ return function (App $app): void {
         $group->patch('/items/{id}', \Bayti\Api\Http\Controllers\Cart\UpdateCartItemController::class);
         $group->delete('/items/{id}', \Bayti\Api\Http\Controllers\Cart\RemoveCartItemController::class);
         $group->post('/merge', \Bayti\Api\Http\Controllers\Cart\MergeAnonCartController::class);
-        // M3.2.X.8-C — Server-authoritative price quote with optional
+        // M3.2.X.8-C, Server-authoritative price quote with optional
         // promo code resolution. Idempotent read; no DB writes.
         $group->post('/quote', \Bayti\Api\Http\Controllers\Cart\QuoteCartController::class);
-        // M3.5 — Gift card preview: how much of this card applies to the cart.
-        // Pure read — no balance deducted (debit happens at /checkout/initiate).
+        // M3.5, Gift card preview: how much of this card applies to the cart.
+        // Pure read, no balance deducted (debit happens at /checkout/initiate).
         $group->post('/gift-card', \Bayti\Api\Http\Controllers\GiftCard\ApplyGiftCardToCartController::class);
         // Wallet preview: how much of the customer's WHOLE gift-card wallet
         // applies to the cart (one-tap alternative to a single code). Pure read.
@@ -317,7 +317,7 @@ return function (App $app): void {
     })->add(AuthMiddleware::class);
 
     // ===================================================================
-    // M3.5 — Gift Cards
+    // M3.5, Gift Cards
     // ===================================================================
     // Public (no auth):
     $app->get('/v3/gift-cards/themes',
@@ -347,7 +347,7 @@ return function (App $app): void {
         \Bayti\Api\Http\Controllers\GiftCard\UploadGiftCardPhotoController::class
     )->add(\Bayti\Api\Http\Middleware\AuthMiddleware::class);
 
-    // Admin/internal — activate after payment confirmation:
+    // Admin/internal, activate after payment confirmation:
     $app->post('/v3/gift-cards/{id:[0-9]+}/activate',
         \Bayti\Api\Http\Controllers\GiftCard\ActivateGiftCardController::class
     )
@@ -355,7 +355,7 @@ return function (App $app): void {
         ->add(\Bayti\Api\Http\Middleware\AuthMiddleware::class);
 
     // ===================================================================
-    // M3.1.6e — Orders (authenticated read-only customer view)
+    // M3.1.6e, Orders (authenticated read-only customer view)
     // ===================================================================
     //
     // Replaces legacy /customer/read-orders, /customer/read_orders_listing,
@@ -367,9 +367,9 @@ return function (App $app): void {
         // Customer view of their own order's event history (reuses
         // OrderTimelineBuilder; whitelisted + actor-sanitized in the controller).
         $group->get('/{id:[0-9]+}/timeline', \Bayti\Api\Http\Controllers\Order\GetOrderTimelineController::class);
-        // M3.1.7-F — customer self-serve cancel (pending_payment only)
+        // M3.1.7-F, customer self-serve cancel (pending_payment only)
         $group->post('/{id:[0-9]+}/cancel', \Bayti\Api\Http\Controllers\Order\CancelOrderController::class);
-        // M3.2.X.18-D — customer return submission + list per order
+        // M3.2.X.18-D, customer return submission + list per order
         $group->post(
             '/{id:[0-9]+}/returns',
             \Bayti\Api\Http\Controllers\Order\SubmitReturnController::class,
@@ -402,7 +402,7 @@ return function (App $app): void {
         );
     })->add(AuthMiddleware::class);
 
-    // M3.2.X.18-D — Customer return detail/cancel + photo serve.
+    // M3.2.X.18-D, Customer return detail/cancel + photo serve.
     // Separate /v3/returns group so customers can address returns
     // directly by id (matches mobile UX of "my returns" tab).
     $app->group('/v3/returns', function (RouteCollectorProxy $group): void {
@@ -420,13 +420,13 @@ return function (App $app): void {
     })->add(AuthMiddleware::class);
 
     // ===================================================================
-    // M3.1.6f1+f2 — Checkout (initiate against Noon + status polling)
+    // M3.1.6f1+f2, Checkout (initiate against Noon + status polling)
     // ===================================================================
     //
-    // POST /v3/checkout/initiate       — auth required (M3.1.6f1)
-    // GET  /v3/checkout/status/{ref}   — auth required (M3.1.6f2)
+    // POST /v3/checkout/initiate      , auth required (M3.1.6f1)
+    // GET  /v3/checkout/status/{ref}  , auth required (M3.1.6f2)
     //
-    // The webhook receiver below is OUTSIDE this group — Noon doesn't
+    // The webhook receiver below is OUTSIDE this group, Noon doesn't
     // have one of our user tokens.
     $app->group('/v3/checkout', function (RouteCollectorProxy $group): void {
         $group->post(
@@ -439,13 +439,13 @@ return function (App $app): void {
         );
     })->add(AuthMiddleware::class);
 
-    // M3.1.6f2 — Noon webhook receiver.
+    // M3.1.6f2, Noon webhook receiver.
     //
-    // INTENTIONALLY UNAUTHENTICATED — Noon does NOT have one of our
+    // INTENTIONALLY UNAUTHENTICATED, Noon does NOT have one of our
     // JWTs. Authentication is via:
     //   1. Signature header (M3.1.6: logged + accepted;
     //      M3.1.7: strict HMAC verification)
-    //   2. RETRIEVE-ORDER-BEFORE-ACTING — the load-bearing safety
+    //   2. RETRIEVE-ORDER-BEFORE-ACTING, the load-bearing safety
     //      mechanism. Even with no signature verification, a spoofed
     //      webhook cannot make us mark an order paid because the
     //      controller calls gateway.retrieveOrder server-to-server
@@ -458,9 +458,9 @@ return function (App $app): void {
         \Bayti\Api\Http\Controllers\Checkout\NoonWebhookController::class,
     );
 
-    // M3.2.Y.3-A — Noon payment-return browser redirect.
+    // M3.2.Y.3-A, Noon payment-return browser redirect.
     //
-    // INTENTIONALLY UNAUTHENTICATED — Noon redirects the raw browser
+    // INTENTIONALLY UNAUTHENTICATED, Noon redirects the raw browser
     // here after hosted checkout; we cannot rely on a valid auth token
     // being present on this request. The endpoint leaks nothing: it
     // only reflects the supplied reference into a 302 to the web app's
@@ -478,28 +478,28 @@ return function (App $app): void {
     );
 
     // ===================================================================
-    // M2.1 — Catalog: public read endpoints (no auth required)
+    // M2.1, Catalog: public read endpoints (no auth required)
     // ===================================================================
 
-    // Categories — public tree + per-slug detail
+    // Categories, public tree + per-slug detail
     $app->get('/v3/categories', \Bayti\Api\Http\Controllers\Catalog\ListCategoriesController::class);
     $app->get('/v3/categories/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetCategoryController::class);
 
-    // Brands — public list + per-slug detail
+    // Brands, public list + per-slug detail
     $app->get('/v3/brands', \Bayti\Api\Http\Controllers\Catalog\ListBrandsController::class);
     $app->get('/v3/brands/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetBrandController::class);
 
-    // Vendors — public list + per-slug detail
+    // Vendors, public list + per-slug detail
     $app->get('/v3/vendors', \Bayti\Api\Http\Controllers\Catalog\ListVendorsController::class);
     $app->get('/v3/featured-vendors', \Bayti\Api\Http\Controllers\Catalog\ListFeaturedVendorsController::class);
-    // HP-BE2 — Storefront campaigns (homepage Anniversary Deals + Flash Sale).
+    // HP-BE2, Storefront campaigns (homepage Anniversary Deals + Flash Sale).
     // /active MUST be registered before /{slug} so the literal path is not
     // captured by the slug placeholder.
     $app->get('/v3/campaigns/active', \Bayti\Api\Http\Controllers\Catalog\GetActiveCampaignsController::class);
     $app->get('/v3/campaigns/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetCampaignController::class);
     $app->get('/v3/vendors/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetVendorController::class);
 
-    // Guest cart price resolution (public — no auth). Resolves a device-
+    // Guest cart price resolution (public, no auth). Resolves a device-
     // local cart payload into a server-priced display cart so the
     // storefront drawer / cart page show authoritative, current prices.
     // The /v3/cart group is auth-only (no anonymous session per Q7=B);
@@ -512,7 +512,7 @@ return function (App $app): void {
     // POST /v3/ota/updates  (NO auth)
     //
     // Polled by @capgo/capacitor-updater on the device to check for a new
-    // web bundle. INTENTIONALLY UNAUTHENTICATED — the plugin carries no user
+    // web bundle. INTENTIONALLY UNAUTHENTICATED, the plugin carries no user
     // token; it only returns public release metadata (version + CDN url +
     // SHA256 checksum) and fails safe to "no update". Bundle integrity is
     // enforced on-device (checksum + signature verification).
@@ -520,7 +520,7 @@ return function (App $app): void {
     $app->post('/v3/ota/updates', \Bayti\Api\Http\Controllers\Ota\CheckOtaUpdateController::class);
 
     // -------------------------------------------------------------------
-    // Vendor applications — PUBLIC seller intake ("Become a seller").
+    // Vendor applications, PUBLIC seller intake ("Become a seller").
     //
     // POST /v3/vendor-applications  (NO auth)
     //
@@ -540,7 +540,7 @@ return function (App $app): void {
     );
 
     // -------------------------------------------------------------------
-    // Account deletion — PUBLIC (NO auth) data-deletion request.
+    // Account deletion, PUBLIC (NO auth) data-deletion request.
     //
     // POST /v3/account/deletion-request  (NO auth)
     //
@@ -552,7 +552,7 @@ return function (App $app): void {
     // process the deletion manually.
     //
     // Anti-enumeration: ALWAYS returns 202 { "status": "received" } for
-    // a well-formed request — it never reveals whether the email matches
+    // a well-formed request, it never reveals whether the email matches
     // an account. Anti-spam: throttled per-IP (CF-Connecting-IP) +
     // per-email inside the controller via the KeyValueStore.
     // -------------------------------------------------------------------
@@ -561,14 +561,14 @@ return function (App $app): void {
         \Bayti\Api\Http\Controllers\Account\RequestAccountDeletionController::class,
     );
 
-    // M2.2 — Products (Day 2 of 10-day rollout)
+    // M2.2, Products (Day 2 of 10-day rollout)
     $app->get('/v3/products', \Bayti\Api\Http\Controllers\Catalog\ListProductsController::class);
-    // M3.2.X.10 — Faceted search. Registered BEFORE /v3/products/{slug}
+    // M3.2.X.10, Faceted search. Registered BEFORE /v3/products/{slug}
     // so the literal 'facets' segment doesn't get eaten by the slug
     // matcher.
     $app->get('/v3/products/facets', \Bayti\Api\Http\Controllers\Catalog\ListFacetsController::class);
     $app->get('/v3/products/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetProductController::class);
-    // M3.2.X.12-G — Per-product recommendations (public)
+    // M3.2.X.12-G, Per-product recommendations (public)
     $app->get('/v3/products/{slug}/recommendations',
         \Bayti\Api\Http\Controllers\Catalog\GetProductRecommendationsController::class);
     $app->get('/v3/vendors/{slug}/products', \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsController::class);
@@ -589,7 +589,7 @@ return function (App $app): void {
     $app->post('/v3/vendors/{vendorId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\CreateVendorReviewController::class)->add(AuthMiddleware::class);
     $app->post('/v3/reviews/{id:[0-9]+}/helpful', \Bayti\Api\Http\Controllers\Review\MarkReviewHelpfulController::class)->add(AuthMiddleware::class);
 
-    // M3.1.5a — by-legacy-id variants for mobile compatibility during
+    // M3.1.5a, by-legacy-id variants for mobile compatibility during
     // the strangler-fig flip. These resolve legacy WordPress/CodeIgniter
     // ids to v3 entities; same response shape as the slug variants.
     // Retired when mobile rebuilds against slug semantics (M3.1.10+).
@@ -598,12 +598,12 @@ return function (App $app): void {
     // collide with real slugs, and the segment counts differ from the
     // slug routes (3 vs 2 segments after /v3/) so Slim ordering is moot.
     $app->get('/v3/products/by-legacy-id/{id}', \Bayti\Api\Http\Controllers\Catalog\GetProductByLegacyIdController::class);
-    // Canonical numeric product detail by v3 id — resolves v3-native products
+    // Canonical numeric product detail by v3 id, resolves v3-native products
     // (no legacy id) too. The storefront navigates by v3 id everywhere now.
     $app->get('/v3/products/by-id/{id}', \Bayti\Api\Http\Controllers\Catalog\GetProductByIdController::class);
     $app->get('/v3/vendors/by-legacy-id/{id}', \Bayti\Api\Http\Controllers\Catalog\GetVendorByLegacyIdController::class);
     $app->get('/v3/vendors/by-legacy-id/{id}/products', \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsByLegacyIdController::class);
-    // PUBLIC store size guide (no auth) — shoppers view the chart from the
+    // PUBLIC store size guide (no auth), shoppers view the chart from the
     // mobile PDP. Resolves the vendor by legacy id and returns the same row
     // shape as the vendor-self-scoped GET /v3/vendor/measurements.
     $app->get('/v3/vendors/by-legacy-id/{id}/size-chart', \Bayti\Api\Http\Controllers\Catalog\StoreSizeChartByLegacyIdController::class);
@@ -613,36 +613,36 @@ return function (App $app): void {
     // + literal /size-chart suffix means no collision with /v3/vendors/{slug}.
     $app->get('/v3/vendors/{slug}/size-chart', \Bayti\Api\Http\Controllers\Catalog\StoreSizeChartBySlugController::class);
 
-    // M3.1.5.5e — Vendor labels (per-vendor merchandising collections).
+    // M3.1.5.5e, Vendor labels (per-vendor merchandising collections).
     // Slug variant for web/canonical use; by-legacy-id variant for
     // mobile compat.
     $app->get('/v3/vendors/{slug}/labels', \Bayti\Api\Http\Controllers\Catalog\ListVendorLabelsController::class);
     $app->get('/v3/vendors/by-legacy-id/{id}/labels', \Bayti\Api\Http\Controllers\Catalog\ListVendorLabelsByLegacyIdController::class);
 
-    // M3.1.5.5f — Styles (curated outfits, community + editorial).
+    // M3.1.5.5f, Styles (curated outfits, community + editorial).
     // Read-only in this phase; admin/future-admin-UI manages writes.
     $app->get('/v3/styles', \Bayti\Api\Http\Controllers\Catalog\ListStylesController::class);
-    // Single style by slug — backs the mobile deep-link / hard-reload path
+    // Single style by slug, backs the mobile deep-link / hard-reload path
     // (style-view re-fetches when router state is wiped). Registered after
     // the bare /v3/styles list so Slim matches the literal path first.
     $app->get('/v3/styles/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetStyleController::class);
 
-    // M2.2 — Sitemap data for apps/web build-time generator
+    // M2.2, Sitemap data for apps/web build-time generator
     $app->get('/v3/sitemap-data', \Bayti\Api\Http\Controllers\Catalog\GetSitemapDataController::class);
 
     // ===================================================================
-    // M2.1 — Catalog: admin endpoints (admin auth required)
+    // M2.1, Catalog: admin endpoints (admin auth required)
     // ===================================================================
     //
     // Middleware order: outermost-first is OPPOSITE of add() order.
     // We want AuthMiddleware to run FIRST (set the user attribute),
     // then AdminAuthMiddleware to run SECOND (check the user is admin).
-    // So: add(AdminAuth) THEN add(Auth) — Auth is added last, runs first.
+    // So: add(AdminAuth) THEN add(Auth), Auth is added last, runs first.
 
     $perm = $app->getContainer()->get(\Bayti\Api\Http\Middleware\PermissionGuard::class);
 
     $app->group('/v3/admin', function (RouteCollectorProxy $group) use ($perm): void {
-        // Admin in-app notification feed (admin top-bar bell) — replaces the
+        // Admin in-app notification feed (admin top-bar bell), replaces the
         // legacy /vendors/common/notifications call for admins.
         $group->get(
             '/notifications',
@@ -653,7 +653,7 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\Notification\MarkAdminNotificationsReadController::class,
         )->add($perm->for('notifications.view'));
 
-        // Chat moderation — feed of PII-flagged message attempts.
+        // Chat moderation, feed of PII-flagged message attempts.
         $group->get(
             '/chat/flagged',
             \Bayti\Api\Http\Controllers\Admin\Chat\ListFlaggedMessagesController::class,
@@ -669,9 +669,9 @@ return function (App $app): void {
         $group->put('/brands/{id}', \Bayti\Api\Http\Controllers\Admin\Brand\UpdateBrandController::class)->add($perm->for('catalog.brands_manage'));
         $group->delete('/brands/{id}', \Bayti\Api\Http\Controllers\Admin\Brand\DeleteBrandController::class)->add($perm->for('catalog.brands_manage'));
 
-        // Mobile OTA — self-hosted web-bundle releases, managed from the portal
+        // Mobile OTA, self-hosted web-bundle releases, managed from the portal
         // (upload a .zip, publish, roll back) so releases never touch the shell.
-        // Gated on settings.* — this is effectively super-admin scope because
+        // Gated on settings.*, this is effectively super-admin scope because
         // publishing OTA ships JS to every user. Bundles live on the app server
         // (var/uploads/ota, served statically at /uploads/ota); devices poll the
         // public POST /v3/ota/updates.
@@ -680,10 +680,10 @@ return function (App $app): void {
         $group->patch('/ota/bundles/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Ota\SetOtaBundleActiveController::class)->add($perm->for('settings.edit'));
         $group->delete('/ota/bundles/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Ota\DeleteOtaBundleController::class)->add($perm->for('settings.edit'));
 
-        // Admin dashboards — "Top performers" carousels
+        // Admin dashboards, "Top performers" carousels
         $group->get('/top-stores', \Bayti\Api\Http\Controllers\Admin\Analytics\ListTopStoresController::class)->add($perm->for('vendors.view'));
         $group->get('/top-customers', \Bayti\Api\Http\Controllers\Admin\Analytics\ListTopCustomersController::class)->add($perm->for('orders.view'));
-        // Admin dashboard — period-over-period insight (KPIs, revenue series, status mix, at-risk)
+        // Admin dashboard, period-over-period insight (KPIs, revenue series, status mix, at-risk)
         $group->get('/insights', \Bayti\Api\Http\Controllers\Admin\Analytics\GetAdminInsightsController::class)->add($perm->for('reports.view'));
 
         // Vendor admin
@@ -695,12 +695,12 @@ return function (App $app): void {
         $group->get('/vendors/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorController::class)->add($perm->for('vendors.view'));
         $group->put('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\UpdateVendorController::class)->add($perm->for('vendors.edit'));
         $group->delete('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\DeleteVendorController::class)->add($perm->for('vendors.suspend'));
-        // Sign in as a vendor (impersonation) — mints a session for the vendor's
+        // Sign in as a vendor (impersonation), mints a session for the vendor's
         // owner tagged with the admin's id (imp_by claim).
         $group->post('/vendors/{id:[0-9]+}/impersonate',
             \Bayti\Api\Http\Controllers\Admin\Vendor\ImpersonateVendorController::class)->add($perm->for('vendors.impersonate'));
 
-        // M3.2.X.6-C — Vendor lifecycle state transitions
+        // M3.2.X.6-C, Vendor lifecycle state transitions
         $group->post('/vendors/{id:[0-9]+}/approve',
             \Bayti\Api\Http\Controllers\Admin\Vendor\ApproveVendorController::class)->add($perm->for('vendors.approve'));
         // Admin KYC compliance review.
@@ -717,7 +717,7 @@ return function (App $app): void {
 
         // Seller applications ("apply -> admin approves" intake). List is
         // gated by vendors.view; approve/reject by vendors.approve (REUSING
-        // the existing vendor permission keys — no new keys minted).
+        // the existing vendor permission keys, no new keys minted).
         // Approve provisions a User + Vendor and emails the applicant to
         // set their password; reject records a reason + optionally emails.
         $group->get('/vendor-applications',
@@ -731,7 +731,7 @@ return function (App $app): void {
         $group->post('/vendor-applications/{id:[0-9]+}/resend-credentials',
             \Bayti\Api\Http\Controllers\Admin\VendorApplication\ResendVendorApplicationCredentialsController::class)->add($perm->for('vendors.approve'));
 
-        // M3.2.X.14-D — Cross-vendor metrics list (admin dashboard).
+        // M3.2.X.14-D, Cross-vendor metrics list (admin dashboard).
         // Registered BEFORE /vendors/{id:[0-9]+}/metrics so the
         // literal 'vendor-metrics' path doesn't get parsed as a
         // vendor id.
@@ -742,15 +742,15 @@ return function (App $app): void {
         $group->get('/analytics',
             \Bayti\Api\Http\Controllers\Admin\GetAdminPlatformAnalyticsController::class)->add($perm->for('reports.view'));
 
-        // M3.2.X.14-B — Vendor performance metrics (admin single-vendor view)
+        // M3.2.X.14-B, Vendor performance metrics (admin single-vendor view)
         $group->get('/vendors/{id:[0-9]+}/metrics',
             \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorMetricsController::class)->add($perm->for('reports.view'));
 
-        // M3.2.X.13-E — Vendor analytics dashboard (admin single-vendor view)
+        // M3.2.X.13-E, Vendor analytics dashboard (admin single-vendor view)
         $group->get('/vendors/{id:[0-9]+}/analytics',
             \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorAnalyticsController::class)->add($perm->for('reports.view'));
 
-        // M3.2.X.12-G — Admin recommendations debug
+        // M3.2.X.12-G, Admin recommendations debug
         $group->get('/recommendations/{product_id:[0-9]+}/explain',
             \Bayti\Api\Http\Controllers\Admin\Catalog\GetAdminRecommendationsExplainController::class)->add($perm->for('reports.view'));
 
@@ -768,7 +768,7 @@ return function (App $app): void {
         $group->patch('/orders/{orderId:[0-9]+}/items/{itemId:[0-9]+}/status',
             \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderItemStatusController::class)->add($perm->for('orders.update_item_status'));
 
-        // M3.2.X.17-C — Order timeline (admin chronological event feed)
+        // M3.2.X.17-C, Order timeline (admin chronological event feed)
         $group->get('/orders/{id:[0-9]+}/timeline',
             \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderTimelineController::class)->add($perm->for('orders.view_detail'));
 
@@ -790,18 +790,18 @@ return function (App $app): void {
         $group->get('/disputes/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Dispute\GetDisputeController::class)->add($perm->for('disputes.view'));
         $group->patch('/disputes/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Dispute\ResolveDisputeController::class)->add($perm->for('disputes.resolve'));
 
-        // Notification logs (M3.2.X.4-C) — admin observability surface
+        // Notification logs (M3.2.X.4-C), admin observability surface
         // for the notification_logs table. Filters: order_id, template,
         // status, recipient, error_kind, since, until, limit, offset.
         $group->get('/notification-logs',
             \Bayti\Api\Http\Controllers\Admin\NotificationLog\ListNotificationLogsController::class)->add($perm->for('notifications.view'));
 
-        // Audit log — forensic view of the append-only audit_log table.
+        // Audit log, forensic view of the append-only audit_log table.
         // Filters: action, subject_type, user_id, subject_id, date_from, date_to.
         $group->get('/audit-logs',
             \Bayti\Api\Http\Controllers\Admin\Audit\ListAuditLogsController::class)->add($perm->for('audit.view'));
 
-        // M3.3.2-C — Admin user list, detail, activate, deactivate.
+        // M3.3.2-C, Admin user list, detail, activate, deactivate.
         $group->get('/users',
             \Bayti\Api\Http\Controllers\Admin\User\ListUsersController::class)->add($perm->for('users.view'));
         $group->get('/users/{id:[0-9]+}',
@@ -810,13 +810,13 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\User\ActivateUserController::class)->add($perm->for('users.deactivate'));
         $group->post('/users/{id:[0-9]+}/deactivate',
             \Bayti\Api\Http\Controllers\Admin\User\DeactivateUserController::class)->add($perm->for('users.deactivate'));
-        // M5.1 — Admin-initiated staff creation + password reset.
+        // M5.1, Admin-initiated staff creation + password reset.
         $group->post('/users',
             \Bayti\Api\Http\Controllers\Admin\User\CreateUserController::class)->add($perm->for('users.create'));
         $group->patch('/users/{id:[0-9]+}/password',
             \Bayti\Api\Http\Controllers\Admin\User\AdminResetPasswordController::class)->add($perm->for('users.edit'));
 
-        // M3.4-H — Product collection CRUD (admin).
+        // M3.4-H, Product collection CRUD (admin).
         $group->get('/collections',
             [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'list'])->add($perm->for('catalog.collections_view'));
         $group->post('/collections',
@@ -828,7 +828,7 @@ return function (App $app): void {
         $group->delete('/collections/{id:[0-9]+}',
             [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'delete'])->add($perm->for('catalog.collections_manage'));
 
-        // HP-BE3 — Campaigns CRUD (homepage Anniversary Deals + Flash Sale).
+        // HP-BE3, Campaigns CRUD (homepage Anniversary Deals + Flash Sale).
         $group->get('/campaigns',
             [\Bayti\Api\Http\Controllers\Admin\Catalog\CampaignCrudController::class, 'list'])->add($perm->for('catalog.campaigns_view'));
         $group->post('/campaigns',
@@ -840,13 +840,13 @@ return function (App $app): void {
         $group->delete('/campaigns/{id:[0-9]+}',
             [\Bayti\Api\Http\Controllers\Admin\Catalog\CampaignCrudController::class, 'delete'])->add($perm->for('catalog.campaigns_manage'));
 
-        // M3.3.2-D — Admin finance (transactions + commissions read).
+        // M3.3.2-D, Admin finance (transactions + commissions read).
         $group->get('/transactions',
             \Bayti\Api\Http\Controllers\Admin\Finance\ListTransactionsController::class)->add($perm->for('payouts.view_transactions'));
         $group->get('/commissions',
             \Bayti\Api\Http\Controllers\Admin\Finance\ListCommissionsController::class)->add($perm->for('payouts.view_commissions'));
 
-        // M3.4-C — Admin message a specific vendor (portal → vendor comms).
+        // M3.4-C, Admin message a specific vendor (portal → vendor comms).
         $group->get('/vendors/{id:[0-9]+}/messages',
             \Bayti\Api\Http\Controllers\Admin\Vendor\ListVendorMessagesController::class)->add($perm->for('vendors.view'));
         $group->post('/vendors/{id:[0-9]+}/messages',
@@ -901,8 +901,8 @@ return function (App $app): void {
         $group->post('/notification-schedules/{id:[0-9]+}/run-now',
             \Bayti\Api\Http\Controllers\Admin\Notification\RunScheduleNowController::class)->add($perm->for('notifications.send'));
 
-        // M3.3.2-F — Admin product write (admin can create/update/delete any product).
-        // Global admin catalogue (all vendors, all statuses — surfaces drafts,
+        // M3.3.2-F, Admin product write (admin can create/update/delete any product).
+        // Global admin catalogue (all vendors, all statuses, surfaces drafts,
         // unlike the public /v3/products) + single-product read for the editor
         // (any status, so draft edit forms load instead of 404ing on the
         // storefront route). Numeric {id} keeps the detail route off the list.
@@ -918,14 +918,14 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\Product\DeleteAdminProductController::class)->add($perm->for('products.delete'));
 
         // Admin-scoped vendor catalog listing (store-products manager). Keyed
-        // by v3 vendor id; UNGATED — returns ALL of the vendor's products in
+        // by v3 vendor id; UNGATED, returns ALL of the vendor's products in
         // every state and works for inactive/pending stores, unlike the public
         // storefront routes (which 404 inactive vendors and hide non
         // active+approved products). See ListAdminVendorProductsController.
         $group->get('/vendors/{id:[0-9]+}/products',
             \Bayti\Api\Http\Controllers\Admin\Product\ListAdminVendorProductsController::class)->add($perm->for('products.view'));
 
-        // M3.2.X.8-E — Promo code CRUD. Soft-delete preserves
+        // M3.2.X.8-E, Promo code CRUD. Soft-delete preserves
         // promo_redemptions FK; hard-delete only when zero redemptions.
         $group->get('/promo-codes',
             \Bayti\Api\Http\Controllers\Admin\PromoCode\ListPromoCodesController::class)->add($perm->for('coupons.view'));
@@ -938,7 +938,7 @@ return function (App $app): void {
         $group->delete('/promo-codes/{id:[0-9]+}',
             \Bayti\Api\Http\Controllers\Admin\PromoCode\DeletePromoCodeController::class)->add($perm->for('coupons.delete'));
 
-        // M5 — Admin gift-card surface. List/detail are gated by
+        // M5, Admin gift-card surface. List/detail are gated by
         // gift_cards.view (the same key the portal route guard applies
         // to /admin-gift-cards). Adjust = gift_cards.adjust_balance,
         // void = gift_cards.delete ("Void gift cards"), issue =
@@ -960,7 +960,7 @@ return function (App $app): void {
         $group->post('/gift-cards/{id:[0-9]+}/void',
             \Bayti\Api\Http\Controllers\Admin\GiftCard\VoidGiftCardController::class)->add($perm->for('gift_cards.delete'));
 
-        // M3.2.X.18-F — Returns admin surface
+        // M3.2.X.18-F, Returns admin surface
         $group->get('/returns',
             \Bayti\Api\Http\Controllers\Admin\Order\ListAdminReturnsController::class)->add($perm->for('returns.view'));
         $group->get('/returns/{id:[0-9]+}',
@@ -974,7 +974,7 @@ return function (App $app): void {
         $group->post('/returns/{id:[0-9]+}/record-refund',
             \Bayti\Api\Http\Controllers\Admin\Order\RecordReturnRefundController::class)->add($perm->for('returns.refund'));
 
-        // M3.2.X.15-F — FX rate management (display-only multi-currency).
+        // M3.2.X.15-F, FX rate management (display-only multi-currency).
         // GET lists all rates with staleness flags; PUT upserts the rate
         // for a single target currency. Audited via AuditEmitter with
         // subject_type='FxRate'; visible via the X.4-C audit-log surface.
@@ -1013,10 +1013,10 @@ return function (App $app): void {
         $group->get('/orders/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderController::class);
         $group->patch('/orders/{orderId:[0-9]+}/items/{itemId:[0-9]+}/status',
             \Bayti\Api\Http\Controllers\Vendor\Order\TransitionVendorOrderItemController::class);
-        // M3.2.X.17-D — vendor order timeline
+        // M3.2.X.17-D, vendor order timeline
         $group->get('/orders/{id:[0-9]+}/timeline',
             \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderTimelineController::class);
-        // M3.2.X.18-E — vendor return endpoints
+        // M3.2.X.18-E, vendor return endpoints
         $group->get(
             '/returns',
             \Bayti\Api\Http\Controllers\Vendor\Order\ListVendorReturnsController::class,
@@ -1029,22 +1029,22 @@ return function (App $app): void {
             '/returns/{id:[0-9]+}/confirm-receipt',
             \Bayti\Api\Http\Controllers\Vendor\Order\ConfirmReceiptController::class,
         );
-        // M3.2.X.14-C — vendor self-serve performance metrics
+        // M3.2.X.14-C, vendor self-serve performance metrics
         $group->get(
             '/metrics',
             \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfMetricsController::class,
         );
-        // M3.2.X.13-E — vendor self-serve analytics dashboard
+        // M3.2.X.13-E, vendor self-serve analytics dashboard
         $group->get(
             '/analytics',
             \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfAnalyticsController::class,
         );
-        // F7a — insightful vendor dashboard (catalog + sales + operations).
+        // F7a, insightful vendor dashboard (catalog + sales + operations).
         $group->get(
             '/dashboard',
             \Bayti\Api\Http\Controllers\Vendor\GetVendorDashboardController::class,
         );
-        // Vendor in-app notification feed (top-bar bell) — replaces the
+        // Vendor in-app notification feed (top-bar bell), replaces the
         // legacy /vendors/common/notifications.
         $group->get(
             '/notifications',
@@ -1054,7 +1054,7 @@ return function (App $app): void {
             '/notifications/mark-read',
             \Bayti\Api\Http\Controllers\Vendor\Notification\MarkVendorNotificationsReadController::class,
         );
-        // Vendor KYC compliance documents — replaces the legacy
+        // Vendor KYC compliance documents, replaces the legacy
         // /vendors/settings/update-compliance + the misused onboarding submit.
         $group->get(
             '/compliance',
@@ -1065,12 +1065,12 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Vendor\Compliance\UpdateVendorComplianceController::class,
         );
 
-        // M3.4-C — Vendor product reviews (read-only).
+        // M3.4-C, Vendor product reviews (read-only).
         $group->get('/reviews',
             \Bayti\Api\Http\Controllers\Vendor\Review\ListVendorReviewsController::class,
         );
 
-        // M3.4-D — Vendor label CRUD.
+        // M3.4-D, Vendor label CRUD.
         $group->get('/labels',
             [\Bayti\Api\Http\Controllers\Vendor\Label\VendorLabelCrudController::class, 'list'],
         );
@@ -1084,7 +1084,7 @@ return function (App $app): void {
             [\Bayti\Api\Http\Controllers\Vendor\Label\VendorLabelCrudController::class, 'delete'],
         );
 
-        // M3.3.1-F — Vendor coupon CRUD (vendor-scoped promo codes)
+        // M3.3.1-F, Vendor coupon CRUD (vendor-scoped promo codes)
         $group->get('/coupons',
             \Bayti\Api\Http\Controllers\Vendor\Coupon\ListVendorCouponsController::class,
         );
@@ -1097,19 +1097,19 @@ return function (App $app): void {
         $group->delete('/coupons/{id:[0-9]+}',
             \Bayti\Api\Http\Controllers\Vendor\Coupon\DeleteVendorCouponController::class,
         );
-        // F3 — vendor coupon detail + usage analytics.
+        // F3, vendor coupon detail + usage analytics.
         $group->get('/coupons/{id:[0-9]+}',
             [\Bayti\Api\Http\Controllers\Vendor\Coupon\VendorCouponAnalyticsController::class, 'detail']);
         $group->get('/coupons/{id:[0-9]+}/analytics',
             [\Bayti\Api\Http\Controllers\Vendor\Coupon\VendorCouponAnalyticsController::class, 'analytics']);
 
         // Vendor read-only collections list (for the product form picker).
-        // Reuses the admin controller's list method — read-only, no writes
+        // Reuses the admin controller's list method, read-only, no writes
         // exposed under the vendor group.
         $group->get('/collections',
             [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'list']);
 
-        // F2 — Vendor size chart (the store's published size guide).
+        // F2, Vendor size chart (the store's published size guide).
         // Named "measurements" for portal/legacy continuity; this is the
         // vendor's size chart, NOT a customer's body measurements
         // (/v3/me/measurements).
@@ -1122,13 +1122,13 @@ return function (App $app): void {
         $group->delete('/measurements/{id:[0-9]+}',
             [\Bayti\Api\Http\Controllers\Vendor\VendorSizeChartController::class, 'delete']);
 
-        // F3 — Vendor message inbox (read-side of admin→vendor messages).
+        // F3, Vendor message inbox (read-side of admin→vendor messages).
         $group->get('/messages',
             [\Bayti\Api\Http\Controllers\Vendor\VendorMessagesController::class, 'list']);
         $group->post('/messages/{id:[0-9]+}/read',
             [\Bayti\Api\Http\Controllers\Vendor\VendorMessagesController::class, 'markRead']);
 
-        // M3.3.1-D — Vendor store settings
+        // M3.3.1-D, Vendor store settings
         $group->get('/store',
             \Bayti\Api\Http\Controllers\Vendor\Settings\GetVendorStoreController::class,
         );
@@ -1136,7 +1136,7 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Vendor\Settings\UpdateVendorStoreController::class,
         );
 
-        // M3.4-A — Vendor payment (bank/payout) + tax (UAE VAT compliance).
+        // M3.4-A, Vendor payment (bank/payout) + tax (UAE VAT compliance).
         // All fields already on the Vendor entity; no schema migration needed.
         $group->get('/store/payment',
             \Bayti\Api\Http\Controllers\Vendor\Settings\GetVendorPaymentController::class,
@@ -1151,7 +1151,7 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Vendor\Settings\UpdateVendorTaxController::class,
         );
 
-        // M3.4-B — Vendor notification preferences + store status toggle.
+        // M3.4-B, Vendor notification preferences + store status toggle.
         $group->get('/store/notifications',
             \Bayti\Api\Http\Controllers\Vendor\Settings\GetVendorNotificationsController::class,
         );
@@ -1162,11 +1162,11 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Vendor\Settings\ToggleVendorStoreStatusController::class,
         );
 
-        // M3.3.1-C — Vendor product write (create / update / soft-delete).
+        // M3.3.1-C, Vendor product write (create / update / soft-delete).
         // Read is handled by the public GET /v3/vendors/{slug}/products +
         // GET /v3/vendors/by-legacy-id/{id}/products catalog endpoints.
         // Self-scoped list (the vendor's OWN catalog, all states) for the
-        // portal — resolves the vendor from the authenticated user.
+        // portal, resolves the vendor from the authenticated user.
         $group->get('/products',
             \Bayti\Api\Http\Controllers\Vendor\Product\ListVendorOwnProductsController::class,
         );
@@ -1213,7 +1213,7 @@ return function (App $app): void {
         ->add(\Bayti\Api\Http\Middleware\VendorAuthMiddleware::class)
         ->add(AuthMiddleware::class);
 
-    // M3.2.X.6-D — Vendor self-serve onboarding endpoints.
+    // M3.2.X.6-D, Vendor self-serve onboarding endpoints.
     //
     // SEPARATE route group with AuthMiddleware ONLY (no
     // VendorAuthMiddleware). Per Option I locked in the M3.2.X.6
@@ -1224,7 +1224,7 @@ return function (App $app): void {
     //     a user who is NOT yet a vendor (any authenticated user
     //     can submit).
     //   - GET /v3/vendor/onboarding/status lets a vendor user check
-    //     their pending status — the lifecycle gate would block
+    //     their pending status, the lifecycle gate would block
     //     them from this if it ran here.
     //
     // The submit controller flips is_vendor=true; the status
@@ -1232,7 +1232,7 @@ return function (App $app): void {
     // non-vendor users while leaving pending+suspended users
     // through.
     $app->group('/v3/vendor/onboarding', function (RouteCollectorProxy $group): void {
-        // Self-serve vendor creation is CLOSED — sellers now apply via the
+        // Self-serve vendor creation is CLOSED, sellers now apply via the
         // public POST /v3/vendor-applications and an admin approves. This
         // route returns 410 Gone pointing at the application flow (was
         // SubmitOnboardingController, which created a pending vendor).

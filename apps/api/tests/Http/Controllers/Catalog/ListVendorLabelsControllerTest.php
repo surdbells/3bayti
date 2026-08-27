@@ -101,7 +101,7 @@ final class ListVendorLabelsControllerTest extends HttpTestCase
             $this->jsonRequest('GET', '/v3/vendors/no-labels/labels'),
         );
 
-        // Empty list != not found — 200 with empty data array is the
+        // Empty list != not found, 200 with empty data array is the
         // right semantic for "this vendor has no labels yet".
         self::assertSame(200, $response->getStatusCode());
         $body = $this->jsonBody($response);

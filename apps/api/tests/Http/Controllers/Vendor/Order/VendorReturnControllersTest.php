@@ -51,7 +51,7 @@ use Psr\Http\Message\ResponseInterface;
 final class VendorReturnControllersTest extends HttpTestCase
 {
     // =================================================================
-    // GET /v3/vendor/returns — list
+    // GET /v3/vendor/returns, list
     // =================================================================
 
     #[Test]
@@ -158,7 +158,7 @@ final class VendorReturnControllersTest extends HttpTestCase
     }
 
     // =================================================================
-    // GET /v3/vendor/returns/{id} — detail
+    // GET /v3/vendor/returns/{id}, detail
     // =================================================================
 
     #[Test]
@@ -342,7 +342,7 @@ final class VendorReturnControllersTest extends HttpTestCase
     #[Test]
     public function nonVendorUserGets403(): void
     {
-        // Not flagged as vendor — VendorAuthMiddleware should 403.
+        // Not flagged as vendor, VendorAuthMiddleware should 403.
         $regularUser = $this->makeUser(id: 99);
         $this->bindVendorEm(vendorUser: $regularUser, ownedVendorIds: []);
 
@@ -407,7 +407,7 @@ final class VendorReturnControllersTest extends HttpTestCase
             }
             public function save(OrderReturnRequest $rr): void
             {
-                // No-op for vendor tests — state changes are inspected
+                // No-op for vendor tests, state changes are inspected
                 // via the entity in scope.
             }
             public function getClassName(): string { return OrderReturnRequest::class; }

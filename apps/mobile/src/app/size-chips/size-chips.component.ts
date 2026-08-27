@@ -36,7 +36,7 @@ export class SizeChipsComponent implements OnChanges {
       }));
   }
 
-  /** Select a size — ensures only one selected at a time. Clicking an already-selected size deselects it. */
+  /** Select a size, ensures only one selected at a time. Clicking an already-selected size deselects it. */
   selectSize(item: { key: string; available: boolean; selected: boolean }) {
     if (!item.available) return;
 

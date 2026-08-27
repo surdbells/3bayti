@@ -18,7 +18,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 
 /**
- * GET /v3/vendor/dashboard — verifies vendor resolution, that the
+ * GET /v3/vendor/dashboard, verifies vendor resolution, that the
  * calculator is invoked with the owned store ids, and the envelope is
  * returned. The aggregate SQL itself is covered in the calculator test.
  */

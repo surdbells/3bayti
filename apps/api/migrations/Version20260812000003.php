@@ -14,21 +14,21 @@ use Doctrine\Migrations\AbstractMigration;
  * FALSE (there was no verified flag to carry over). But OTP login gates on
  * is_phone_verified for BOTH channels: OtpLoginSendController returns a
  * FAKE verification id and dispatches NOTHING when the resolved user is not
- * phone-verified. So every migrated customer hit a silent dead end —
+ * phone-verified. So every migrated customer hit a silent dead end -
  * the app showed the "code sent" screen, but no SMS/email was ever sent
  * (nothing in the MessageCentral / ZeptoMail logs), while brand-new v3
  * sign-ups (verified during registration) logged in fine.
  *
- * Migrated accounts are established legacy customers — the legacy platform
+ * Migrated accounts are established legacy customers, the legacy platform
  * authenticated them by phone OTP (same MessageCentral flow), so their
  * numbers are real and trusted. We flip is_phone_verified = TRUE for them
  * so login dispatches a real code.
  *
- * Scope: legacy_user_id IS NOT NULL — migrated rows only. Native v3 sign-ups
+ * Scope: legacy_user_id IS NOT NULL, migrated rows only. Native v3 sign-ups
  * (legacy_user_id NULL) keep their real verification state. is_email_verified
  * is deliberately left untouched: login does not depend on it (it checks
  * is_phone_verified), and we don't assert email ownership we can't
- * substantiate. Idempotent — a second run matches nothing.
+ * substantiate. Idempotent, a second run matches nothing.
  *
  * Preview affected rows:
  *   SELECT count(*) FROM users

@@ -6,7 +6,7 @@ namespace Bayti\Api\Payment\Noon;
 
 /**
  * Noon Payments API result codes captured during M3.1.6 recon
- * (docs.noonpayments.com — specifically the resultCode field
+ * (docs.noonpayments.com, specifically the resultCode field
  * returned in API responses).
  *
  * Only codes the v3 layer needs to recognise live here. Unknown
@@ -27,7 +27,7 @@ final class NoonResultCodes
 
     /**
      * Duplicate merchant order reference. Source:
-     * docs.noonpayments.com (multiple payment-method pages —
+     * docs.noonpayments.com (multiple payment-method pages -
      * "In case an order with the same reference is already
      * present, the system will return resultCode: 19012 and in
      * the result block there will be the details of the existing
@@ -42,7 +42,7 @@ final class NoonResultCodes
 
     /**
      * Business not configured for the requested feature. Source:
-     * docs.noonpayments.com Samsung Pay direct page — "the system
+     * docs.noonpayments.com Samsung Pay direct page, "the system
      * will return resultCode: 19100 if the business is not
      * enabled to submit card details. Please contact our support
      * team for further information".

@@ -14,7 +14,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * A finalised order — created at checkout-initiate (with status
+ * A finalised order, created at checkout-initiate (with status
  * 'pending_payment') and transitioned by the payment-finalize flow.
  *
  * Status lifecycle
@@ -38,16 +38,16 @@ use Doctrine\ORM\Mapping as ORM;
  * ================
  * Our v3-level idempotency key, sent to Noon as merchant_reference.
  * Format: '3B-<base36-timestamp>-<random-6>' giving ~32 chars max.
- * UNIQUE at the DB layer — defensive against the case where Noon's
+ * UNIQUE at the DB layer, defensive against the case where Noon's
  * merchant-side uniqueness is not enabled (per their docs that
  * setting requires manual support enablement).
  *
  * Monetary fields
  * ================
- * subtotal       — sum of (item.unit_price * item.quantity)
- * delivery_fee   — fixed at checkout, can vary by vendor/region
- * discount       — any promo/loyalty discount applied
- * total          — subtotal + delivery_fee - discount (or zero if negative)
+ * subtotal      , sum of (item.unit_price * item.quantity)
+ * delivery_fee  , fixed at checkout, can vary by vendor/region
+ * discount      , any promo/loyalty discount applied
+ * total         , subtotal + delivery_fee - discount (or zero if negative)
  *
  * All DECIMAL(10, 2). Use bcmath / decimal arithmetic; never floats.
  *
@@ -96,7 +96,7 @@ class Order
 
     /**
      * The cart this order was created from. Kept so the cart is converted only
-     * when the order is PAID (not at checkout initiate — otherwise cancelling
+     * when the order is PAID (not at checkout initiate, otherwise cancelling
      * out of the payment page would empty the cart). NULL for orders with no
      * cart, e.g. gift-card purchases, so nothing is converted for those.
      */
@@ -165,7 +165,7 @@ class Order
      * amount; the redemption row holds the WHY (which code, which type,
      * which value). Keeping the discount column independent of the
      * redemption row means deleting a redemption (admin override) does
-     * NOT zero out the order's discount — that's a deliberate decision
+     * NOT zero out the order's discount, that's a deliberate decision
      * tied to FK ON DELETE SET NULL on this column.
      *
      * Not persisted via cascade: the resolver in M3.2.X.8-D persists
@@ -345,7 +345,7 @@ class Order
     }
 
     /**
-     * Transition the order to 'paid' and stamp paid_at. Idempotent —
+     * Transition the order to 'paid' and stamp paid_at. Idempotent -
      * a second call (e.g. duplicate webhook) is a no-op. Throws if
      * called on a terminal order (DELIVERED already paid, REFUNDED
      * paid then reversed, etc.).
@@ -393,7 +393,7 @@ class Order
 
     /**
      * Admin-driven order status override. Bypasses normal state-
-     * machine validation — used by safety overrides (e.g. unsticking
+     * machine validation, used by safety overrides (e.g. unsticking
      * an order, manually marking failed). Caller MUST audit the
      * override; this method does NOT itself record an audit row.
      *
@@ -436,7 +436,7 @@ class Order
      *     left untouched (terminal or pre-fulfilment states; vendor
      *     item transitions don't apply).
      *
-     * Designed to be safe to call repeatedly — same item-state input
+     * Designed to be safe to call repeatedly, same item-state input
      * always produces the same order-state output.
      *
      * NOTE: this method does NOT advance the order beyond DELIVERED
@@ -513,7 +513,7 @@ class Order
         if ($newStatus !== null && $newStatus !== $this->status) {
             $this->status = $newStatus;
             // Stamp delivered_at the first time the order reaches
-            // DELIVERED. Set once — a later re-transition (e.g. an item
+            // DELIVERED. Set once, a later re-transition (e.g. an item
             // returned then re-delivered) keeps the original timestamp.
             if ($newStatus === self::STATUS_DELIVERED && $this->deliveredAt === null) {
                 $this->deliveredAt = new DateTimeImmutable();
@@ -587,7 +587,7 @@ class Order
      * AFTER the redemption row has been persisted (so Doctrine has a
      * managed entity to reference).
      *
-     * Does NOT touch the discount column — the caller is expected to
+     * Does NOT touch the discount column, the caller is expected to
      * call setDiscount($redemption->getDiscountAmount()) separately
      * since the redemption amount and the order discount, while
      * usually equal, are logically distinct (the order discount could
@@ -650,7 +650,7 @@ class Order
     {
         $gross = bcadd($subtotal, $deliveryFee, 2);
         $net = bcsub($gross, $discount, 2);
-        // Floor at zero — a discount can't make the order negative.
+        // Floor at zero, a discount can't make the order negative.
         return bccomp($net, '0.00', 2) < 0 ? '0.00' : $net;
     }
 

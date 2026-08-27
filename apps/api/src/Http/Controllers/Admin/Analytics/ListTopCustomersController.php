@@ -17,7 +17,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/admin/top-customers
  *
- * The 10 highest-spending customers ranked by number of purchases —
+ * The 10 highest-spending customers ranked by number of purchases -
  * orders that reached a real sale state (paid/fulfilling/shipped/
  * delivered). Feeds the admin "Top performers" carousel: rank +
  * customer identity + purchases_count + spend.

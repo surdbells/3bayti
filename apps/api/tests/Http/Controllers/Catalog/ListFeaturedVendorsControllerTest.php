@@ -89,7 +89,7 @@ final class ListFeaturedVendorsControllerTest extends HttpTestCase
         // 2 featured vendors returned
         self::assertCount(2, $body['data']);
 
-        // First vendor — with rating
+        // First vendor, with rating
         self::assertSame('almas-fashion', $body['data'][0]['slug']);
         self::assertSame('Almas Fashion', $body['data'][0]['name']);
         self::assertSame('A luxe label.', $body['data'][0]['description']);
@@ -99,7 +99,7 @@ final class ListFeaturedVendorsControllerTest extends HttpTestCase
         self::assertSame('silk-abaya', $body['data'][0]['products'][0]['slug']);
         self::assertSame('https://cdn.example/silk.jpg', $body['data'][0]['products'][0]['image_url']);
 
-        // Second vendor — no rating
+        // Second vendor, no rating
         self::assertSame('beit-co', $body['data'][1]['slug']);
         self::assertNull($body['data'][1]['description']);
         self::assertNull(
@@ -134,7 +134,7 @@ final class ListFeaturedVendorsControllerTest extends HttpTestCase
 
         $productRepo = $this->createMock(ProductRepository::class);
         // Must NOT be called when neither featured nor fallback yields
-        // vendors — the early return prevents wasted product queries.
+        // vendors, the early return prevents wasted product queries.
         $productRepo->expects(self::never())->method('findActivePaginated');
 
         $em = $this->stubEm(function ($em) use ($vendorRepo, $productRepo) {
@@ -149,7 +149,7 @@ final class ListFeaturedVendorsControllerTest extends HttpTestCase
             $this->jsonRequest('GET', '/v3/featured-vendors'),
         );
 
-        // 200 not 404 — empty curation is a legitimate state
+        // 200 not 404, empty curation is a legitimate state
         self::assertSame(200, $response->getStatusCode());
         $body = $this->jsonBody($response);
 
@@ -213,7 +213,7 @@ final class ListFeaturedVendorsControllerTest extends HttpTestCase
         $body = $this->jsonBody($response);
 
         // Both verified vendors surface with their embedded products,
-        // exactly as featured vendors would — same wire contract.
+        // exactly as featured vendors would, same wire contract.
         self::assertCount(2, $body['data']);
         self::assertSame('noor-atelier', $body['data'][0]['slug']);
         self::assertSame(4.2, $body['data'][0]['rating']);
@@ -228,7 +228,7 @@ final class ListFeaturedVendorsControllerTest extends HttpTestCase
     public function fallbackSkipsVerifiedVendorsWithoutInStockProducts(): void
     {
         // In the fallback path, a verified vendor with no in-stock
-        // products must NOT produce an empty Spotlight card — it's
+        // products must NOT produce an empty Spotlight card, it's
         // skipped so the surface always looks populated. (Contrast with
         // vendorWithNoProductsStillAppears: a *curated* featured vendor
         // is kept even when empty, because an admin chose to feature it.)
@@ -390,7 +390,7 @@ final class ListFeaturedVendorsControllerTest extends HttpTestCase
     {
         // Edge case: vendor flagged featured but with zero active
         // products. They should still appear in the response with
-        // an empty products array — admin chose to feature them.
+        // an empty products array, admin chose to feature them.
         $vendor = $this->makeVendor('empty-vendor', 'Empty Vendor', null);
         $vendor->setFeatured(true);
 

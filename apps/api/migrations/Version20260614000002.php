@@ -31,7 +31,7 @@ final class Version20260614000002 extends AbstractMigration
 
         $this->addSql('ALTER TABLE notification_logs ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT FALSE');
         $this->addSql('ALTER TABLE notification_logs ADD COLUMN IF NOT EXISTS read_at TIMESTAMP(0) WITH TIME ZONE DEFAULT NULL');
-        // Feed query is (recipient, status, is_read, sent_at) — index the hot path.
+        // Feed query is (recipient, status, is_read, sent_at), index the hot path.
         $this->addSql(<<<'SQL'
             CREATE INDEX IF NOT EXISTS idx_notification_logs_recipient_sent
                 ON notification_logs (recipient, sent_at)

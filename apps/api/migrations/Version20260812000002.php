@@ -16,7 +16,7 @@ use Doctrine\Migrations\AbstractMigration;
  *   1. The admin customer list rendered "AE0506995999".
  *   2. OTP login broke: the app sends the number as '+971506995999', but
  *      UserRepository::findByPhone is an exact match, so it never matched the
- *      stored local form — the user "wasn't found", anti-enumeration returned
+ *      stored local form, the user "wasn't found", anti-enumeration returned
  *      a fake verification id, and no SMS was ever dispatched (nothing in the
  *      MessageCentral logs).
  *

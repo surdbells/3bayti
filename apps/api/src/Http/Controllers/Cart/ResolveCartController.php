@@ -18,15 +18,15 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * POST /v3/cart/resolve  (public — no auth)
+ * POST /v3/cart/resolve  (public, no auth)
  *
  * Resolves a guest device-local cart payload into a server-priced cart
  * for display. For each incoming line we look up the product and emit a
  * line with its CURRENT name, image, and unit price, plus computed line
  * and cart subtotals. The result is returned through CartSerializer so
- * the shape is identical to GET /v3/cart — but it is NOT persisted.
+ * the shape is identical to GET /v3/cart, but it is NOT persisted.
  *
- * Why this exists: guests have no server cart (Q7=B — no anonymous
+ * Why this exists: guests have no server cart (Q7=B, no anonymous
  * session), so the storefront keeps a device-local cart. Synthesising
  * prices client-side risks showing a stale price if the product changed
  * after it was added. This endpoint lets the storefront render the
@@ -63,7 +63,7 @@ final class ResolveCartController
         /** @var ProductRepository $products */
         $products = $this->em->getRepository(Product::class);
 
-        // Transient cart — never persisted. A legacy cart code satisfies
+        // Transient cart, never persisted. A legacy cart code satisfies
         // the entity's "not fully anonymous" guard without needing a user.
         $cart = new Cart(legacyCartCode: 'PND');
 

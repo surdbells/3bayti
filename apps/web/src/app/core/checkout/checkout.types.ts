@@ -1,5 +1,5 @@
 /**
- * Checkout domain types — the in-progress state held across the
+ * Checkout domain types, the in-progress state held across the
  * three /checkout/* routes (address → review → payment).
  *
  * Persistence
@@ -79,7 +79,7 @@ export interface InitiateCheckoutInput {
   /**
    * Apply the customer's whole gift WALLET (aggregate balance across all
    * their spendable cards) instead of a single code. The server draws across
-   * the cards soonest-expiry first, then charges Noon the remainder — or
+   * the cards soonest-expiry first, then charges Noon the remainder, or
    * skips the gateway entirely when the wallet covers the order. Ignored when
    * gift_card_code is also supplied (an explicit code wins).
    */
@@ -90,7 +90,7 @@ export interface InitiateCheckoutInput {
  * Server response from GET /v3/checkout/status/{order_reference}.
  *
  * Mirrors apps/api GetCheckoutStatusController. Reads ONLY local
- * Order state (never calls Noon's GET_ORDER — Noon bans aggressive
+ * Order state (never calls Noon's GET_ORDER, Noon bans aggressive
  * polling). The webhook receiver is the authoritative state-of-record
  * by the time we poll; until it arrives, status stays
  * 'pending_payment' and terminal=false, telling us to keep polling.

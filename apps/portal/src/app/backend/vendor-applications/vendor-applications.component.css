@@ -1,6 +1,6 @@
 /* Layout + visuals come from the shared ax-* design system. */
 
-/* Review modal backdrop — centers the .ax-modal card (which is otherwise
+/* Review modal backdrop, centers the .ax-modal card (which is otherwise
    CDK-positioned elsewhere in the app). */
 .va-modal-overlay {
   position: fixed;
@@ -16,7 +16,7 @@
 @keyframes va-overlay-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .va-modal-overlay { animation: none; } }
 
-/* Detail list — two columns on desktop, single column on phones. */
+/* Detail list, two columns on desktop, single column on phones. */
 .va-detail {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

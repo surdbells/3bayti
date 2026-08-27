@@ -72,7 +72,7 @@ class ComplianceDocumentService
     /**
      * If $value is an inline base64 blob (a data URL, or raw un-prefixed base64
      * as some legacy rows were migrated), store it as a private file and return
-     * the new storage path. Returns null when there's nothing to localize — the
+     * the new storage path. Returns null when there's nothing to localize, the
      * value is empty, already a storage path, or a remote URL.
      *
      * Powers compliance:localize-documents, which moves legacy/base64 document
@@ -112,7 +112,7 @@ class ComplianceDocumentService
             return null;
         }
         // Back-compat: a row written before hardening already holds a data URL,
-        // or a legacy migrated row holds a full URL — both are usable verbatim.
+        // or a legacy migrated row holds a full URL, both are usable verbatim.
         if (str_starts_with($path, 'data:')
             || str_starts_with($path, 'http://')
             || str_starts_with($path, 'https://')) {
@@ -177,7 +177,7 @@ class ComplianceDocumentService
     }
 
     /**
-     * Interpret a value as raw (un-prefixed) base64 image/PDF data — the shape
+     * Interpret a value as raw (un-prefixed) base64 image/PDF data, the shape
      * some legacy rows were migrated in. Returns ['bytes','mime'] or null when
      * the value isn't plausibly base64. Real storage paths are rejected because
      * they contain '-'/'.'/':' which aren't in the base64 alphabet.
@@ -201,7 +201,7 @@ class ComplianceDocumentService
     }
 
     /**
-     * base64_decode that tolerates whitespace/newlines in legacy payloads —
+     * base64_decode that tolerates whitespace/newlines in legacy payloads -
      * strict mode rejects them, which broke serving MIME-chunked legacy blobs
      * imported from the legacy DB.
      */

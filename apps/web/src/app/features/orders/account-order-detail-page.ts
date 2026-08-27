@@ -38,7 +38,7 @@ interface TimelineEventView {
 }
 
 /**
- * /account/orders/:id — single-order detail page.
+ * /account/orders/:id, single-order detail page.
  *
  * Surface
  * -------
@@ -61,7 +61,7 @@ interface TimelineEventView {
  *
  * Why native confirm() for now: the global custom-confirm modal
  * lives in Y.5's account polish work. Native confirm() is keyboard-
- * accessible, focus-trapped, and unambiguous — perfectly acceptable
+ * accessible, focus-trapped, and unambiguous, perfectly acceptable
  * for a self-serve cancel until the design system delivers a modal.
  *
  * Returns submission
@@ -69,7 +69,7 @@ interface TimelineEventView {
  * The "Request a return" CTA is rendered when the order is
  * eligible (status in {paid, fulfilling, shipped, delivered} per
  * apps/api business rules). The actual return form is Y.2-J's
- * scope — for now the CTA can navigate to a future
+ * scope, for now the CTA can navigate to a future
  * /account/orders/:id/return route.
  *
  * Polling
@@ -433,7 +433,7 @@ export class AccountOrderDetailPageComponent implements OnInit {
   /**
    * Return-eligibility (UI-side gate, server has final say).
    * Shows the CTA for any status where a return could plausibly be
-   * filed — the server enforces the 14-day window + per-item
+   * filed, the server enforces the 14-day window + per-item
    * delivered status. If we surface the CTA for an ineligible order,
    * the form-level RETURN_* error mappings (Y.2-J) handle it
    * gracefully with a clear toast.
@@ -472,7 +472,7 @@ export class AccountOrderDetailPageComponent implements OnInit {
     try {
       const order = await this.orderService.getById(id);
       this._order.set(order);
-      /* Best-effort event feed — never blocks the detail render, and the
+      /* Best-effort event feed, never blocks the detail render, and the
          template gracefully falls back to the derived stepper on empty. */
       void this.loadTimeline(id);
     } catch {
@@ -500,7 +500,7 @@ export class AccountOrderDetailPageComponent implements OnInit {
   }
 
   /* -----------------------------------------------------------------
-     Timeline — client-derived fallback stepper
+     Timeline, client-derived fallback stepper
      -----------------------------------------------------------------
      Only rendered when the server feed is empty (endpoint unavailable).
      Honest by design: only "placed" + "paid" carry real timestamps; later
@@ -571,12 +571,12 @@ export class AccountOrderDetailPageComponent implements OnInit {
     this._showCancelConfirm.set(true);
   }
 
-  /** User dismissed the confirm modal — close it, do nothing. */
+  /** User dismissed the confirm modal, close it, do nothing. */
   protected onCancelDismissed(): void {
     this._showCancelConfirm.set(false);
   }
 
-  /** User confirmed cancellation in the modal — perform the cancel. */
+  /** User confirmed cancellation in the modal, perform the cancel. */
   protected async onCancelConfirmed(): Promise<void> {
     const order = this._order();
     if (order === null) {
@@ -597,7 +597,7 @@ export class AccountOrderDetailPageComponent implements OnInit {
     }
   }
 
-  /** Confirm message i18n key — used by the modal's [message]. */
+  /** Confirm message i18n key, used by the modal's [message]. */
   protected confirmMessage(): string {
     return 'orders.detail.cancelConfirm';
   }

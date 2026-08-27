@@ -105,7 +105,7 @@ export class SocialAuthButtonsComponent {
         await this.navigateAfter(result.user.is_phone_verified);
         return;
       }
-      /* A deliberately-cancelled popup is a normal outcome — stay silent. */
+      /* A deliberately-cancelled popup is a normal outcome, stay silent. */
       if (result.reason === 'cancelled') return;
       this.error.set(this.errorKeyFor(result.reason));
     } finally {
@@ -114,7 +114,7 @@ export class SocialAuthButtonsComponent {
   }
 
   /**
-   * Fresh social accounts have is_phone_verified === false — gate them at
+   * Fresh social accounts have is_phone_verified === false, gate them at
    * /verify-phone (the phone-after-social step) before the rest of the app.
    * Already-verified users go straight to the returnUrl / home.
    */

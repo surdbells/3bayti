@@ -20,7 +20,7 @@ import { ToastService } from '../../shared/forms';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
- * CartDrawerComponent — slide-out panel showing the user's cart.
+ * CartDrawerComponent, slide-out panel showing the user's cart.
  *
  * Mounted once at the app shell (sibling to <router-outlet>). The
  * CartIconComponent's click toggles open/close via CartDrawerService.
@@ -40,7 +40,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
  *   - aria-labelledby points to the heading
  *   - Focus moves to the close button on open
  *   - Focus is restored to the element that opened the drawer on close
- *     (we ask document.activeElement to refocus — works for the cart
+ *     (we ask document.activeElement to refocus, works for the cart
  *     icon and most other triggers)
  *   - Escape closes the drawer
  *   - Focus trap keeps tab within the panel while open
@@ -242,7 +242,7 @@ export class CartDrawerComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    /* Nothing to do — the effect handles focus on every open. */
+    /* Nothing to do, the effect handles focus on every open. */
   }
 
   protected close(): void {

@@ -70,9 +70,9 @@ export function translateRequestBody(body: unknown): {
       if (typeof v === 'string' && v.length > 0) {
         token = v;
       }
-      // Drop `token` regardless — v3 doesn't accept it in body.
+      // Drop `token` regardless, v3 doesn't accept it in body.
     } else if (key === 'id') {
-      // Drop `id` — v3 derives user from JWT, not from body.
+      // Drop `id`, v3 derives user from JWT, not from body.
       // Note: if a future v3 endpoint legitimately needs an `id`
       // in the body (e.g. resource id for a write), it must use
       // a more specific field name (e.g. `address_id`) or appear
@@ -91,7 +91,7 @@ export function translateRequestBody(body: unknown): {
 /**
  * Wrap a v3 response in the legacy envelope shape.
  *
- * Exported for unit testability — see translateRequestBody.
+ * Exported for unit testability, see translateRequestBody.
  *
  * v3 typically returns `{data: ...}` or `{data: [...], meta: {...}}`
  * or sometimes custom shapes (e.g. the auth login response with token
@@ -145,7 +145,7 @@ export function toLegacyEnvelope(v3Response: unknown): {
 }
 
 /**
- * MobileNetworkAdapter — the mobile app's v3 API client.
+ * MobileNetworkAdapter, the mobile app's v3 API client.
  *
  * Every page calls v3 endpoints DIRECTLY by route-key via the typed
  * methods get_v3 / post_v3 / patch_v3 / put_v3 / delete_v3 (→ callV3Direct).
@@ -162,7 +162,7 @@ export function toLegacyEnvelope(v3Response: unknown): {
  * route-key (CATALOG_RESPONSE_TRANSFORMS / MUTATION_RESPONSE_TRANSFORMS)
  * reshapes `data` into what the page binds. So call sites keep their
  * `if (response.response_code === 200) { use response.data }` pattern.
- * NOTE: the *_v3 methods do NOT apply a request transform — each call site
+ * NOTE: the *_v3 methods do NOT apply a request transform, each call site
  * passes the explicit v3 body / query params.
  *
  * Errors
@@ -186,7 +186,7 @@ export function toLegacyEnvelope(v3Response: unknown): {
  * post_request / get_request call sites to v3. All call sites are now on
  * direct v3, and the legacy machinery (post_request, get_request, route,
  * tryConvertPostToGet, the legacy callV3, the request transforms, and
- * url-route-resolver) has been deleted — this is now a pure v3 client.
+ * url-route-resolver) has been deleted, this is now a pure v3 client.
  */
 @Injectable({ providedIn: 'root' })
 export class MobileNetworkAdapter {
@@ -211,14 +211,14 @@ export class MobileNetworkAdapter {
    * Failure semantics
    * =================
    * If /v3/auth/refresh returns an error (refresh token expired,
-   * revoked, malformed) — we clear the cached user blob from
+   * revoked, malformed), we clear the cached user blob from
    * Preferences and resolve the observable with null. The 401 caller
-   * sees the original 401 surfaced through translateError — which
+   * sees the original 401 surfaced through translateError, which
    * call sites should treat as "session expired, redirect to /login".
    *
    * Why this lives on the adapter and not a separate service
    * ========================================================
-   * Refresh is intrinsically coupled to the auth-aware HTTP path —
+   * Refresh is intrinsically coupled to the auth-aware HTTP path -
    * it needs to mutate the same Preferences blob the adapter reads
    * for auth and it needs to be triggerable from the adapter's
    * 401 handling. Adding a separate service would force callers to
@@ -229,7 +229,7 @@ export class MobileNetworkAdapter {
   /**
    * Call a v3 endpoint directly by routeKey, without any legacy-URL
    * lookup. Use this for v3-only endpoints (those with `oldPath: ''`
-   * in ENDPOINT_ROUTING) — they have no legacy URL to resolve FROM,
+   * in ENDPOINT_ROUTING), they have no legacy URL to resolve FROM,
    * so post_request / get_request can't route them.
    *
    * Why this is separate from post_request
@@ -340,7 +340,7 @@ export class MobileNetworkAdapter {
    * string is appended here from queryParams (preserving stable
    * insertion order, which matters for log readability and caching).
    *
-   * Boolean values are stringified to "true"/"false" — matches v3's
+   * Boolean values are stringified to "true"/"false", matches v3's
    * parseBool which accepts those tokens. Numbers stringify naturally.
    */
   private buildV3UrlWithQuery(
@@ -367,7 +367,7 @@ export class MobileNetworkAdapter {
   }
 
   /**
-   * Issue a v3-direct request — sibling to callV3 but with simpler
+   * Issue a v3-direct request, sibling to callV3 but with simpler
    * input semantics: no legacy body translation; explicit auth token;
    * optional path params.
    *
@@ -375,7 +375,7 @@ export class MobileNetworkAdapter {
    * confirm, password reset, refresh-token, logout, etc.). See the
    * post_v3 docblock for design rationale.
    *
-   * 401 handling: same as callV3 — see that method's docblock.
+   * 401 handling: same as callV3, see that method's docblock.
    */
   private callV3Direct(
     method: HttpMethod,
@@ -391,7 +391,7 @@ export class MobileNetworkAdapter {
     try {
       cfg = resolveConfig(routeKey);
     } catch {
-      // Unknown route key — return an error envelope through the
+      // Unknown route key, return an error envelope through the
       // success channel so call sites can detect via response_code.
       // This shouldn't happen if callers use string literals matching
       // ENDPOINT_ROUTING; it's defensive against typos.
@@ -406,7 +406,7 @@ export class MobileNetworkAdapter {
 
     if (cfg.target !== 'new') {
       // The routing table says this route is legacy. v3-direct can't
-      // serve a legacy-targeted route — that's what post_request /
+      // serve a legacy-targeted route, that's what post_request /
       // get_request are for. Surface as an error envelope.
       return of({
         response_code: 500,
@@ -417,7 +417,7 @@ export class MobileNetworkAdapter {
       });
     }
 
-    // M3.1.7-I — build URL with both path-params and optional query string.
+    // M3.1.7-I, build URL with both path-params and optional query string.
     // Reuses buildV3UrlWithQuery so query strings are stable + URL-encoded
     // identically to the POST-to-GET conversion path.
     const url = opts?.queryParams && Object.keys(opts.queryParams).length > 0
@@ -431,7 +431,7 @@ export class MobileNetworkAdapter {
     const authHeader = opts?.authToken ? `Bearer ${opts.authToken}` : null;
 
     // The refresh endpoint itself MUST NOT trigger refresh-on-401
-    // recursion — a 401 from /auth/refresh means the refresh token
+    // recursion, a 401 from /auth/refresh means the refresh token
     // is dead, period. Same for /auth/login and other anonymous
     // endpoints: they have no Authorization header to refresh.
     if (routeKey === 'POST /auth/refresh' || authHeader === null) {
@@ -449,7 +449,7 @@ export class MobileNetworkAdapter {
   }
 
   /**
-   * Execute the actual HTTP request. Pure dispatch on method — no
+   * Execute the actual HTTP request. Pure dispatch on method, no
    * envelope wrapping or error translation. Used by both callV3
    * (with refresh-retry wrapper) and the refresh-token path itself
    * (which can't refresh-retry on itself).
@@ -492,7 +492,7 @@ export class MobileNetworkAdapter {
    *
    * The `execute` callback takes a fresh authHeader each time because
    * after refresh succeeds, the original request must be retried with
-   * the new token — not the stale one that just failed.
+   * the new token, not the stale one that just failed.
    *
    * The optional `routeKey` enables response shape transformation.
    * When provided AND CATALOG_RESPONSE_TRANSFORMS has an entry for it,
@@ -519,11 +519,11 @@ export class MobileNetworkAdapter {
           switchMap((newToken) => {
             if (newToken === null) {
               // Refresh failed (or no refresh_token stored). Surface
-              // the original 401 — call sites treat as session expired.
+              // the original 401, call sites treat as session expired.
               return this.translateError(err);
             }
             // Retry the original request with the new token. On a
-            // second failure, do NOT refresh again — that'd loop on
+            // second failure, do NOT refresh again, that'd loop on
             // a 401 the new token can't fix.
             return execute(`Bearer ${newToken}`).pipe(
               map((v3Response) => this.envelopeAndTransform(v3Response, routeKey)),
@@ -557,7 +557,7 @@ export class MobileNetworkAdapter {
     this.refreshInFlight$ = from(Preferences.get({ key: 'user' })).pipe(
       switchMap((stored) => {
         if (!stored.value) {
-          // No cached user blob at all — nothing to refresh against.
+          // No cached user blob at all, nothing to refresh against.
           return of<string | null>(null);
         }
         let parsed: Record<string, unknown>;
@@ -590,7 +590,7 @@ export class MobileNetworkAdapter {
           }),
           catchError((err: any) => {
             // Only DROP the session when the refresh token is genuinely
-            // rejected — a 401/403 from /auth/refresh (expired / revoked /
+            // rejected, a 401/403 from /auth/refresh (expired / revoked /
             // invalid). A network blip, timeout or 5xx must NOT log the user
             // out: the session should end only on manual logout or a real
             // auth rejection, so we keep the stored user and let the caller's
@@ -632,10 +632,10 @@ export class MobileNetworkAdapter {
    * blob.
    *
    * Preserves all existing legacy fields (first_name, billing_*, etc.)
-   * — the refresh response only contains auth-related fields. Updates:
+   *, the refresh response only contains auth-related fields. Updates:
    *   - token (from access_token)
    *   - refresh_token
-   *   - id (in case it changed — unlikely but defensive)
+   *   - id (in case it changed, unlikely but defensive)
    *   - any user.* fields v3 returns (first_name, etc.)
    *
    * Why not just store response.user verbatim
@@ -692,7 +692,7 @@ export class MobileNetworkAdapter {
    *
    *   1. No routeKey OR routeKey has no registered transform:
    *      Returns the envelope unchanged. Same as the legacy
-   *      toLegacyEnvelope behaviour — used for auth and any other
+   *      toLegacyEnvelope behaviour, used for auth and any other
    *      endpoint that doesn't need shape mapping.
    *
    *   2. routeKey has a registered transform AND the envelope's data
@@ -704,7 +704,7 @@ export class MobileNetworkAdapter {
    *
    *   3. routeKey has a registered transform BUT data is null/missing:
    *      Returns the envelope unchanged (transform doesn't run).
-   *      Defensive — a v3 response without a `data` field is anomalous
+   *      Defensive, a v3 response without a `data` field is anomalous
    *      and we'd rather surface that to the caller than synthesise.
    *
    * Why a helper instead of inlining: there are four sites that wrap
@@ -763,14 +763,14 @@ export class MobileNetworkAdapter {
    * For v3 errors we want call sites to see them through the `next`
    * handler with `response_code: <status>` and `status: 'error'`. This
    * means the Observable resolves SUCCESSFULLY but with an error
-   * envelope — the caller checks response_code to detect.
+   * envelope, the caller checks response_code to detect.
    *
    * For network-level errors (no response), we propagate via the
    * Observable error channel (matches legacy NetworkService behaviour:
    * the `error` callback fires for transport errors).
    */
   private translateError(err: HttpErrorResponse): Observable<unknown> {
-    // Network-level error (status 0 or undefined) — propagate via
+    // Network-level error (status 0 or undefined), propagate via
     // error channel. Matches legacy NetworkService.error() behaviour.
     if (!err.status) {
       return throwError(() => err);
@@ -798,13 +798,13 @@ export class MobileNetworkAdapter {
         }
         // v3 structured errors carry a `details` object (e.g. PROMO_MIN_
         // SUBTOTAL_NOT_MET -> { min_subtotal, currency }). 422s are surfaced
-        // here via the success channel, so propagate details too — otherwise
+        // here via the success channel, so propagate details too, otherwise
         // call sites that interpolate them (promo messages) render blanks.
         if (details !== undefined) {
           errorDetails = details;
         }
       }
-      // Some v3 errors are "unstructured" — the human message sits at the top
+      // Some v3 errors are "unstructured", the human message sits at the top
       // level (`{ message: "Gift card not found." }`) rather than under `error`.
       // Surface it so call sites show a specific message, not a generic one.
       if (message === 'Request failed') {

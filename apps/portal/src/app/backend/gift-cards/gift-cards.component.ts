@@ -41,7 +41,7 @@ interface GiftCardRow extends Record<string, unknown> {
   created_at: string;
 }
 
-/** A row from GET /admin/gift-cards/redemptions — one checkout debit. */
+/** A row from GET /admin/gift-cards/redemptions, one checkout debit. */
 interface RedemptionRow extends Record<string, unknown> {
   id: number | string;
   amount: string;

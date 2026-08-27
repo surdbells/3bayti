@@ -2,7 +2,7 @@ import { Injectable, Signal, signal, computed } from '@angular/core';
 
 /**
  * Snapshot of the access token + its expiry. The two travel together
- * — we never want to know the token without knowing when it dies.
+ *, we never want to know the token without knowing when it dies.
  */
 export interface AccessTokenSnapshot {
   /** The raw JWT access token. */
@@ -12,7 +12,7 @@ export interface AccessTokenSnapshot {
 }
 
 /**
- * AccessTokenStore — in-memory access-token cache.
+ * AccessTokenStore, in-memory access-token cache.
  *
  * Responsibilities
  * ----------------
@@ -22,7 +22,7 @@ export interface AccessTokenSnapshot {
  * The token is seeded on the client by AuthService.hydrate(), which
  * calls /auth-proxy/me with the HttpOnly refresh cookie and adopts the
  * returned access token. The long-lived refresh token never enters the
- * JS context — it lives only in the HttpOnly cookie owned by the
+ * JS context, it lives only in the HttpOnly cookie owned by the
  * auth-proxy Pages Function.
  *
  * Why a separate store rather than living inside AuthService
@@ -37,7 +37,7 @@ export interface AccessTokenSnapshot {
  *
  * Invariants
  * ----------
- *   - `current()` returns either a snapshot or null — never a partial.
+ *   - `current()` returns either a snapshot or null, never a partial.
  *   - `hasValidToken()` is a pure derivation from `current()` + Date.now().
  *   - `clear()` always succeeds and is idempotent.
  */

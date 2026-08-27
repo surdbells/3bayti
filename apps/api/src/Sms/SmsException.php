@@ -9,7 +9,7 @@ namespace Bayti\Api\Sms;
  * provider 4xx/5xx, invalid recipient, etc.).
  *
  * Mirrors MailerException: callers MUST NOT block their action on this
- * — log + continue. A failed gift-card delivery SMS is annoying but the
+ *, log + continue. A failed gift-card delivery SMS is annoying but the
  * card itself is still valid and the buyer can share the code manually.
  *
  * Kind helps operators triage:

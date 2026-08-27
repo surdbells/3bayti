@@ -229,7 +229,7 @@ export class CategoryPage implements OnInit, OnDestroy {
 
     // Direct v3 (GET /v3/products). transformCategoryListingResponse still
     // applies via get_v3, so response.data keeps the legacy Products[] shape.
-    // Public catalog read — no authToken. Query params mirror what
+    // Public catalog read, no authToken. Query params mirror what
     // transformCategoryListingRequest produced from `initial`: limit/offset
     // always, category_id only when category !== 0, max_price from maxPrice.
     this.networkAdapter.get_v3('GET /mobile/category-listing', { queryParams: this.buildListingQuery() })
@@ -311,7 +311,7 @@ export class CategoryPage implements OnInit, OnDestroy {
 
   onFilterApply(state: ProductFilterState): void {
     this.filterState = state;
-    // The sheet is now the sole price authority — reset the legacy chip
+    // The sheet is now the sole price authority, reset the legacy chip
     // ceiling so a stale chip value doesn't leak through buildListingQuery's
     // fallback when the sheet leaves max_price unset.
     this.selectedFilter = 'all';
@@ -330,7 +330,7 @@ export class CategoryPage implements OnInit, OnDestroy {
     this.resetImageStates();
     this.cdr.markForCheck();
 
-    // Direct v3 (GET /v3/products) — public catalog read, no authToken.
+    // Direct v3 (GET /v3/products), public catalog read, no authToken.
     this.networkAdapter.get_v3('GET /mobile/category-listing', { queryParams: this.buildListingQuery() })
       .subscribe({
         next: (response: any) => {
@@ -410,7 +410,7 @@ export class CategoryPage implements OnInit, OnDestroy {
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit;
 
-    // Direct v3 (GET /v3/products) — public catalog read, no authToken.
+    // Direct v3 (GET /v3/products), public catalog read, no authToken.
     this.networkAdapter.get_v3('GET /mobile/category-listing', { queryParams: this.buildListingQuery() })
       .subscribe({
         next: (response: any) => {

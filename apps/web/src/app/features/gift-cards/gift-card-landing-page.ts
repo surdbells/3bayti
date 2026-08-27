@@ -33,9 +33,9 @@ import type {
 type LoadState = 'loading' | 'ready' | 'error';
 
 /**
- * /gift-cards — browse the themed gift-card designs and buy one.
+ * /gift-cards, browse the themed gift-card designs and buy one.
  *
- * Purchase flow (Phase E2 — synthetic checkout, bypasses the cart):
+ * Purchase flow (Phase E2, synthetic checkout, bypasses the cart):
  *   1. POST /v3/gift-cards/purchase  → a pending_payment card {id}
  *   2. POST /v3/checkout/initiate { gift_card_purchase_id } → Noon URL
  *   3. record the order_reference (markGiftCardCheckout) and redirect to
@@ -44,7 +44,7 @@ type LoadState = 'loading' | 'ready' | 'error';
  *      sees paid=true and routes the buyer to /account/gift-cards
  *
  * Auth: purchasing requires a signed-in buyer (the API returns 401
- * otherwise) — we catch that and send them to /login with a returnUrl.
+ * otherwise), we catch that and send them to /login with a returnUrl.
  *
  * Auto-delivery: the buyer may add a recipient email and/or phone. When
  * either is present the API delivers the card automatically (email via
@@ -393,7 +393,7 @@ export class GiftCardLandingPageComponent implements OnInit {
   /* Luxury recipient photo state (only the luxury theme supports a photo). */
   protected readonly recipientPhotoUrl = signal<string | null>(null);
   protected readonly photoUploading = signal<boolean>(false);
-  /** null | 'type' | 'size' | 'upload' — drives the inline error message key. */
+  /** null | 'type' | 'size' | 'upload', drives the inline error message key. */
   protected readonly photoError = signal<string | null>(null);
 
   /** Client-side mirror of the API's accepted types + 10 MB ceiling. */
@@ -451,7 +451,7 @@ export class GiftCardLandingPageComponent implements OnInit {
 
   /**
    * A card SCHEDULED for a later date must carry at least one recipient
-   * contact — otherwise there is nobody to deliver to when the date arrives.
+   * contact, otherwise there is nobody to deliver to when the date arrives.
    * Mirrors the server rule in PurchaseGiftCardController. Contact stays fully
    * optional for immediate (unscheduled) cards: the buyer shares the code.
    */
@@ -588,7 +588,7 @@ export class GiftCardLandingPageComponent implements OnInit {
     }
   }
 
-  /** datetime-local min — now, so the buyer can't schedule in the past. */
+  /** datetime-local min, now, so the buyer can't schedule in the past. */
   protected minScheduleValue(): string {
     const now = new Date();
     const pad = (n: number): string => String(n).padStart(2, '0');

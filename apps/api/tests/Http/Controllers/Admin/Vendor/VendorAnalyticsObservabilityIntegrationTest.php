@@ -31,7 +31,7 @@ use Psr\Log\NullLogger;
  * propagate end-to-end.
  *
  * Mirrors the X.14-E / X.17-E / X.11-H / X.15-G pattern (fifth
- * instance — pattern is firmly locked). Real
+ * instance, pattern is firmly locked). Real
  * VendorAnalyticsCalculator + real VendorAnalyticsSerializer +
  * real AuditEmitter; mocked Connection (returns canned rows for
  * each of the 6 queries) + mocked VendorRepository/UserRepository.
@@ -142,7 +142,7 @@ final class VendorAnalyticsObservabilityIntegrationTest extends HttpTestCase
         $admin = $this->makeAdminUser(99);
         $vendor = $this->makeVendor(101, 'almas', 'Almas');
 
-        // All 6 queries return empty results — vendor with no orders
+        // All 6 queries return empty results, vendor with no orders
         $this->bindFullStack($admin, $vendor, queryResults: [
             // totals
             [['revenue' => '0', 'orders' => 0, 'items' => 0, 'unique_customers' => 0]],

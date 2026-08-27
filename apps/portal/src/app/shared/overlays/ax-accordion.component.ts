@@ -26,7 +26,7 @@ import { IconComponent } from '../icon/icon.component';
  *   </app-ax-accordion-item>
  *
  * Controlled by its parent. Do NOT bind [expanded] yourself unless
- * you also bind the accordion's [multi]="true" — otherwise the parent
+ * you also bind the accordion's [multi]="true", otherwise the parent
  * will fight your state.
  */
 @Component({
@@ -104,8 +104,8 @@ export class AxAccordionItemComponent {
  *   </app-ax-accordion>
  *
  * Modes:
- *   [multi]="false"  (default)  — only one panel open at a time
- *   [multi]="true"              — any number open at once
+ *   [multi]="false"  (default) , only one panel open at a time
+ *   [multi]="true"             , any number open at once
  *
  * Set [defaultOpenIndex]="0" to open the first panel on init.
  */

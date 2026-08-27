@@ -69,7 +69,7 @@ final class OrderNotificationServiceReturnsTest extends TestCase
     }
 
     // =================================================================
-    // returnSubmitted — fan-out (customer + vendor + admin)
+    // returnSubmitted, fan-out (customer + vendor + admin)
     // =================================================================
 
     #[Test]
@@ -167,7 +167,7 @@ final class OrderNotificationServiceReturnsTest extends TestCase
     }
 
     // =================================================================
-    // returnApproved / returnDenied / returnPickedUp / etc — customer only
+    // returnApproved / returnDenied / returnPickedUp / etc, customer only
     // =================================================================
 
     #[Test]
@@ -274,7 +274,7 @@ final class OrderNotificationServiceReturnsTest extends TestCase
     }
 
     // =================================================================
-    // Locale routing — customer Arabic
+    // Locale routing, customer Arabic
     // =================================================================
 
     #[Test]
@@ -334,7 +334,7 @@ final class OrderNotificationServiceReturnsTest extends TestCase
     }
 
     // =================================================================
-    // Renderer — direct template coverage
+    // Renderer, direct template coverage
     // =================================================================
 
     #[Test]
@@ -358,7 +358,7 @@ final class OrderNotificationServiceReturnsTest extends TestCase
             'refund_reference' => 'CASH-1',
         ];
 
-        // English variants — 6 customer + 1 vendor + 1 admin
+        // English variants, 6 customer + 1 vendor + 1 admin
         $en = User::LOCALE_EN;
         $renderer->render(EmailTemplate::RETURN_SUBMITTED_CUSTOMER, $order, $extra, $en);
         $renderer->render(EmailTemplate::RETURN_APPROVED_CUSTOMER, $order, $extra, $en);
@@ -369,7 +369,7 @@ final class OrderNotificationServiceReturnsTest extends TestCase
         $renderer->render(EmailTemplate::RETURN_SUBMITTED_VENDOR, $order, $extra, $en);
         $renderer->render(EmailTemplate::RETURN_SUBMITTED_ADMIN, $order, $extra, $en);
 
-        // Arabic variants — 6 customer + 1 vendor (admin ignores locale)
+        // Arabic variants, 6 customer + 1 vendor (admin ignores locale)
         $ar = User::LOCALE_AR;
         $renderer->render(EmailTemplate::RETURN_SUBMITTED_CUSTOMER, $order, $extra, $ar);
         $renderer->render(EmailTemplate::RETURN_APPROVED_CUSTOMER, $order, $extra, $ar);

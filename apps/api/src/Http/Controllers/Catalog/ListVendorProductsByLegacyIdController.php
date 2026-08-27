@@ -20,7 +20,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/vendors/by-legacy-id/{id}/products
  *
- * Mobile-compatibility shim during the M3.1.5 strangler-fig flip —
+ * Mobile-compatibility shim during the M3.1.5 strangler-fig flip -
  * paginated active products for a single vendor, identified by the
  * legacy WordPress/CodeIgniter vendor id rather than slug.
  *

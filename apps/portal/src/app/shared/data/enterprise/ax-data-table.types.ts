@@ -88,7 +88,7 @@ export type AxFilterValue =
 export type AxFilterValues = Readonly<Record<string, AxFilterValue>>;
 
 // ─────────────────────────────────────────────────────────────────────────
-// Query state — the canonical "what am I looking at" description
+// Query state, the canonical "what am I looking at" description
 // ─────────────────────────────────────────────────────────────────────────
 
 export interface AxQueryState {

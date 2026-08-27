@@ -17,7 +17,7 @@ use DateTimeInterface;
  * Two shapes:
  *   - listShape:   compact card-grid form (what /v3/products returns
  *                  per item).
- *   - detailShape: full product detail (PDP) — superset of listShape.
+ *   - detailShape: full product detail (PDP), superset of listShape.
  *
  * The shapes match apps/web/src/app/features/catalog/product.model.ts:
  *   Product (listShape) + ProductDetail (detailShape).
@@ -32,7 +32,7 @@ use DateTimeInterface;
  * ----------------------
  * If `primary_image_url` is set, use it. Otherwise pick the first image
  * from `images` if present. Otherwise null. The frontend Card renders a
- * placeholder when null — we don't need to fabricate one server-side.
+ * placeholder when null, we don't need to fabricate one server-side.
  *
  * sizes / colors transformation
  * -----------------------------
@@ -41,12 +41,12 @@ use DateTimeInterface;
  * `[{label, in_stock}, ...]`. Since legacy doesn't track per-size stock,
  * every size is `in_stock: true` if the product has positive stock,
  * false otherwise. This matches what the legacy v2 API returned (we
- * verified by reading the legacy code — it emits a flat "in_stock"
+ * verified by reading the legacy code, it emits a flat "in_stock"
  * boolean per size based on overall product stock).
  *
  * vendor embed
  * ------------
- * We embed `{ slug, name }` rather than the full Vendor object — apps/web
+ * We embed `{ slug, name }` rather than the full Vendor object, apps/web
  * needs only those two fields for the card. Saves bytes on long lists.
  */
 final class ProductSerializer
@@ -87,7 +87,7 @@ final class ProductSerializer
      *         ->listShapeMany(...);
      *
      * Missing attribute (e.g. middleware not installed in a test
-     * environment) defaults to Currency::AED — backward-compatible.
+     * environment) defaults to Currency::AED, backward-compatible.
      */
     public function configureFromRequest(\Psr\Http\Message\ServerRequestInterface $request): self
     {
@@ -107,13 +107,13 @@ final class ProductSerializer
     /**
      * Vendor product-management list shape. Unlike listShape (the
      * customer-facing storefront shape), this surfaces the management
-     * fields the vendor catalog table needs — status, stock quantity,
+     * fields the vendor catalog table needs, status, stock quantity,
      * stock status, category NAME, and flat convenience keys (image,
      * price, price_formatted) the table columns + image cell read
      * directly. Used by GET /v3/vendor/products.
      */
     /**
-     * Vendor product DETAIL shape — the management shape plus the rich
+     * Vendor product DETAIL shape, the management shape plus the rich
      * fields the vendor preview drawer needs (description, gallery, sizes,
      * colors). Works for any status (drafts included). Used by
      * GET /v3/vendor/products/{id}.
@@ -151,7 +151,7 @@ final class ProductSerializer
             'id'              => $p->getId(),
             'slug'            => $p->getSlug(),
             'name'            => $p->getName(),
-            // Owning store — lets the admin editor resolve + display the vendor
+            // Owning store, lets the admin editor resolve + display the vendor
             // (it's fixed there; a product's store can't be reassigned on edit).
             'vendor_id'       => $vendor->getId(),
             'store_name'      => $vendor->getName(),
@@ -191,7 +191,7 @@ final class ProductSerializer
     }
 
     /**
-     * Admin GLOBAL product list row — the vendor-scoped manage shape plus a
+     * Admin GLOBAL product list row, the vendor-scoped manage shape plus a
      * vendor embed, since the admin catalogue spans every store (Store
      * column + vendor filter + "Manage store" row action).
      *
@@ -232,7 +232,7 @@ final class ProductSerializer
         return [
             'id' => $p->getId(),
             'slug' => $p->getSlug(),
-            // Legacy product id — mobile cards navigate to the single-product
+            // Legacy product id, mobile cards navigate to the single-product
             // page via GET /v3/products/by-legacy-id/{id}, so the list must
             // surface the legacy id (null for v3-native products with no
             // legacy row). Without it the card sends the v3 id and the
@@ -245,7 +245,7 @@ final class ProductSerializer
             'primary_image' => $primaryImage,
             // Full gallery so list-driven carousels (mobile explore) can show
             // multiple images per product. imagesArray reads the already-hydrated
-            // in-memory images collection — no extra query / no N+1.
+            // in-memory images collection, no extra query / no N+1.
             'images' => $this->imagesArray($p),
             'category_id' => $p->getCategory()?->getId(),
             'category_slug' => $p->getCategory()?->getSlug(),
@@ -253,7 +253,7 @@ final class ProductSerializer
             // navigate to the vendor storefront via
             // GET /v3/vendors/by-legacy-id/{id}, keyed on the legacy store id.
             // Without it the card's `store` was undefined and tapping the
-            // vendor badge opened an empty storefront (store 0) — the same bug
+            // vendor badge opened an empty storefront (store 0), the same bug
             // detailShape already fixed for the PDP size guide. Mirror it here.
             'vendor' => $p->getVendor()->getSlug() !== ''
                 ? [
@@ -268,7 +268,7 @@ final class ProductSerializer
             'in_stock' => $p->isInStock(),
             'is_new' => $p->isNew(),
             'is_bestseller' => false, // computed later via order joins (M3)
-            // M3.1.5.5 — surface label_id + collection_id on list shape.
+            // M3.1.5.5, surface label_id + collection_id on list shape.
             // Mobile's vendors.page renders products grouped by label
             // (`@if(category.id === product.collection)`); the response
             // transform maps label_id → legacy field name `collection`.
@@ -289,7 +289,7 @@ final class ProductSerializer
     }
 
     /**
-     * Full ProductDetail shape — superset of listShape.
+     * Full ProductDetail shape, superset of listShape.
      *
      * @param list<ProductReview> $reviews
      * @return array<string, mixed>
@@ -318,7 +318,7 @@ final class ProductSerializer
         // detail-shape vendor block that ALSO carries the legacy store id.
         // The mobile PDP resolves the store's published size guide via the
         // legacy-id route (GET /v3/vendors/by-legacy-id/{id}/size-chart), so
-        // the detail shape must surface the legacy id — without it the PDP's
+        // the detail shape must surface the legacy id, without it the PDP's
         // `this.single.store` was 0 and the size-guide fetch hit store 0
         // (empty). `legacy_id` matches the resolver the featured/directory
         // shapes use ($vendor->getLegacyVendorId()); `id` is the v3 id.
@@ -338,7 +338,7 @@ final class ProductSerializer
             'images' => $this->imagesArray($p),
             'sizes' => $sizes,
             'colors' => $colors,
-            // Delivery window ({ time, custom_time, note }) — the PDP renders
+            // Delivery window ({ time, custom_time, note }), the PDP renders
             // "Delivery: {time} days" (or the custom value). Without this the
             // mobile transform fell back to '' and showed "Delivery: days".
             'delivery_info' => $p->getDeliveryInfo(),
@@ -405,7 +405,7 @@ final class ProductSerializer
 
         $r = $this->conversion->convert($decimalString, $this->displayCurrency);
         if (!$r['converted']) {
-            // Missing-rate fallback path — emit the AED-only shape
+            // Missing-rate fallback path, emit the AED-only shape
             // so clients don't see a confusing source_currency=AED
             // and currency=AED pair.
             return [

@@ -28,7 +28,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * phone becomes verified (is_phone_verified = true).
  *
  * Mirrors /v3/auth/confirm's verification flow but:
- *   - The user is ALREADY authenticated — no token pair is issued.
+ *   - The user is ALREADY authenticated, no token pair is issued.
  *   - The OtpAttempt purpose must be PURPOSE_PHONE_CHANGE (not
  *     registration), guarding against cross-flow OTP reuse.
  *   - The attempt must belong to the current user.
@@ -95,7 +95,7 @@ final class VerifyPhoneController
         }
 
         // Pending-phone model: promote the number that was actually OTP-verified
-        // (the attempt's destination) to the active phone. Re-check uniqueness —
+        // (the attempt's destination) to the active phone. Re-check uniqueness -
         // the number could have been claimed by another account between the send
         // and this verify.
         $verifiedPhone = $attempt->getPhone();

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Payment\Noon;
 
 /**
- * HMAC-SHA256 webhook signature verifier — SCAFFOLDED but NOT
+ * HMAC-SHA256 webhook signature verifier, SCAFFOLDED but NOT
  * bound to the DI container in M3.1.6.
  *
  * Why scaffolded now:
@@ -17,7 +17,7 @@ namespace Bayti\Api\Payment\Noon;
  * piece if sandbox capture confirms it. If sandbox capture
  * reveals a different algorithm (e.g. SHA-512, or a timestamp +
  * body concatenation like Stripe/Clover do), we'll either
- * replace this class or add a sibling — the
+ * replace this class or add a sibling, the
  * NoonWebhookSignatureVerifier interface is the only contract
  * the controller depends on.
  *
@@ -30,7 +30,7 @@ namespace Bayti\Api\Payment\Noon;
  *
  *   1. Capture real sandbox webhook + body
  *   2. Run brute-force matching: HMAC-SHA256, HMAC-SHA512,
- *      timestamp+body variants, etc. — comparing each against
+ *      timestamp+body variants, etc., comparing each against
  *      the captured signature
  *   3. Update or extend this class to match the discovered algo
  *   4. Swap the DI binding from LoggingOnlyVerifier to this
@@ -63,14 +63,14 @@ final class HmacSha256SignatureVerifier implements NoonWebhookSignatureVerifier
 
         $expected = hash_hmac('sha256', $rawBody, $this->sharedSecret);
 
-        // Constant-time comparison — defends against signature
+        // Constant-time comparison, defends against signature
         // timing attacks. PHP hash_equals returns false for
         // length-mismatched inputs without leaking timing info.
         return hash_equals($expected, $normalised);
     }
 
     /**
-     * Real cryptographic verifier — a passing verify() means the HMAC
+     * Real cryptographic verifier, a passing verify() means the HMAC
      * checked out, so the controller records the event as
      * payment_webhook_events.signature_verified=true.
      */

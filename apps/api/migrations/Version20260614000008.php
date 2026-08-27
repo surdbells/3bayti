@@ -10,7 +10,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Phase C1 — RBAC schema. Adds true role/permission tables:
+ * Phase C1, RBAC schema. Adds true role/permission tables:
  *   permissions, roles, role_permission (M2M), user_role (M2M).
  *
  * Seeds the full permission catalog and the system roles (Super Admin,
@@ -19,7 +19,7 @@ use Doctrine\Migrations\AbstractMigration;
  *   is_admin -> Super Admin, is_finance -> Finance, is_support -> Support,
  *   is_sub_admin -> Operations.
  *
- * Additive only — no enforcement is wired here, so this migration cannot lock
+ * Additive only, no enforcement is wired here, so this migration cannot lock
  * anyone out on its own.
  */
 final class Version20260614000008 extends AbstractMigration

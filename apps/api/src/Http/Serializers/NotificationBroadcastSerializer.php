@@ -18,7 +18,7 @@ use DateTimeInterface;
 final class NotificationBroadcastSerializer
 {
     /**
-     * History-row shape (summary — never touches the recipients table).
+     * History-row shape (summary, never touches the recipients table).
      *
      * @param array<int, string> $userNames
      * @return array<string, mixed>
@@ -51,7 +51,7 @@ final class NotificationBroadcastSerializer
     }
 
     /**
-     * Detail shape — history summary + full message, device breakdown,
+     * Detail shape, history summary + full message, device breakdown,
      * failure diagnostics.
      *
      * @param array<int, string> $userNames

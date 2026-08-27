@@ -30,18 +30,18 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * NOT wrapped in { data: ... } envelope because the script was written
  * against the v2 shape which returns the object directly. The script
- * does `(await res.json()).categories` — wrapping would break it.
+ * does `(await res.json()).categories`, wrapping would break it.
  *
  * Pagination: NONE. This endpoint emits ALL active records. It's a
  * build-time call (runs once per deploy), so the cost is acceptable
  * even at 2000 products. If we grow to 100K+ products we'll need
- * to chunk this — but that's a year+ out.
+ * to chunk this, but that's a year+ out.
  *
  * Caching: NONE for now. The endpoint is called once per build (every
  * few hours at most). At ~2000 product rows it's <100ms. We can add
  * HTTP caching headers later if needed.
  *
- * Includes only ACTIVE records — soft-deleted/draft excluded from
+ * Includes only ACTIVE records, soft-deleted/draft excluded from
  * the sitemap (we don't want search engines indexing dead URLs).
  */
 final class GetSitemapDataController
@@ -61,7 +61,7 @@ final class GetSitemapDataController
 
     public function __invoke(ServerRequestInterface $request): ResponseInterface
     {
-        // Use raw SQL via DBAL — avoids hydrating full entities for
+        // Use raw SQL via DBAL, avoids hydrating full entities for
         // what is essentially a slug + timestamp dump.
         $conn = $this->em->getConnection();
 
@@ -79,7 +79,7 @@ final class GetSitemapDataController
             ORDER BY updated_at DESC
         ");
 
-        // Products limited to 50K to bound payload size — if we exceed
+        // Products limited to 50K to bound payload size, if we exceed
         // that we have bigger architectural problems. Current production
         // is 1928, so plenty of headroom.
         $products = $conn->fetchAllAssociative("

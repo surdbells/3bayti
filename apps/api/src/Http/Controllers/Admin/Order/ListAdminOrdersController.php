@@ -25,7 +25,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Admin cross-vendor orders view. Optional filters narrow the scope.
  * Returns the full unfiltered order shape (no per-vendor item
- * filtering — admins see everything).
+ * filtering, admins see everything).
  *
  * Q5=A audit: emits ACTION_VIEWED with the filter set as context.
  * Does NOT log per-order subject_ids in the list view because (a)
@@ -89,7 +89,7 @@ final class ListAdminOrdersController
         );
 
         // Audit the listing access. Subject is the admin User
-        // themselves — list views don't have a single subject entity,
+        // themselves, list views don't have a single subject entity,
         // so the audit row records "admin X queried the orders list
         // with these filters." We use the actor as subject to keep
         // the audit row valid (subjectId requires int).
@@ -114,7 +114,7 @@ final class ListAdminOrdersController
 
         // Prefetch the gift-card map for THIS page in one query so
         // synthesizing the "Gift Card" line for gift-card purchase orders
-        // (those with zero real items) is N+1-free — mirrors the customer
+        // (those with zero real items) is N+1-free, mirrors the customer
         // ListOrdersController. Keyed by order_reference ==
         // gift_cards.purchase_order_reference. Skipped for an empty page.
         $giftCardMap = [];
@@ -164,7 +164,7 @@ final class ListAdminOrdersController
 
     /**
      * Parse the status filter. Accepts either a single status value or a
-     * comma-separated list (CSV) of statuses — the logistics board sends the
+     * comma-separated list (CSV) of statuses, the logistics board sends the
      * fulfilment set ("shipped,delivered") this way. Each value is validated
      * against the canonical Order::STATUS_* set; unknown values are dropped.
      *

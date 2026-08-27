@@ -87,7 +87,7 @@ class UserRepository extends EntityRepository
      * whether it was saved as E.164 ('+971506995999'), with the country code
      * but no '+', or as a local number with/without a leading zero. Bare
      * digits with no recognizable country code are treated as a local UAE
-     * (+971) number — the platform default.
+     * (+971) number, the platform default.
      *
      * @return list<string>
      */
@@ -138,7 +138,7 @@ class UserRepository extends EntityRepository
     /**
      * Find a user by their legacy MySQL id. Used by the CDC sync
      * (M1.8) when applying writes from the legacy side. Includes
-     * deleted users — CDC needs to update them too.
+     * deleted users, CDC needs to update them too.
      */
     public function findByLegacyId(int $legacyUserId): ?User
     {
@@ -168,7 +168,7 @@ class UserRepository extends EntityRepository
 
     /**
      * Persist + flush convenience for caller code that doesn't want
-     * to thread EntityManager around. Use sparingly — services that
+     * to thread EntityManager around. Use sparingly, services that
      * batch multiple operations should flush themselves.
      */
 
@@ -368,9 +368,9 @@ class UserRepository extends EntityRepository
      * (balanced cadence).
      *
      * Eligibility (all must hold):
-     *   1. last_login_at <= (now - 14 days)   — genuinely lapsed
-     *   2. has >= 1 active device token        — a push can land
-     *   3. marketing_push_opt_out = false      — consented to marketing
+     *   1. last_login_at <= (now - 14 days)  , genuinely lapsed
+     *   2. has >= 1 active device token       , a push can land
+     *   3. marketing_push_opt_out = false     , consented to marketing
      *   4. NOT soft-deleted
      *   5. NOT nudged in the last 14 days: no notification_logs row with
      *      user_id = u.id AND template='re_engagement.nudge' AND
@@ -379,7 +379,7 @@ class UserRepository extends EntityRepository
      * The opt-out + the cadence guard are BOTH enforced here so the
      * finder returns a tight candidate set; PushNotificationService
      * ::reEngagementNudge re-checks the opt-out at dispatch (defence in
-     * depth — the flag could flip between this query and the send).
+     * depth, the flag could flip between this query and the send).
      *
      * Raw SQL (not DQL) because the cadence guard references the
      * unmapped notification_logs.user_id / channel columns. Returns ids;

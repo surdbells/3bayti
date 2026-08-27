@@ -45,7 +45,7 @@ type OrderStatus =
   | 'cancelled'
   | 'refunded'
   | 'failed';
-// M3.1.7-I.6 — status filter chips. 'all' = no server filter; every other
+// M3.1.7-I.6, status filter chips. 'all' = no server filter; every other
 // value is a real Order status enum sent verbatim as ?status= to GET /v3/orders
 // (server-side filtering, so it composes with offset/infinite-scroll).
 type FilterStatus =
@@ -58,7 +58,7 @@ type FilterStatus =
   | 'cancelled';
 
 interface StatusChip {
-  /** Filter bucket — 'all' or a real Order status. */
+  /** Filter bucket, 'all' or a real Order status. */
   value: FilterStatus;
   /** i18n key for the chip label. */
   labelKey: string;
@@ -69,7 +69,7 @@ interface StatusChip {
 type FilterType = 'all' | 'product' | 'gift_card';
 
 interface TypeChip {
-  /** Filter bucket — 'all', 'product', or 'gift_card'. */
+  /** Filter bucket, 'all', 'product', or 'gift_card'. */
   value: FilterType;
   /** i18n key for the chip label. */
   labelKey: string;
@@ -121,7 +121,7 @@ export class MyOrdersPage implements OnInit {
   /** Expose cfImage for template usage. */
   readonly cfImage = cfImage;
   orders: Order[] = [];
-  // filter chips — order matches the customer order lifecycle. Each value
+  // filter chips, order matches the customer order lifecycle. Each value
   // (except 'all') is a real Order status sent server-side as ?status=.
   statuses: StatusChip[] = [
     { value: 'all', labelKey: 'orders_filter_all' },
@@ -133,7 +133,7 @@ export class MyOrdersPage implements OnInit {
     { value: 'cancelled', labelKey: 'orders_filter_cancelled' },
   ];
   selectedStatus: FilterStatus = 'all';
-  // Type filter chips — parallel to the status chips. 'all' sends no ?type=;
+  // Type filter chips, parallel to the status chips. 'all' sends no ?type=;
   // 'product' / 'gift_card' filter server-side by whether the order has a
   // linked gift card.
   types: TypeChip[] = [
@@ -170,11 +170,11 @@ export class MyOrdersPage implements OnInit {
   }
   ngOnInit() {
     // Loaded in ionViewWillEnter so the list refreshes on every entry (Ionic
-    // caches the page, so ngOnInit runs only once — otherwise the orders show
+    // caches the page, so ngOnInit runs only once, otherwise the orders show
     // a stale/empty snapshot after navigating away and back).
   }
   ionViewWillEnter() {
-    // Returning from a child page (order detail / vendor store) — keep the list
+    // Returning from a child page (order detail / vendor store), keep the list
     // exactly as the user left it (scroll + loaded pages) rather than refetching.
     if (this.skipReloadOnEnter) {
       this.skipReloadOnEnter = false;
@@ -272,7 +272,7 @@ export class MyOrdersPage implements OnInit {
   }
   // Extract orders array from either legacy (data=array) or v3
   // (data={orders, pagination}) response shapes. Defensive against
-  // null/malformed inputs — returns [] rather than throwing.
+  // null/malformed inputs, returns [] rather than throwing.
   private extractOrders(data: any): any[] {
     if (Array.isArray(data)) return data;
     if (data && typeof data === 'object' && Array.isArray(data.orders)) {
@@ -338,7 +338,7 @@ export class MyOrdersPage implements OnInit {
     }
   }
 
-  // i18n key for an order's status badge — maps the raw enum to a
+  // i18n key for an order's status badge, maps the raw enum to a
   // customer-friendly label. Falls back to a humanised key so a new
   // backend status still renders something sensible.
   statusLabelKey(status: string): string {
@@ -357,12 +357,12 @@ export class MyOrdersPage implements OnInit {
     }
   }
 
-  // itemCount() was dropped with the collapsed thumbnail-strip summary — the
+  // itemCount() was dropped with the collapsed thumbnail-strip summary, the
   // card now lists item rows directly, each showing its own quantity.
 
   // Switch the active status chip and refetch from offset 0 so the list
   // authoritatively reflects the server-side filtered page (rather than
-  // filtering the already-loaded — possibly partial — client list).
+  // filtering the already-loaded, possibly partial, client list).
   selectStatus(s: FilterStatus) {
     if (this.selectedStatus === s) {
       return;
@@ -400,7 +400,7 @@ export class MyOrdersPage implements OnInit {
     this.initial.id = this.single_user.id;
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit
-    // Direct v3 (GET /v3/orders) — same paginated read as order_listing(),
+    // Direct v3 (GET /v3/orders), same paginated read as order_listing(),
     // advancing offset for infinite scroll. Carries the active status filter
     // so paged-in results stay scoped to the selected chip.
     this.networkAdapter
@@ -433,7 +433,7 @@ export class MyOrdersPage implements OnInit {
   open_vendor(slug: string, name: string) {
     // Tapping an order item opens the VENDOR STORE (the card's own "View
     // details" button opens the order). This previously pointed at
-    // 'vendor-reviews' — a copy-paste slip that sent shoppers to a reviews
+    // 'vendor-reviews', a copy-paste slip that sent shoppers to a reviews
     // page and fed the vendors<->reviews back-navigation loop.
     if (!slug) { return; }
     this.skipReloadOnEnter = true;
@@ -444,7 +444,7 @@ export class MyOrdersPage implements OnInit {
   }
 
   // ===================================================================
-  // M3.1.7-F/I — Customer self-serve order cancellation
+  // M3.1.7-F/I, Customer self-serve order cancellation
   // ===================================================================
   // Only orders in 'pending_payment' can be cancelled by the customer
   // themselves (paid orders require admin / support contact). The

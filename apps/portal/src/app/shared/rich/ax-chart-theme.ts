@@ -2,7 +2,7 @@
  * ApexCharts theming factory.
  *
  * Pages that already use ng-apexcharts keep all their existing chart code
- * unchanged — they just wrap their options in `themedChart({...})` and they
+ * unchanged, they just wrap their options in `themedChart({...})` and they
  * inherit the brand palette, typography, and tooltip styling automatically.
  *
  *   chartOptions: ApexOptions = themedChart({

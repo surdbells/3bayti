@@ -1,5 +1,5 @@
 /* ============================================================================
-   Addresses page — M2 styling
+   Addresses page, M2 styling
    ============================================================================ */
 
 /* Picker-button label (matches ax-text-field's __label style for visual
@@ -15,7 +15,7 @@
   margin-bottom: 6px;
 }
 
-/* Loader row — centered (matches auth pattern) */
+/* Loader row, centered (matches auth pattern) */
 .loader-row {
   display: flex;
   justify-content: center;
@@ -67,7 +67,7 @@
 }
 
 /* ============================================================================
-   Address book — saved-address cards (CRUD)
+   Address book, saved-address cards (CRUD)
    ============================================================================ */
 
 .address-empty {
@@ -94,7 +94,7 @@
   // NB: use the real semantic token --ax-color-bg-surface (flips to dark
   // espresso in dark mode). The old --ax-color-surface / --ax-color-primary
   // names don't exist, so they fell back to their light literals and the card
-  // stayed white in dark mode — faint text on white.
+  // stayed white in dark mode, faint text on white.
   background: var(--ax-color-bg-surface, #fff);
 
   &--default {

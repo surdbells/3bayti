@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  * Migrate categories from legacy MySQL to v3 Postgres.
  *
- * Source: `category` (8 rows, flat — no tree)
+ * Source: `category` (8 rows, flat, no tree)
  *  - category_id INT PRIMARY KEY
  *  - icon VARCHAR(50)      ('@tui.*' refs)
  *  - category_name VARCHAR(50)
@@ -15,10 +15,10 @@ declare(strict_types=1);
  *  - legacy_category_id INT UNIQUE  (preserved for idempotency)
  *  - slug VARCHAR(100) UNIQUE       (generated from name)
  *  - name VARCHAR(150)
- *  - description TEXT NULL          (left null — legacy has none)
- *  - parent_id BIGINT NULL          (left null — legacy is flat)
+ *  - description TEXT NULL          (left null, legacy has none)
+ *  - parent_id BIGINT NULL          (left null, legacy is flat)
  *  - path VARCHAR(500)              (just the slug for root categories)
- *  - display_order INT              (left 0 — legacy has none)
+ *  - display_order INT              (left 0, legacy has none)
  *  - is_active BOOLEAN
  *  - icon VARCHAR(50) NULL          (preserved verbatim)
  *
@@ -84,7 +84,7 @@ try {
         );
 
         if ($existing === false) {
-            // First-time INSERT — generate slug
+            // First-time INSERT, generate slug
             $slug = $slugger->make($name, fallback: 'cat-' . $legacyId);
             if ($slug === null) {
                 $log->error('categories', $legacyId, "Slug generation failed for name '{$name}'");
@@ -108,7 +108,7 @@ try {
 
             $log->info('categories', $legacyId, "INSERT as '{$slug}' ({$name})");
         } else {
-            // Re-sync — UPDATE everything except slug (stable per decision)
+            // Re-sync, UPDATE everything except slug (stable per decision)
             $changes = [];
             if ($existing['name'] !== $name) {
                 $changes['name'] = ['from' => $existing['name'], 'to' => $name];
@@ -123,7 +123,7 @@ try {
             }
 
             if (count($changes) === 0) {
-                continue; // No drift — silent skip
+                continue; // No drift, silent skip
             }
 
             $conn->executeStatement(

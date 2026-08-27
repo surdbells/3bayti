@@ -26,22 +26,22 @@ interface PickedProduct {
   price: string;
 }
 
-/** Hard cap on products per style — matches the v3 CreateStyleController. */
+/** Hard cap on products per style, matches the v3 CreateStyleController. */
 const MAX_PRODUCTS = 4;
 
 /**
- * /styles/create — assemble a community style (outfit) and submit it.
+ * /styles/create, assemble a community style (outfit) and submit it.
  *
  * Ported from the mobile create flow (apps/mobile/.../styles/create).
  * The v3 CreateStyleController reads only `name` + `products` (up to 4
- * v3 product ids), so this page collects exactly those — mobile's
+ * v3 product ids), so this page collects exactly those, mobile's
  * category / isPrivate fields are dropped because the API ignores them.
  *
  * Auth: guests are shown a sign-in prompt instead of the form (POST
  * /me/styles is Bearer-bound; the auth interceptor attaches the token).
  *
  * Product picker: rather than the mobile vendor-drill-down, the web port
- * uses the existing product search (GET /products?q=…) — type a query,
+ * uses the existing product search (GET /products?q=…), type a query,
  * tap a result to add it to the outfit tray (max 4, no duplicates). Each
  * picked product is keyed by its v3 `id`, which is what the API expects.
  */

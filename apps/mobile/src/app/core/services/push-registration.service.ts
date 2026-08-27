@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { MobileNetworkAdapter } from '../http/mobile-network-adapter';
 
 /**
- * PushRegistrationService (mobile) — registers / deactivates this
+ * PushRegistrationService (mobile), registers / deactivates this
  * device's FCM push token against the v3 backend.
  *
  * Route-keys (resolved by MobileNetworkAdapter via @3bayti/api-client):

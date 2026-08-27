@@ -46,7 +46,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *
  * Failure isolation
  * =================
- * Each vendor is processed in its own try/catch and flushed independently —
+ * Each vendor is processed in its own try/catch and flushed independently -
  * one oversized/corrupt document never aborts the batch or rolls back others.
  *
  * Options
@@ -171,7 +171,7 @@ final class LocalizeComplianceDocumentsCommand extends Command
         return $result;
     }
 
-    /** True for an inline value (data URL or raw base64) — NOT a path/URL/empty. */
+    /** True for an inline value (data URL or raw base64), NOT a path/URL/empty. */
     private function looksInline(?string $value): bool
     {
         if ($value === null || $value === '') {

@@ -1,10 +1,10 @@
 /* ============================================================================
-   Checkout — M2 redesign
+   Checkout, M2 redesign
    ============================================================================ */
 
 /*
   Brand gradient aliases. These are declared per-page (product.page.scss and
-  home.page.scss do the same) rather than globally — without them the
+  home.page.scss do the same) rather than globally, without them the
   floating CTA's `linear-gradient(var(--brand-dark), var(--brand-light))`
   resolved to nothing and its white label sat on a transparent background,
   making the checkout button invisible.
@@ -215,7 +215,7 @@
   }
 }
 
-/* ----- Step 1 — delivery heading + radio list (web parity) ----------- */
+/* ----- Step 1, delivery heading + radio list (web parity) ----------- */
 
 .checkout-address-heading {
   font-family: inherit;

@@ -261,7 +261,7 @@ export class StoreSalesComponent implements OnInit {
 
   private fetchSales(query: AxQueryState) {
     // Scope the list to THIS store. /admin/transactions has no vendor
-    // filter (it's global) — using it showed every store the same list.
+    // filter (it's global), using it showed every store the same list.
     // /admin/orders filters by the resolved v3 vendor_id and carries the
     // product/line-item data this table needs.
     if (!this.vendorV3Id) {
@@ -273,7 +273,7 @@ export class StoreSalesComponent implements OnInit {
       vendor_id: this.vendorV3Id,
     };
     if (query.search) q.search = query.search;
-    // Store SALES — exclude unpaid (pending_payment) orders, same rule as the
+    // Store SALES, exclude unpaid (pending_payment) orders, same rule as the
     // admin/sales report; a specific status pick (if this table gains one) wins.
     q.status = query.filters['status'] || SALES_STATUSES.join(',');
     const range = query.filters['date'] as AxDateRange | undefined;

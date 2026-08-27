@@ -118,7 +118,7 @@ final class GetAddressControllerTest extends HttpTestCase
             ])
         );
 
-        // 404, NOT 403 — see GetAddressController docblock for IDOR rationale.
+        // 404, NOT 403, see GetAddressController docblock for IDOR rationale.
         self::assertSame(404, $response->getStatusCode());
     }
 

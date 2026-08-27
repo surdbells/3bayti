@@ -20,7 +20,7 @@ class ConversationRepository extends EntityRepository
         $em->flush();
     }
 
-    /** Persist without flushing — for batching inside an existing UoW. */
+    /** Persist without flushing, for batching inside an existing UoW. */
     public function add(Conversation $conversation): void
     {
         $this->getEntityManager()->persist($conversation);

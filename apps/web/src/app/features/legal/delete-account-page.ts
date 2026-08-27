@@ -26,10 +26,10 @@ interface DeletionRequestResponse {
 }
 
 /**
- * /delete-account — PUBLIC account-deletion information + request form
+ * /delete-account, PUBLIC account-deletion information + request form
  * (Google Play "account deletion" compliance).
  *
- * MUST be reachable WITHOUT signing in — the whole point is to give a
+ * MUST be reachable WITHOUT signing in, the whole point is to give a
  * deletion path to people who cannot sign in (forgot password) or who
  * signed up with Google/Apple. No guard on the route.
  *

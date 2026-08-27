@@ -12,7 +12,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Slim\Psr7\Factory\ServerRequestFactory;
 
 /**
- * Exercises RequestContext::extractIp — the Cloudflare-aware client-IP
+ * Exercises RequestContext::extractIp, the Cloudflare-aware client-IP
  * resolution that the per-IP OTP rate limit keys on.
  */
 #[CoversTrait(RequestContext::class)]

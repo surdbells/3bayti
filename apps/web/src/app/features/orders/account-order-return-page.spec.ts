@@ -265,7 +265,7 @@ describe('AccountOrderReturnPageComponent', () => {
       const cb = fixture.nativeElement.querySelector('input[type=checkbox]') as HTMLInputElement;
       cb.click();
       fixture.detectChanges();
-      /* Set reason='other' via the component instance — Angular
+      /* Set reason='other' via the component instance, Angular
          ReactiveForms-driven radios don't always surface a value
          attribute that querySelector('input[value="other"]') can
          match in jsdom, so we drive the form control directly. */

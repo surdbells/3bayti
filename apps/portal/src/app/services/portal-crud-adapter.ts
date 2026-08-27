@@ -14,7 +14,7 @@ import { GlobalComponent } from '../global-component';
 import type { V3RouteKey } from './v3-route-keys.generated';
 
 /**
- * PortalCrudAdapter — the portal's counterpart to MobileNetworkAdapter.
+ * PortalCrudAdapter, the portal's counterpart to MobileNetworkAdapter.
  *
  * Provides typed, route-key-driven HTTP verbs over the v3 API, mirroring
  * the naming convention used in the mobile app so component migrations are
@@ -23,14 +23,14 @@ import type { V3RouteKey } from './v3-route-keys.generated';
  *
  * Authentication
  * -------------
- * Reads the JWT access token from sessionStorage('SESSION') — the same
- * source all portal components use — and attaches it as a Bearer header.
+ * Reads the JWT access token from sessionStorage('SESSION'), the same
+ * source all portal components use, and attaches it as a Bearer header.
  * `getToken()` is called per-request so a token refresh (e.g. after a
  * re-login) is immediately reflected without re-injecting the service.
  *
  * Base URLs
  * ---------
- * OLD = https://api.3bayti.ae/        (legacy — used only during shadow)
+ * OLD = https://api.3bayti.ae/        (legacy, used only during shadow)
  * NEW = https://api-v3.3bayti.ae      (v3)
  *
  * Route keys (M3.3.0-B)
@@ -75,7 +75,7 @@ export class PortalCrudAdapter {
   /**
    * Single in-flight refresh, shared across all requests that 401 at the
    * same time. Critical: the API rotates refresh tokens single-use and
-   * treats a re-presented (already-rotated) token as theft — revoking the
+   * treats a re-presented (already-rotated) token as theft, revoking the
    * whole family. Deduping to one refresh keeps concurrent 401s from
    * tripping that and logging the user out everywhere.
    */
@@ -208,12 +208,12 @@ export class PortalCrudAdapter {
         if (err.status !== 401 || isAuthRoute) {
           return this.logAndRethrow(err);
         }
-        // Access token rejected — try the refresh token, then retry once.
+        // Access token rejected, try the refresh token, then retry once.
         return this.refreshAccessToken().pipe(
           catchError((refreshErr) => {
             // Only log out when the refresh token is genuinely invalid/expired
             // (or absent). A transient failure (network, 5xx) must NOT sign the
-            // user out mid-session — surface the original error and keep the
+            // user out mid-session, surface the original error and keep the
             // session so a later request (or the proactive refresh) can recover.
             if (this.isRefreshAuthFailure(refreshErr)) {
               this.terminate();
@@ -227,7 +227,7 @@ export class PortalCrudAdapter {
   }
 
   /**
-   * Proactively refresh the session — used by SessionManager's silent
+   * Proactively refresh the session, used by SessionManager's silent
    * pre-expiry refresh and the idle "stay signed in" action. Resolves to the
    * new access token; errors (without logging out) when there's no valid
    * refresh token so the caller can decide what to do.
@@ -237,7 +237,7 @@ export class PortalCrudAdapter {
   }
 
   /** True when a refresh failure means the session is unrecoverable (invalid/
-   *  absent refresh token) — i.e. a real logout — vs a transient blip. */
+   *  absent refresh token), i.e. a real logout, vs a transient blip. */
   private isRefreshAuthFailure(e: unknown): boolean {
     if (e instanceof HttpErrorResponse) {
       return e.status === 401 || e.status === 403;

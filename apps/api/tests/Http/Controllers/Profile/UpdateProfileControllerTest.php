@@ -54,7 +54,7 @@ final class UpdateProfileControllerTest extends HttpTestCase
         $response = $this->handle(
             $this->jsonRequest('PATCH', '/v3/me/profile', [
                 'first_name' => 'NewFirst',
-                // last_name omitted — should stay 'OldLast'
+                // last_name omitted, should stay 'OldLast'
                 'gender' => 'female',
                 'locale' => 'ar-AE',
             ], [
@@ -64,7 +64,7 @@ final class UpdateProfileControllerTest extends HttpTestCase
 
         self::assertSame(200, $response->getStatusCode());
 
-        // Direct entity assertions — the controller mutated $user in place.
+        // Direct entity assertions, the controller mutated $user in place.
         self::assertSame('NewFirst', $user->getFirstName());
         self::assertSame('OldLast', $user->getLastName());
         self::assertSame('female', $user->getGender());
@@ -287,7 +287,7 @@ final class UpdateProfileControllerTest extends HttpTestCase
         $jwt = $this->app->getContainer()->get(JwtService::class);
         $pair = $jwt->issueTokenPair($user);
 
-        // 200 years ago — well beyond our 130-year cap.
+        // 200 years ago, well beyond our 130-year cap.
         $oldDate = (new \DateTimeImmutable('-200 years'))->format('Y-m-d');
 
         $response = $this->handle(

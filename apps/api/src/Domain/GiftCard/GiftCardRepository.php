@@ -39,7 +39,7 @@ class GiftCardRepository extends EntityRepository
      * References with no matching card simply don't appear in the map.
      * A blank input returns an empty map. If two cards somehow share a
      * reference (the column is UNIQUE, so this shouldn't happen) the
-     * last one wins — acceptable for the display-only use here.
+     * last one wins, acceptable for the display-only use here.
      *
      * @param list<string> $refs
      * @return array<string, GiftCard> keyed by purchaseOrderReference
@@ -89,13 +89,13 @@ class GiftCardRepository extends EntityRepository
      * partially_used, unexpired, with balance).
      *
      * Ownership mirrors GiftCard::isSpendableBy():
-     *   - cards assigned to them (they redeemed the code — including a buyer
+     *   - cards assigned to them (they redeemed the code, including a buyer
      *     who claimed back a card they had bought as a gift), OR
      *   - cards they bought for THEMSELVES: no recipient was designated
      *     (no name / email / phone) and nobody has claimed them.
      *
      * A card bought as a gift for someone else therefore never shows up in
-     * the buyer's spendable balance — the recipient's to spend, unless the
+     * the buyer's spendable balance, the recipient's to spend, unless the
      * buyer explicitly redeems it back to their own account.
      *
      * @return list<GiftCard>
@@ -124,7 +124,7 @@ class GiftCardRepository extends EntityRepository
      * gift-cards:dispatch-scheduled cron).
      *
      * A card is due when:
-     *   - status IN (active, partially_used) — it has been activated
+     *   - status IN (active, partially_used), it has been activated
      *     and is spendable (we don't deliver pending/voided/expired), AND
      *   - at least one channel is pending:
      *       (recipient_email IS NOT NULL AND email_delivered_at IS NULL) OR
@@ -155,7 +155,7 @@ class GiftCardRepository extends EntityRepository
     }
 
     /**
-     * Admin list query — paginated, filterable, search-able.
+     * Admin list query, paginated, filterable, search-able.
      *
      * Joins the buyer + recipient user eagerly (addSelect) so the admin
      * serializer can render purchaser/recipient emails with NO N+1: one
@@ -164,18 +164,18 @@ class GiftCardRepository extends EntityRepository
      * cheap regardless of how many transactions a card has.
      *
      * Supported $filters keys (all optional; null/absent = no filter):
-     *   - search       string  — case-insensitive substring match across
+     *   - search       string , case-insensitive substring match across
      *                            code (raw, hyphens stripped + UPPER),
      *                            recipient_email, recipient_name,
      *                            buyer.email
-     *   - status       string  — exact GiftCard::STATUS_* match
-     *   - minBalance   string  — balance >= (decimal string)
-     *   - maxBalance   string  — balance <= (decimal string)
-     *   - minValue     string  — denomination >= (decimal string)
-     *   - maxValue     string  — denomination <= (decimal string)
-     *   - createdFrom  DateTimeImmutable — created_at >=
-     *   - createdTo    DateTimeImmutable — created_at <=
-     *   - delivered    bool    — true: email OR sms delivered;
+     *   - status       string , exact GiftCard::STATUS_* match
+     *   - minBalance   string , balance >= (decimal string)
+     *   - maxBalance   string , balance <= (decimal string)
+     *   - minValue     string , denomination >= (decimal string)
+     *   - maxValue     string , denomination <= (decimal string)
+     *   - createdFrom  DateTimeImmutable, created_at >=
+     *   - createdTo    DateTimeImmutable, created_at <=
+     *   - delivered    bool   , true: email OR sms delivered;
      *                            false: neither channel delivered
      *   - limit        int     (default 20)
      *   - offset       int     (default 0)
@@ -263,7 +263,7 @@ class GiftCardRepository extends EntityRepository
     }
 
     /**
-     * Detail fetch for the admin endpoint — eager-loads the full
+     * Detail fetch for the admin endpoint, eager-loads the full
      * transaction ledger + buyer/recipient in ONE query so the detail
      * serializer never lazy-loads. Returns null when not found.
      */

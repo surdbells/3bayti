@@ -385,21 +385,21 @@ final class OrderTimelineBuilderTest extends TestCase
             ['id' => '1234', 'order_reference' => 'V3-X',
              'created_at' => '2026-05-01 08:00:00+00', 'paid_at' => null],
             [
-                // Audit on this vendor's item — kept
+                // Audit on this vendor's item, kept
                 ['id' => '501', 'user_id' => '42', 'subject_type' => 'OrderItem',
                  'subject_id' => '5000', 'action' => 'updated',
                  'changes' => '{"before":{"item_status":"pending"},"after":{"item_status":"accepted"}}',
                  'created_at' => '2026-05-02 10:00:00+00',
                  'ip_address' => null, 'item_vendor_id' => '101',
                  'order_reference' => 'V3-X'],
-                // Audit on OTHER vendor's item — dropped
+                // Audit on OTHER vendor's item, dropped
                 ['id' => '502', 'user_id' => '42', 'subject_type' => 'OrderItem',
                  'subject_id' => '5001', 'action' => 'updated',
                  'changes' => '{"before":{"item_status":"pending"},"after":{"item_status":"accepted"}}',
                  'created_at' => '2026-05-02 10:01:00+00',
                  'ip_address' => null, 'item_vendor_id' => '202',
                  'order_reference' => 'V3-X'],
-                // Audit on Order subject — also dropped (item_vendor_id is null)
+                // Audit on Order subject, also dropped (item_vendor_id is null)
                 ['id' => '503', 'user_id' => '42', 'subject_type' => 'Order',
                  'subject_id' => '1234', 'action' => 'overridden',
                  'changes' => '{"before":{"status":"paid"},"after":{"status":"cancelled"}}',
@@ -430,14 +430,14 @@ final class OrderTimelineBuilderTest extends TestCase
              'created_at' => '2026-05-01 08:00:00+00', 'paid_at' => null],
             [],
             [
-                // Sent to the vendor — kept
+                // Sent to the vendor, kept
                 ['id' => '900', 'order_id' => '1234',
                  'template' => 'order.paid.vendor',
                  'recipient' => 'vendor@example.com', 'status' => 'sent',
                  'sent_at' => '2026-05-01 09:00:00+00',
                  'last_failure_reason' => null, 'context' => '{}',
                  'created_at' => '2026-05-01 09:00:00+00'],
-                // Sent to the customer — dropped
+                // Sent to the customer, dropped
                 ['id' => '901', 'order_id' => '1234',
                  'template' => 'order.paid.customer',
                  'recipient' => 'customer@example.com', 'status' => 'sent',
@@ -463,7 +463,7 @@ final class OrderTimelineBuilderTest extends TestCase
     public function vendorFilterUsesJoinedReturnQuery(): void
     {
         // When vendor filter is set, the return query has a different
-        // SQL shape (INNER JOIN on items) — verify it runs and returns
+        // SQL shape (INNER JOIN on items), verify it runs and returns
         // the expected event.
         $captured = $this->captureQueriesWithVendorEmail([
             ['id' => '1234', 'order_reference' => 'V3-X',
@@ -670,11 +670,11 @@ final class OrderTimelineBuilderTest extends TestCase
                 // Heuristic: if the value is associative (string keys),
                 // treat as single row; if it's a list (int keys), treat as multi.
                 if (is_array($row) && !empty($row) && !array_is_list($row)) {
-                    // Single associative row — for fetchAssociative
+                    // Single associative row, for fetchAssociative
                     $result->method('fetchAssociative')->willReturn($row);
                     $result->method('fetchAllAssociative')->willReturn([]);
                 } else {
-                    // List of rows — for fetchAllAssociative
+                    // List of rows, for fetchAllAssociative
                     $result->method('fetchAssociative')->willReturn(false);
                     $result->method('fetchAllAssociative')->willReturn($row);
                 }
@@ -692,7 +692,7 @@ final class OrderTimelineBuilderTest extends TestCase
      * vendor email row in at index 2.
      *
      * Call sequence: orders → audit → vendors(contact_email) →
-     * notifications → returns. (No disputes — vendor scope skips them.)
+     * notifications → returns. (No disputes, vendor scope skips them.)
      *
      * @param list<array<string, mixed>|list<array<string, mixed>>|false> $resultRows
      * @return array{em: EntityManagerInterface, queries: list<array{sql: string, params: array<string, mixed>}>}

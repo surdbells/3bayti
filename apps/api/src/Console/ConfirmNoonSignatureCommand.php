@@ -10,17 +10,17 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
- * noon:confirm-signature — offline brute-force of Noon's webhook
+ * noon:confirm-signature, offline brute-force of Noon's webhook
  * signing algorithm against captured (body + signature) pairs.
  *
  * INPUT: the JSON-lines files written by NoonWebhookCaptureRecorder
- * (apps/api/var/captures/noon-webhook-*.jsonl) — enable capture with
+ * (apps/api/var/captures/noon-webhook-*.jsonl), enable capture with
  * NOON_WEBHOOK_CAPTURE=true for a short window, let real Noon traffic
  * accumulate, then run this command.
  *
  * For each captured pair it computes a set of candidate signatures
  * (HMAC-SHA256/512/1 × hex/base64) over the raw body using
- * NOON_WEBHOOK_SECRET, and reports which scheme — if any — reproduces
+ * NOON_WEBHOOK_SECRET, and reports which scheme, if any, reproduces
  * the captured signature across EVERY pair.
  *
  *   - A scheme that matches every pair → that's Noon's algorithm.

@@ -15,8 +15,8 @@ use Psr\Log\NullLogger;
  * Automatic audit trail for entity mutations.
  *
  * Registered on Doctrine's onFlush + postFlush (see config/di.php), this records
- * a create/update/delete AuditLog row for every audited entity change — with a
- * field-level diff — regardless of which controller triggered it. That's how
+ * a create/update/delete AuditLog row for every audited entity change, with a
+ * field-level diff, regardless of which controller triggered it. That's how
  * customer and vendor self-service actions (which have no explicit AuditEmitter
  * calls) get logged the same way admin actions do.
  *
@@ -32,7 +32,7 @@ use Psr\Log\NullLogger;
  * The actor/IP come from {@see AuditContext} (stamped by middleware). The same
  * context carries a per-request ledger: if an admin controller already audited a
  * change explicitly (rich snapshot), it `claim()`ed the key and this listener
- * skips it — so admin actions aren't logged twice.
+ * skips it, so admin actions aren't logged twice.
  */
 final class EntityAuditListener
 {
@@ -45,7 +45,7 @@ final class EntityAuditListener
         'DeviceToken', 'Cart', 'CartItem',
     ];
 
-    /** Fields dropped from every diff — they change on every write by definition. */
+    /** Fields dropped from every diff, they change on every write by definition. */
     private const SKIP_FIELDS = ['createdAt', 'updatedAt'];
 
     /** @var list<array{entity: object, id: ?int, type: string, action: string, changes: array<string, mixed>}> */

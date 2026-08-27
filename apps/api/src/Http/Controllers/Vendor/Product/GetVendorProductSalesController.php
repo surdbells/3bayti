@@ -22,7 +22,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/vendor/products/{id}/sales
  *
- * Per-product sales for the authenticated vendor's own product — summary
+ * Per-product sales for the authenticated vendor's own product, summary
  * KPIs, a daily units/revenue series, and recent orders containing the
  * product. Computed from order_items joined to orders, counting only
  * paid-and-beyond statuses (paid, fulfilling, shipped, delivered) as

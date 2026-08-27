@@ -8,12 +8,12 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Refresh-token registry — one row per active refresh token issued.
+ * Refresh-token registry, one row per active refresh token issued.
  *
  * Why this exists
  * ---------------
  * Access tokens (the JWTs sent in Authorization headers) are
- * stateless — we verify them by signature alone, no DB lookup. That
+ * stateless, we verify them by signature alone, no DB lookup. That
  * makes them fast but also makes them impossible to revoke before
  * their expiry. So we keep their TTL short (15 minutes per Decision
  * A.6.1) and pair them with longer-lived refresh tokens that ARE
@@ -32,7 +32,7 @@ use Doctrine\ORM\Mapping as ORM;
  * Storage details
  * ---------------
  * We store the SHA-256 hash of the refresh token, not the token
- * itself. If the database is leaked, attackers see hashes — they
+ * itself. If the database is leaked, attackers see hashes, they
  * still need the original token to authenticate. This is a
  * defense-in-depth measure; the JWT signature alone would catch
  * forged tokens, but storing hashes means a DB read doesn't yield
@@ -59,7 +59,7 @@ class RefreshToken
     private User $user;
 
     /**
-     * JWT ID claim — uuid embedded in the refresh token's payload.
+     * JWT ID claim, uuid embedded in the refresh token's payload.
      * Globally unique. We use ramsey/uuid v7 (time-ordered) so
      * adjacent issuances cluster on disk, helping the index.
      */
@@ -70,7 +70,7 @@ class RefreshToken
      * SHA-256 hash of the refresh token string. Used to detect
      * token-substitution attacks: if the jti claim in the presented
      * token matches a row but the hash doesn't, something forged
-     * the JWT (only possible with a leaked signing key — at which
+     * the JWT (only possible with a leaked signing key, at which
      * point all bets are off, but we'll detect it).
      *
      * 64 hex characters.
@@ -110,7 +110,7 @@ class RefreshToken
     private ?string $revokedReason = null;
 
     // -------------------------------------------------------------------
-    // Audit fields — context of issuance, helps detect anomalies
+    // Audit fields, context of issuance, helps detect anomalies
     // -------------------------------------------------------------------
 
     /**
@@ -163,10 +163,10 @@ class RefreshToken
      * True when this token was revoked specifically by ROTATION (single-use
      * refresh) within the last $graceSeconds.
      *
-     * This distinguishes an innocent lost-response retry — the same client
+     * This distinguishes an innocent lost-response retry, the same client
      * re-presenting a token that was just rotated because it never received
      * or persisted the replacement (dropped connection, app suspended
-     * mid-refresh) — from genuine refresh-token reuse/theft. Only the
+     * mid-refresh), from genuine refresh-token reuse/theft. Only the
      * 'rotated' reason qualifies: a token revoked by logout / logout_all /
      * password_changed / admin_force_logout is deliberately dead and must
      * never be honoured, regardless of how recently it happened.
@@ -203,7 +203,7 @@ class RefreshToken
     public function revoke(string $reason): void
     {
         if ($this->revokedAt !== null) {
-            // Idempotent — re-revoking is a no-op (don't overwrite
+            // Idempotent, re-revoking is a no-op (don't overwrite
             // the original timestamp/reason).
             return;
         }

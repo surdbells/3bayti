@@ -40,7 +40,7 @@ import { I18nService } from '../../i18n.service';
  *
  * Status filter
  * -------------
- * pending_payment is intentionally excluded from the vendor view —
+ * pending_payment is intentionally excluded from the vendor view -
  * those orders haven't been paid yet and aren't ready for vendor
  * action. The filter chips offer the post-payment statuses only.
  */
@@ -231,7 +231,7 @@ export class VendorOrdersPage implements OnInit {
         status: o.status,
         // Only THIS store's items. The API filters items[] to the requesting
         // vendor, so sum their line subtotals rather than showing o.total (the
-        // customer's whole-order payment — incl. delivery + other vendors' items).
+        // customer's whole-order payment, incl. delivery + other vendors' items).
         total: this.sumVendorItems(items),
         currency: o.currency,
         date: o.date,

@@ -23,7 +23,7 @@ use PHPUnit\Framework\TestCase;
  * ----------------------------
  * Apps/api test suite is mock-driven (per HttpTestCase docblock).
  * Adding a real Postgres-backed test for this method would be the
- * first one in the suite — out of scope for M3.2.X.2 which is
+ * first one in the suite, out of scope for M3.2.X.2 which is
  * about shipping the curation surface, not changing the test
  * infrastructure baseline.
  *

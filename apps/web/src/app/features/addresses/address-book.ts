@@ -16,7 +16,7 @@ import { ToastService } from '../../shared/forms';
 import { ConfirmModalComponent } from '../../shared/ui';
 
 /**
- * Address book page — /account/addresses.
+ * Address book page, /account/addresses.
  *
  * Renders the user's saved addresses, with actions to add, edit,
  * delete, or set as default. Used standalone via the account menu
@@ -271,12 +271,12 @@ export class AddressBookPageComponent implements OnInit {
     this._pendingDelete.set(addr);
   }
 
-  /** Modal dismissed — clear the pending target. */
+  /** Modal dismissed, clear the pending target. */
   protected onDeleteDismissed(): void {
     this._pendingDelete.set(null);
   }
 
-  /** Modal confirmed — perform the delete for the pending address. */
+  /** Modal confirmed, perform the delete for the pending address. */
   protected async onDeleteConfirmed(): Promise<void> {
     const addr = this._pendingDelete();
     if (addr === null) return;

@@ -3,7 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { RoutedHttpClient } from '../http/routed-http-client';
 import { AuthService } from './auth.service';
 
-/** Response from POST /v3/me/phone — same { verification_id } as register OTP. */
+/** Response from POST /v3/me/phone, same { verification_id } as register OTP. */
 export interface SetPhoneResponse {
   verification_id: string;
 }
@@ -15,7 +15,7 @@ export interface VerifyPhoneResponse {
 }
 
 /**
- * PhoneService — set + verify the CURRENT user's phone (Bearer /me calls,
+ * PhoneService, set + verify the CURRENT user's phone (Bearer /me calls,
  * routed through RoutedHttpClient, NOT the BFF).
  *
  * Backs the phone-after-social gate: a Google/Apple sign-up arrives with

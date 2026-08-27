@@ -33,7 +33,7 @@ use Psr\Log\NullLogger;
  *   - Submit returns 422 on validation errors
  *   - Submit emits audit ACTION_CREATED row
  *   - Status endpoint accessible to PENDING vendors (key design
- *     point — Option I locked: separate route group bypasses
+ *     point, Option I locked: separate route group bypasses
  *     VendorAuthMiddleware lifecycle gate)
  *   - Status endpoint accessible to SUSPENDED vendors too
  *   - Status endpoint returns 403 for non-vendor users (inline check)
@@ -179,7 +179,7 @@ final class OnboardingControllersTest extends HttpTestCase
     #[Test]
     public function submitWithoutAuthTokenReturns401(): void
     {
-        // No Authorization header — AuthMiddleware should reject
+        // No Authorization header, AuthMiddleware should reject
         $response = $this->handle(
             $this->jsonRequest('POST', '/v3/vendor/onboarding/submit', [
                 'slug' => 'almas-fashion',
@@ -217,7 +217,7 @@ final class OnboardingControllersTest extends HttpTestCase
     }
 
     // -----------------------------------------------------------------
-    // GetOnboardingStatusController — KEY: pending vendors must access
+    // GetOnboardingStatusController, KEY: pending vendors must access
     // -----------------------------------------------------------------
 
     #[Test]
@@ -232,7 +232,7 @@ final class OnboardingControllersTest extends HttpTestCase
         $user->setRoles(vendor: true);
 
         $pendingVendor = $this->makeVendor(100, 'almas-fashion', 'Almas Fashion');
-        // Vendor defaults to pending — no transition needed
+        // Vendor defaults to pending, no transition needed
 
         $this->bindEmForStatus($user, [$pendingVendor]);
 
@@ -329,7 +329,7 @@ final class OnboardingControllersTest extends HttpTestCase
     {
         // Edge case: User has is_vendor=true (admin set it somehow)
         // but has never submitted onboarding, so owns zero stores.
-        // Returns 200 with empty array — empty is legitimate, not 404.
+        // Returns 200 with empty array, empty is legitimate, not 404.
         $user = $this->makeUser(id: 42);
         $user->setRoles(vendor: true);
 

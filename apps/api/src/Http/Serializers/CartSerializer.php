@@ -12,9 +12,9 @@ use Bayti\Api\Domain\Cart\CartItem;
  *
  * Two response shapes:
  *
- *   - listShape (the full cart with embedded items) — returned by
+ *   - listShape (the full cart with embedded items), returned by
  *     GET /v3/cart and after most mutations
- *   - itemShape (single line item) — used internally + in error
+ *   - itemShape (single line item), used internally + in error
  *     paths
  *
  * Mobile mapping (the legacy customer/read-cart response shape,
@@ -24,7 +24,7 @@ use Bayti\Api\Domain\Cart\CartItem;
  *   ─────────────────────────────────────
  *   cart.id            ←→  id
  *   cart.cart_code     ←→  cart_code (= legacyCartCode if migrated,
- *                                      else 'PND' for new carts —
+ *                                      else 'PND' for new carts -
  *                                      preserves mobile's hard-coded
  *                                      'PND' default expectation)
  *   cart.items[]       ←→  items[]

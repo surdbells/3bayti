@@ -12,7 +12,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * A curated outfit / look — community or editorial style.
+ * A curated outfit / look, community or editorial style.
  *
  * Domain shape
  * ============
@@ -38,7 +38,7 @@ use Doctrine\ORM\Mapping as ORM;
  * product prices change. Acceptable because mobile uses total_price
  * as a display-only "outfit total" hint, not a checkout amount.
  * If product prices drift, the displayed total may differ from a
- * checkout total — by design.
+ * checkout total, by design.
  *
  * Slug
  * ====
@@ -49,7 +49,7 @@ use Doctrine\ORM\Mapping as ORM;
  * ==============
  * Many-to-many through `style_products` join table with explicit
  * display_order. Eager-fetched in the list endpoint via DQL JOIN to
- * avoid N+1 — see ListStylesController.
+ * avoid N+1, see ListStylesController.
  */
 #[ORM\Entity(repositoryClass: StyleRepository::class)]
 #[ORM\Table(name: 'styles')]
@@ -114,15 +114,15 @@ class Style
      * Tradeoff locked: skip the StyleProduct entity for now; use
      * a simple many-to-many. Mobile's response transform will
      * receive products in whatever order Doctrine returns (which
-     * by default is by product.id ASC — not display_order).
+     * by default is by product.id ASC, not display_order).
      *
-     * If display_order matters for UX (and it does — mobile reads
+     * If display_order matters for UX (and it does, mobile reads
      * style.products[0], [1], [2]), we either:
      *   (a) Add the StyleProduct association entity (more code)
      *   (b) Use raw SQL with ORDER BY in the repository's load
      *       method (less Doctrine-y but simpler)
      *
-     * Locked: option (b) — see StyleRepository::loadProductsOrdered.
+     * Locked: option (b), see StyleRepository::loadProductsOrdered.
      * The $products association below is for cascade ops + the
      * Doctrine metadata, but the controller bypasses it and uses
      * the ordered loader.

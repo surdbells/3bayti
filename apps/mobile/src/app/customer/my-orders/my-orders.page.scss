@@ -1,5 +1,5 @@
 /* ============================================================================
-   My Orders page — M2 redesign (M23 Tier 3)
+   My Orders page, M2 redesign (M23 Tier 3)
    ============================================================================ */
 
 ion-content.page-bg {
@@ -76,7 +76,7 @@ ion-content.page-bg {
   gap: 2px;
 }
 
-/* Date leads — it's what customers scan for. */
+/* Date leads, it's what customers scan for. */
 .order-date {
   font-family: inherit;
   font-size: 14px;
@@ -108,7 +108,7 @@ ion-content.page-bg {
   text-transform: uppercase;
   flex-shrink: 0;
 
-  /* paid / fulfilling / processing — in-progress (blue) */
+  /* paid / fulfilling / processing, in-progress (blue) */
   &--processing,
   &--paid,
   &--fulfilling {
@@ -116,7 +116,7 @@ ion-content.page-bg {
     color: #1e6fdb;
   }
 
-  /* shipping / shipped — in transit (amber) */
+  /* shipping / shipped, in transit (amber) */
   &--shipping,
   &--shipped {
     background: rgba(245, 158, 11, 0.14);
@@ -177,7 +177,7 @@ ion-content.page-bg {
     background: var(--ax-color-bg-brand-subtle);
   }
 
-  /* Items with no image (gift cards especially) get a themed tile — the old
+  /* Items with no image (gift cards especially) get a themed tile, the old
      <img src=""> rendered as a broken-image glyph. */
   &__thumb--placeholder {
     display: inline-flex;
@@ -250,7 +250,7 @@ ion-content.page-bg {
   }
 }
 
-/* Quiet expand/collapse — a text row, deliberately NOT a button, so it never
+/* Quiet expand/collapse, a text row, deliberately NOT a button, so it never
    competes with the card's primary action. Only rendered when something is
    actually hidden. */
 .order-items__toggle {
@@ -330,7 +330,7 @@ ion-content.page-bg {
   &:active { transform: scale(0.97); opacity: 0.9; }
 }
 
-/* Cancel is a quiet destructive link on its own row — it used to be a
+/* Cancel is a quiet destructive link on its own row, it used to be a
    full-width outlined button that read as important as "View details". */
 .order-cancel-link {
   align-self: flex-start;

@@ -1,7 +1,7 @@
 <main class="home-page">
 
   <!-- ===========================================================
-       BENTO HERO — "Souk" direction
+       BENTO HERO, "Souk" direction
        A saturated amber band carrying the editorial value prop in a
        large banner, paired with two promo tiles. Replaces the former
        editorial/carousel split. The band bleeds full-width and sits
@@ -42,7 +42,7 @@
   </section>
 
   <!-- ===========================================================
-       ADD-PHONE PROMPT — nudges signed-in social sign-ups (no phone
+       ADD-PHONE PROMPT, nudges signed-in social sign-ups (no phone
        on file, unverified) to add + OTP-verify a number. Renders
        nothing for everyone else. Sits in the page gutter.
        =========================================================== -->
@@ -51,7 +51,7 @@
   </section>
 
   <!-- ===========================================================
-       BENEFITS STRIP — trust signals as a scannable row.
+       BENEFITS STRIP, trust signals as a scannable row.
        (Absorbs the old hero trust list.)
        =========================================================== -->
   <section class="home-section">
@@ -76,7 +76,7 @@
   </section>
 
   <!-- ===========================================================
-       CATEGORY TILES — compact icon tiles (Souk).
+       CATEGORY TILES, compact icon tiles (Souk).
        Reworked from the bento grid into a scannable equal tile row so
        the whole catalogue is reachable at a glance.
        =========================================================== -->
@@ -91,7 +91,7 @@
     @if (categories(); as cats) {
       @if (cats.length > 0) {
         <div class="cat-tiles" role="list">
-          <!-- Discounted shortcut — leads the row, mirrors the mobile chip,
+          <!-- Discounted shortcut, leads the row, mirrors the mobile chip,
                with an on-sale product-count badge. -->
           <a
             href="/discounted"
@@ -144,7 +144,7 @@
   </section>
 
   <!-- ===========================================================
-       ANNIVERSARY DEALS (campaign — hidden unless one is live)
+       ANNIVERSARY DEALS (campaign, hidden unless one is live)
        =========================================================== -->
   @if (anniversary(); as anniv) {
     <home-campaign-section
@@ -156,7 +156,7 @@
   }
 
   <!-- ===========================================================
-       FLASH SALE (campaign — hidden unless one is live)
+       FLASH SALE (campaign, hidden unless one is live)
        =========================================================== -->
   @if (flash(); as fl) {
     <home-campaign-section
@@ -168,7 +168,7 @@
   }
 
   <!-- ===========================================================
-       TOP SELLERS (ranked) — the "Trending now" grid.
+       TOP SELLERS (ranked), the "Trending now" grid.
        =========================================================== -->
   <home-top-sellers
     [products]="bestSellers() ?? []"
@@ -237,7 +237,7 @@
   </section>
 
   <!-- ===========================================================
-       FOR YOU / TRENDING STRIP (personalized — signed-in only)
+       FOR YOU / TRENDING STRIP (personalized, signed-in only)
        =========================================================== -->
   @if (forYou().length > 0) {
     <ui-product-strip
@@ -299,7 +299,7 @@
   }
 
   <!-- ===========================================================
-       GET THE APP — mobile-app promo band.
+       GET THE APP, mobile-app promo band.
        =========================================================== -->
   <section class="home-section home-section--app" aria-labelledby="get-app-title">
     <article class="app-band">
@@ -379,7 +379,7 @@
   </ng-template>
 
   <!-- ===========================================================
-       SELL ON 3bayti — vendor-recruitment band.
+       SELL ON 3bayti, vendor-recruitment band.
        =========================================================== -->
   <section class="home-section home-section--sell" aria-labelledby="sell-band-title">
     <div class="sell-band">

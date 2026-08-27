@@ -24,7 +24,7 @@ use Doctrine\ORM\Query\TokenType;
  *
  * The `:values` parameter MUST be bound with
  * \Doctrine\DBAL\ArrayParameterType::STRING so Doctrine expands the single
- * placeholder into `?, ?, ?` inside the `array[...]` literal — yielding the
+ * placeholder into `?, ?, ?` inside the `array[...]` literal, yielding the
  * exact SQL FacetAggregator already emits for the same filter.
  *
  * Why the jsonb_exists_any() FUNCTION and not the `?|` operator

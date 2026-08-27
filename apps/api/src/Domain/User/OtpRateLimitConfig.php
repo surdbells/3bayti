@@ -15,7 +15,7 @@ namespace Bayti\Api\Domain\User;
  * Compiled-container safety
  * -------------------------
  * This is a plain value object with a SCALAR-ONLY constructor and no
- * object/enum defaults — PHP-DI's compiled container can build it from
+ * object/enum defaults, PHP-DI's compiled container can build it from
  * a factory closure that returns `OtpRateLimitConfig::fromEnv()` with
  * no `use()` capture. See config/di.php.
  *
@@ -35,7 +35,7 @@ final class OtpRateLimitConfig
 {
     public function __construct(
         public readonly int $resendCooldownSeconds = 60,
-        // Product decision: NO hard send caps for web or mobile — the only
+        // Product decision: NO hard send caps for web or mobile, the only
         // gate on OTP sends is the 60s resend cooldown above (the client
         // counts down 60s, then allows a fresh send). The per-destination
         // and per-IP hour/day caps are disabled by default (0). An operator
@@ -45,7 +45,7 @@ final class OtpRateLimitConfig
         public readonly int $sendsPerDay = 0,
         public readonly int $sendsPerIpHour = 0,
         public readonly int $sendsPerIpDay = 0,
-        // Verify-guessing protection is NOT a send limit — it bounds how
+        // Verify-guessing protection is NOT a send limit, it bounds how
         // many times a single code can be guessed before it burns. Kept on
         // (5) so codes can't be brute-forced.
         public readonly int $maxVerifyAttempts = 5,
@@ -65,7 +65,7 @@ final class OtpRateLimitConfig
 
         return new self(
             resendCooldownSeconds: self::readInt($env, 'OTP_RESEND_COOLDOWN_SECONDS', 60),
-            // Default 0 (disabled) — see the constructor note. An operator
+            // Default 0 (disabled), see the constructor note. An operator
             // can still cap sends by setting these env vars to a positive
             // value; unset/blank means "no hard limit".
             sendsPerHour: self::readInt($env, 'OTP_SENDS_PER_HOUR', 0),

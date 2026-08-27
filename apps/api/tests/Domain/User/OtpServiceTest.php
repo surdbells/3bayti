@@ -114,7 +114,7 @@ final class OtpServiceTest extends TestCase
 
     /**
      * Build an OtpService. Defaults to a config that DISABLES the resend
-     * cooldown so each send mints a fresh verification_id — the dedup
+     * cooldown so each send mints a fresh verification_id, the dedup
      * behaviour gets its own dedicated tests. Per-test overrides flow
      * through the $config param.
      */
@@ -129,7 +129,7 @@ final class OtpServiceTest extends TestCase
         );
     }
 
-    /** Cooldown disabled; generous caps — the everyday test baseline. */
+    /** Cooldown disabled; generous caps, the everyday test baseline. */
     private function noCooldownConfig(): OtpRateLimitConfig
     {
         return new OtpRateLimitConfig(
@@ -201,12 +201,12 @@ final class OtpServiceTest extends TestCase
         $config = new OtpRateLimitConfig(resendCooldownSeconds: 0, sendsPerHour: 3, sendsPerDay: 100);
         $service = $this->makeService($config);
 
-        // Three sends within the hour — all succeed.
+        // Three sends within the hour, all succeed.
         $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
         $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
         $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
 
-        // Fourth — over the cap.
+        // Fourth, over the cap.
         $this->expectException(OtpRateLimitException::class);
         $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
     }
@@ -232,7 +232,7 @@ final class OtpServiceTest extends TestCase
     #[Test]
     public function sendEnforcesDailyCap(): void
     {
-        // Hourly generous, daily tight — the daily cap should trip first.
+        // Hourly generous, daily tight, the daily cap should trip first.
         $config = new OtpRateLimitConfig(resendCooldownSeconds: 0, sendsPerHour: 100, sendsPerDay: 2);
         $service = $this->makeService($config);
 
@@ -296,7 +296,7 @@ final class OtpServiceTest extends TestCase
         $first = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
         $second = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
 
-        // Same verification_id returned — true resend-dedup.
+        // Same verification_id returned, true resend-dedup.
         self::assertSame($first, $second);
         // Only ONE provider send actually happened.
         self::assertCount(1, $this->provider->allIssued());
@@ -348,7 +348,7 @@ final class OtpServiceTest extends TestCase
         $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
 
         // The claim writes the cooldown marker via setIfAbsent BEFORE
-        // dispatch — so the per-purpose key is present after one send.
+        // dispatch, so the per-purpose key is present after one send.
         self::assertNotNull(
             $this->cache->get('otp:cooldown:' . OtpAttempt::PURPOSE_REGISTRATION . ':+971501234567'),
             'First send must atomically claim (stamp) the cooldown marker.',
@@ -372,7 +372,7 @@ final class OtpServiceTest extends TestCase
 
         // Pre-own the marker so the next claim loses. Stamp it FAR in the
         // future-ish (just-now) so dedupWithinCooldown lets us through to
-        // the claim — actually dedup reads the same marker, so to exercise
+        // the claim, actually dedup reads the same marker, so to exercise
         // the CLAIM path we delete any created_at advantage: use a fresh
         // service and pre-claim directly.
         $cooldownKey = 'otp:cooldown:' . OtpAttempt::PURPOSE_REGISTRATION . ':+971501234567';
@@ -397,7 +397,7 @@ final class OtpServiceTest extends TestCase
     public function lostClaimThrows429WhenNoCommittedCodeYet(): void
     {
         // Marker owned (stamped older than cooldown so dedup passes), but
-        // NO committed usable row exists — the racing send hasn't flushed
+        // NO committed usable row exists, the racing send hasn't flushed
         // yet. The loser must 429 rather than dispatch.
         $cooldownKey = 'otp:cooldown:' . OtpAttempt::PURPOSE_REGISTRATION . ':+971509999999';
 
@@ -449,7 +449,7 @@ final class OtpServiceTest extends TestCase
     {
         // Hourly cap of 1; cooldown ON. The 2nd distinct-purpose send to
         // the same dest claims the cooldown, then trips the per-dest cap
-        // (shared across purposes) — the claim must be released.
+        // (shared across purposes), the claim must be released.
         $config = new OtpRateLimitConfig(resendCooldownSeconds: 60, sendsPerHour: 1, sendsPerDay: 100);
         $service = $this->makeService($config);
 
@@ -475,7 +475,7 @@ final class OtpServiceTest extends TestCase
     #[Test]
     public function claimFallsBackToDispatchWhenCacheUnavailable(): void
     {
-        // Redis down (setIfAbsent throws) must NOT hard-fail the send —
+        // Redis down (setIfAbsent throws) must NOT hard-fail the send -
         // we fall back to dispatching (DB created_at still gates dedup).
         $brokenCache = $this->brokenCache();
         $config = new OtpRateLimitConfig(resendCooldownSeconds: 60, sendsPerHour: 0, sendsPerDay: 0);
@@ -500,7 +500,7 @@ final class OtpServiceTest extends TestCase
     public function perIpCapTripsAcrossDestinations(): void
     {
         // IP cap of 2; destination caps generous. Two different phones
-        // from the same IP — the third send (any phone) trips the IP cap.
+        // from the same IP, the third send (any phone) trips the IP cap.
         $config = new OtpRateLimitConfig(
             resendCooldownSeconds: 0,
             sendsPerHour: 100,
@@ -529,7 +529,7 @@ final class OtpServiceTest extends TestCase
         );
         $service = $this->makeService($config);
 
-        // No IP supplied — the per-IP cap must be skipped entirely.
+        // No IP supplied, the per-IP cap must be skipped entirely.
         $service->send('+971501111111', OtpAttempt::PURPOSE_REGISTRATION, requestedIp: null);
         $service->send('+971502222222', OtpAttempt::PURPOSE_REGISTRATION, requestedIp: null);
         $service->send('+971503333333', OtpAttempt::PURPOSE_REGISTRATION, requestedIp: null);
@@ -682,7 +682,7 @@ final class OtpServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // Email channel — local generation + verification
+    // Email channel, local generation + verification
     // -------------------------------------------------------------------
 
     #[Test]

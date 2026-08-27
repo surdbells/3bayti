@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 /**
- * SectionHeader — the consistent header used above homepage marketing
+ * SectionHeader, the consistent header used above homepage marketing
  * sections (bento categories, campaign rails, recommendations).
  *
  * Encodes the page's section-title language in one place: an optional

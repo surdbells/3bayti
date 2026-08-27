@@ -5,12 +5,12 @@ import { refreshInterceptor } from './refresh.interceptor';
 import { currencyInterceptor } from '../currency/currency.interceptor';
 
 /**
- * provideAuth() — wires the auth interceptor and hydrates the session
+ * provideAuth(), wires the auth interceptor and hydrates the session
  * at app bootstrap.
  *
  * Why APP_INITIALIZER for hydration
  * ---------------------------------
- * The very first paint should reflect the user's signed-in state —
+ * The very first paint should reflect the user's signed-in state -
  * otherwise the page flashes "Sign in" for half a second before
  * discovering the cookie session and swapping to the user's name.
  * Returning the hydrate() promise from the initializer delays bootstrap
@@ -34,7 +34,7 @@ import { currencyInterceptor } from '../currency/currency.interceptor';
  * ----
  * This function adds the `refreshInterceptor` to provideHttpClient
  * via `withInterceptors`. The root `provideHttpClient(withFetch())`
- * in app.config.ts should be REMOVED in favour of this one — having
+ * in app.config.ts should be REMOVED in favour of this one, having
  * two `provideHttpClient` calls leads to undefined behaviour in
  * which one wins. We do it this way (own the HttpClient setup) to
  * avoid the more fragile alternative (multiple HTTP_INTERCEPTORS).

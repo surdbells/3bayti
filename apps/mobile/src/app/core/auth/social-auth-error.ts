@@ -6,7 +6,7 @@
  * ---------------
  * The login / register / settings screens all used to `catch (err)` and show a
  * single generic "Sign in failed" toast while the real reason went only to
- * console.error — invisible on a shipped device. That made the intermittent
+ * console.error, invisible on a shipped device. That made the intermittent
  * "fails on some devices" reports impossible to diagnose remotely.
  *
  * The most common non-obvious cause on Android is a Google Play Services
@@ -14,15 +14,15 @@
  * device isn't registered as a SHA-1/SHA-256 fingerprint in the Firebase
  * project (typical when Play App Signing re-signs the app, or a side-loaded
  * build uses a different key). It presents as a hard failure only on the
- * affected devices — exactly the reported symptom.
+ * affected devices, exactly the reported symptom.
  *
  * This helper classifies the error, maps the actionable ones to a clear
- * message, and — crucially — appends the raw code to the generic fallback so a
+ * message, and, crucially, appends the raw code to the generic fallback so a
  * user can screenshot it and support can act on it.
  */
 
 export interface SocialAuthErrorInfo {
-  /** User dismissed the native sheet — callers should stay silent (no toast). */
+  /** User dismissed the native sheet, callers should stay silent (no toast). */
   cancelled: boolean;
   /** Best-effort machine code: a Firebase `auth/...` slug or a native code/label. */
   code: string;
@@ -48,7 +48,7 @@ const CATEGORY_KEYS: Record<Exclude<SocialAuthErrorCategory, 'cancelled' | 'unkn
   disabled: 'social_err_disabled',
 };
 
-/** Substrings/codes that mean "the user backed out" — never shown as an error. */
+/** Substrings/codes that mean "the user backed out", never shown as an error. */
 const CANCEL_TOKENS = [
   'cancel',
   'canceled',
@@ -109,7 +109,7 @@ function classify(code: string, haystack: string): SocialAuthErrorCategory {
     return 'account-exists';
   }
   // DEVELOPER_ERROR (10) / operation-not-allowed / configuration / api-not-available:
-  // the user can't fix these — they're a Firebase/console setup problem (most
+  // the user can't fix these, they're a Firebase/console setup problem (most
   // often an unregistered signing SHA), so surface a config-specific message.
   if (
     both.includes('developer_error') ||
@@ -147,7 +147,7 @@ export function socialAuthErrorMessage(
     info.category !== 'cancelled' && info.category !== 'unknown'
       ? t(CATEGORY_KEYS[info.category])
       : t('text_social_signin_failed');
-  // Always append the raw code when we have one — on a shipped device the
+  // Always append the raw code when we have one, on a shipped device the
   // console log isn't reachable, so the visible code is the only way a user
   // can report (and support can act on) the real cause.
   return info.code ? `${base} (${info.code})` : base;

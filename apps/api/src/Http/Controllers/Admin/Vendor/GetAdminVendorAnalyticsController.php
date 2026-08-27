@@ -28,7 +28,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Q-AdminVisibility = A locked: admins can see vendor dashboards.
  * Audited via AuditEmitter::recordView with the vendor as subject
- * and the window context — matches X.14 admin metrics pattern.
+ * and the window context, matches X.14 admin metrics pattern.
  *
  * Cross-vendor aggregations (e.g. "show me all vendors' analytics
  * in one view") deferred to operator follow-up #34.

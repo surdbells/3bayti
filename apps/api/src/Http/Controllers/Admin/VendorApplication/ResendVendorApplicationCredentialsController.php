@@ -33,7 +33,7 @@ use Psr\Log\LoggerInterface;
  * portal confirms first (this overwrites any password the vendor already set).
  *
  * Only valid for approved applications (400 otherwise). Idempotent-safe to
- * call repeatedly — each call simply issues a new temporary password.
+ * call repeatedly, each call simply issues a new temporary password.
  *
  * Success: 200 { "application": { ...adminShape } }
  */

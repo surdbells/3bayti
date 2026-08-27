@@ -7,12 +7,12 @@ namespace Bayti\Api\Http\Controllers\Notification\Dto;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Input for DELETE /v3/me/device-tokens — deactivate a device's push
+ * Input for DELETE /v3/me/device-tokens, deactivate a device's push
  * token (logout / opt-out).
  *
  * token is required. The controller deactivates it only if it belongs
  * to the current user; unknown / not-owned tokens are a no-op success
- * (idempotent — the caller's goal "this token should not receive my
+ * (idempotent, the caller's goal "this token should not receive my
  * pushes" is already true).
  */
 final class DeleteDeviceTokenInput

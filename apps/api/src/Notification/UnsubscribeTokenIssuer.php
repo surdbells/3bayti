@@ -24,7 +24,7 @@ use Firebase\JWT\Key;
  * Token claims
  * ============
  *   sub:    user id
- *   action: 'unsubscribe' (audience tag — refuses any token
+ *   action: 'unsubscribe' (audience tag, refuses any token
  *                          issued for a different purpose)
  *   iat:    issued-at
  *   exp:    +30 days (long-lived; recipients may not open the
@@ -36,7 +36,7 @@ use Firebase\JWT\Key;
  * If the email forwards to someone else, that recipient can
  * unsubscribe the original user. Acceptable per industry norms
  * (Mailchimp, Klaviyo, etc. all use this pattern). The token
- * only sets opt_out=TRUE — no other state mutations possible.
+ * only sets opt_out=TRUE, no other state mutations possible.
  * User can opt back in via account settings (future feature).
  *
  * Signing reuses JwtSettings::signingSecret to avoid introducing
@@ -70,7 +70,7 @@ final class UnsubscribeTokenIssuer
     /**
      * Verify a token. Returns the embedded user_id on success,
      * null on any failure (bad signature, expired, wrong action,
-     * malformed). Opaque on failure — caller decides the UX
+     * malformed). Opaque on failure, caller decides the UX
      * response.
      */
     public function verify(string $token): ?int

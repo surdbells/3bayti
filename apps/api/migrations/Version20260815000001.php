@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Notification schedules (Phase 3) — scheduled + recurring notifications.
+ * Notification schedules (Phase 3), scheduled + recurring notifications.
  *
  * A schedule holds the message (optionally from a template, raw {{variables}}
  * kept unresolved), the audience config, and a recurrence rule. The

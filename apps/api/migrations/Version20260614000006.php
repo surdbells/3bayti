@@ -9,7 +9,7 @@ use Doctrine\Migrations\AbstractMigration;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 
 /**
- * Phase 5 — chat notification debounce anchors. Per-party "last notified"
+ * Phase 5, chat notification debounce anchors. Per-party "last notified"
  * timestamps on chat_conversations so unread email/push notifications can
  * be debounced (one ping per burst, re-armed when the recipient reads).
  */

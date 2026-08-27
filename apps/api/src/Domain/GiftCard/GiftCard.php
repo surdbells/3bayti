@@ -12,16 +12,16 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * A 3bayti gift card — a closed-loop stored-value instrument.
+ * A 3bayti gift card, a closed-loop stored-value instrument.
  *
  * Lifecycle
  * ---------
- *   pending_payment  — order created, gateway not yet confirmed
- *   active           — payment confirmed; balance available to spend
- *   partially_used   — at least one debit applied; balance > 0
- *   exhausted        — balance reached exactly 0.00
- *   expired          — expiry_at passed with remaining balance
- *   voided           — admin-cancelled (refund processed externally)
+ *   pending_payment , order created, gateway not yet confirmed
+ *   active          , payment confirmed; balance available to spend
+ *   partially_used  , at least one debit applied; balance > 0
+ *   exhausted       , balance reached exactly 0.00
+ *   expired         , expiry_at passed with remaining balance
+ *   voided          , admin-cancelled (refund processed externally)
  *
  * Partial payment model
  * ---------------------
@@ -40,15 +40,15 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * Themes (6 designs)
  * ------------------
- *   birthday        — gold confetti, warm amber
- *   wedding         — ivory + rose gold, florals
- *   eid             — deep green, crescent motifs, Arabic calligraphy
- *   mother          — blush pink, soft botanicals
- *   graduation      — navy + gold, starburst
- *   luxury          — black + platinum, minimal editorial
+ *   birthday       , gold confetti, warm amber
+ *   wedding        , ivory + rose gold, florals
+ *   eid            , deep green, crescent motifs, Arabic calligraphy
+ *   mother         , blush pink, soft botanicals
+ *   graduation     , navy + gold, starburst
+ *   luxury         , black + platinum, minimal editorial
  *
  * The 'luxury' theme is the only one that supports a recipient photo
- * (recipient_photo_url). This is a curated experience — upload via
+ * (recipient_photo_url). This is a curated experience, upload via
  * POST /v3/upload?context=gift_card_photo before creating the card.
  *
  * Denomination constraints
@@ -108,7 +108,7 @@ class GiftCard
     private ?int $id = null;
 
     /**
-     * 16 uppercase hex chars without hyphens — stored raw, formatted
+     * 16 uppercase hex chars without hyphens, stored raw, formatted
      * as XXXX-XXXX-XXXX-XXXX on read. Unique at DB level.
      */
     #[ORM\Column(name: 'code', type: 'string', length: 16, unique: true)]
@@ -156,7 +156,7 @@ class GiftCard
     private ?string $recipientMessage = null;
 
     /**
-     * Recipient photo URL — only meaningful for theme='luxury'.
+     * Recipient photo URL, only meaningful for theme='luxury'.
      * Uploaded via POST /v3/upload?context=gift_card_photo before card
      * creation; validated at creation time.
      */
@@ -167,7 +167,7 @@ class GiftCard
     //
     // When recipient_email / recipient_phone is set, the card is
     // auto-delivered on activation (or by the scheduled-delivery cron).
-    // When null, the buyer shares the formatted code manually — the
+    // When null, the buyer shares the formatted code manually, the
     // original, fully backward-compatible behaviour.
 
     /** Optional recipient email for auto-delivery. Validated at creation. */
@@ -194,7 +194,7 @@ class GiftCard
 
     /**
      * Optional scheduled delivery date. When set, the card is NOT
-     * immediately sent to the recipient — it's queued and delivered
+     * immediately sent to the recipient, it's queued and delivered
      * on this date. Null = send immediately on activation.
      */
     #[ORM\Column(name: 'scheduled_delivery_at', type: 'datetime_immutable', nullable: true)]
@@ -215,7 +215,7 @@ class GiftCard
     private DateTimeImmutable $updatedAt;
 
     /**
-     * The purchase order — links this card to the Noon payment that
+     * The purchase order, links this card to the Noon payment that
      * funded it. Used to tie the activation webhook back to the card.
      * Nullable because we create the card before the payment completes.
      */
@@ -287,7 +287,7 @@ class GiftCard
      *
      * Unlike the storefront purchase path (which creates a
      * pending_payment card that activates on payment), an admin-issued
-     * card is born ACTIVE — no payment is collected. It is funded by an
+     * card is born ACTIVE, no payment is collected. It is funded by an
      * initial CREDIT ledger row (so the ledger always opens with the
      * issued value) and carries the standard 12-month expiry from now.
      *
@@ -462,7 +462,7 @@ class GiftCard
     // customer-facing guards: an admin credit is NOT capped at the
     // original denomination (a comp top-up may legitimately raise the
     // balance), and an admin debit does NOT require the card to be
-    // "spendable" — but it still may NEVER push the balance below 0.
+    // "spendable", but it still may NEVER push the balance below 0.
 
     /**
      * Admin credit (top-up / comp). Increases balance + writes a CREDIT
@@ -502,7 +502,7 @@ class GiftCard
     /**
      * Admin debit (manual deduction / clawback). Decreases balance +
      * writes a DEBIT ledger row. Rejects an overdraw (amount may not
-     * exceed the current balance — balance never goes below 0).
+     * exceed the current balance, balance never goes below 0).
      *
      * @throws \LogicException  if the card is voided
      * @throws \DomainException if the amount exceeds the balance
@@ -544,13 +544,13 @@ class GiftCard
      * Admin void with audit trail. Zeroes the spendable balance, flips
      * status to voided, and writes a terminal VOID ledger row carrying
      * the reason + actor. Idempotent: calling void on an already-voided
-     * card is a no-op (returns null) — the caller surfaces a clear
+     * card is a no-op (returns null), the caller surfaces a clear
      * "already voided" response rather than double-recording.
      */
     public function voidWithLedger(string $reason, ?int $actorUserId = null): ?GiftCardTransaction
     {
         if ($this->status === self::STATUS_VOIDED) {
-            return null; // already voided — idempotent no-op
+            return null; // already voided, idempotent no-op
         }
 
         $this->status   = self::STATUS_VOIDED;
@@ -580,7 +580,7 @@ class GiftCard
 
     /**
      * Link a recipient user account when they redeem the card.
-     * Idempotent — safe to call again if same user.
+     * Idempotent, safe to call again if same user.
      */
     public function assignRecipient(User $user): void
     {
@@ -638,7 +638,7 @@ class GiftCard
     /**
      * Was this card bought FOR SOMEONE ELSE?
      *
-     * True as soon as the buyer designated a recipient in any form — a name,
+     * True as soon as the buyer designated a recipient in any form, a name,
      * an email or a phone. Those cards are the recipient's to spend, so they
      * must NOT sit in the buyer's spendable wallet just because the buyer
      * paid for them. A card bought with no recipient details at all is a
@@ -663,7 +663,7 @@ class GiftCard
      *     else and nobody else has claimed it.
      *
      * Spendability of the card itself (status/expiry/balance) is a separate
-     * concern — see isSpendable().
+     * concern, see isSpendable().
      */
     public function isSpendableBy(User $user): bool
     {
@@ -791,7 +791,7 @@ class GiftCard
     /**
      * Light E.164-ish validation: an optional leading '+' followed by
      * 7–15 digits. We store the value exactly as given (no
-     * normalisation) — the SMS sender strips the country code itself.
+     * normalisation), the SMS sender strips the country code itself.
      */
     private function assertValidPhone(string $phone): void
     {

@@ -6,7 +6,7 @@ import { SessionManager } from '../../services/session-manager.service';
  * Idle-session warning modal. Appears when the user has been inactive long
  * enough that their session is about to end, with a live countdown. They can
  * stay signed in (refreshes the token) or log out now. If the countdown runs
- * out, SessionManager signs them out — so a session never ends abruptly while
+ * out, SessionManager signs them out, so a session never ends abruptly while
  * they're still working, only after an explicit warning.
  *
  * Rendered once in the app shell; visibility is driven by SessionManager

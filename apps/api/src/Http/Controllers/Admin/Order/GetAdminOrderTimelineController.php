@@ -28,9 +28,9 @@ use Psr\Http\Message\ServerRequestInterface;
  * chronological feed.
  *
  * Query parameters:
- *   order  — 'desc' (default, newest first) | 'asc' (oldest first)
- *   limit  — 1-200, default 50
- *   offset — >=0, default 0
+ *   order , 'desc' (default, newest first) | 'asc' (oldest first)
+ *   limit , 1-200, default 50
+ *   offset, >=0, default 0
  *
  * Authorization: admin-only (group middleware). Audit ACTION_VIEWED
  * emitted with the order as subject so forensic 'who looked at this

@@ -28,7 +28,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Query parameters:
  *   - status: optional filter on OrderReturnRequest::ALL_STATUSES
- *   - vendor_id: optional — if the user owns multiple vendors, the
+ *   - vendor_id: optional, if the user owns multiple vendors, the
  *     UI can request returns for just one of them; otherwise we
  *     show returns across all of the user's vendors.
  *   - limit: default 20, max 100
@@ -39,14 +39,14 @@ use Psr\Http\Message\ServerRequestInterface;
  *     with at least one approved store" by the time this controller
  *     runs.
  *   - We resolve the user's vendor IDs and filter the query to those
- *     vendors only — defense in depth.
+ *     vendors only, defense in depth.
  *
  * Multi-vendor user
  * =================
  * A single user MAY own multiple Vendor entities. Without a vendor_id
  * query param, this endpoint returns the union: any return touching
  * any of the user's vendors. With a vendor_id, we narrow to just
- * that one (after verifying the user actually owns it — cross-vendor
+ * that one (after verifying the user actually owns it, cross-vendor
  * attempts return empty rather than 403, since the existence-leak
  * pattern argues for indistinguishability).
  *
@@ -93,7 +93,7 @@ final class ListVendorReturnsController
         $userVendorIds = $vendorRepo->findIdsByOwnerUser($user);
         if ($userVendorIds === []) {
             // VendorAuthMiddleware should have caught this, but
-            // defense in depth — empty page.
+            // defense in depth, empty page.
             return $this->ok(PaginatedEnvelope::build([], 0, self::DEFAULT_LIMIT, 0));
         }
 
@@ -109,7 +109,7 @@ final class ListVendorReturnsController
         if ($requestedVendorId !== null) {
             if (!in_array($requestedVendorId, $userVendorIds, true)) {
                 // Pretend they have no returns there. Existence-leak
-                // prevention — same response shape as a vendor with
+                // prevention, same response shape as a vendor with
                 // genuinely zero returns.
                 return $this->ok(PaginatedEnvelope::build([], 0, $limit, $offset));
             }
@@ -125,7 +125,7 @@ final class ListVendorReturnsController
         // the repo's vendor-paginated method is a direct match.
         // For multi-vendor users iterating all their vendors, we
         // call findFilteredPaginatedForAdmin with vendorId set per
-        // vendor and merge — but for v1 simplicity, we keep the
+        // vendor and merge, but for v1 simplicity, we keep the
         // contract simple: vendor_id is required when the user owns
         // multiple vendors. Multi-vendor merge is a future
         // enhancement when use-cases demand it.

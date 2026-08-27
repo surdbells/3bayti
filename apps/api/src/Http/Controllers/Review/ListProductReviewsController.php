@@ -16,7 +16,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * GET /v3/products/{productId}/reviews[?limit=&offset=] — public
+ * GET /v3/products/{productId}/reviews[?limit=&offset=], public
  * (approved) reviews for a product, newest first. No auth; only
  * approved reviews are exposed (pending/rejected/spam stay hidden).
  */

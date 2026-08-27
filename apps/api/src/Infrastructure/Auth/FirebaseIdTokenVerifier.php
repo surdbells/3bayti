@@ -19,7 +19,7 @@ use Psr\Cache\CacheItemPoolInterface;
  * or Apple), then sends us the resulting Firebase ID token. We verify it
  * server-side before trusting ANY claim:
  *
- *   1. Signature — RS256 against Google's public x509 certs for the
+ *   1. Signature, RS256 against Google's public x509 certs for the
  *      `securetoken@system.gserviceaccount.com` service account. Certs
  *      are fetched from Google's well-known endpoint and cached for the
  *      duration Google's Cache-Control allows (rotated ~daily).
@@ -28,7 +28,7 @@ use Psr\Cache\CacheItemPoolInterface;
  *   4. `exp` MUST be in the future (enforced by JWT::decode).
  *
  * Any failure throws {@see SocialTokenVerificationException} with a
- * generic message — the caller turns that into one uniform 401, so the
+ * generic message, the caller turns that into one uniform 401, so the
  * token-state oracle never leaks.
  *
  * Claims returned
@@ -76,7 +76,7 @@ final class FirebaseIdTokenVerifier
     public function verify(string $idToken): VerifiedSocialIdentity
     {
         if ($this->projectId === '') {
-            // Misconfiguration — refuse to "verify" against an empty
+            // Misconfiguration, refuse to "verify" against an empty
             // audience/issuer (which would otherwise accept tokens for
             // any project). Generic exception; the real cause is logged
             // upstream via the chained throwable on the caller side.
@@ -89,7 +89,7 @@ final class FirebaseIdTokenVerifier
             $keys = $this->buildKeySet();
             $payload = JWT::decode($idToken, $keys);
         } catch (\Throwable $e) {
-            // Bad signature / expired / malformed / unfetchable certs —
+            // Bad signature / expired / malformed / unfetchable certs -
             // all collapse to one opaque failure.
             throw SocialTokenVerificationException::invalid($e);
         }
@@ -202,7 +202,7 @@ final class FirebaseIdTokenVerifier
             );
         }
 
-        // `sub` is the Firebase user id — required to identify the user.
+        // `sub` is the Firebase user id, required to identify the user.
         if (!isset($payload->sub) || !is_string($payload->sub) || $payload->sub === '') {
             throw SocialTokenVerificationException::invalid(
                 new \RuntimeException('Token is missing subject.'),
@@ -230,7 +230,7 @@ final class FirebaseIdTokenVerifier
 
         if ($provider === null) {
             // Some other Firebase provider (password, phone, facebook…)
-            // — not a social provider we support here.
+            //, not a social provider we support here.
             throw SocialTokenVerificationException::invalid(
                 new \RuntimeException("Unsupported sign-in provider: {$signInProvider}"),
             );

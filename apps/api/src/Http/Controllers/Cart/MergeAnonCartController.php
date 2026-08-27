@@ -36,10 +36,10 @@ use Psr\Http\Message\ServerRequestInterface;
  *   measurement + extra_measurement). If found, add quantities
  *   (capped at 999 per line). If not, append a new line.
  *
- * Empty items[] is a no-op success — first sign-in for users
+ * Empty items[] is a no-op success, first sign-in for users
  * with no guest cart returns the empty server cart in 200 OK.
  *
- * Unknown product_ids are SKIPPED (not failed) — a deleted product
+ * Unknown product_ids are SKIPPED (not failed), a deleted product
  * shouldn't block a sign-in flow. Skipped items return in the
  * response under `skipped` so mobile can show a one-line notice.
  *

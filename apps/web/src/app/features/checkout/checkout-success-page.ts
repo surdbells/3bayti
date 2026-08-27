@@ -16,7 +16,7 @@ import { ToastService } from '../../shared/forms';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
- * /checkout/success/:id — order placed confirmation.
+ * /checkout/success/:id, order placed confirmation.
  *
  * Lands here from:
  *   - Y.3's /checkout/return route after a successful payment poll
@@ -30,7 +30,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
  *      will have emptied the server cart)
  *   3. If failed → toast + Back to /account/orders
  *
- * We do NOT verify the order belongs to the current user — the API
+ * We do NOT verify the order belongs to the current user, the API
  * enforces that and returns 404 for cross-user reads.
  *
  * Layout
@@ -41,7 +41,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
  *   - Shipping address card
  *   - Action buttons: View all orders / Continue shopping
  *
- * The hero animation is intentionally restrained — a single subtle
+ * The hero animation is intentionally restrained, a single subtle
  * scale-in on the checkmark. Users in the post-checkout flow want
  * confirmation, not fireworks.
  */
@@ -241,7 +241,7 @@ export class CheckoutSuccessPageComponent implements OnInit {
   private readonly _errored = signal<boolean>(false);
   protected readonly errored = this._errored.asReadonly();
 
-  /** Template helper — avoid pipe overhead for a single arithmetic check. */
+  /** Template helper, avoid pipe overhead for a single arithmetic check. */
   protected readonly parseFloat = parseFloat;
 
   async ngOnInit(): Promise<void> {

@@ -11,7 +11,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * MessageCentral CPaaS general-SMS sender — production adapter.
+ * MessageCentral CPaaS general-SMS sender, production adapter.
  *
  * Reuses the same auth-token mechanism as MessageCentralOtpProvider
  * (GET /auth/v1/authentication/token → {token}, sent back as the
@@ -19,7 +19,7 @@ use Psr\Log\NullLogger;
  * endpoint. The OTP send endpoint cannot carry arbitrary text, so a
  * separate general-SMS endpoint is required.
  *
- * IMPORTANT — endpoint is unconfirmed
+ * IMPORTANT, endpoint is unconfirmed
  * ===================================
  * MessageCentral's exact general-SMS send path + parameter names are
  * not yet confirmed by the operator. Everything here is therefore
@@ -31,7 +31,7 @@ use Psr\Log\NullLogger;
  * Operator must set (see di.php + .env.example):
  *   - MESSAGECENTRAL_SMS_ENABLED=true
  *   - MESSAGECENTRAL_CUSTOMER_ID / MESSAGECENTRAL_KEY / MESSAGECENTRAL_EMAIL
- *     (shared with the OTP provider — same account)
+ *     (shared with the OTP provider, same account)
  *   - MESSAGECENTRAL_SMS_SENDER_ID   (the approved alphanumeric/DLT sender)
  *   - MESSAGECENTRAL_SMS_PATH        (the confirmed send path; default below)
  *   - MESSAGECENTRAL_COUNTRY         (default '971')
@@ -71,7 +71,7 @@ final class MessageCentralSmsSender implements SmsSenderInterface
         $this->logger = $logger ?? new NullLogger();
     }
 
-    /** Real HTTPS sender — always enabled once selected by the container. */
+    /** Real HTTPS sender, always enabled once selected by the container. */
     public function isEnabled(): bool
     {
         return true;

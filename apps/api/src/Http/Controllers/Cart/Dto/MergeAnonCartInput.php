@@ -26,16 +26,16 @@ use Symfony\Component\Validator\Constraints as Assert;
  *   measurement + extra_measurement). If found, add the quantities
  *   (capped at 999 per line). If not, append a new line.
  *
- * Empty items[] is a no-op success — first sign-in for users with
+ * Empty items[] is a no-op success, first sign-in for users with
  * no guest cart returns the empty server cart in 200 OK.
  *
- * Unknown product_ids are SKIPPED (not failed) by the controller —
+ * Unknown product_ids are SKIPPED (not failed) by the controller -
  * deleting a product shouldn't block sign-in. Skipped items return
  * under `skipped` in the response.
  *
  * Why items is `array` not `list<MergeAnonCartItem>`:
  *   RequestValidator's hydrator is a single-level constructor
- *   mapper — it can't auto-instantiate nested DTOs. The controller
+ *   mapper, it can't auto-instantiate nested DTOs. The controller
  *   handles per-item normalisation inline. Validator's `All`
  *   constraint with a nested `Collection` runs the field-level
  *   checks (positive int, length caps, etc.) without needing the

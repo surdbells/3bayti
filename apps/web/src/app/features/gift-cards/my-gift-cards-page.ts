@@ -24,7 +24,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 type GiftCardFilter = 'all' | 'active' | 'pending_payment' | 'used' | 'expired' | 'voided';
 
 /**
- * /account/gift-cards — the buyer's gift cards (purchased + redeemed).
+ * /account/gift-cards, the buyer's gift cards (purchased + redeemed).
  *
  * Auth-gated. Loads GET /v3/gift-cards/mine (which embeds transactions) once on
  * init and renders each card as a themed ui-gift-card tile. Mirrors the mobile
@@ -284,7 +284,7 @@ export class MyGiftCardsPageComponent implements OnInit {
         if (this.copiedId() === card.id) this.copiedId.set(null);
       }, 1800);
     } catch {
-      /* clipboard unavailable — no-op */
+      /* clipboard unavailable, no-op */
     }
   }
 

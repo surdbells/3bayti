@@ -194,7 +194,7 @@ export class AddPhonePromptComponent {
     return u !== null && !u.phone && u.is_phone_verified === false && !dismissed();
   });
 
-  /** Come back here after verifying — the current page, sans query string. */
+  /** Come back here after verifying, the current page, sans query string. */
   protected returnUrl(): string {
     const url = this.router.url.split('?')[0];
     return url.startsWith('/') ? url : '/';

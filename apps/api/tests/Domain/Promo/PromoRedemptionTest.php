@@ -15,7 +15,7 @@ use PHPUnit\Framework\TestCase;
 /**
  * Entity behaviour tests for PromoRedemption (M3.2.X.8-A).
  *
- * No database — these exercise the constructor's snapshot capture +
+ * No database, these exercise the constructor's snapshot capture +
  * immutability contract. Snapshot fields must reflect the catalog
  * state AT REDEMPTION TIME, never live-rebound to the underlying
  * PromoCode (which admin may later edit).
@@ -111,7 +111,7 @@ final class PromoRedemptionTest extends TestCase
     {
         // Edge: a 0.00 discount is semantically a no-op but technically
         // valid (a clamped fixed_amount that hit the cart-subtotal floor
-        // when subtotal was zero — degenerate cart-only path).
+        // when subtotal was zero, degenerate cart-only path).
         $user = $this->newUser();
         $order = $this->newOrder($user);
         $promo = $this->newPromoCode();

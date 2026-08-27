@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Admin compliance review metadata on vendors — who reviewed a KYC
+ * Admin compliance review metadata on vendors, who reviewed a KYC
  * submission, when, and (for rejections) why.
  *
  *   compliance_reviewed_at  TIMESTAMPTZ NULL
@@ -32,7 +32,7 @@ final class Version20260614000004 extends AbstractMigration
         $this->addSql('ALTER TABLE vendors ADD COLUMN IF NOT EXISTS compliance_reviewed_at TIMESTAMP(0) WITH TIME ZONE DEFAULT NULL');
         $this->addSql('ALTER TABLE vendors ADD COLUMN IF NOT EXISTS compliance_reviewed_by BIGINT DEFAULT NULL');
         $this->addSql('ALTER TABLE vendors ADD COLUMN IF NOT EXISTS compliance_review_note TEXT DEFAULT NULL');
-        // Review queue lists by status — index it.
+        // Review queue lists by status, index it.
         $this->addSql('CREATE INDEX IF NOT EXISTS idx_vendors_compliance_status ON vendors (compliance_status)');
     }
 

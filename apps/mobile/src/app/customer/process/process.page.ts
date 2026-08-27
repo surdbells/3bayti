@@ -135,7 +135,7 @@ finalize() {
       ).trim();
 
       if (!reference) {
-        // Nothing to confirm against — don't claim success or failure;
+        // Nothing to confirm against, don't claim success or failure;
         // send the user to their orders so they can see the real state.
         this.ui_controls.confirming_transaction = false;
         this.router.navigate(['/my-orders'], { replaceUrl: true });

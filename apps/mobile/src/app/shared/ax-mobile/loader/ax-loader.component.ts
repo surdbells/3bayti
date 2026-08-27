@@ -1,5 +1,5 @@
 /**
- * AxLoaderComponent — abayti's spinner primitive.
+ * AxLoaderComponent, abayti's spinner primitive.
  *
  * Three dots pulsing in a left-to-right wave. Brand brown by default,
  * inheriting via currentColor so callers can override with text color

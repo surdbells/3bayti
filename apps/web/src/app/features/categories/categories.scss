@@ -1,6 +1,6 @@
 /* /category page styles. Brand-aligned: editorial, generous whitespace,
    subtle hover states. The category card is the single repeating unit
-   that Phase 2's category-detail page will likely reuse — keep
+   that Phase 2's category-detail page will likely reuse, keep
    selectors specific enough to extract later. */
 
 .categories-page {
@@ -22,7 +22,7 @@
   color: var(--color-brand-500);
 }
 
-/* Responsive grid — 1 col mobile, 2 col tablet, 3 col desktop, 4 col XL.
+/* Responsive grid, 1 col mobile, 2 col tablet, 3 col desktop, 4 col XL.
    Using auto-fill ensures empty space is consumed when categories are sparse. */
 .category-grid {
   display: grid;
@@ -56,7 +56,7 @@
   outline: none;
 }
 
-/* Letter avatar — placeholder while backend doesn't supply real
+/* Letter avatar, placeholder while backend doesn't supply real
    category images. Brand-colored circle with a serif initial. */
 .category-thumb {
   flex: 0 0 auto;
@@ -79,7 +79,7 @@
 }
 
 .category-thumb span {
-  /* Slight optical adjustment — Playfair caps look low without it. */
+  /* Slight optical adjustment, Playfair caps look low without it. */
   transform: translateY(-1px);
 }
 

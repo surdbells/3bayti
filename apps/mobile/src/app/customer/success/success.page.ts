@@ -46,7 +46,7 @@ interface SuccessOrder {
  * Reached from /process once the checkout poll reports a terminal PAID
  * state, and from checkout directly on the gift-card full-cover path
  * (gateway skipped). It confirms the payment and renders the full order
- * receipt — items, money breakdown and delivery address — so the customer
+ * receipt, items, money breakdown and delivery address, so the customer
  * sees exactly what they bought without opening My Orders.
  *
  * The order is fetched by id when /process passes one; otherwise the id is
@@ -122,7 +122,7 @@ export class SuccessPage implements OnInit {
     }
   }
 
-  /** No id passed — ask the status endpoint for it (keyed by reference). */
+  /** No id passed, ask the status endpoint for it (keyed by reference). */
   private resolveIdThenLoad(): void {
     this.adapter
       .get_v3('GET /checkout/status/:order_reference', {
@@ -154,7 +154,7 @@ export class SuccessPage implements OnInit {
           if (o) { this.order = this.mapOrder(o); }
           this.isLoading = false;
         },
-        // Payment already succeeded — a detail-fetch failure must never turn
+        // Payment already succeeded, a detail-fetch failure must never turn
         // this into an error screen. Show the confirmation without it.
         error: () => { this.isLoading = false; },
       });
@@ -206,7 +206,7 @@ export class SuccessPage implements OnInit {
   }
 
   goToOrder(): void {
-    // The order-detail route is 'orders/:id' (NOT 'order-detail/:id') — the
+    // The order-detail route is 'orders/:id' (NOT 'order-detail/:id'), the
     // wrong path matched nothing, so the button silently did nothing.
     if (this.order?.id) {
       this.router.navigate(['/', 'orders', this.order.id]);

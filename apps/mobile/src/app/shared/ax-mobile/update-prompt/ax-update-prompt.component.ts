@@ -1,10 +1,10 @@
 /**
- * AxUpdatePromptComponent — centered floating modal that blocks app usage
+ * AxUpdatePromptComponent, centered floating modal that blocks app usage
  * until the user updates. Used when AppUpdateService.check() returns
  * shouldForceUpdate=true.
  *
  * UX:
- *   - Centered modal, not a bottom sheet — visually distinct from the
+ *   - Centered modal, not a bottom sheet, visually distinct from the
  *     dismissible sheets used elsewhere
  *   - No backdrop tap to dismiss, no Escape key, no Later button
  *   - "Update now" is the only action
@@ -12,13 +12,13 @@
  *   - Respects safe-area inset on iOS (Dynamic Island, notch)
  *
  * Inputs:
- *   isOpen — whether to render the modal
- *   title — heading text (already localized)
- *   message — body text (already localized)
- *   buttonLabel — CTA label (already localized)
+ *   isOpen, whether to render the modal
+ *   title, heading text (already localized)
+ *   message, body text (already localized)
+ *   buttonLabel, CTA label (already localized)
  *
  * Outputs:
- *   updateClicked — fires when user taps the CTA. Caller should call
+ *   updateClicked, fires when user taps the CTA. Caller should call
  *                   AppUpdateService.startUpdate() in response.
  *
  * Why no AxBottomSheet reuse: the existing sheet has dismiss affordances
@@ -63,7 +63,7 @@ export class AxUpdatePromptComponent {
   @Input() versionLabel = '';
 
   /** Whether to show a secondary "Later" button below the primary CTA.
-   *  When false (default — hard-prompt mode), the modal has no dismiss
+   *  When false (default, hard-prompt mode), the modal has no dismiss
    *  affordance and the user must update. When true (soft-prompt mode),
    *  a Later button appears. Caller sets based on AppUpdateService's
    *  UpdateCheckResult.canDismiss. */

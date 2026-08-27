@@ -61,7 +61,7 @@
        defensive guard keep working under the step gates. -->
   <ion-accordion-group #accordionGroup [value]="['first']" hidden></ion-accordion-group>
 
-  <!-- ══════════════ STEP 1 — ADDRESS ══════════════ -->
+  <!-- ══════════════ STEP 1, ADDRESS ══════════════ -->
   @if (step === 1) {
     <section class="checkout-section" [attr.aria-label]="'aria_delivery_information' | translate">
       <div class="ion-padding-vertical">
@@ -128,7 +128,7 @@
     </ion-button>
   }
 
-  <!-- ══════════════ STEP 2 — REVIEW ══════════════ -->
+  <!-- ══════════════ STEP 2, REVIEW ══════════════ -->
   @if (step === 2) {
     <section class="checkout-section" [attr.aria-label]="'aria_review_order' | translate">
       <div class="ion-padding-vertical">
@@ -138,7 +138,7 @@
             <!-- Single server-authoritative summary, driven by promo.quote
                  (POST /v3/cart/quote). The v3 cart endpoint doesn't compute
                  delivery/discount/total, so the old this.bill.f_* fields were
-                 always blank — values now come from the quote. -->
+                 always blank, values now come from the quote. -->
             <ion-list lines="none" class="contact-list">
               <ion-item lines="none" detail="false">
                 <ion-label>{{ 'label_items' | translate }}</ion-label>
@@ -285,7 +285,7 @@
     }
   </div>
 
-  <!-- ── Promo code (additive — M-promo) ──────────────────────────── -->
+  <!-- ── Promo code (additive, M-promo) ──────────────────────────── -->
   <div class="gc-apply-section">
     <button type="button" class="gc-apply-toggle" (click)="togglePromoSection()">
       <div class="gc-apply-toggle__left">
@@ -477,7 +477,7 @@
 </ion-content>
 
 <!--
-  Floating action bar (step 2 / review) — mirrors the product page's
+  Floating action bar (step 2 / review), mirrors the product page's
   price + add-to-cart footer: surface background, lifted shadow, safe-area
   padding, amount on the left, gradient CTA on the right. Back sits beside the
   CTA as a compact icon button so both float above the scrolling review.

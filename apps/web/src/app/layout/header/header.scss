@@ -1,4 +1,4 @@
-/* Site header — sticky, branded, deliberately spare in Phase 1.
+/* Site header, sticky, branded, deliberately spare in Phase 1.
 
    Y.1-I will introduce the full nav structure (mega-menu, search,
    account, cart). Y.1-A adds the locale switcher slot. */
@@ -26,7 +26,7 @@
    FLOATING transparent-over-hero variant
    On the home route the header sits ON TOP of the hero band (see app.scss /
    home hero stacking) and drops its own surface so the hero gradient shows
-   through — the nav "floats". The home hero is a LIGHT warm-cream field, so
+   through, the nav "floats". The home hero is a LIGHT warm-cream field, so
    text/logo stay dark (brand-700) here for AA contrast; we only strip the
    background, border, and shadow. `.is-scrolled` wins over this (it comes
    later + the template only applies .is-transparent while NOT scrolled), so
@@ -37,7 +37,7 @@
   background: transparent;
   border-block-end-color: transparent;
   box-shadow: none;
-  /* No blur over the hero — let the gradient read crisply behind the bar. */
+  /* No blur over the hero, let the gradient read crisply behind the bar. */
   backdrop-filter: none;
 }
 
@@ -57,7 +57,7 @@
   justify-content: space-between;
   gap: 32px;
   max-width: 1360px;
-  /* margin-inline + padding-inline are logical properties — they map
+  /* margin-inline + padding-inline are logical properties, they map
      to left/right in LTR and right/left in RTL automatically, so the
      same rules work for both directions. */
   margin-inline: auto;
@@ -169,7 +169,7 @@
   font-weight: 600;
 }
 
-/* "Discounted" — a subtle promotional accent so it reads as distinct from
+/* "Discounted", a subtle promotional accent so it reads as distinct from
    the plain browse links, while staying consistent with the gilded text
    menu. Uses the brand gold that the product-card sale treatment uses,
    so the on-sale visual language matches across the site. */
@@ -204,7 +204,7 @@
 }
 
 .nav-link::after {
-  /* Subtle underline-on-hover — no layout shift since the line
+  /* Subtle underline-on-hover, no layout shift since the line
      uses transform instead of border. */
   content: '';
   position: absolute;
@@ -215,7 +215,7 @@
   height: 1px;
   background: currentColor;
   transform: scaleX(0);
-  /* The underline grows from the leading edge — `left center` in LTR
+  /* The underline grows from the leading edge, `left center` in LTR
      reads as the start edge; in RTL we need it to grow from the right.
      Using `transform-origin: 0 center` plus logical properties works
      when paired with `direction`-aware overrides below. */
@@ -269,7 +269,7 @@
 }
 
 /* In the header actions row, the ghost (Vendor) CTA collapses on narrow
-   screens — it remains reachable inside the mobile drawer. Scoped to
+   screens, it remains reachable inside the mobile drawer. Scoped to
    .header-actions so the drawer copy is unaffected. */
 @media (max-width: 560px) {
   .header-actions .auth-cta--ghost {
@@ -290,7 +290,7 @@
   }
 }
 
-/* Sign-in affordance — a refined account link (person icon + label) that
+/* Sign-in affordance, a refined account link (person icon + label) that
    replaces the former gold "Customer" button. Espresso text on a hairline
    border with a subtle brand-tinted hover. Deliberately quieter than a
    primary button so it reads as utility, not a sales CTA. */
@@ -359,7 +359,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Mobile navigation — hamburger toggle + off-canvas drawer
+   Mobile navigation, hamburger toggle + off-canvas drawer
    The inline .primary-nav is hidden below 900px; the toggle opens a
    left-anchored (right in RTL) drawer that mirrors the nav items and,
    when logged out, the Customer / Vendor CTAs.
@@ -508,14 +508,14 @@
 }
 
 /* Divider between the primary browse links and the Discounted entry
-   inside the drawer — a full-width hairline with a little breathing room. */
+   inside the drawer, a full-width hairline with a little breathing room. */
 .nav-drawer__divider {
   height: 1px;
   margin: 6px 4px;
   background: var(--color-border-subtle);
 }
 
-/* "Discounted" in the drawer — same gilded accent as the desktop nav. */
+/* "Discounted" in the drawer, same gilded accent as the desktop nav. */
 .nav-drawer__link--sale {
   color: var(--color-brand-600);
   font-weight: 600;

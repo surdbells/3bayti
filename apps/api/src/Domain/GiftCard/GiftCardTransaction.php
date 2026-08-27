@@ -11,10 +11,10 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * Append-only ledger of every balance movement on a gift card.
  *
- * TYPE_DEBIT  — balance reduced (checkout spend)
- * TYPE_CREDIT — balance restored (order cancellation refund back to card)
+ * TYPE_DEBIT , balance reduced (checkout spend)
+ * TYPE_CREDIT, balance restored (order cancellation refund back to card)
  *
- * Immutable once created — never updated by the application.
+ * Immutable once created, never updated by the application.
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'gift_card_transactions')]
@@ -48,13 +48,13 @@ class GiftCardTransaction
     #[ORM\Column(name: 'order_reference', type: 'string', length: 32, nullable: true)]
     private ?string $orderReference;
 
-    /** Order DB id — nullable because the order may not exist yet when the card is applied. */
+    /** Order DB id, nullable because the order may not exist yet when the card is applied. */
     #[ORM\Column(name: 'order_id', type: 'bigint', nullable: true)]
     private ?int $orderId;
 
     /**
      * Admin-supplied rationale for a manual adjustment / void / issue.
-     * Null for ordinary checkout debits / cancellation credits — those
+     * Null for ordinary checkout debits / cancellation credits, those
      * are explained by the order_reference instead.
      */
     #[ORM\Column(name: 'reason', type: 'string', length: 255, nullable: true)]

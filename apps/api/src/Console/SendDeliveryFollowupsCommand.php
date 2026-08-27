@@ -36,10 +36,10 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *      that have no prior review-prompt PUSH log row.
  *   2. For each, PushNotificationService::orderReviewPrompt() fans the
  *      push out to the customer's devices (fire-and-forget; internally
- *      honors marketing_push_opt_out — the THREE marketing pushes skip
+ *      honors marketing_push_opt_out, the THREE marketing pushes skip
  *      opted-out users, unlike transactional order-lifecycle pushes).
  *   3. Logs the attempt to notification_logs with
- *      template='order.review_prompt', channel='push', order_id set —
+ *      template='order.review_prompt', channel='push', order_id set -
  *      that row makes the order ineligible on the next run.
  *
  * Idempotency
@@ -50,7 +50,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *
  * Failure isolation
  * =================
- * Each order is processed in its own try/catch — one order's failure
+ * Each order is processed in its own try/catch, one order's failure
  * never aborts the batch.
  */
 #[AsCommand(

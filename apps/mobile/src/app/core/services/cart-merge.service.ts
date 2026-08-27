@@ -48,7 +48,7 @@ export type MergeResult = {
  * Trade-off between data loss and double-merging. Leaving the cart
  * means a retry sends the same items again; v3's variant-aware
  * merge handles this idempotently. Clearing on failure means the
- * user permanently loses their cart on a transient network blip —
+ * user permanently loses their cart on a transient network blip -
  * the worse failure mode for a conversion-critical surface.
  *
  * Why a separate service from LocalCartService
@@ -56,7 +56,7 @@ export type MergeResult = {
  * Separation of concerns. LocalCartService owns local storage; it
  * has no business knowing about networking or backend semantics.
  * CartMergeService orchestrates: read local → POST server → clear
- * local. Keeping them separate also makes testing easier — mock
+ * local. Keeping them separate also makes testing easier, mock
  * either side independently.
  */
 @Injectable({ providedIn: 'root' })
@@ -73,7 +73,7 @@ export class CartMergeService {
    *
    * Should be called AFTER the auth token has been stored in
    * Preferences, so the adapter's translateRequestBody can pick
-   * up the token from the body (legacy convention) — caller must
+   * up the token from the body (legacy convention), caller must
    * pass the token in the body via { id, token } as legacy mobile
    * does throughout. Adapter strips and converts to Bearer header.
    *
@@ -87,7 +87,7 @@ export class CartMergeService {
       localItems = await this.localCart.list();
     } catch (err) {
       // Storage error reading the local cart. Treat as 'no local
-      // cart to merge' — don't fail the sign-in.
+      // cart to merge', don't fail the sign-in.
       console.warn('[CartMerge] failed to read local cart', err);
       return { attempted: false, success: false, skipped: [], error: err };
     }
@@ -118,7 +118,7 @@ export class CartMergeService {
         this.networkAdapter.post_v3('POST /cart/merge', { items }, { authToken: authBody.token }),
       );
 
-      // Detect success across both shapes (defensive — Phase F flip
+      // Detect success across both shapes (defensive, Phase F flip
       // should make this always v3, but until then leave the legacy
       // detection in place).
       const success =
@@ -141,7 +141,7 @@ export class CartMergeService {
           ? response.data.skipped
           : [];
 
-      // Server accepted — clear the local cart so we don't re-merge
+      // Server accepted, clear the local cart so we don't re-merge
       // on the next sign-in. Clear failure here is non-fatal (the
       // server-side cart is already correct; local will just be a
       // ghost that next sign-in re-merges, which is idempotent
@@ -159,7 +159,7 @@ export class CartMergeService {
         error: null,
       };
     } catch (err) {
-      // Network or HTTP error. Local cart is INTACT — user can retry
+      // Network or HTTP error. Local cart is INTACT, user can retry
       // on next sign-in.
       return {
         attempted: true,

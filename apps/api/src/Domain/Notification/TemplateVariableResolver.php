@@ -11,14 +11,14 @@ use DateTimeZone;
  * Resolves {{variable}} placeholders in a notification title/body.
  *
  * Two kinds of variable:
- *   - per-recipient (first_name, last_name, full_name) — resolved against the
+ *   - per-recipient (first_name, last_name, full_name), resolved against the
  *     actual recipient user at send time.
- *   - shared/time (date, time) — computed once per broadcast, timezone-aware.
+ *   - shared/time (date, time), computed once per broadcast, timezone-aware.
  *
  * The catalog is the single source of truth: the compose UI reads it to show
  * insertable chips, validation checks against it, and resolution reads it. Add
  * a variable here (+ wire its value in valuesFor / sharedTimeValues) and the
- * whole system extends — nothing is hardcoded elsewhere.
+ * whole system extends, nothing is hardcoded elsewhere.
  */
 final class TemplateVariableResolver
 {
@@ -111,7 +111,7 @@ final class TemplateVariableResolver
     }
 
     /**
-     * Variable names used in the given text(s) that AREN'T in the catalog —
+     * Variable names used in the given text(s) that AREN'T in the catalog -
      * so the composer can flag "unknown variable" before saving/sending.
      *
      * @return list<string>

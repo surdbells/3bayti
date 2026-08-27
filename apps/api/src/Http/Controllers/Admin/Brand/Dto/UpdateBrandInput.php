@@ -9,7 +9,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * Body shape for PUT /v3/admin/brands/{id}.
  *
- * PUT semantics — all fields settable, name required. Slug present
+ * PUT semantics, all fields settable, name required. Slug present
  * in body REPLACES current slug (admin can rename URL).
  */
 final class UpdateBrandInput

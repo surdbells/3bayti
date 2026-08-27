@@ -1,5 +1,5 @@
 /* ============================================================================
-   Vendor profile page (single vendor) — compact redesign
+   Vendor profile page (single vendor), compact redesign
    ============================================================================ */
 
 ion-content.page-bg {
@@ -20,7 +20,7 @@ ion-header.vendor-header {
 .vendor-cover-wrapper {
   position: relative;
   width: 100%;
-  /* Shorter cover than before (was 16/9 ~211px) — ~16/7 ≈ 150px on a 360px
+  /* Shorter cover than before (was 16/9 ~211px), ~16/7 ≈ 150px on a 360px
      viewport, reclaiming vertical space for the catalog. */
   aspect-ratio: 16 / 7;
   overflow: hidden;
@@ -39,7 +39,7 @@ ion-header.vendor-header {
   }
 }
 
-/* Floating back button — overlays the cover image, top-start */
+/* Floating back button, overlays the cover image, top-start */
 .vendor-back-btn {
   position: absolute;
   top: calc(env(safe-area-inset-top, 0px) + 12px);
@@ -285,7 +285,7 @@ ion-header.vendor-header {
   padding: 4px 16px 16px;
 
   /* .m6d-product-card is fluid (100%) outside .h-scroll, so it fills each
-     grid cell — no 158px pin here (that rule is scoped to .h-scroll). */
+     grid cell, no 158px pin here (that rule is scoped to .h-scroll). */
 }
 
 /* ----- Per-filter empty state --------------------------------------- */

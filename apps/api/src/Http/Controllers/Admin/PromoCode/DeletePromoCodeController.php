@@ -99,7 +99,7 @@ final class DeletePromoCodeController
             // create a typo'd code and immediately want it gone.
             $repo->remove($promo);
         } else {
-            // Soft delete path: set is_active=false. Idempotent —
+            // Soft delete path: set is_active=false. Idempotent -
             // already-inactive codes pass through unchanged.
             if ($promo->isActive()) {
                 $promo->setActive(false);

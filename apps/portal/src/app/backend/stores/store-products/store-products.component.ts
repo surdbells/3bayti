@@ -159,8 +159,8 @@ export class StoreProductsComponent implements OnInit {
 
   onRowAction(e: { action: { id: string }; row: ProductRow }) {
     if (e.action.id === 'edit') {
-      // Open the full routed product editor (loads real product detail) —
-      // same pattern as AdminProducts — instead of the partial inline drawer.
+      // Open the full routed product editor (loads real product detail) -
+      // same pattern as AdminProducts, instead of the partial inline drawer.
       this.router.navigate(['/admin_edit_product'], { queryParams: { id: e.row.id, slug: String(e.row['slug'] ?? '') } });
     } else if (e.action.id === 'delete') {
       this.confirmDelete(e.row);

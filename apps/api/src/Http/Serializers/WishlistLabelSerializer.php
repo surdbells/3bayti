@@ -12,7 +12,7 @@ use Bayti\Api\Domain\Wishlist\WishlistLabel;
  * Shape:
  *   { id, name, count, created_at }
  *
- * `count` (saved-product count per label) is supplied by the caller —
+ * `count` (saved-product count per label) is supplied by the caller -
  * the controller computes it in one grouped query rather than N
  * per-label counts.
  */

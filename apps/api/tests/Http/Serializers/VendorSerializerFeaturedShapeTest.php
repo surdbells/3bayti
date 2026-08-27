@@ -21,7 +21,7 @@ use PHPUnit\Framework\TestCase;
  *   - Empty product list: serialized as `[]` not omitted
  *
  * Any change to the keys here is a breaking change for the apps/web
- * FeaturedVendor / FeaturedVendorProduct interfaces — keep them in sync.
+ * FeaturedVendor / FeaturedVendorProduct interfaces, keep them in sync.
  */
 #[CoversClass(VendorSerializer::class)]
 final class VendorSerializerFeaturedShapeTest extends TestCase
@@ -91,7 +91,7 @@ final class VendorSerializerFeaturedShapeTest extends TestCase
     {
         $vendor = $this->makeVendor('precise-vendor', 'Precise Vendor', null);
 
-        // SQL AVG can produce arbitrary precision — confirm we round
+        // SQL AVG can produce arbitrary precision, confirm we round
         $shape = $this->serializer->featuredShape(
             $vendor,
             [],

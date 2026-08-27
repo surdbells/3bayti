@@ -168,7 +168,7 @@ final class GetAdminVendorMetricsControllerTest extends HttpTestCase
     public function missingVendorReturns404(): void
     {
         $admin = $this->makeAdminUser(99);
-        // No vendor — repo returns null
+        // No vendor, repo returns null
         $this->bindDeps($admin, vendor: null, metrics: $this->emptyMetrics(30));
 
         $response = $this->makeGet($admin, '/v3/admin/vendors/999/metrics');

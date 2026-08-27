@@ -24,9 +24,9 @@ export class SeoService {
   private readonly title = inject(Title);
   private readonly doc = inject(DOCUMENT);
 
-  /** Site default — override per page via `set()`. */
+  /** Site default, override per page via `set()`. */
   private readonly siteName = '3bayti';
-  /** Build-time canonical URL — set via SITE_URL env var. */
+  /** Build-time canonical URL, set via SITE_URL env var. */
   private readonly siteUrl = environment.SITE_URL;
   /** Default OG image. Lives at the site root. */
   private readonly defaultImage = `${environment.SITE_URL}/og-default.jpg`;
@@ -34,7 +34,7 @@ export class SeoService {
   /**
    * Set all SEO + social tags for a page.
    *
-   * Idempotent — calling repeatedly with different values updates the
+   * Idempotent, calling repeatedly with different values updates the
    * tags in place (uses Meta service's `updateTag`, not `addTag`).
    */
   set(opts: SeoOptions): void {
@@ -46,17 +46,17 @@ export class SeoService {
     const image = opts.image ?? this.defaultImage;
     const type = opts.type ?? 'website';
 
-    /* Title — both <title> AND og:title for share previews */
+    /* Title, both <title> AND og:title for share previews */
     this.title.setTitle(fullTitle);
 
     /* Description */
     this.meta.updateTag({ name: 'description', content: description });
 
-    /* Canonical link — important for SEO to avoid duplicate-content
+    /* Canonical link, important for SEO to avoid duplicate-content
        penalties when the same page is reachable at multiple URLs. */
     this.setCanonical(url);
 
-    /* Open Graph — Facebook, LinkedIn, WhatsApp, etc. */
+    /* Open Graph, Facebook, LinkedIn, WhatsApp, etc. */
     this.meta.updateTag({ property: 'og:title', content: opts.title });
     this.meta.updateTag({ property: 'og:description', content: description });
     this.meta.updateTag({ property: 'og:type', content: type });
@@ -71,7 +71,7 @@ export class SeoService {
     this.meta.updateTag({ name: 'twitter:description', content: description });
     this.meta.updateTag({ name: 'twitter:image', content: image });
 
-    /* Robots — controls indexability per page. Default = index, follow.
+    /* Robots, controls indexability per page. Default = index, follow.
        Use noindex for legal/internal pages. */
     if (opts.robots) {
       this.meta.updateTag({ name: 'robots', content: opts.robots });
@@ -85,7 +85,7 @@ export class SeoService {
    * can declare Organization + Product + BreadcrumbList all on the same
    * page.
    *
-   * Pass an object — it will be JSON.stringify'd into a <script> tag.
+   * Pass an object, it will be JSON.stringify'd into a <script> tag.
    * No need to manually include the @context (we add it automatically
    * if missing).
    */
@@ -103,7 +103,7 @@ export class SeoService {
       const script = this.doc.createElement('script');
       script.type = 'application/ld+json';
       script.setAttribute('data-seo-jsonld', '');
-      /* Auto-inject @context if missing — convenience so callers can
+      /* Auto-inject @context if missing, convenience so callers can
          pass schema.org snippets without boilerplate. */
       const payload = '@context' in item
         ? item
@@ -131,7 +131,7 @@ export class SeoService {
 /* ----- Types -------------------------------------------------------------- */
 
 export interface SeoOptions {
-  /** Page title — appears in <title> + og:title + twitter:title.
+  /** Page title, appears in <title> + og:title + twitter:title.
    *  Will be auto-suffixed with " | 3bayti" unless `titleSuffix: false`. */
   title: string;
   /** ~155 char description for SERP snippet, og:description, twitter:description. */

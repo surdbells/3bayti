@@ -11,7 +11,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Confirm the OTP sent by POST /v3/me/phone. On success the pending
  * phone is committed and is_phone_verified is set true. Mirrors
- * ConfirmInput (registration OTP) — same verification_id + 4–6 digit
+ * ConfirmInput (registration OTP), same verification_id + 4–6 digit
  * code contract.
  */
 final class VerifyPhoneInput

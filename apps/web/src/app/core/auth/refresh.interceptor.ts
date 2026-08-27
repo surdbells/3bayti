@@ -13,7 +13,7 @@ import { AuthService } from './auth.service';
 import { AUTH_PROXY_BASE } from './auth.tokens';
 
 /**
- * refreshInterceptor — auth's HTTP interceptor.
+ * refreshInterceptor, auth's HTTP interceptor.
  *
  * Two responsibilities
  * --------------------
@@ -34,14 +34,14 @@ import { AUTH_PROXY_BASE } from './auth.tokens';
  * first would rotate the refresh token, invalidating the others, and
  * 4 of the 5 would fail. The AuthService.refresh() method already
  * implements single-flight (one inflight promise shared by all callers)
- * — this interceptor just hooks into it.
+ *, this interceptor just hooks into it.
  *
  * Why AuthService is resolved LAZILY via Injector
  * -----------------------------------------------
  * The provideAuth() bundle registers BOTH this interceptor AND an
  * APP_INITIALIZER that calls AuthService.hydrate(). hydrate() makes
  * an HTTP request, which causes this interceptor function to run,
- * which would call inject(AuthService) — while AuthService is STILL
+ * which would call inject(AuthService), while AuthService is STILL
  * being constructed for the same APP_INITIALIZER. That's NG0200
  * (circular dependency).
  *
@@ -57,7 +57,7 @@ import { AUTH_PROXY_BASE } from './auth.tokens';
  *   - Doesn't redirect to /login. That's the calling page's job
  *     (so that the page can preserve form state, returnUrl, etc.).
  *   - Doesn't fire on auth-proxy 401s. The /login endpoint's 401
- *     means "wrong credentials", not "stale token" — refreshing
+ *     means "wrong credentials", not "stale token", refreshing
  *     would be pointless and could mask the original error.
  */
 export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
@@ -84,7 +84,7 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       /* Defensive: don't try to refresh if the original request
-         already lacked an Authorization header — there's no point
+         already lacked an Authorization header, there's no point
          refreshing a token we never tried in the first place; the
          endpoint just doesn't accept anonymous access. */
       const hadAuthHeader = initialRequest.headers.has('Authorization');
@@ -97,16 +97,16 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
          third, ... caller awaits the same result.
 
          injector.get(AuthService) here (not inject() at the top)
-         breaks the APP_INITIALIZER cycle — see the file header. */
+         breaks the APP_INITIALIZER cycle, see the file header. */
       const auth = injector.get(AuthService);
       return from(auth.refresh()).pipe(
         switchMap(success => {
           if (!success) {
-            /* Refresh failed — session is dead. Propagate the
+            /* Refresh failed, session is dead. Propagate the
                original 401 so the page can route to /login. */
             return throwError(() => error);
           }
-          /* Refresh succeeded — retry the original request with
+          /* Refresh succeeded, retry the original request with
              the new token. */
           const retried = attachAuthHeader(req, tokenStore.getToken());
           return next(retried);
@@ -138,7 +138,7 @@ function attachAuthHeader(req: HttpRequest<unknown>, token: string | null): Http
  * we check by path prefix.
  */
 function isAuthProxyRequest(req: HttpRequest<unknown>, proxyBase: string): boolean {
-  /* Relative proxyBase ('/auth-proxy') — match by url prefix. */
+  /* Relative proxyBase ('/auth-proxy'), match by url prefix. */
   if (proxyBase.startsWith('/')) {
     /* HttpClient also supports absolute URLs; if a consumer passed
        an absolute URL that happens to share the proxy path, treat
@@ -151,6 +151,6 @@ function isAuthProxyRequest(req: HttpRequest<unknown>, proxyBase: string): boole
     }
   }
 
-  /* Absolute proxyBase — match by full URL prefix. */
+  /* Absolute proxyBase, match by full URL prefix. */
   return req.url.startsWith(proxyBase);
 }

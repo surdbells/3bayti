@@ -79,7 +79,7 @@ final class ListVendorsAdminController
 
         $this->applyFilters($qb, $q);
 
-        // Total (count) — reset orderBy on the clone to keep PostgreSQL happy.
+        // Total (count), reset orderBy on the clone to keep PostgreSQL happy.
         $countQb = clone $qb;
         $total   = (int) $countQb->select('COUNT(v.id)')
             ->resetDQLPart('orderBy')
@@ -142,7 +142,7 @@ final class ListVendorsAdminController
      */
     private function applyFilters(\Doctrine\ORM\QueryBuilder $qb, array $q): void
     {
-        // status — pending | approved | suspended (validated against the
+        // status, pending | approved | suspended (validated against the
         // entity's known statuses; an unknown value is ignored).
         if (isset($q['status']) && trim((string) $q['status']) !== '') {
             $status = trim((string) $q['status']);
@@ -151,7 +151,7 @@ final class ListVendorsAdminController
             }
         }
 
-        // Boolean flags — accept 1/0/true/false.
+        // Boolean flags, accept 1/0/true/false.
         if (($isActive = $this->boolOrNull($q['is_active'] ?? null)) !== null) {
             $qb->andWhere('v.isActive = :is_active')->setParameter('is_active', $isActive);
         }
@@ -162,13 +162,13 @@ final class ListVendorsAdminController
             $qb->andWhere('v.isFeatured = :is_featured')->setParameter('is_featured', $isFeatured);
         }
 
-        // emirate — exact (case-insensitive) match.
+        // emirate, exact (case-insensitive) match.
         if (isset($q['emirate']) && trim((string) $q['emirate']) !== '') {
             $qb->andWhere('LOWER(v.emirate) = :emirate')
                 ->setParameter('emirate', mb_strtolower(trim((string) $q['emirate'])));
         }
 
-        // created_at range — inclusive. Parse leniently; ignore unparsable.
+        // created_at range, inclusive. Parse leniently; ignore unparsable.
         if (($from = $this->dateOrNull($q['created_from'] ?? null)) !== null) {
             $qb->andWhere('v.createdAt >= :created_from')->setParameter('created_from', $from);
         }

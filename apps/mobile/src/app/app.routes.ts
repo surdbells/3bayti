@@ -31,7 +31,7 @@ export const routes: Routes = [
     loadComponent: () => import('./customer/settings/settings.page').then(m => m.SettingsPage)
   },
   {
-    // In-app account deletion (Apple 5.1.1(v)) — DELETE /v3/me with re-auth
+    // In-app account deletion (Apple 5.1.1(v)), DELETE /v3/me with re-auth
     path: 'delete-account',
     loadComponent: () => import('./customer/delete-account/delete-account.page').then(m => m.DeleteAccountPage),
     title: 'Delete Account'
@@ -155,17 +155,17 @@ export const routes: Routes = [
     loadComponent: () => import('./vendor/store-dashboard/store-dashboard.page').then(m => m.StoreDashboardPage),
     title: 'Store Dashboard'
   }, {
-    // M3.1.7-I — vendor orders list
+    // M3.1.7-I, vendor orders list
     path: 'vendor-orders',
     loadComponent: () => import('./vendor/vendor-orders/vendor-orders.page').then(m => m.VendorOrdersPage),
     title: 'Vendor Orders'
   }, {
-    // M3.1.7-I — vendor order detail (item-level transitions)
+    // M3.1.7-I, vendor order detail (item-level transitions)
     path: 'vendor-orders/:id',
     loadComponent: () => import('./vendor/vendor-order-detail/vendor-order-detail.page').then(m => m.VendorOrderDetailPage),
     title: 'Order Detail'
   }, {
-    // Vendor catalog — own products list + quick edits
+    // Vendor catalog, own products list + quick edits
     path: 'vendor-products',
     loadComponent: () => import('./vendor/vendor-products/vendor-products.page').then(m => m.VendorProductsPage),
     title: 'My Products'
@@ -194,7 +194,7 @@ export const routes: Routes = [
   },
   {
     // Post-payment confirmation for a gift-card purchase (the product
-    // /success screen doesn't fit — no vendor, no line items).
+    // /success screen doesn't fit, no vendor, no line items).
     path: 'gift-card-success',
     loadComponent: () => import('./customer/gift-card-success/gift-card-success.page').then(m => m.GiftCardSuccessPage)
   },

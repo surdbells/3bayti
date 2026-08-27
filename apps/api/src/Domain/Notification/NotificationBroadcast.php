@@ -8,7 +8,7 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One push-broadcast execution — an immediate admin send today, and a
+ * One push-broadcast execution, an immediate admin send today, and a
  * scheduled/recurring occurrence in a later phase.
  *
  * Lifecycle: queued -> processing -> (sent | partially_delivered | failed).
@@ -219,7 +219,7 @@ class NotificationBroadcast
         $this->touch();
     }
 
-    /** Hard failure (e.g. the dispatcher threw mid-send) — never leave a
+    /** Hard failure (e.g. the dispatcher threw mid-send), never leave a
      *  broadcast stuck in 'processing'. */
     public function failWith(?string $sample): void
     {

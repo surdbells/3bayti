@@ -20,7 +20,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/admin/products/{id}
  *
- * A single product by v3 id, in ANY status (draft, active, out-of-stock) —
+ * A single product by v3 id, in ANY status (draft, active, out-of-stock) -
  * for the admin edit form. The admin editor previously loaded via the public
  * GET /v3/products/{slug}, which 404s on drafts, leaving the form blank. Any
  * vendor's product is editable by admin, so there is no ownership scope

@@ -26,7 +26,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Replaces mobile's legacy /customer/IncreaseItem +
  * /customer/decreaseItem endpoints, which take a delta. v3 uses
- * absolute quantity instead — idempotent (re-applying the same
+ * absolute quantity instead, idempotent (re-applying the same
  * PATCH doesn't compound), and clients don't need a sequence
  * number to avoid race-condition double-counting.
  *
@@ -36,7 +36,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Authorization: line must belong to the authenticated user's
  * active cart. Cross-tenant access (item id from another user's
- * cart) returns 404 — not 403 — to avoid leaking item existence.
+ * cart) returns 404, not 403, to avoid leaking item existence.
  */
 final class UpdateCartItemController
 {

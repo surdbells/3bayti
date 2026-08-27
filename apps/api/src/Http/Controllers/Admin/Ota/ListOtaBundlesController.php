@@ -13,7 +13,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * GET /v3/admin/ota/bundles — every published OTA bundle, newest first, for the
+ * GET /v3/admin/ota/bundles, every published OTA bundle, newest first, for the
  * portal management UI.
  */
 final class ListOtaBundlesController

@@ -11,7 +11,7 @@ import { FormFieldComponent, ToastService, mapApiErrors, ApiErrorMapping } from 
 import { ProfileService } from './profile.service';
 
 /**
- * /account/password — change the account password.
+ * /account/password, change the account password.
  *
  * Requires the current password (server re-auths via current_password
  * → 401 AUTH_INVALID_CREDENTIALS on mismatch). new_password min 8

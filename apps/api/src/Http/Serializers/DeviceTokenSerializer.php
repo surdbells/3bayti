@@ -10,7 +10,7 @@ use DateTimeInterface;
 /**
  * Serialises a DeviceToken for the registration response.
  *
- * The full token string is NOT echoed back — the client already has
+ * The full token string is NOT echoed back, the client already has
  * it, and not reflecting it avoids logging/leaking the secret in
  * response bodies. We return the row's metadata so the client can
  * confirm the registration took.

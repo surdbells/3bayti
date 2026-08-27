@@ -58,7 +58,7 @@ final class NoonWebhookVerifierBindingTest extends TestCase
     public function flagFalseReturnsLoggingOnlyVerifier(): void
     {
         $_ENV['NOON_VERIFY_SIGNATURE'] = 'false';
-        $_ENV['NOON_WEBHOOK_SECRET'] = ''; // intentionally empty — flag is false so this shouldn't be required
+        $_ENV['NOON_WEBHOOK_SECRET'] = ''; // intentionally empty, flag is false so this shouldn't be required
 
         $verifier = $this->resolveVerifier();
         self::assertInstanceOf(LoggingOnlyVerifier::class, $verifier);
@@ -131,7 +131,7 @@ final class NoonWebhookVerifierBindingTest extends TestCase
     #[Test]
     public function flagUnknownValueDefaultsToLoggingOnly(): void
     {
-        // 'yes', 'enabled', 'on' — none of these match the strict 'true'/'1'
+        // 'yes', 'enabled', 'on', none of these match the strict 'true'/'1'
         // we accept. Safe-default behaviour: degrade to logging-only rather
         // than throwing or accepting the unknown value as truthy.
         $_ENV['NOON_VERIFY_SIGNATURE'] = 'yes';
@@ -168,7 +168,7 @@ final class NoonWebhookVerifierBindingTest extends TestCase
      * other bindings).
      *
      * If config/di.php's factory logic changes, this test will need to
-     * be updated to match — a deliberate touch-point so divergence is
+     * be updated to match, a deliberate touch-point so divergence is
      * caught.
      */
     private function resolveVerifier(): NoonWebhookSignatureVerifier

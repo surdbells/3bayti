@@ -264,7 +264,7 @@ final class RoleControllersTest extends HttpTestCase
         $permRepo = $this->createMock(EntityRepository::class);
         $this->bindRepos($actor, [Role::class => $roleRepo, Permission::class => $permRepo]);
 
-        // Tries to grant orders.refund — which the actor does NOT hold.
+        // Tries to grant orders.refund, which the actor does NOT hold.
         $response = $this->send($actor, 'POST', '/v3/admin/roles', [
             'name' => 'Sneaky',
             'permissions' => ['orders.view', 'orders.refund'],

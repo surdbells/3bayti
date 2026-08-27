@@ -8,15 +8,15 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Legacy-migration support — wishlist_labels.legacy_wishlist_label_id.
+ * Legacy-migration support, wishlist_labels.legacy_wishlist_label_id.
  *
  * The legacy->v3 wishlist-labels migrator (MigrationSteps::migrateWishlistLabels,
  * bin/migrate-from-legacy/migrate-wishlist-labels.php) needs a stable legacy id
  * column so it is idempotent + re-runnable while the legacy MySQL stays live.
  *
  * wishlist_labels has TWO idempotency keys it must respect:
- *   - the existing UNIQUE (user_id, name) — one label name per user
- *   - this new UNIQUE legacy_wishlist_label_id — the legacy customer_wishlist_label.wishll_id
+ *   - the existing UNIQUE (user_id, name), one label name per user
+ *   - this new UNIQUE legacy_wishlist_label_id, the legacy customer_wishlist_label.wishll_id
  *
  * The migrator's check-then-branch resolves both: look up by
  * legacy_wishlist_label_id; if not found but a row already exists for

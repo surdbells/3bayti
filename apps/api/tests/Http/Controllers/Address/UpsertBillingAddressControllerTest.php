@@ -49,7 +49,7 @@ final class UpsertBillingAddressControllerTest extends HttpTestCase
 
         $addrRepo = $this->createMock(AddressRepository::class);
         $addrRepo->method('findDefaultBillingForUser')->with($user)->willReturn($existing);
-        // Should NOT call save/findAllForUser — UPDATE path uses
+        // Should NOT call save/findAllForUser, UPDATE path uses
         // em->flush() directly on the existing entity.
         $addrRepo->expects(self::never())->method('save');
         $addrRepo->expects(self::never())->method('findAllForUser');
@@ -123,7 +123,7 @@ final class UpsertBillingAddressControllerTest extends HttpTestCase
             ])
         );
 
-        // 200 (not 201) — see UpsertBillingAddressController docblock
+        // 200 (not 201), see UpsertBillingAddressController docblock
         // for why we use 200 for both create + update.
         self::assertSame(200, $response->getStatusCode());
         $body = $this->jsonBody($response);
@@ -268,7 +268,7 @@ final class UpsertBillingAddressControllerTest extends HttpTestCase
     }
 
     /**
-     * A non-billing-default address — used to simulate a user who has
+     * A non-billing-default address, used to simulate a user who has
      * an existing shipping address but no billing address yet.
      */
     private function makeUnrelatedAddress(User $user, int $id): Address

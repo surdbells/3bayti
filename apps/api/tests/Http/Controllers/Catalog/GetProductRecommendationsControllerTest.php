@@ -22,7 +22,7 @@ use Psr\Http\Message\ResponseInterface;
  * HTTP-level tests for GET /v3/products/{slug}/recommendations
  * (M3.2.X.12-G).
  *
- * No auth required — public endpoint.
+ * No auth required, public endpoint.
  */
 #[CoversClass(GetProductRecommendationsController::class)]
 #[CoversClass(RecommendationsSerializer::class)]

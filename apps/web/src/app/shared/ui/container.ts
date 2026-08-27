@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 
 /**
- * Container — width-constrained content wrapper. The single most-used
+ * Container, width-constrained content wrapper. The single most-used
  * layout primitive on the site. Sets max-width + horizontal padding +
  * margin auto. Three preset widths cover ~95% of needs.
  *
@@ -11,10 +11,10 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
  *   <ui-container size="full">...</ui-container>
  *
  * Sizes:
- *   narrow  640px  — single-column reading content (about, blog post)
- *   default 1280px — most page content
- *   wide    1280px — marketing pages, dashboards
- *   full    100%   — edge-to-edge sections (hero backgrounds, etc.)
+ *   narrow  640px , single-column reading content (about, blog post)
+ *   default 1280px, most page content
+ *   wide    1280px, marketing pages, dashboards
+ *   full    100%  , edge-to-edge sections (hero backgrounds, etc.)
  */
 @Component({
   selector: 'ui-container',

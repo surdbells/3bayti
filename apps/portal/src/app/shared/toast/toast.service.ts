@@ -2,7 +2,7 @@
  * Drop-in replacement for @ngneat/hot-toast.
  *
  * Implements only the methods the portal uses: success() and error().
- * Renders a lightweight overlay toast with auto-dismiss — no third-party
+ * Renders a lightweight overlay toast with auto-dismiss, no third-party
  * dependencies, no Angular version conflicts.
  *
  * Usage is identical to HotToastService:

@@ -16,7 +16,7 @@ use Doctrine\Migrations\AbstractMigration;
  * and recordOverride() writes ACTION_OVERRIDDEN ('overridden'). Every
  * audited admin GET (e.g. GET /v3/admin/orders/{id}, which calls
  * recordView with context 'admin_order_detail') therefore threw
- * SQLSTATE 23514 at flush time — surfacing as a 500 on the admin order
+ * SQLSTATE 23514 at flush time, surfacing as a 500 on the admin order
  * screen (Sentry PHP-H, 61 occurrences). Widen the CHECK to the full
  * set of AuditLog::ACTION_* constants so audited reads/overrides persist.
  *
@@ -47,7 +47,7 @@ final class Version20260626000001 extends AbstractMigration
     public function down(Schema $schema): void
     {
         // Reverting restores the original 4-value CHECK. This will FAIL
-        // if any 'viewed'/'overridden' rows already exist — delete those
+        // if any 'viewed'/'overridden' rows already exist, delete those
         // rows first if a rollback is genuinely required.
         $this->addSql('ALTER TABLE audit_log DROP CONSTRAINT audit_log_action_check');
         $this->addSql(<<<'SQL'

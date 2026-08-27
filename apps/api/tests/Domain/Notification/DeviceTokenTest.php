@@ -15,7 +15,7 @@ use PHPUnit\Framework\TestCase;
  *
  * Locks the construction defaults and the touch()/deactivate() state
  * transitions that DeviceTokenRepository::register/deactivate depend
- * on. Pure entity test — no DB.
+ * on. Pure entity test, no DB.
  */
 #[CoversClass(DeviceToken::class)]
 final class DeviceTokenTest extends TestCase
@@ -83,7 +83,7 @@ final class DeviceTokenTest extends TestCase
         self::assertFalse($token->isActive());
         $updatedAfterFirst = $token->getUpdatedAt();
 
-        // Second deactivate is a no-op — does not re-stamp updated_at.
+        // Second deactivate is a no-op, does not re-stamp updated_at.
         usleep(1000);
         $token->deactivate();
         self::assertFalse($token->isActive());

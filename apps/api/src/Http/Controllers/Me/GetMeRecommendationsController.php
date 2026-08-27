@@ -29,7 +29,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * fallback BUT the route is gated by AuthMiddleware so anonymous
  * requests get 401 before reaching this controller.
  *
- * No audit emission — own-data read is non-auditable.
+ * No audit emission, own-data read is non-auditable.
  */
 final class GetMeRecommendationsController
 {

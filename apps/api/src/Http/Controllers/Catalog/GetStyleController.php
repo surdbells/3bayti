@@ -21,15 +21,15 @@ use Psr\Http\Message\ServerRequestInterface;
  * Single active style, resolved by its stable slug. Backs the mobile
  * Style-Hub deep-link / hard-reload path: the style-view page reads the
  * style from router state when navigated to from the list, but on a hard
- * reload (or a shared deep link) that state is wiped — so it re-fetches
+ * reload (or a shared deep link) that state is wiped, so it re-fetches
  * the style by slug here and rebuilds it via the same response transform
  * used for the list.
  *
- * Returns: { data: Style } (detailShape — same field set as the list's
+ * Returns: { data: Style } (detailShape, same field set as the list's
  * listShape, with the embedded products array incl. legacy_product_id so
  * a product tap navigates to the PDP by legacy id).
  *
- * 404 when the slug is unknown or the style is inactive — mirrors the
+ * 404 when the slug is unknown or the style is inactive, mirrors the
  * other by-key catalog reads (GetProductByLegacyIdController).
  */
 final class GetStyleController

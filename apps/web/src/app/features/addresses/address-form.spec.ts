@@ -149,7 +149,7 @@ describe('AddressFormComponent', () => {
       await drainMicrotasks();
 
       controller.expectOne(`${V3_BASE}/v3/me/addresses`).flush(makeAddress({ id: 42 }));
-      /* The create() chain calls list() — drain microtasks to let
+      /* The create() chain calls list(), drain microtasks to let
          that fire, then flush it. */
       await drainMicrotasks();
       controller.expectOne(`${V3_BASE}/v3/me/addresses`).flush({ addresses: [makeAddress({ id: 42 })] });

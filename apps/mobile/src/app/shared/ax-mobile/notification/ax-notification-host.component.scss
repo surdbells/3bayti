@@ -1,5 +1,5 @@
 /* =========================================================================
-   ax-notification-host — stack container
+   ax-notification-host, stack container
    ========================================================================= */
 
 :host {
@@ -14,7 +14,7 @@
 }
 
 .ax-notification-host {
-  /* Empty wrapper — visual styling lives on the per-position stacks. */
+  /* Empty wrapper, visual styling lives on the per-position stacks. */
 }
 
 .ax-notification-host__stack {

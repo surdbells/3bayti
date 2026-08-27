@@ -160,7 +160,7 @@ export class HomePage implements OnInit, OnDestroy {
     void this.pendingOrders.refresh();
   }
 
-  /** Reminder subtitle — singular vs plural, with the AED total. */
+  /** Reminder subtitle, singular vs plural, with the AED total. */
   get pendingBannerBody(): string {
     const c = this.pendingOrders.count();
     const amount = Math.round(this.pendingOrders.amount());
@@ -180,7 +180,7 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   open_product(id: number) {
-    // Use the full product detail page — same as best-sellers / new-arrivals /
+    // Use the full product detail page, same as best-sellers / new-arrivals /
     // category / cart. The legacy `/single` page is an incomplete preview (its
     // "Add to Cart" only redirects to sign-in and it has no size/measurement
     // UI), so home was the only surface sending users to a dead-end PDP.
@@ -198,7 +198,7 @@ export class HomePage implements OnInit, OnDestroy {
     // Same shadow → flip lifecycle as account.page::get_best_sellers
     // and best-sellers.page methods.
     // Direct v3 (GET /v3/products with sort=best_seller). Public catalog
-    // read — anonymous, so no authToken. transformBestSellersRequest drops
+    // read, anonymous, so no authToken. transformBestSellersRequest drops
     // the legacy {id, token} body, so no query params carry over.
     // transformBestSellersResponse still applies via get_v3, so response.data
     // shape is unchanged.
@@ -220,7 +220,7 @@ export class HomePage implements OnInit, OnDestroy {
     // M3.2.X.1.5-A: route through MobileNetworkAdapter to consult
     // 'GET /mobile/new-arrivals' feature flag (already target='new'
     // since M3.1.5).
-    // Direct v3 (GET /v3/products with sort=newest). Public catalog read —
+    // Direct v3 (GET /v3/products with sort=newest). Public catalog read -
     // anonymous, so no authToken. transformNewArrivalsRequest drops the
     // legacy {id, token} body, so no query params carry over. The response
     // transform still applies via get_v3, so response.data shape is unchanged.
@@ -280,7 +280,7 @@ export class HomePage implements OnInit, OnDestroy {
     // Guard against a fetch past the end of the directory.
     if (!this.hasMoreStores) return;
     this.get_featured.offset = this.get_featured.offset + this.get_featured.limit
-    // Paginated PUBLIC store directory (GET /v3/vendors) — same read as
+    // Paginated PUBLIC store directory (GET /v3/vendors), same read as
     // get_featured_products(), advancing offset for infinite scroll. Anonymous
     // catalog read (no authToken). Response shape unchanged (transform applies).
     this.networkAdapter.get_v3('GET /mobile/stores', {

@@ -27,14 +27,14 @@ use Psr\Http\Message\ServerRequestInterface;
  * filter + sort.
  *
  * Query parameters:
- *   days      — 7-365, default 30 (clamp)
- *   status    — 'pending' | 'approved' | 'suspended' | null (no filter)
- *   sort      — 'name_asc' (default) / 'name_desc' / 'created_at_desc' /
+ *   days     , 7-365, default 30 (clamp)
+ *   status   , 'pending' | 'approved' | 'suspended' | null (no filter)
+ *   sort     , 'name_asc' (default) / 'name_desc' / 'created_at_desc' /
  *               'created_at_asc' / 'fulfillment_rate_desc' /
  *               'fulfillment_rate_asc' / 'cancellation_rate_desc' /
  *               'return_rate_desc' / 'dispute_rate_desc'
- *   limit     — 1-100, default 24
- *   offset    — >=0, default 0
+ *   limit    , 1-100, default 24
+ *   offset   , >=0, default 0
  *
  * Sort strategy:
  *   - Vendor-field sorts (name_*, created_at_*) push down into the
@@ -45,7 +45,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *     then sorting in PHP, then slicing for pagination. O(N) metric
  *     computations where N = total matching vendors.
  *
- *     For 3bayti's expected scale (≤200 vendors) this is fine —
+ *     For 3bayti's expected scale (≤200 vendors) this is fine -
  *     computeForVendorList runs 3 queries regardless of vendor count.
  *     Flagged as operator follow-up #18 (cache-warming on demand
  *     when scale crosses ~500 vendors).
@@ -206,7 +206,7 @@ final class ListAdminVendorMetricsController
 
         // Sort the ids by the chosen metric value. null values sort
         // LAST (vendors with no data should appear at the bottom
-        // regardless of asc/desc — they're not actually "the worst"
+        // regardless of asc/desc, they're not actually "the worst"
         // or "the best"; they're "unknown").
         $sortedIds = $this->sortIdsByMetric($allIds, $allMetrics, $sort);
 

@@ -50,7 +50,7 @@ export interface A11yOptions {
   excludeRules?: string[];
   /** CSS selectors to skip (e.g. third-party widgets) */
   excludeSelectors?: string[];
-  /** Reason for any exclusion — surfaces in test output for review */
+  /** Reason for any exclusion, surfaces in test output for review */
   reason?: string;
 }
 

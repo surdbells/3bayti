@@ -17,14 +17,14 @@ const V3_BASE = 'https://api-v3.3bayti.ae';
  *   - locale (en | ar | en-AE | ar-AE)
  *
  * NOT editable here (deliberately omitted to match the API):
- *   - email / phone — changed via dedicated verified-contact flows,
+ *   - email / phone, changed via dedicated verified-contact flows,
  *     not this endpoint. Shown read-only on the profile page.
- *   - timezone — the API accepts it but the web app derives it; no
+ *   - timezone, the API accepts it but the web app derives it; no
  *     UI control for it.
  *
  * RFC 7396 JSON Merge Patch: only the keys present in the body are
  * updated; omitted keys are untouched; an explicit null clears a
- * field. So this is a Partial — callers send only what changed.
+ * field. So this is a Partial, callers send only what changed.
  */
 export type ProfileGender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
 
@@ -51,7 +51,7 @@ export interface ChangePasswordResponse {
 }
 
 /**
- * ProfileService — read + partial-update of the authenticated user's
+ * ProfileService, read + partial-update of the authenticated user's
  * profile. Public-ish account read, but auth-gated; routed through
  * RoutedHttpClient (which carries the bearer via the auth interceptor)
  * for consistency with the rest of the catalog/account reads.
@@ -114,7 +114,7 @@ export class ProfileService {
    * The endpoint re-authenticates via current_password, revokes ALL of
    * the user's refresh tokens (including this session's), and returns a
    * FRESH token pair. We adopt it via AuthService.applyPasswordChange
-   * so the current session survives the revocation — otherwise the
+   * so the current session survives the revocation, otherwise the
    * very next request would fail with a revoked token.
    */
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
@@ -145,7 +145,7 @@ export class ProfileService {
    * any other avatar consumers update immediately, with no /me refetch.
    *
    * Uses the direct Bearer HttpClient (auth attached by interceptor)
-   * because this endpoint isn't in the RoutedHttpClient registry —
+   * because this endpoint isn't in the RoutedHttpClient registry -
    * same approach as deleteAccount.
    */
   async uploadAvatar(dataUrl: string): Promise<string> {

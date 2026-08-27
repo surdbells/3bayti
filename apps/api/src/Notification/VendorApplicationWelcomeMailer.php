@@ -13,7 +13,7 @@ use Psr\Log\LoggerInterface;
  * that hands a freshly-approved applicant their login credentials.
  *
  * Shared by the approve flow and the "resend credentials" admin action so the
- * copy + credential handling live in one place. Entirely non-blocking — a
+ * copy + credential handling live in one place. Entirely non-blocking, a
  * mailer failure is logged and swallowed; it must never fail the caller's
  * primary action (the account/vendor are already committed by then).
  */
@@ -47,7 +47,7 @@ final class VendorApplicationWelcomeMailer
      *
      * A freshly-provisioned user gets a temporary password to sign in with
      * (pass it as $tempPassword); an applicant who already had a 3bayti account
-     * keeps their existing credentials — pass null and they're pointed at the
+     * keeps their existing credentials, pass null and they're pointed at the
      * sign-in page instead (we never expose a password they already control).
      */
     public function sendApprovalWelcome(

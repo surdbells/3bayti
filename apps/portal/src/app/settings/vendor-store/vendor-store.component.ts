@@ -167,7 +167,7 @@ export class VendorStoreComponent implements OnInit {
       store_phone: this.store_single.store_phone,
       store_address: this.store_single.store_address,
     };
-    // Only send real uploaded image URLs — never the local placeholder path
+    // Only send real uploaded image URLs, never the local placeholder path
     // (it would be stored as the logo). Omitting the field is a no-op PATCH, so
     // an existing image is left untouched.
     if (isRealImage(this.store_single.store_logo)) body['store_logo'] = this.store_single.store_logo;
@@ -221,7 +221,7 @@ export class VendorStoreComponent implements OnInit {
   /**
    * Compress the picked file and upload it via POST /v3/upload, then store the
    * returned URL. The API caps logo/cover at 500 chars, so the previous base64
-   * data-URL approach always failed validation — uploads return a short CDN URL
+   * data-URL approach always failed validation, uploads return a short CDN URL
    * that saves cleanly. The URL is applied to the preview; "Save changes"
    * persists it.
    */

@@ -109,7 +109,7 @@ final class FirebaseIdTokenVerifierTest extends TestCase
                 ['Cache-Control' => 'public, max-age=3600'],
                 (string) json_encode([self::KID => $this->certPem]),
             ),
-            // A second response in case the cache misses again — not
+            // A second response in case the cache misses again, not
             // expected, but keeps the handler from throwing "queue empty".
             new Response(
                 200,

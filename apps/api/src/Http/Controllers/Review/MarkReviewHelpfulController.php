@@ -18,11 +18,11 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * POST /v3/reviews/{id}/helpful — mark an approved review as helpful
+ * POST /v3/reviews/{id}/helpful, mark an approved review as helpful
  * (authenticated). Only approved reviews can be voted on (you can only
  * see approved ones publicly). Returns the new helpful count.
  *
- * Note: dedup is not enforced per-user (no votes table) — this mirrors
+ * Note: dedup is not enforced per-user (no votes table), this mirrors
  * the legacy behaviour. If abuse becomes an issue, add a
  * review_helpful_votes(user_id, review_id) unique table and gate here.
  */

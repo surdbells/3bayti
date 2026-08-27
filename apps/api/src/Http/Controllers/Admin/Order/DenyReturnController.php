@@ -24,7 +24,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Admin denies a pending return request. State transition:
  * STATUS_PENDING → STATUS_DENIED (terminal). admin_notes is required
- * by the entity layer — the customer deserves an explanation.
+ * by the entity layer, the customer deserves an explanation.
  *
  * 422 with RETURN_CANNOT_DENY if the request isn't pending.
  */

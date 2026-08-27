@@ -11,7 +11,7 @@ declare(strict_types=1);
  * MigrationSteps::migrateStyles() imported the style ROWS only and
  * explicitly deferred product membership:
  *
- *   "style_products join rows NOT migrated by this method — the legacy
+ *   "style_products join rows NOT migrated by this method, the legacy
  *    schema for product membership is not yet known. Run a separate
  *    migrate-style-products step once the join table shape is identified
  *    (legacy candidate: 'stylist_products')."
@@ -28,7 +28,7 @@ declare(strict_types=1);
  *   (A) a join table:  <style_fk>, <product_fk>, [display_order]
  *   (B) a CSV column on the legacy styles table: products = "12,34,56"
  * If neither matches we print exactly what we looked for and exit 0 WITHOUT
- * writing — share the diagnostics (+ `SHOW TABLES LIKE '%styl%'`) and the
+ * writing, share the diagnostics (+ `SHOW TABLES LIKE '%styl%'`) and the
  * candidate lists below get adjusted.
  *
  * Mapping
@@ -39,13 +39,13 @@ declare(strict_types=1);
  *
  * total_price: after linking, recomputed per affected style as the SUM of
  * each ACTIVE linked product's effective price COALESCE(sale_price, price)
- * — matching CreateStyleController (getSalePrice() ?? getPrice()).
+ *, matching CreateStyleController (getSalePrice() ?? getPrice()).
  *
  * Idempotent: an existing (style_id, product_id) link is left as-is.
  * Transactional. Safe to re-run. The legacy DB is never written.
  *
  * Note: CreateStyleController caps new styles at 4 products; this backfill
- * does NOT cap — it brings over whatever the legacy style contained.
+ * does NOT cap, it brings over whatever the legacy style contained.
  *
  * Usage (from apps/api):
  *   php bin/migrate-from-legacy/migrate-style-products.php            # live

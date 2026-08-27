@@ -210,7 +210,7 @@ final class GetAdminOrderTimelineControllerTest extends HttpTestCase
     #[Test]
     public function adminCallPassesNullVendorFilter(): void
     {
-        // Admin endpoint should NEVER pass a vendor filter — the
+        // Admin endpoint should NEVER pass a vendor filter, the
         // builder applies vendor scoping only when vendorIdFilter is
         // non-null. This test guards against a future regression
         // that might add accidental vendor filtering.
@@ -310,7 +310,7 @@ final class GetAdminOrderTimelineControllerTest extends HttpTestCase
 
     private function makeOrder(int $id, string $reference): Order
     {
-        // Build a minimal Order via reflection — we don't need a full
+        // Build a minimal Order via reflection, we don't need a full
         // entity graph here; the controller calls findByIdForAdmin
         // (mocked) and feeds the result straight to the serializer.
         $order = (new \ReflectionClass(Order::class))->newInstanceWithoutConstructor();

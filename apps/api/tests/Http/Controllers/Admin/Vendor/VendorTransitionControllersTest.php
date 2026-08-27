@@ -276,7 +276,7 @@ final class VendorTransitionControllersTest extends HttpTestCase
     {
         $admin = $this->makeAdminUser(99);
         $vendor = $this->makeVendor(42, 'almas-fashion', 'Almas Fashion');
-        // Pending — never suspended; reactivate not valid
+        // Pending, never suspended; reactivate not valid
 
         $this->bindEm($admin, $vendor);
 

@@ -22,11 +22,11 @@ use Psr\Http\Message\ServerRequestInterface;
  * Returns: { data: ProductDetail }
  *
  * Includes approved reviews (up to 10 most recent) under recent_reviews.
- * Inactive / draft / soft-deleted products return 404 — they don't exist
+ * Inactive / draft / soft-deleted products return 404, they don't exist
  * to public consumers.
  *
  * Reviews are fetched in the same query path (separate query, joined
- * by product_id) — small N (27 in production total) so no risk of
+ * by product_id), small N (27 in production total) so no risk of
  * N+1 or unbounded fetch.
  */
 final class GetProductController

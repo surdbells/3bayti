@@ -4,7 +4,7 @@
      aria-modal="true"
      [attr.aria-labelledby]="'ax-update-prompt-title'"
      [attr.aria-describedby]="'ax-update-prompt-message'">
-  <!-- Backdrop is intentionally non-interactive — no click-to-dismiss
+  <!-- Backdrop is intentionally non-interactive, no click-to-dismiss
        on a hard-prompt force-update flow. -->
   <div class="ax-update-prompt__backdrop"></div>
 
@@ -32,7 +32,7 @@
       <span>{{ buttonLabel }}</span>
     </button>
 
-    <!-- Soft-prompt mode only — explicit secondary action. Backdrop
+    <!-- Soft-prompt mode only, explicit secondary action. Backdrop
          tap is still non-interactive even here, to prevent accidental
          dismissals. Tapping Later requires deliberate intent. -->
     <button *ngIf="canDismiss"

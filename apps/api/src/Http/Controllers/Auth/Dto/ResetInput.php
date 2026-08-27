@@ -11,7 +11,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
  * Input for POST /v3/auth/reset.
  *
  * Initiates password reset. The user supplies their EMAIL (per
- * Decision A.6.5 — email-first identifier across the auth surface).
+ * Decision A.6.5, email-first identifier across the auth surface).
  * We look up the User by email, find their stored phone, and send
  * an OTP to that phone.
  *
@@ -68,7 +68,7 @@ final class ResetInput
     ) {
         // Canonicalise the email ONCE (lowercase + trim). User lookup is
         // case-insensitive but the OTP dedup/cooldown/rate-limit keys are
-        // case-sensitive — normalising here keeps a case-variant from
+        // case-sensitive, normalising here keeps a case-variant from
         // bypassing dedup and double-emailing the same reset code.
         $email = strtolower(trim($email));
         $this->email = $email !== '' ? $email : null;

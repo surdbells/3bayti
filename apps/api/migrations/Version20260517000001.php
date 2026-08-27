@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.2.X.6-A — Vendor lifecycle status columns + backfill.
+ * M3.2.X.6-A, Vendor lifecycle status columns + backfill.
  *
  * Background
  * ==========
@@ -62,7 +62,7 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * status_changed_at is set to NOW() for all non-pending rows so
  * forensic queries ("when was this vendor approved?") have a
- * non-null starting point. Pending rows keep NULL — semantically
+ * non-null starting point. Pending rows keep NULL, semantically
  * correct since they haven't transitioned.
  *
  * Operator follow-up post-migration
@@ -76,7 +76,7 @@ use Doctrine\Migrations\AbstractMigration;
  * Constraint
  * ==========
  * CHECK constraint enforces the valid status values at the DB
- * level. Defense in depth — application code already validates
+ * level. Defense in depth, application code already validates
  * via Vendor::transitionTo and Vendor::ALL_STATUSES, but the DB
  * constraint catches any direct SQL writes that bypass the entity.
  *
@@ -90,7 +90,7 @@ use Doctrine\Migrations\AbstractMigration;
  * ---------------
  * down() drops the three columns + index + constraint. The legacy
  * booleans are preserved end-to-end, so rolling back doesn't lose
- * any visibility data — the system reverts to the boolean-flag
+ * any visibility data, the system reverts to the boolean-flag
  * semantics it had before this migration.
  */
 final class Version20260517000001 extends AbstractMigration
@@ -107,7 +107,7 @@ final class Version20260517000001 extends AbstractMigration
             'This migration only supports PostgreSQL.'
         );
 
-        // Add the three columns. status defaults to 'pending' — applies
+        // Add the three columns. status defaults to 'pending', applies
         // to existing rows atomically (no rewrite for varchar defaults).
         $this->addSql(<<<'SQL'
             ALTER TABLE vendors
@@ -117,7 +117,7 @@ final class Version20260517000001 extends AbstractMigration
         SQL);
 
         // Backfill: map legacy booleans to lifecycle status.
-        // Order matters — pending is the default, so we only need
+        // Order matters, pending is the default, so we only need
         // to UPDATE the rows that should be approved or suspended.
         $this->addSql(<<<'SQL'
             UPDATE vendors

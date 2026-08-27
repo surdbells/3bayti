@@ -13,7 +13,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Customer-self-serve cancel. Only allowed for pending_payment
  * orders (they may have abandoned checkout). Reason is optional
- * for the customer path — if missing, we record an empty string.
+ * for the customer path, if missing, we record an empty string.
  *
  * Admin's CancelOrderInput requires reason; this DTO doesn't, since
  * customers shouldn't need to justify abandoning a checkout.

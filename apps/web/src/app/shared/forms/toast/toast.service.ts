@@ -1,14 +1,14 @@
 import { Injectable, signal, computed } from '@angular/core';
 
 /**
- * Toast service — small global notification queue.
+ * Toast service, small global notification queue.
  *
  * Used by AuthService callers (login / register / etc.) to surface
  * "unmapped" API errors that don't fit into a specific FormControl's
  * inline error. Examples: 5xx upstream errors, network failures,
  * OTP_PROVIDER_ERROR.
  *
- * Per-field validation errors should NOT go through here — they go on
+ * Per-field validation errors should NOT go through here, they go on
  * the FormField via mapApiErrors (api-error-mapping.ts).
  *
  * Why a signal-based queue rather than a CDK overlay
@@ -35,13 +35,13 @@ import { Injectable, signal, computed } from '@angular/core';
  */
 
 export interface Toast {
-  /** Stable identifier — used for keyed *ngFor and manual dismiss. */
+  /** Stable identifier, used for keyed *ngFor and manual dismiss. */
   id: string;
-  /** i18n key OR plain string. We don't enforce — consumers know. */
+  /** i18n key OR plain string. We don't enforce, consumers know. */
   message: string;
   /** Translation params for {{ }} interpolation. */
   params?: Record<string, unknown>;
-  /** Visual variant — drives icon + colour. */
+  /** Visual variant, drives icon + colour. */
   kind: 'success' | 'error' | 'info' | 'warning';
   /** Milliseconds before auto-dismiss. 0 = sticky. */
   durationMs: number;
@@ -58,7 +58,7 @@ export interface ToastInput {
 export class ToastService {
   private readonly _toasts = signal<Toast[]>([]);
 
-  /** Current visible toasts — for the container component to render. */
+  /** Current visible toasts, for the container component to render. */
   readonly toasts = this._toasts.asReadonly();
   /** True when at least one toast is visible. Useful for screen-reader
    *  region rendering decisions. */
@@ -92,7 +92,7 @@ export class ToastService {
     return id;
   }
 
-  /** Convenience helpers — same as show() with the kind pre-set. */
+  /** Convenience helpers, same as show() with the kind pre-set. */
   success(message: string, params?: Record<string, unknown>): string {
     return this.show({ message, params, kind: 'success' });
   }

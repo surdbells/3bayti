@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Domain\User;
 
 /**
- * User gender — small enum of values we accept for the optional
+ * User gender, small enum of values we accept for the optional
  * profile field.
  *
  * Why an enum class instead of just a string
@@ -15,16 +15,16 @@ namespace Bayti\Api\Domain\User;
  * that means runtime errors come from Doctrine instead of validation.
  * An enum class gives us:
  *
- *   1. Type safety — methods that take Gender can't be called with a
+ *   1. Type safety, methods that take Gender can't be called with a
  *      typo'd string. The IDE knows the four valid values.
- *   2. Centralised values — when we extend the list (e.g., add
+ *   2. Centralised values, when we extend the list (e.g., add
  *      'non_binary' or anything else), we change one file.
- *   3. Easy iteration — Gender::cases() gives us the full list for
+ *   3. Easy iteration, Gender::cases() gives us the full list for
  *      validators that need to enumerate options.
  *
  * Why we accept 'prefer_not_to_say' AND nullable
  * -----------------------------------------------
- * NULL means "user has not been asked for their gender" — e.g., they
+ * NULL means "user has not been asked for their gender", e.g., they
  * registered before we added this field, or skipped the profile form.
  * 'prefer_not_to_say' means "user was asked and explicitly declined."
  *

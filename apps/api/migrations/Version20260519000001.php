@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.2.X.12-A — Recommendations engine: product_recommendations table.
+ * M3.2.X.12-A, Recommendations engine: product_recommendations table.
  *
  * Single denormalized lookup table holding pre-computed per-product
  * recommendations. Populated nightly by the X.12-E
@@ -25,27 +25,27 @@ use Doctrine\Migrations\AbstractMigration;
  *                                     (FK to products)
  *   score                    NUMERIC(8, 4)  algorithm-specific score
  *                                            (co-purchase count, category
- *                                            similarity, etc.) — 0.0000
+ *                                            similarity, etc.), 0.0000
  *                                            to 9999.9999. Larger = better.
  *   source                   VARCHAR(20)  'copurchase' | 'category' |
- *                                          'fallback_popular' — which
+ *                                          'fallback_popular', which
  *                                          algorithm produced this row
  *   rank                     INTEGER  1..N within (product_id, source);
  *                                     primary order key for the read path
  *   computed_at              TIMESTAMP WITH TIME ZONE  cron run timestamp
  *
- * UNIQUE (product_id, recommended_product_id) — exactly one row per
+ * UNIQUE (product_id, recommended_product_id), exactly one row per
  *   (source, target) pair; the cron either inserts new or updates
  *   existing on rerun. A product can be recommended FOR multiple
  *   parents (one per parent product) but only once per parent.
  *
  * INDEX idx_product_recs_lookup ON (product_id, rank)
- *   — the hot read path: "give me top-N recommendations for product X
+ *  , the hot read path: "give me top-N recommendations for product X
  *   ordered by rank". Composite index keyed on both columns is the
  *   single seek+range scan that satisfies this.
  *
  * INDEX idx_product_recs_source ON source
- *   — supports the X.12-G admin "explain why" endpoint, which filters
+ *  , supports the X.12-G admin "explain why" endpoint, which filters
  *   rows by source to break down the score makeup.
  *
  * FK CASCADE behavior:

@@ -24,7 +24,7 @@ final class UploadGiftCardPhotoControllerTest extends HttpTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        // Real service with a mocked filesystem — exercises the full
+        // Real service with a mocked filesystem, exercises the full
         // validate/path/write logic without touching disk. Tests that
         // need to assert no write rebind their own.
         $fs = $this->createMock(FilesystemOperator::class);

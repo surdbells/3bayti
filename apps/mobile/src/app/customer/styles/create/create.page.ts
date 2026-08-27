@@ -41,7 +41,7 @@ export interface StyleCategoryOption {
   value: string;
   labelKey: string;
 }
-/** A selectable PRODUCT category — numeric legacy category_id + i18n label. */
+/** A selectable PRODUCT category, numeric legacy category_id + i18n label. */
 export interface ProductCategoryOption {
   id: number;
   labelKey: string;
@@ -99,7 +99,7 @@ export class CreatePage {
   /**
    * Aesthetic style categories (bound to create_style.category via the
    * category picker sheet). These are the same 24 options the legacy
-   * ion-select carried — labels resolve through the style_category_*
+   * ion-select carried, labels resolve through the style_category_*
    * i18n keys.
    */
   readonly styleCategories: StyleCategoryOption[] = [
@@ -133,7 +133,7 @@ export class CreatePage {
   /**
    * PRODUCT categories for the picker sheet. These are the real numeric
    * legacy category_id values the catalog uses (mirrors the account page's
-   * category chips — Abayas..Pyjamas → ids 1..8). GET /mobile/category-listing
+   * category chips, Abayas..Pyjamas → ids 1..8). GET /mobile/category-listing
    * filters server-side on category_id (resolved to a v3 category in
    * ListProductsController), so these ids drive the product grid.
    */
@@ -284,7 +284,7 @@ export class CreatePage {
    * server-side; the registered transformProductListResponse reshapes the
    * v3 envelope back into the legacy product-card shape
    * ({product_id, product_name, image_1, price}) the grid + addProductToStyle
-   * expect. Public read — no authToken.
+   * expect. Public read, no authToken.
    */
   loadProductsForCategory(categoryId: number) {
     this.selectedProductCategoryId = categoryId;
@@ -318,7 +318,7 @@ export class CreatePage {
    * per-request token discards stale responses when the user changes
    * category/search mid-flight, and hasMore stops paging once a short page
    * comes back. GET /mobile/category-listing → /v3/products with the mobile
-   * transform applied. Public read — no authToken.
+   * transform applied. Public read, no authToken.
    */
   private fetchProducts(reset: boolean) {
     if (!reset && (this.ui_controls.is_loading || this.ui_controls.is_loading_more || !this.ui_controls.hasMore)) {
@@ -381,7 +381,7 @@ export class CreatePage {
     this.ui_controls.is_creating = true;
     this.create_style.id = this.single_user.id;
     this.create_style.token = this.single_user.token;
-    // Direct v3 (POST /v3/me/styles). Authed — token rides the
+    // Direct v3 (POST /v3/me/styles). Authed, token rides the
     // Authorization header via opts.authToken, not the body. The v3
     // CreateStyleController reads only `name` and `products` (CSV);
     // legacy `category`/`isPrivate` have no v3 equivalent and are dropped.

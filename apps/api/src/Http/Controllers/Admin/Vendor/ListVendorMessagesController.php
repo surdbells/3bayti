@@ -17,7 +17,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * The admin-to-vendor message thread for one vendor (newest first), so the
  * portal's store-messages view can render it. Mirrors the vendor-facing inbox
- * (GET /v3/vendor/messages) but scoped by an explicit vendor id — the
+ * (GET /v3/vendor/messages) but scoped by an explicit vendor id, the
  * counterpart read for SendVendorMessageController's POST on the same path.
  */
 final class ListVendorMessagesController

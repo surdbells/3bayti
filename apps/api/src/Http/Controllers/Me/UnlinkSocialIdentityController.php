@@ -24,7 +24,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Last-method guard
  * -----------------
  * We refuse (422) to remove the identity if doing so would leave the
- * user with NO way to sign in — i.e. they have no password
+ * user with NO way to sign in, i.e. they have no password
  * (User::hasPassword() === false) AND no other social identity would
  * remain. Otherwise they'd lock themselves out permanently.
  *

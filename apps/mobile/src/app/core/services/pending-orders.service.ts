@@ -63,7 +63,7 @@ export class PendingOrdersService {
       });
   }
 
-  /** Reset to zero — call on sign-out. */
+  /** Reset to zero, call on sign-out. */
   clear(): void {
     this.count.set(0);
     this.amount.set(0);

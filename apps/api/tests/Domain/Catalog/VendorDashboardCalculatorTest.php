@@ -12,7 +12,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * VendorDashboardCalculator — assembles the dashboard envelope from the
+ * VendorDashboardCalculator, assembles the dashboard envelope from the
  * aggregate queries. Connection is mocked to feed canned rows.
  */
 #[CoversClass(VendorDashboardCalculator::class)]

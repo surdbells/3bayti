@@ -94,7 +94,7 @@ export interface AxNotificationItem {
   duration: number;
   /** Setter for the auto-dismiss timer; cleared on dismiss/update. */
   timerId: ReturnType<typeof setTimeout> | null;
-  /** Animation state — drives enter/exit CSS classes. */
+  /** Animation state, drives enter/exit CSS classes. */
   animState: 'entering' | 'visible' | 'leaving';
 }
 
@@ -109,7 +109,7 @@ export interface AxNotificationConfig {
   defaultPosition?: AxNotificationPosition;
   /** Maximum simultaneous visible notifications. Default 3. */
   maxStack?: number;
-  /** Debounce window in ms — identical messages within this window update existing. Default 200. */
+  /** Debounce window in ms, identical messages within this window update existing. Default 200. */
   dedupeWindowMs?: number;
 }
 
@@ -122,7 +122,7 @@ export const AX_NOTIFICATION_DEFAULT_CONFIG: Required<AxNotificationConfig> = {
 
 /**
  * Per-status default durations (ms). 0 = sticky.
- * These match the locked spec — keep in sync with docs/m3-notification-spec.md.
+ * These match the locked spec, keep in sync with docs/m3-notification-spec.md.
  */
 export const AX_NOTIFICATION_DEFAULT_DURATIONS: Record<AxNotificationStatus, number> = {
   success: 3000,

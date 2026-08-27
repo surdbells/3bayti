@@ -18,19 +18,19 @@ use DateTimeInterface;
  * request can be viewed by different actors with different concerns):
  *
  *   - customerShape: what the customer sees on their account
- *     — full lifecycle status, their own items, their photos
+ *    , full lifecycle status, their own items, their photos
  *   - vendorShape: what a vendor sees on the vendor portal
- *     — only items they sold, vendor-side actions available
+ *    , only items they sold, vendor-side actions available
  *   - adminShape: what admin sees on the operator console
- *     — full request including all items + photo metadata for review,
+ *    , full request including all items + photo metadata for review,
  *     plus admin-only fields (customer_user_id, decided_by_admin)
  *
  * Photo URLs
  * ==========
  * Photos are served through GET /v3/returns/{id}/photos/{photoId}
  * (auth-gated). The serializer emits relative URLs (without origin)
- * — clients prepend their configured API base. storage_path is NEVER
- * exposed in any shape — it's an internal implementation detail.
+ *, clients prepend their configured API base. storage_path is NEVER
+ * exposed in any shape, it's an internal implementation detail.
  *
  * Refund block
  * ============
@@ -42,7 +42,7 @@ use DateTimeInterface;
 final class ReturnRequestSerializer
 {
     /**
-     * Customer-facing shape — what the customer sees on "my returns".
+     * Customer-facing shape, what the customer sees on "my returns".
      *
      * @return array<string, mixed>
      */
@@ -56,7 +56,7 @@ final class ReturnRequestSerializer
             'reason' => $request->getReason(),
             'customer_notes' => $request->getCustomerNotes(),
             // Customer can see admin's denial reason or approval note
-            // (it's about THEIR return — they deserve to know).
+            // (it's about THEIR return, they deserve to know).
             'admin_notes' => $request->getAdminNotes(),
             'requested_at' => $this->iso($request->getRequestedAt()),
             'decided_at' => $this->iso($request->getDecidedAt()),
@@ -72,7 +72,7 @@ final class ReturnRequestSerializer
     }
 
     /**
-     * Vendor-facing shape — only items relevant to the vendor.
+     * Vendor-facing shape, only items relevant to the vendor.
      * Caller passes the vendor's id; serializer filters items.
      *
      * @return array<string, mixed>
@@ -99,7 +99,7 @@ final class ReturnRequestSerializer
     }
 
     /**
-     * Admin-facing shape — full visibility.
+     * Admin-facing shape, full visibility.
      *
      * @return array<string, mixed>
      */

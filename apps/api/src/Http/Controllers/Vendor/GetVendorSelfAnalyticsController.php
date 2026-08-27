@@ -34,7 +34,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Authorization: VendorAuthMiddleware enforces 'approved vendor'
  * on the route group. No further auth check needed here.
  *
- * No audit emission — vendors viewing their own data is non-
+ * No audit emission, vendors viewing their own data is non-
  * auditable (same as X.14 self-metrics).
  */
 final class GetVendorSelfAnalyticsController

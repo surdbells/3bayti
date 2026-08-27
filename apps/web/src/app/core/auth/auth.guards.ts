@@ -8,7 +8,7 @@ import {
 import { AuthService } from './auth.service';
 
 /**
- * CanMatch guard — defers lazy-chunk loading for unauthenticated users.
+ * CanMatch guard, defers lazy-chunk loading for unauthenticated users.
  *
  * What this is for
  * ----------------
@@ -34,7 +34,7 @@ import { AuthService } from './auth.service';
  *
  * Important
  * ---------
- * CanMatch CANNOT return a UrlTree — only a boolean. Use
+ * CanMatch CANNOT return a UrlTree, only a boolean. Use
  * authActivateGuard if you need to redirect with returnUrl semantics.
  */
 export const authMatchGuard: CanMatchFn = () => {
@@ -43,13 +43,13 @@ export const authMatchGuard: CanMatchFn = () => {
 };
 
 /**
- * CanActivate guard — runtime auth check with returnUrl preservation.
+ * CanActivate guard, runtime auth check with returnUrl preservation.
  *
  * What this is for
  * ----------------
  * The runtime-re-check companion to authMatchGuard. Even though the
  * CanMatch guard prevents anon users from loading the chunk, this
- * one runs every navigation INTO the protected route — including
+ * one runs every navigation INTO the protected route, including
  * back/forward navigation, programmatic router.navigate, etc.
  *
  * Behaviour
@@ -84,7 +84,7 @@ export const authActivateGuard: CanActivateFn = (_route, state): boolean | UrlTr
 };
 
 /**
- * Inverse guard — redirect AWAY from auth pages when already signed in.
+ * Inverse guard, redirect AWAY from auth pages when already signed in.
  *
  * Used by /login, /register, /forgot-password, /reset-password so
  * authenticated users don't see those pages. Honours `returnUrl` if
@@ -120,7 +120,7 @@ export const guestActivateGuard: CanActivateFn = (route): boolean | UrlTree => {
  *   - bare hostnames:       evil.example
  *
  * All are excluded by requiring [0] === '/' AND [1] !== '/'. A single
- * '/' is fine — that's the site root and a legitimate returnUrl.
+ * '/' is fine, that's the site root and a legitimate returnUrl.
  *
  * Type guard: narrows `value: string | null` to `value is string` so
  * callers can pass the result directly to router.parseUrl().

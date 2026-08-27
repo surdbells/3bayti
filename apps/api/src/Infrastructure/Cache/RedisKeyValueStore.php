@@ -14,7 +14,7 @@ use Throwable;
  *
  * Why phpredis not predis
  * -----------------------
- * phpredis is a C extension — installed server-side, used directly.
+ * phpredis is a C extension, installed server-side, used directly.
  * Predis is a pure PHP library installed via composer. We use phpredis
  * because:
  *   - Already installed on our production server (M1.6.1.A prep)
@@ -24,7 +24,7 @@ use Throwable;
  *
  * Connection management
  * ---------------------
- * Uses Redis::pconnect() — persistent connection per FPM worker.
+ * Uses Redis::pconnect(), persistent connection per FPM worker.
  * The first request a worker handles opens the connection; subsequent
  * requests in the same worker reuse it. PHP-FPM's worker recycle
  * (pm.max_requests) eventually closes them.
@@ -34,7 +34,7 @@ use Throwable;
  * connection overhead.
  *
  * Connection is established lazily on first operation, not in the
- * constructor — we don't want DI container instantiation to fail
+ * constructor, we don't want DI container instantiation to fail
  * if Redis is briefly down.
  *
  * Failure handling
@@ -112,12 +112,12 @@ final class RedisKeyValueStore implements KeyValueStore
     public function setIfAbsent(string $key, string $value, int $ttlSeconds): bool
     {
         try {
-            // SET key value NX [EX ttl] — atomic set-if-not-exists.
+            // SET key value NX [EX ttl], atomic set-if-not-exists.
             // phpredis takes the options as an associative array; 'nx'
             // makes it conditional, 'ex' attaches the expiry in the same
             // atomic command (no SET-then-EXPIRE race / leaked-lock gap).
             // On success Redis returns true; when the key already exists
-            // the NX condition fails and Redis returns false — that false
+            // the NX condition fails and Redis returns false, that false
             // is the "someone else owns it" signal, NOT an error.
             $options = $ttlSeconds > 0
                 ? ['nx', 'ex' => $ttlSeconds]
@@ -135,7 +135,7 @@ final class RedisKeyValueStore implements KeyValueStore
     {
         try {
             // EXPIRE returns true if TTL was set, false if key doesn't exist.
-            // We accept both — the "key doesn't exist" case is a no-op
+            // We accept both, the "key doesn't exist" case is a no-op
             // by design (interface contract).
             $this->client()->expire($key, $ttlSeconds);
         } catch (RedisException $e) {
@@ -147,7 +147,7 @@ final class RedisKeyValueStore implements KeyValueStore
     {
         try {
             // DEL returns count of deleted keys. We don't care if it
-            // was 0 (key didn't exist) or 1 (deleted) — both satisfy
+            // was 0 (key didn't exist) or 1 (deleted), both satisfy
             // "ensure key is gone."
             $this->client()->del($key);
         } catch (RedisException $e) {
@@ -164,7 +164,7 @@ final class RedisKeyValueStore implements KeyValueStore
             return $result === true || $result === '+PONG' || $result === 'PONG';
         } catch (Throwable $e) {
             // ping() is the explicit "does not throw" method per the
-            // interface — used by /v3/health/ready. Swallow any error
+            // interface, used by /v3/health/ready. Swallow any error
             // and report unhealthy.
             return false;
         }

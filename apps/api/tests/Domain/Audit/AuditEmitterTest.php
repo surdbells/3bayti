@@ -337,7 +337,7 @@ final class AuditEmitterTest extends TestCase
     public function dbWriteFailureDoesNotPropagate(): void
     {
         // If the audit save throws (e.g. DB connection lost), the
-        // emitter must NOT propagate the exception — the user's
+        // emitter must NOT propagate the exception, the user's
         // request should still succeed.
         $brokenEm = $this->createMock(EntityManagerInterface::class);
         $brokenRepo = $this->createMock(AuditLogRepository::class);

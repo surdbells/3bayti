@@ -59,7 +59,7 @@ use Psr\Log\NullLogger;
  *        OrderAddress records (decouples Order from later
  *        address-book edits)
  *      - Mark Cart as converted
- *   5. Call Noon INITIATE — outside the DB transaction. The Noon
+ *   5. Call Noon INITIATE, outside the DB transaction. The Noon
  *      round-trip is slow (median ~800ms in our sandbox testing)
  *      and we don't want to hold a row lock that long. Worst-case
  *      failure here: a pending-payment Order exists with no
@@ -93,7 +93,7 @@ use Psr\Log\NullLogger;
  * ------------------------------
  * - Delivery fee calculation: caller passes it (M3.2.x will add
  *   a /v3/checkout/quote endpoint to compute it)
- * - Discount/coupon resolution: caller passes amount (same — quote
+ * - Discount/coupon resolution: caller passes amount (same, quote
  *   endpoint comes in M3.2.x)
  * - Cart locking against concurrent add-to-cart: not needed since
  *   the cart-snapshot-into-order is inside the transaction; an
@@ -139,7 +139,7 @@ final class InitiateCheckoutController
 
         // NOTE: The former pre-checkout phone-verification gate (throwing
         // AUTH_PHONE_NOT_VERIFIED when !$user->isPhoneVerified()) was removed.
-        // All customers — migrated and new — already have a verified phone from
+        // All customers, migrated and new, already have a verified phone from
         // onboarding, so the gate was redundant and blocked legitimate
         // checkouts. Phone collection/storage and the social phone-link flow
         // are unaffected; only the checkout-blocking check is gone.
@@ -147,7 +147,7 @@ final class InitiateCheckoutController
         $input = $this->validator->parse($request, InitiateCheckoutInput::class);
 
         // ------------------------------------------------------------------
-        // M3.5 Phase 4 — Gift card PURCHASE flow (no cart involved).
+        // M3.5 Phase 4, Gift card PURCHASE flow (no cart involved).
         //
         // When gift_card_purchase_id is supplied the buyer is paying for a
         // gift card they just created (status=pending_payment). We bypass
@@ -166,7 +166,7 @@ final class InitiateCheckoutController
         }
 
         // ------------------------------------------------------------------
-        // Resume payment for an EXISTING pending_payment order — the mobile
+        // Resume payment for an EXISTING pending_payment order, the mobile
         // "Complete payment" action. Like the gift-card branch this bypasses
         // the cart entirely: no new order is created, we just hand back a
         // checkout URL for the order the customer already has.
@@ -200,7 +200,7 @@ final class InitiateCheckoutController
                     ),
                 );
             }
-            // CUSTOM size must carry the body-measurement snapshot — unless the
+            // CUSTOM size must carry the body-measurement snapshot, unless the
             // category makes size optional (bags/accessories/kaftans/mukhawars).
             if (strtoupper((string) $cartItem->getSize()) === 'CUSTOM'
                 && !$this->isSizeOptionalCategory($itemProduct)
@@ -230,7 +230,7 @@ final class InitiateCheckoutController
         $deliveryFee = $this->delivery->forCart($cart);
 
         // ------------------------------------------------------------------
-        // M3.2.X.8-D — Promo code resolution
+        // M3.2.X.8-D, Promo code resolution
         //
         // If the caller supplied promo_code, resolve it server-side via
         // PromoCodeResolverService BEFORE the transaction. Resolution
@@ -256,18 +256,18 @@ final class InitiateCheckoutController
         }
 
         // ------------------------------------------------------------------
-        // M3.5 — Gift card resolution (pre-transaction, like promo)
+        // M3.5, Gift card resolution (pre-transaction, like promo)
         //
         // If the caller supplied gift_card_code, load and validate the card
         // before entering the EM transaction. Validation failure → 422 with
-        // a clear message. No debit happens here — debit is inside the
+        // a clear message. No debit happens here, debit is inside the
         // transaction so it's atomic with the order creation.
         // ------------------------------------------------------------------
         // Unified gift-card plan. An explicit gift_card_code applies ONE card;
         // use_gift_wallet applies the customer's whole wallet across ALL their
         // spendable cards (soonest-expiry first). Both resolve to a list of
         // [card => amount] that is debited atomically inside the checkout
-        // transaction below. No debit happens here — validation only.
+        // transaction below. No debit happens here, validation only.
         //
         // Tentative order total (subtotal + deliveryFee - discount): same
         // arithmetic as Order::computeTotal(), used to size the gift-card draw.
@@ -404,7 +404,7 @@ final class InitiateCheckoutController
                 $em->persist($order);
                 $em->flush();
 
-                // M3.2.X.8-D — Promo redemption (unchanged).
+                // M3.2.X.8-D, Promo redemption (unchanged).
                 if ($resolution !== null) {
                     $redemption = $this->promoResolver->recordRedemption(
                         promoCode: $resolution->promoCode,
@@ -416,13 +416,13 @@ final class InitiateCheckoutController
                     $em->flush();
                 }
 
-                // M3.5 / wallet — Gift card debit (atomic with order creation).
+                // M3.5 / wallet, Gift card debit (atomic with order creation).
                 // Debit the planned card(s) inside the transaction so a gateway
                 // failure after this point rolls back both the order AND every
                 // debit (same EM transaction; the gateway call is outside).
                 // For the wallet this walks several cards; for a single code
                 // it's a one-element plan. Each card is refreshed + re-checked
-                // under the write lock — a balance that changed since planning
+                // under the write lock, a balance that changed since planning
                 // makes debit() throw and rolls the whole checkout back.
                 if ($giftCardPlan !== []) {
                     $applied   = '0.00';
@@ -460,7 +460,7 @@ final class InitiateCheckoutController
         );
 
         // ------------------------------------------------------------------
-        // M3.5 — Gateway skip: if the gift card covers the full order total,
+        // M3.5, Gateway skip: if the gift card covers the full order total,
         // skip the Noon INITIATE call entirely and mark the order paid now.
         // The mobile app receives { checkout_url: null, gateway_skipped: true }
         // and navigates directly to /success.
@@ -471,10 +471,10 @@ final class InitiateCheckoutController
             $orderRepo = $this->em->getRepository(Order::class);
             if ($order->markPaid()) {
                 // First (and only) paid transition for this zero-value
-                // order — decrement flash-campaign stock before the save
+                // order, decrement flash-campaign stock before the save
                 // below persists everything in one flush.
                 $this->flashStock->reduceForPaidOrder($order);
-                // Payment is complete (gift-card balance covered the total) —
+                // Payment is complete (gift-card balance covered the total) -
                 // NOW convert the cart it was created from.
                 if ($cart->isActive()) {
                     $cart->markConverted();
@@ -484,7 +484,7 @@ final class InitiateCheckoutController
 
             // Confirmed-at-creation path (no online payment step): the
             // gift-card credit fully covered the total, so the order is
-            // PAID the instant it's created — there is no gateway round-
+            // PAID the instant it's created, there is no gateway round-
             // trip and no webhook will ever arrive for it. This is the
             // ONLY order-creation path that legitimately confirms without
             // a payment gateway (the moral equivalent of a COD / zero-
@@ -495,14 +495,14 @@ final class InitiateCheckoutController
             //   - orderPaid(): the customer's payment-confirmed email/push.
             //   - orderPaidVendors(): the vendor "new order to prepare"
             //     email (vendors are notified only once payment is real).
-            // We deliberately do NOT call orderPlaced() here — its
+            // We deliberately do NOT call orderPlaced() here, its
             // customer copy says "await payment confirmation", which is
             // wrong for an order that is already paid.
             $this->notifications->orderPaid($order);
             $this->notifications->orderPaidVendors($order);
             $this->pushNotifications->orderPaid($order);
 
-            // Order is paid (no gateway) — provision the per-item chats now.
+            // Order is paid (no gateway), provision the per-item chats now.
             // Fire-and-forget: must not abort the response.
             try {
                 $this->chatProvisioner->provisionForOrder($order);
@@ -535,7 +535,7 @@ final class InitiateCheckoutController
         // Call Noon INITIATE. Failure modes:
         //   - Network/timeout: rollback by marking the Order as failed
         //     (we keep the row for forensics; future cleanup job archives)
-        //   - Auth/upstream: same — log + 502
+        //   - Auth/upstream: same, log + 502
         //   - Duplicate reference (resultCode 19012): vanishingly unlikely
         //     given our server-side ref generation, but if it happens,
         //     fetch existing via retrieveOrderByReference and reuse
@@ -585,7 +585,7 @@ final class InitiateCheckoutController
 
         // NO order-confirmation notification fires here. This is the
         // PRE-payment path: we have only just handed the customer a Noon
-        // checkout URL — they have not paid yet. Firing orderPlaced()/
+        // checkout URL, they have not paid yet. Firing orderPlaced()/
         // orderPaid() here would confirm an order the customer might
         // abandon. The single confirmation fires later, on the PAID
         // transition, in NoonWebhookController::__invoke() (gated on the
@@ -602,7 +602,7 @@ final class InitiateCheckoutController
             'gift_card_amount' => $order->getGiftCardAmount(),
         ]);
 
-        // M3.2.X.8-D — Deprecation header on legacy raw-discount path.
+        // M3.2.X.8-D, Deprecation header on legacy raw-discount path.
         // Signal to clients that the `discount` request field is being
         // phased out in favor of `promo_code`. Header is RFC 8594-style
         // free-form; consumers can grep for the leading prefix to detect.
@@ -617,7 +617,7 @@ final class InitiateCheckoutController
     }
 
     /**
-     * Gift card purchase flow — creates a synthetic order for the card
+     * Gift card purchase flow, creates a synthetic order for the card
      * denomination, calls Noon INITIATE, and returns the checkout URL.
      * The cart is not touched. Called when gift_card_purchase_id is set.
      */
@@ -642,11 +642,11 @@ final class InitiateCheckoutController
             );
         }
 
-        // A gift card is a DIGITAL product — it needs no deliverable
+        // A gift card is a DIGITAL product, it needs no deliverable
         // shipping address. Noon only needs (a) a payer NAME on the billing
         // OrderAddress and (b) a shipping OrderAddress to merely EXIST (the
-        // gateway never receives the shipping content). So — unlike the cart
-        // path — we do NOT run assertAddressComplete here: we resolve the
+        // gateway never receives the shipping content). So, unlike the cart
+        // path, we do NOT run assertAddressComplete here: we resolve the
         // buyer's billing address if they happen to have one (for a nicer
         // payer name) but never hard-fail on a missing/incomplete one, and we
         // snapshot the SAME resolved address as both the billing and shipping
@@ -679,7 +679,7 @@ final class InitiateCheckoutController
             }
         }
 
-        // Create the synthetic order (no cart items — just the denomination).
+        // Create the synthetic order (no cart items, just the denomination).
         $order = $this->em->wrapInTransaction(
             function (\Doctrine\ORM\EntityManagerInterface $em) use (
                 $user, $orderReference, $denomination, $payerAddress,
@@ -692,7 +692,7 @@ final class InitiateCheckoutController
                     discount: '0.00',
                 );
                 // Same resolved (or synthesized) address as BOTH billing +
-                // shipping — the shipping row only has to exist for Noon.
+                // shipping, the shipping row only has to exist for Noon.
                 $order->addAddress($this->snapshotGiftCardAddress($payerAddress, $user, OrderAddress::TYPE_BILLING));
                 $order->addAddress($this->snapshotGiftCardAddress($payerAddress, $user, OrderAddress::TYPE_SHIPPING));
                 $em->persist($order);
@@ -754,14 +754,14 @@ final class InitiateCheckoutController
     }
 
     /**
-     * Resume payment for an EXISTING pending_payment order — the mobile
+     * Resume payment for an EXISTING pending_payment order, the mobile
      * "Complete payment" action.
      *
      * Unlike the cart flow this creates NO new order: it reuses the order's
      * original Noon checkout session when one is still on file (double-tap /
      * return visit gets the same URL), otherwise re-initiates a fresh session
      * for the SAME order. A gateway failure here does NOT mark the order
-     * failed — the order stays pending_payment so the customer can retry.
+     * failed, the order stays pending_payment so the customer can retry.
      */
     private function initiateOrderResume(
         User $user,
@@ -802,7 +802,7 @@ final class InitiateCheckoutController
             }
         }
 
-        // No usable session on file — initiate a fresh one for the SAME order.
+        // No usable session on file, initiate a fresh one for the SAME order.
         $returnUrl = $this->buildReturnUrl($order->getOrderReference());
         try {
             $initiation = $this->gateway->initiateCheckout(
@@ -811,7 +811,7 @@ final class InitiateCheckoutController
                 channel: $input->channel,
             );
         } catch (PaymentGatewayException $e) {
-            // Deliberately do NOT markOrderFailed — leave the order pending so
+            // Deliberately do NOT markOrderFailed, leave the order pending so
             // the customer can try again from "Complete payment".
             $this->logger->error('checkout.initiate: order-resume gateway failure', [
                 'user_id' => $user->getId(),
@@ -869,7 +869,7 @@ final class InitiateCheckoutController
      *
      * Throws HttpException 422 (via PromoNotApplicableException
      * mapping) when a promo code was supplied but didn't apply.
-     * Same shape as POST /v3/cart/quote — clients can use the same
+     * Same shape as POST /v3/cart/quote, clients can use the same
      * error-handling code path.
      */
     private function resolvePromoOrThrow(
@@ -924,7 +924,7 @@ final class InitiateCheckoutController
      * immutable per-order snapshot) requires before it will construct.
      *
      * A saved Address can legitimately carry empty/null optional columns
-     * — street_address in particular is nullable — but OrderAddress
+     *, street_address in particular is nullable, but OrderAddress
      * mandates a recipient name, phone, email, street and city. Without
      * this guard an incomplete (e.g. street-less) address flows into
      * snapshotAddress() → OrderAddress::__construct(), which throws a raw
@@ -932,8 +932,8 @@ final class InitiateCheckoutController
      * as an opaque 500 ("An unexpected error occurred"). That left buyers
      * with a created-but-unpayable gift card and no idea why.
      *
-     * Validating here — before any order is created and before the
-     * gateway is called — converts that 500 into an actionable 422 that
+     * Validating here, before any order is created and before the
+     * gateway is called, converts that 500 into an actionable 422 that
      * names the address (billing/shipping) and the missing field(s), for
      * BOTH the cart and gift-card checkout flows (they share this method).
      */
@@ -987,7 +987,7 @@ final class InitiateCheckoutController
      * Resolve the billing address to use for a GIFT-CARD purchase WITHOUT
      * asserting completeness. Unlike resolveAddress() (used by the cart
      * path), this never throws: a gift card is digital, so a missing or
-     * incomplete address is fine — the only thing we want the address for
+     * incomplete address is fine, the only thing we want the address for
      * is a nicer payer name.
      *
      *   - If a specific id was requested and it belongs to the user, use it.
@@ -1005,7 +1005,7 @@ final class InitiateCheckoutController
             if ($candidate !== null && $candidate->getUser()->getId() === $user->getId()) {
                 return $candidate;
             }
-            // Foreign/unknown id: don't hard-fail a digital purchase — fall
+            // Foreign/unknown id: don't hard-fail a digital purchase, fall
             // through to the default-billing lookup below.
         }
         return $addresses->findDefaultBillingForUser($user);
@@ -1051,7 +1051,7 @@ final class InitiateCheckoutController
             $email = 'no-reply@3bayti.ae';
         }
 
-        // Delivery-only fields — irrelevant for a digital gift card (never sent
+        // Delivery-only fields, irrelevant for a digital gift card (never sent
         // to Noon) but non-empty is required by OrderAddress.
         $street = $source !== null ? trim((string) ($source->getStreetAddress() ?? '')) : '';
         if ($street === '') {
@@ -1132,7 +1132,7 @@ final class InitiateCheckoutController
             $order->markFailed();
             // The cart was marked converted inside the order-creation
             // transaction (committed before the gateway call). Payment
-            // never started, so restore it to active — the customer keeps
+            // never started, so restore it to active, the customer keeps
             // their cart and can retry. The bumped updated_at gives the
             // retry a fresh idempotency key. (Gift-card purchases pass no
             // cart; nothing to restore there.)
@@ -1141,7 +1141,7 @@ final class InitiateCheckoutController
             }
             $this->em->flush();
         } catch (\Throwable $flushErr) {
-            // Order entity might not have markFailed — degrade
+            // Order entity might not have markFailed, degrade
             // gracefully. The pending_payment row still exists; the
             // ops team can mark it failed manually.
             $this->logger->warning('checkout.initiate: could not mark order failed / restore cart', [

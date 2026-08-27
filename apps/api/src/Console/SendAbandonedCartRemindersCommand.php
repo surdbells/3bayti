@@ -30,7 +30,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * Industry conversion uplift from cart-abandonment recovery typically
  * runs 5-15% of abandoned carts.
  *
- * This command runs on a cron schedule (operator-configurable —
+ * This command runs on a cron schedule (operator-configurable -
  * recommended every 1-2 hours). It:
  *   1. Finds eligible carts via CartAbandonmentFinder
  *      (status=active, items present, updated_at past threshold,
@@ -38,7 +38,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *   2. For each cart, calls CartNotificationService::cartAbandoned
  *      which respects the marketing-opt-out flag and writes a
  *      notification_log row (SENT/FAILED/SKIPPED) with cart_id
- *      populated — that row makes the cart ineligible for future
+ *      populated, that row makes the cart ineligible for future
  *      runs (Q-MaxRemindersPerCart = A locked: exactly one reminder
  *      per cart, even if the customer later goes opted-out)
  *   3. Reports counts of sent/skipped/failed/errors for ops
@@ -61,7 +61,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * =================
  * Each cart processed in its own try/catch. One cart's failure
  * (e.g. transient DB error during persist) does NOT abort the
- * batch — the next cart is still processed. Matches the
+ * batch, the next cart is still processed. Matches the
  * established CartNotificationService::safeSend / safePersist
  * resilience pattern.
  *
@@ -143,7 +143,7 @@ final class SendAbandonedCartRemindersCommand extends Command
         // Email-eligible carts (idempotent on channel='email' via the
         // email template log) and push-eligible carts (idempotent on
         // channel='push') are found INDEPENDENTLY. A cart can appear in
-        // one set, both, or neither — an email log never suppresses a
+        // one set, both, or neither, an email log never suppresses a
         // push and vice-versa (the new notification_logs.channel column
         // is what keeps the two streams separate).
         $cartIds = $this->finder->findEligibleCartIds(
@@ -304,7 +304,7 @@ final class SendAbandonedCartRemindersCommand extends Command
                 $cart = $carts->find($cartId);
                 if (!$cart instanceof Cart) {
                     // Cart was deleted between Finder query and now.
-                    // Rare race — log and continue.
+                    // Rare race, log and continue.
                     $this->logger->info('cart_reminders.cart_disappeared', [
                         'cart_id' => $cartId,
                     ]);

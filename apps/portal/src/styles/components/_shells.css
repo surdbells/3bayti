@@ -1,5 +1,5 @@
 /* =========================================================================
-   Abayti Design System — Overlay Shell Components
+   Abayti Design System, Overlay Shell Components
    Styles for AxModal, AxDrawer, AxTabs, AxAccordion, AxTooltip, AxPopover.
    Underlying CDK positions these overlays; the CSS here handles chrome,
    scroll, and entrance animations.
@@ -452,7 +452,7 @@
 }
 
 .ax-collapse-content {
-  /* Content inside — no padding default so parent can decide */
+  /* Content inside, no padding default so parent can decide */
 }
 
 

@@ -77,7 +77,7 @@ final class CancelOrderControllerTest extends HttpTestCase
     }
 
     /**
-     * M3.2.Z.6 — lifecycle push wiring. Cancelling an order must fan a
+     * M3.2.Z.6, lifecycle push wiring. Cancelling an order must fan a
      * push out to the customer's active device tokens beside the email.
      * Drives the real controller → CancelOrderService → push seam, with
      * an InMemoryPushSender capturing the send and a DeviceTokenRepository

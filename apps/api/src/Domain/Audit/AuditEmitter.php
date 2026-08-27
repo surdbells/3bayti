@@ -21,13 +21,13 @@ use Throwable;
  *   // create
  *   $audit->recordCreate($request, $user, $address);
  *
- *   // update — pass before+after snapshots
+ *   // update, pass before+after snapshots
  *   $beforeSnapshot = $audit->snapshot($address);
  *   $address->update(...);
  *   $afterSnapshot = $audit->snapshot($address);
  *   $audit->recordUpdate($request, $user, $address, $beforeSnapshot, $afterSnapshot);
  *
- *   // delete — pass the snapshot from BEFORE the delete
+ *   // delete, pass the snapshot from BEFORE the delete
  *   $beforeSnapshot = $audit->snapshot($address);
  *   $repo->remove($address);
  *   $audit->recordDelete($request, $user, $address, $beforeSnapshot);
@@ -42,7 +42,7 @@ use Throwable;
  * The `snapshot()` method extracts a plain associative array of an
  * entity's persistable state. Used to capture "before" before a
  * mutation and "after" after. The diff in recordUpdate is computed
- * by comparing them — only fields that actually changed are kept.
+ * by comparing them, only fields that actually changed are kept.
  *
  * Sensitive field redaction
  * -------------------------
@@ -60,7 +60,7 @@ use Throwable;
  * already happened (or is about to via the controller's flush).
  * Refusing to return the user's address-update because the audit
  * row couldn't be written is worse than briefly missing audit data
- * — and Sentry will alert us so we can fix it.
+ *, and Sentry will alert us so we can fix it.
  *
  * Trade-off accepted: silent audit failures are possible. Mitigations:
  *   - Failures land in the application log (var/logs/) AND Sentry
@@ -90,7 +90,7 @@ final class AuditEmitter
      * Record a 'created' event.
      *
      * @param array<string, mixed>|null $afterSnapshot
-     *        If null, no fields are recorded — useful when the entity's
+     *        If null, no fields are recorded, useful when the entity's
      *        identity (id) is enough and the values aren't interesting.
      */
     public function recordCreate(
@@ -126,7 +126,7 @@ final class AuditEmitter
     ): void {
         $diff = $this->diff($beforeSnapshot, $afterSnapshot);
         if (empty($diff['before']) && empty($diff['after'])) {
-            // Nothing actually changed — no audit row.
+            // Nothing actually changed, no audit row.
             return;
         }
 
@@ -160,7 +160,7 @@ final class AuditEmitter
     }
 
     /**
-     * Record a 'default' event — used for role/flag changes that
+     * Record a 'default' event, used for role/flag changes that
      * aren't quite a generic update. E.g. "set this address as the
      * default shipping" doesn't change the address itself, just the
      * flags relating it to other addresses.
@@ -183,14 +183,14 @@ final class AuditEmitter
     }
 
     /**
-     * Record a 'viewed' event — used by M3.1.7-D admin endpoints to
+     * Record a 'viewed' event, used by M3.1.7-D admin endpoints to
      * audit reads (Q5=A: ALL admin actions audited, including GETs).
      *
      * Changes payload typically contains:
      *   - 'context'  → e.g. 'list', 'detail'
      *   - 'filters'  → query params (limit/offset/status/etc.)
      *
-     * Don't capture the full response body — that bloats the audit
+     * Don't capture the full response body, that bloats the audit
      * table. The subject_id + filters + actor are enough to
      * reconstruct what the admin saw.
      *
@@ -212,7 +212,7 @@ final class AuditEmitter
     }
 
     /**
-     * Record an 'overridden' event — admin-driven state mutation
+     * Record an 'overridden' event, admin-driven state mutation
      * that bypassed normal validation (e.g. forcing an order from
      * pending_payment directly to refunded as a safety override).
      *
@@ -247,7 +247,7 @@ final class AuditEmitter
      *
      * Strategy: ask Doctrine's UnitOfWork for the original entity
      * data. This gives us the state as last seen by the persistence
-     * layer — the "before" state for an update.
+     * layer, the "before" state for an update.
      *
      * For the "after" state, we use the entity's current public
      * getters mirrored to a known shape per type.
@@ -294,7 +294,7 @@ final class AuditEmitter
     }
 
     /**
-     * Core record method — writes the AuditLog row.
+     * Core record method, writes the AuditLog row.
      *
      * @param array<string, mixed> $changes
      */
@@ -334,7 +334,7 @@ final class AuditEmitter
             $repo->save($log);
         } catch (Throwable $e) {
             // Audit failures must not break the user's request. The
-            // catch block must NEVER throw — that would propagate up
+            // catch block must NEVER throw, that would propagate up
             // as a 500, defeating the whole point of "audit is a
             // secondary concern."
             //
@@ -342,7 +342,7 @@ final class AuditEmitter
             // The original code called subjectId() inside both the
             // try AND the catch (for logging). When subjectId() threw
             // in the try, control jumped to catch, which called it
-            // AGAIN — the second throw escaped the catch as an
+            // AGAIN, the second throw escaped the catch as an
             // unhandled exception.
             //
             // Fix: resolve subject_id defensively for logging, never
@@ -357,12 +357,12 @@ final class AuditEmitter
                 'error' => $e->getMessage(),
                 'exception' => $e::class,
             ]);
-            // Send to Sentry too — audit failures are exactly the
+            // Send to Sentry too, audit failures are exactly the
             // kind of "we want to know" event Sentry exists for.
             try {
                 \Sentry\captureException($e);
             } catch (Throwable) {
-                // Sentry is also down — give up silently.
+                // Sentry is also down, give up silently.
             }
         }
     }
@@ -509,14 +509,14 @@ final class AuditEmitter
     /**
      * UserLocation snapshot.
      *
-     * Includes the user-id for context — useful when auditing "who
+     * Includes the user-id for context, useful when auditing "who
      * shared their location" patterns. Excludes raw timestamps
      * (they change on every UPDATE by definition and aren't
      * interesting in a diff).
      *
      * Latitude/longitude are stored as DECIMAL (PHP string) in the
      * entity. Cast to string here to keep the audit changes map
-     * consistent across snapshot calls — passing the entity's
+     * consistent across snapshot calls, passing the entity's
      * already-string value through unchanged.
      *
      * @return array<string, mixed>
@@ -536,7 +536,7 @@ final class AuditEmitter
     /**
      * Brand snapshot.
      *
-     * No redaction needed — Brand has no sensitive fields.
+     * No redaction needed, Brand has no sensitive fields.
      */
     private function snapshotBrand(\Bayti\Api\Domain\Catalog\Brand $b): array
     {
@@ -555,7 +555,7 @@ final class AuditEmitter
      * detail to audit (admin changing a vendor's commission cut is
      * exactly the kind of change forensics cares about).
      *
-     * Contact email/phone are NOT PII-redacted here — they're
+     * Contact email/phone are NOT PII-redacted here, they're
      * vendor-business data, not customer PII, and Q5=A policy only
      * redacts *_hash and *_token fields.
      */
@@ -605,7 +605,7 @@ final class AuditEmitter
      * and the vendor the application resolved to. Volatile timestamps and the
      * free-text applicant message are intentionally omitted.
      *
-     * reviewed_by / vendor captured as scalar ids — the audit log is meant to
+     * reviewed_by / vendor captured as scalar ids, the audit log is meant to
      * be readable without joins.
      */
     private function snapshotVendorApplication(\Bayti\Api\Domain\Catalog\VendorApplication $a): array
@@ -629,7 +629,7 @@ final class AuditEmitter
     /**
      * Category snapshot.
      *
-     * parent_id captured as scalar (not the parent entity) — the
+     * parent_id captured as scalar (not the parent entity), the
      * audit log is meant to be readable without joins.
      */
     private function snapshotCategory(\Bayti\Api\Domain\Catalog\Category $c): array
@@ -653,7 +653,7 @@ final class AuditEmitter
      * audit diff: code rename, discount-type or value changes, time-
      * window adjustments, limit revisions, soft-delete toggles.
      *
-     * No redaction needed — promo codes are not PII or secrets. The
+     * No redaction needed, promo codes are not PII or secrets. The
      * marketing-facing `code` is intentionally human-typeable and the
      * surrounding business fields are operational data.
      *
@@ -706,7 +706,7 @@ final class AuditEmitter
 
     private static function subjectType(object $subject): string
     {
-        // Use class basename (strip namespace) — keeps subject_type
+        // Use class basename (strip namespace), keeps subject_type
         // human-readable in audit_log. e.g. 'User' not
         // 'Bayti\\Api\\Domain\\User\\User'.
         $parts = explode('\\', $subject::class);
@@ -756,7 +756,7 @@ final class AuditEmitter
         if (!is_string($ip) || $ip === '') {
             return null;
         }
-        // Validate it's a real IP — defends against weirdly-set
+        // Validate it's a real IP, defends against weirdly-set
         // server params (e.g. unix sockets that put a path here).
         if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
             return null;

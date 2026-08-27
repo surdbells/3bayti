@@ -34,12 +34,12 @@ export type GiftCardPattern =
 
 /**
  * Lifecycle status (server-authoritative).
- *   pending_payment — created, awaiting Noon settlement (not spendable)
- *   active          — paid + activated (full balance available)
- *   partially_used  — some balance spent
- *   exhausted       — balance == 0
- *   expired         — past expires_at
- *   voided          — cancelled / refunded
+ *   pending_payment, created, awaiting Noon settlement (not spendable)
+ *   active         , paid + activated (full balance available)
+ *   partially_used , some balance spent
+ *   exhausted      , balance == 0
+ *   expired        , past expires_at
+ *   voided         , cancelled / refunded
  */
 export type GiftCardStatus =
   | 'pending_payment'
@@ -120,7 +120,7 @@ export interface GiftCardPurchaseInput {
   recipient_phone?: string | null;
 }
 
-/** Result of POST /v3/cart/gift-card — how much of a card applies to the cart. */
+/** Result of POST /v3/cart/gift-card, how much of a card applies to the cart. */
 export interface GiftCardCartPreview {
   code: string;
   balance: string;
@@ -131,7 +131,7 @@ export interface GiftCardCartPreview {
 }
 
 /**
- * Result of GET /v3/cart/gift-wallet — how much of the customer's WHOLE gift
+ * Result of GET /v3/cart/gift-wallet, how much of the customer's WHOLE gift
  * wallet (aggregate balance across all their spendable cards) covers the cart.
  * `cards_used` is the draw plan, soonest-expiry first.
  */

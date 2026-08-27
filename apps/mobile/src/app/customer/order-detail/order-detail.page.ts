@@ -31,7 +31,7 @@ import { OrderPaymentService } from './order-payment.service';
 import { PendingOrdersService } from '../../core/services/pending-orders.service';
 
 /**
- * Customer order-detail screen — M3.2.Z.1.
+ * Customer order-detail screen, M3.2.Z.1.
  *
  * Full per-order view at /orders/:id, replacing the empty onView()
  * stub on my-orders. Reads GET /v3/orders/:id (OrderSerializer
@@ -201,7 +201,7 @@ export class OrderDetailPage implements OnInit {
     this.loadOrder(() => event.target.complete());
   }
 
-  /** True only for pending_payment — mirrors the web/my-orders rule. */
+  /** True only for pending_payment, mirrors the web/my-orders rule. */
   canCancel(): boolean {
     return this.order?.status === 'pending_payment' && !this.ui_controls.is_cancelling;
   }
@@ -213,7 +213,7 @@ export class OrderDetailPage implements OnInit {
 
   /**
    * Resume payment for this pending order (mobile "Complete payment").
-   * Delegates to OrderPaymentService — initiate → in-app browser → poll —
+   * Delegates to OrderPaymentService, initiate → in-app browser → poll -
    * then reloads the order so its status reflects the outcome.
    */
   completePayment(): void {
@@ -330,8 +330,8 @@ export class OrderDetailPage implements OnInit {
 
   /**
    * Fetch the full customer event feed (GET /orders/:id/timeline), requesting
-   * chronological (oldest → newest) order. On ANY failure — including the
-   * endpoint not being deployed yet — leaves timelineEvents empty so the
+   * chronological (oldest → newest) order. On ANY failure, including the
+   * endpoint not being deployed yet, leaves timelineEvents empty so the
    * template gracefully falls back to the client-derived stepper. Never blocks
    * the order-detail render.
    */
@@ -355,7 +355,7 @@ export class OrderDetailPage implements OnInit {
           }
         },
         error: () => {
-          /* Fall back to the derived stepper — timelineEvents stays empty. */
+          /* Fall back to the derived stepper, timelineEvents stays empty. */
         },
       });
   }
@@ -474,7 +474,7 @@ export class OrderDetailPage implements OnInit {
     this.router.navigate(['/', 'vendors'], { queryParams: { slug, name } });
   }
 
-  /** Open WhatsApp support — keeps a support affordance on the order screen. */
+  /** Open WhatsApp support, keeps a support affordance on the order screen. */
   openSupport() {
     window.open(supportWhatsappLink('Hello, I need assistance.'), '_system');
   }

@@ -16,7 +16,7 @@ import { MessagesService } from '../messages/messages.service';
 import { SUPPORT_WHATSAPP_URL } from '../../core/config/support.constants';
 
 /**
- * /account — account hub / dashboard.
+ * /account, account hub / dashboard.
  *
  * Auth-gated (authActivateGuard on the route). A simple landing page
  * linking to every account surface: profile, orders, addresses,
@@ -178,10 +178,10 @@ export class AccountHubPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly messages = inject(MessagesService);
 
-  /** Unread order-chat total — drives the Messages tile badge. */
+  /** Unread order-chat total, drives the Messages tile badge. */
   protected readonly unreadMessages = this.messages.unreadTotal;
 
-  /** WhatsApp support deep link — opened in a new tab from the support tile. */
+  /** WhatsApp support deep link, opened in a new tab from the support tile. */
   protected readonly supportWhatsappUrl = SUPPORT_WHATSAPP_URL;
 
   /** Banner dismissed for this view (resets on navigation/reload). */
@@ -205,7 +205,7 @@ export class AccountHubPageComponent implements OnInit {
    * session. Verification is required before placing an order.
    *
    * The no-phone case (social sign-ups with phone === '') is handled by the
-   * separate <app-add-phone-prompt> above — requiring a phone here keeps the
+   * separate <app-add-phone-prompt> above, requiring a phone here keeps the
    * two banners mutually exclusive.
    */
   protected readonly showVerifyBanner = computed(() => {

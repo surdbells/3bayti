@@ -7,7 +7,7 @@ import { RoutedHttpClient } from '../../core/http/routed-http-client';
  *
  * The v3 chat API is uuid-keyed, Bearer-authenticated (the refresh
  * interceptor attaches the token automatically), text-only, and
- * auto-provisions one conversation per paid order item — there is no
+ * auto-provisions one conversation per paid order item, there is no
  * get-or-create-by-order endpoint, so the web app only ever LISTS the
  * conversations the server has already created and opens one by uuid.
  *

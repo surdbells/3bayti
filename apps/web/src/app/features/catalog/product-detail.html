@@ -17,7 +17,7 @@
     } @else if (product(); as p) {
 
       <!-- Breadcrumb (visual). The same trail is also emitted as
-           BreadcrumbList JSON-LD via SeoService — they MUST stay in
+           BreadcrumbList JSON-LD via SeoService, they MUST stay in
            lockstep (Google's rich-results guidelines reject
            structured data that doesn't match visible content). The
            shared `categoryLabel()` helper enforces that. -->
@@ -130,7 +130,7 @@
           <!-- Aggregate rating. Only renders when there's a real
                rating + at least one review. Mirrors what's emitted
                in the schema.org JSON-LD AggregateRating block (W2.2b
-               Phase 2) — Google requires the visible rating to match
+               Phase 2), Google requires the visible rating to match
                the structured-data rating. -->
           @if (aggregateRating(); as agg) {
             <div class="pdp-rating" [attr.aria-label]="'product.rating.aria' | translate:{ value: agg.value, count: reviewCountLabel(agg.count) }">
@@ -374,12 +374,12 @@
             <p class="pdp-buybox__error" role="alert">{{ err | translate }}</p>
           }
 
-          <!-- Social share — six channels (decision #5): WhatsApp, copy
+          <!-- Social share, six channels (decision #5): WhatsApp, copy
                link, native share, Facebook, X, Telegram. Shares the
                canonical product URL. -->
           <ui-share-buttons [url]="shareUrl()" [title]="p.name" />
 
-          <!-- Trust / delivery / returns (PDP4a) — grounded in real
+          <!-- Trust / delivery / returns (PDP4a), grounded in real
                capability: a UAE marketplace, a returns flow on orders, and
                secured payment. No fabricated timeframes or thresholds. -->
           <ul class="pdp-trust" [attr.aria-label]="'product.trust.aria' | translate">
@@ -423,7 +423,7 @@
         </section>
       </div>
 
-      <!-- Product information — moved below the gallery + buy-box grid (PDP2)
+      <!-- Product information, moved below the gallery + buy-box grid (PDP2)
            so the buy box can stick alongside the gallery on desktop. -->
       <div class="pdp-content">
 
@@ -536,7 +536,7 @@
                 }
               </ul>
 
-              <!-- Paginated "see all reviews" — pages the rest in from
+              <!-- Paginated "see all reviews", pages the rest in from
                    GET /products/:productId/reviews (approved-only). Shown
                    only when the server has more approved reviews than the
                    embedded first render. -->
@@ -693,7 +693,7 @@
           }
       </div>
 
-      <!-- Related products — "You may also like".
+      <!-- Related products, "You may also like".
            Prefers the X.12 recommendations engine (co-purchase /
            category / popular), loaded client-side via
            relatedProducts(); falls back to the product's own
@@ -716,7 +716,7 @@
            sticky bar hides so it never overlaps the footer (see component). -->
       <div #ctaSentinel class="pdp-cta-sentinel" aria-hidden="true"></div>
 
-      <!-- Mobile sticky add-to-cart — fixed to the viewport bottom on small
+      <!-- Mobile sticky add-to-cart, fixed to the viewport bottom on small
            screens so the price + primary action stay reachable while
            scrolling; hidden on desktop, where the in-page buy box suffices.
            Mirrors the main buy box's enabled/disabled logic. -->
@@ -743,7 +743,7 @@
         </div>
       }
 
-      <!-- Gallery lightbox (PDP3) — fullscreen zoomed viewer. Mounted only
+      <!-- Gallery lightbox (PDP3), fullscreen zoomed viewer. Mounted only
            while open; focus is trapped within the dialog (see component),
            Esc closes, Left/Right cycle, and clicking the backdrop closes. -->
       @if (lightboxOpen()) {
@@ -805,7 +805,7 @@
         </div>
       }
 
-      <!-- Size-guide modal — the store's published size chart. Mounted only
+      <!-- Size-guide modal, the store's published size chart. Mounted only
            while open; Esc closes, Tab is trapped, backdrop click closes.
            Mirrors the mobile size-chart sheet. -->
       @if (sizeGuideOpen()) {

@@ -7,8 +7,8 @@ import { GlobalComponent } from '../global-component';
  *
  * Source of truth is the backend (every endpoint is enforced regardless of the
  * UI); this only decides what controls to *show*. Super admins (is_admin) hold
- * every permission — mirrored from both the session flag and the /me roles
- * array — so can() short-circuits true for them.
+ * every permission, mirrored from both the session flag and the /me roles
+ * array, so can() short-circuits true for them.
  */
 @Injectable({ providedIn: 'root' })
 export class PermissionService {

@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
- * Admin KYC compliance review — view a submission, approve, reject.
+ * Admin KYC compliance review, view a submission, approve, reject.
  */
 #[CoversClass(GetAdminVendorComplianceController::class)]
 #[CoversClass(ApproveVendorComplianceController::class)]

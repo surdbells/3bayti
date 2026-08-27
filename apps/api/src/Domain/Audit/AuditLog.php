@@ -28,7 +28,7 @@ use Doctrine\ORM\Mapping as ORM;
  * The audit log must outlive its subjects. If user 42 deletes their
  * account (M3+), we keep the audit rows showing what user 42 did.
  * FK with CASCADE would erase the audit; FK with RESTRICT would
- * block the delete. Neither is right — we just preserve the id as
+ * block the delete. Neither is right, we just preserve the id as
  * data.
  *
  * Reading audit rows for forensics is the job of the AuditLogRepository
@@ -67,10 +67,10 @@ class AuditLog
     private ?int $id = null;
 
     /**
-     * The actor — the authenticated user who initiated the change.
+     * The actor, the authenticated user who initiated the change.
      * Nullable for system-driven events (cron, webhooks).
      *
-     * NOT a FK by design — see class docblock.
+     * NOT a FK by design, see class docblock.
      */
     #[ORM\Column(name: 'user_id', type: 'bigint', nullable: true)]
     private ?int $userId;

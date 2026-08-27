@@ -1,6 +1,6 @@
 @use '@angular/cdk/overlay-prebuilt.css';
 
-/* Abayti mobile design tokens — must load before any rule that consumes them.
+/* Abayti mobile design tokens, must load before any rule that consumes them.
    Defined as :root CSS custom properties; SCSS doesn't transform them. */
 @use 'app/shared/ax-mobile/tokens';
 /*
@@ -56,7 +56,7 @@ ion-toolbar ion-title {
 }
 
 /* =========================================================================
-   M2c — Component pattern overrides
+   M2c, Component pattern overrides
    --------------------------------------------------------------------------
    Per-component rules that complete the M2 design system. Color tokens
    come from theme/variables.scss (set in M2b). Font and heading rules
@@ -136,7 +136,7 @@ ion-card-title {
 ion-card-subtitle {
   font-size: var(--ax-fs-2xs);             /* 12px */
   font-weight: var(--ax-fw-medium);
-  letter-spacing: var(--ax-ls-wider);      /* 0.08em — eyebrow */
+  letter-spacing: var(--ax-ls-wider);      /* 0.08em, eyebrow */
   text-transform: uppercase;
   color: var(--ax-color-text-tertiary);
 }
@@ -150,7 +150,7 @@ ion-toolbar {
 }
 
 ion-toolbar ion-title {
-  font-size: var(--ax-fs-lg);              /* 18px — title scale */
+  font-size: var(--ax-fs-lg);              /* 18px, title scale */
   font-weight: var(--ax-fw-semibold);      /* 600 */
   letter-spacing: var(--ax-ls-snug);
 }
@@ -181,13 +181,13 @@ ion-tab-button {
 }
 
 ion-tab-button ion-label {
-  font-size: var(--ax-fs-3xs);             /* 11px — tight tab label */
+  font-size: var(--ax-fs-3xs);             /* 11px, tight tab label */
   font-weight: var(--ax-fw-regular);
   margin-top: 2px;
 }
 
 ion-tab-button.tab-selected ion-label {
-  font-weight: var(--ax-fw-medium);        /* 500 — slight weight bump on active */
+  font-weight: var(--ax-fw-medium);        /* 500, slight weight bump on active */
 }
 
 /* ----- Inputs ----- */
@@ -204,7 +204,7 @@ ion-textarea {
   --color: var(--ax-color-text-primary);
   --placeholder-color: var(--ax-color-text-tertiary);
   font-family: var(--ax-font-body);
-  font-size: var(--ax-fs-base);            /* 16px — prevents iOS zoom on focus */
+  font-size: var(--ax-fs-base);            /* 16px, prevents iOS zoom on focus */
 }
 
 ion-searchbar {
@@ -243,7 +243,7 @@ ion-content {
 
 /* ----- Action sheet (logout confirm, delete account, etc) -----
    Ionic's defaults don't track our tokens, so without these overrides
-   the sheet stays white in dark mode with white button text — invisible.
+   the sheet stays white in dark mode with white button text, invisible.
    Vars per https://ionicframework.com/docs/api/action-sheet */
 ion-action-sheet {
   --background: var(--ax-color-bg-raised);
@@ -261,7 +261,7 @@ ion-action-sheet {
   --button-color-hover: var(--ax-color-text-primary);
   --button-color-selected: var(--ax-color-text-brand);
 
-  /* Destructive actions — keep red in both themes for clarity */
+  /* Destructive actions, keep red in both themes for clarity */
   .action-sheet-destructive {
     color: var(--ax-color-text-danger) !important;
   }
@@ -469,7 +469,7 @@ ion-header.md ion-toolbar {
 }
 
 /* ============================================================
-   M7-1 — Tab bar / footer (moved from account.page.scss)
+   M7-1, Tab bar / footer (moved from account.page.scss)
    These styles apply to any page using the m6f-* class names
    on its <ion-footer> + <ion-tab-bar> + <ion-tab-button>
    structure. Originally introduced in M6f-1 for account.page;
@@ -478,10 +478,10 @@ ion-header.md ion-toolbar {
    ============================================================ */
 
 /* ============================================================
-   M6f — Tab bar + wishlist modal
+   M6f, Tab bar + wishlist modal
    ============================================================ */
 
-/* Footer wrapper — white background replaces the deep red #7C2108
+/* Footer wrapper, white background replaces the deep red #7C2108
    that was on every page. The 0.5px top border separates the tab
    bar from content above without being heavy. */
 .m6f-footer {
@@ -499,12 +499,12 @@ ion-header.md ion-toolbar {
   --border: 0.5px solid var(--ax-color-border-subtle);
   --color: var(--ax-color-text-tertiary);
   /* Active color is set per-tab below since we don't bind to
-     route — see comment in the .m6f-tab--active block. */
+     route, see comment in the .m6f-tab--active block. */
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-/* Each tab — by default muted grey. The bar now holds 6 tabs
+/* Each tab, by default muted grey. The bar now holds 6 tabs
    (Home / Explore / Cart / Style hub / Gifts / Profile), so icon
    and label sizing is tightened to keep all six on one row without
    overflowing on narrow phones. Padding is trimmed and labels are
@@ -540,7 +540,7 @@ ion-header.md ion-toolbar {
   }
 }
 
-/* Very narrow phones — give labels a hair more breathing room by
+/* Very narrow phones, give labels a hair more breathing room by
    shrinking the icon slightly so 6 tabs never clip. */
 @media (max-width: 360px) {
   .m6f-tab {
@@ -549,7 +549,7 @@ ion-header.md ion-toolbar {
   }
 }
 
-/* Active tab — brown accent. The active state is currently
+/* Active tab, brown accent. The active state is currently
    driven by a hardcoded class on the Home tab (the existing
    production behavior was an underline on the Home label,
    never updated based on route). When a route-driven active
@@ -582,14 +582,14 @@ ion-header.md ion-toolbar {
 }
 
 /* ============================================================
-   M7-2 — Page header inner classes (shared by all variants)
+   M7-2, Page header inner classes (shared by all variants)
    These classes (.m7-title, .m7-header-back, .m7-header-action)
    are reused by all three M7 header style variants
    (.m7-header-shadow, .m7-header-pill, .m7-floating-buttons).
    Defined once here, used everywhere.
    ============================================================ */
 
-/* Title — Poltawski regular, sentence case, single line ellipsis */
+/* Title, Poltawski regular, sentence case, single line ellipsis */
 .m7-title {
   font-family: var(--ax-font-display);  /* Poltawski Nowy */
   font-weight: 400;
@@ -602,7 +602,7 @@ ion-header.md ion-toolbar {
      space taken by start/end buttons via Ionic's flex layout. */
 }
 
-/* Back button — 44x44 tappable area, plain transparent bg, no
+/* Back button, 44x44 tappable area, plain transparent bg, no
    shadow, no circle. Just the icon. Contrast comes from the bg
    border below, not from a chrome shape on the button itself. */
 .m7-header-back {
@@ -626,7 +626,7 @@ ion-header.md ion-toolbar {
   }
 }
 
-/* Right-side action button — same chrome treatment as the back
+/* Right-side action button, same chrome treatment as the back
    button. Lucide-stroke icons at 22px in body color. No circle,
    no shadow. */
 .m7-header-action {
@@ -652,7 +652,7 @@ ion-header.md ion-toolbar {
 
 
 /* ============================================================
-   M7-2 redux — Three header styles
+   M7-2 redux, Three header styles
    ============================================================
    Three independently usable header patterns. Each handles
    safe-area-inset-top automatically (iOS notch / Dynamic
@@ -660,13 +660,13 @@ ion-header.md ion-toolbar {
 
    Pick one per page based on the page's needs:
 
-   A) .m7-header-shadow   — full-width white header with soft
+   A) .m7-header-shadow  , full-width white header with soft
                             warm-brown shadow underneath. Safe
                             default for content-pages with text/
                             list content directly under the
                             header. No border, just shadow.
 
-   B) .m7-header-floating — no header bar at all, just floating
+   B) .m7-header-floating, no header bar at all, just floating
                             circular white buttons over the page
                             background. For image-led pages
                             (product detail, single, hero pages)
@@ -674,17 +674,17 @@ ion-header.md ion-toolbar {
                             visual context. Title goes IN page
                             content, not the header.
 
-   C) .m7-header-pill     — single rounded white pill containing
+   C) .m7-header-pill    , single rounded white pill containing
                             back + title + actions, sitting on
                             the page background with side margins.
                             Most distinctive look, more designed.
 
    Common inner classes (shared by A and C):
-     .m7-toolbar          — toolbar styling (backgrounds, height)
-     .m7-title            — Poltawski Nowy regular 17px
-     .m7-header-back      — 44x44 transparent back button (A)
-     .m7-header-action    — 44x44 transparent action button (A)
-     .m7-btn-shadow       — 44x44 white circle button + shadow,
+     .m7-toolbar         , toolbar styling (backgrounds, height)
+     .m7-title           , Poltawski Nowy regular 17px
+     .m7-header-back     , 44x44 transparent back button (A)
+     .m7-header-action   , 44x44 transparent action button (A)
+     .m7-btn-shadow      , 44x44 white circle button + shadow,
                             used by B and C variants
 
    All three keep page-specific click handlers and content
@@ -693,7 +693,7 @@ ion-header.md ion-toolbar {
 
    Usage examples:
 
-   <!-- Style A — shadow header (cart-like pages) -->
+   <!-- Style A, shadow header (cart-like pages) -->
    <ion-header class="m7-header-shadow ion-no-border">
      <ion-toolbar class="m7-toolbar ion-no-border">
        <ion-buttons slot="start">
@@ -710,7 +710,7 @@ ion-header.md ion-toolbar {
      </ion-toolbar>
    </ion-header>
 
-   <!-- Style B — floating buttons (image-led pages) -->
+   <!-- Style B, floating buttons (image-led pages) -->
    <!-- Place at top of <ion-content> as a floating overlay, NOT
         inside <ion-header>. Two raw buttons, page bg shows. -->
    <div class="m7-floating-buttons">
@@ -722,7 +722,7 @@ ion-header.md ion-toolbar {
      </ion-button>
    </div>
 
-   <!-- Style C — rounded pill (any page) -->
+   <!-- Style C, rounded pill (any page) -->
    <ion-header class="m7-header-pill ion-no-border">
      <ion-toolbar class="m7-pill-toolbar ion-no-border">
        <!-- pill wraps the toolbar contents -->
@@ -748,7 +748,7 @@ ion-header.md ion-toolbar {
      safe-area visually because ion-toolbar's own safe-area inset takes
      room INSIDE this header element. The header's background covers
      the whole area including the status-bar inset, so we don't need
-     a manual padding-top here — Ionic's toolbar handles the inset. */
+     a manual padding-top here, Ionic's toolbar handles the inset. */
 
   ion-toolbar.m7-toolbar {
     --background: var(--ax-color-bg-surface);
@@ -759,7 +759,7 @@ ion-header.md ion-toolbar {
     --padding-end: 4px;
   }
 
-  /* Two-layer warm-brown shadow — same recipe as M6d-fix1 product
+  /* Two-layer warm-brown shadow, same recipe as M6d-fix1 product
      cards. Tight contact + softer ambient. Brown-tinted (not
      neutral grey) to harmonize with the M2 palette. */
   box-shadow: 0 2px 8px rgba(46, 36, 28, 0.06),
@@ -812,7 +812,7 @@ ion-header.md ion-toolbar {
 
 .m7-header-pill {
   background: transparent;  /* page bg shows through */
-  /* Safe area handled OUTSIDE the pill — the pill itself doesn't
+  /* Safe area handled OUTSIDE the pill, the pill itself doesn't
      extend into the safe area. The header just gets enough top
      padding to push the pill below the notch. */
   padding-top: calc(env(safe-area-inset-top, 0) + 8px);
@@ -838,7 +838,7 @@ ion-header.md ion-toolbar {
     overflow: hidden;
   }
 
-  /* Title in pill is slightly smaller — pill is tighter overall */
+  /* Title in pill is slightly smaller, pill is tighter overall */
   .m7-title {
     font-size: 16px;
   }
@@ -861,7 +861,7 @@ ion-header.md ion-toolbar {
   height: 44px;
   margin: 0;
 
-  /* Floating shadow — slightly stronger than option A's header
+  /* Floating shadow, slightly stronger than option A's header
      shadow because these buttons stand alone, not on a header
      bar. The shadow gives them lift. */
   box-shadow: 0 2px 8px rgba(46, 36, 28, 0.08),
@@ -875,7 +875,7 @@ ion-header.md ion-toolbar {
 
 
 /* ============================================================
-   M7-3-listing — Filter chips + subtitle row
+   M7-3-listing, Filter chips + subtitle row
    ============================================================
    Used by listing pages with filter UI under the header
    (best-sellers, category, new-arrivals, plus future pages
@@ -883,7 +883,7 @@ ion-header.md ion-toolbar {
 
    The chips are white pills by default, brown-filled when
    active. The subtitle row is small italic Inter in muted
-   grey — quiet, supplementary copy that tells the user
+   grey, quiet, supplementary copy that tells the user
    what they're looking at.
 
    Place inside <ion-header class="m7-header-shadow"> AFTER
@@ -957,7 +957,7 @@ ion-header.md ion-toolbar {
   border-color: var(--ax-color-bg-brand);
 
   &:active {
-    /* Don't lighten on tap when already active — subtle press
+    /* Don't lighten on tap when already active, subtle press
        feedback only via opacity. */
     opacity: 0.85;
   }
@@ -965,7 +965,7 @@ ion-header.md ion-toolbar {
 
 
 /* ============================================================
-   M6d — Product card (moved from account.page.scss in M7-4-2)
+   M6d, Product card (moved from account.page.scss in M7-4-2)
    ============================================================
    Used by account.page horizontal carousels (Best Sellers,
    New Arrivals) and 2-column grids on listing pages
@@ -974,10 +974,10 @@ ion-header.md ion-toolbar {
    ============================================================ */
 
 /* ============================================================
-   M6d — Section headers + product cards
+   M6d, Section headers + product cards
    ============================================================ */
 
-/* Section header — used by Best Sellers, New Arrivals, and the
+/* Section header, used by Best Sellers, New Arrivals, and the
    redesigned Popular Stores in M6e. */
 .m6d-section-head {
   display: flex;
@@ -1014,11 +1014,11 @@ ion-header.md ion-toolbar {
   }
 }
 
-/* Product card — replaces the chrome-heavy .product-card. The image
+/* Product card, replaces the chrome-heavy .product-card. The image
    IS the product; no surrounding border, shadow, or fill. Caption
    sits below the image with no separator. */
 .m6d-product-card {
-  /* Width is fluid by default — fills its container. Used in
+  /* Width is fluid by default, fills its container. Used in
      2-column grid on listing pages (best-sellers, category,
      new-arrivals). Inside .h-scroll context (account.page
      horizontal carousels), gets pinned to 158px so cards don't
@@ -1041,8 +1041,8 @@ ion-header.md ion-toolbar {
 .m6d-img-wrap {
   position: relative;
   aspect-ratio: 3 / 2;
-  background: var(--ax-color-bg-placeholder);  /* #ead9ca — warm neutral */
-  /* No standalone border-radius here — the parent .m6d-product-card's
+  background: var(--ax-color-bg-placeholder);  /* #ead9ca, warm neutral */
+  /* No standalone border-radius here, the parent .m6d-product-card's
      border-radius + overflow:hidden gives the image rounded top corners.
      Bottom of the image meets the caption area flush, no gap. */
   overflow: hidden;
@@ -1053,7 +1053,7 @@ ion-header.md ion-toolbar {
     inset: 0;
     background: var(--ax-color-bg-placeholder);
     z-index: 2;
-    // Decorative overlay — must NEVER absorb taps. Before the image loads it
+    // Decorative overlay, must NEVER absorb taps. Before the image loads it
     // sits over the <img>'s (click)=open_product, so without this the first
     // tap lands here and is swallowed, forcing a second tap to open the PDP.
     pointer-events: none;
@@ -1080,7 +1080,7 @@ ion-header.md ion-toolbar {
     }
   }
 
-  /* Wishlist heart-plus button — top-right of card image. The button
+  /* Wishlist heart-plus button, top-right of card image. The button
      sits over the product image (which can be any color) so we need
      it visible on both light and dark backgrounds. We use the surface
      token (white in light, espresso-700 in dark) plus a soft shadow
@@ -1113,7 +1113,7 @@ ion-header.md ion-toolbar {
     }
   }
 
-  /* Vendor badge — bottom-left, dark translucent overlay */
+  /* Vendor badge, bottom-left, dark translucent overlay */
   .m6d-vendor-badge {
     position: absolute;
     left: 8px;
@@ -1164,11 +1164,11 @@ ion-header.md ion-toolbar {
 .m6d-price {
   font-size: 13px;
   font-weight: 500;
-  color: var(--ax-color-text-primary);  /* #1c1916 — dropped the deep red */
+  color: var(--ax-color-text-primary);  /* #1c1916, dropped the deep red */
   line-height: 1.4;
 }
 
-/* Add-to-cart button — small brown circle with plus icon, replaces
+/* Add-to-cart button, small brown circle with plus icon, replaces
    the inline 50-line SVG that used #7C2108 deep red. */
 .m6d-add-to-cart {
   width: 26px;
@@ -1198,7 +1198,7 @@ ion-header.md ion-toolbar {
 /* ============================================================ */
 
 
-/* ----- M6d flag badge (e.g. "NEW") — top-left of img-wrap ----- */
+/* ----- M6d flag badge (e.g. "NEW"), top-left of img-wrap ----- */
 .m6d-img-wrap .m6d-flag-badge {
   position: absolute;
   top: 8px;
@@ -1215,7 +1215,7 @@ ion-header.md ion-toolbar {
   line-height: 1;
 }
 
-/* ----- SALE flag badge — distinct discount colour (red) --------- */
+/* ----- SALE flag badge, distinct discount colour (red) --------- */
 .m6d-img-wrap .m6d-flag-badge--sale {
   background: var(--ax-color-bg-danger);  /* discount red, distinct from brand */
   color: var(--ax-palette-neutral-0);
@@ -1245,7 +1245,7 @@ ion-header.md ion-toolbar {
 }
 
 
-/* ----- M7 header badge — passive count (e.g. total unread) ----- */
+/* ----- M7 header badge, passive count (e.g. total unread) ----- */
 .m7-header-badge {
   display: inline-flex;
   align-items: center;
@@ -1267,7 +1267,7 @@ ion-header.md ion-toolbar {
 
 
 /* ============================================================
-   M7 — Segment tabs (mutually-exclusive view switcher)
+   M7, Segment tabs (mutually-exclusive view switcher)
    ============================================================
    Pill-style segment tabs for switching between mutually-exclusive
    views on the same page. Used by styles.page (Community / 3bayti
@@ -1277,7 +1277,7 @@ ion-header.md ion-toolbar {
 
    Place inside <ion-header class="m7-header-shadow"> AFTER the
    <ion-toolbar> closes, OR at the top of <ion-content> below the
-   header — same render either way. The container provides its
+   header, same render either way. The container provides its
    own pill-track background.
 
    Usage:
@@ -1332,7 +1332,7 @@ ion-header.md ion-toolbar {
               0 1px 1px rgba(46, 36, 28, 0.04);
 
   &:active {
-    /* Already active — no opacity dip on tap */
+    /* Already active, no opacity dip on tap */
     opacity: 1;
   }
 }
@@ -1422,7 +1422,7 @@ ion-header.md ion-toolbar {
 /* ============================================================
  * M39: Shared status-screen utility
  *
- * Used by failed/success/process pages — full-viewport centered
+ * Used by failed/success/process pages, full-viewport centered
  * status messages with optional illustration, heading, body,
  * and one or more CTA buttons. Vertically + horizontally centered
  * via flex (replaces hand-tweaked margin-top: 25%/30% hacks).
@@ -1568,7 +1568,7 @@ ion-header.md ion-toolbar {
    Native <select> for use INSIDE custom CDK-overlay bottom sheets (e.g. the
    add-address sheet). An ion-select with interface="action-sheet" teleports its
    overlay into <ion-app>, which sits in a sibling stacking context BELOW the
-   CDK overlay container (z-index 1000) that hosts the sheet — so the picker
+   CDK overlay container (z-index 1000) that hosts the sheet, so the picker
    renders behind the sheet and is invisible. A native <select> uses the OS
    picker (drawn above the webview), sidestepping the z-index trap entirely.
    Styled to match the surrounding ax-text-field inputs.

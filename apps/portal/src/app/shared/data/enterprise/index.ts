@@ -1,5 +1,5 @@
 /**
- * Enterprise data table — public API.
+ * Enterprise data table, public API.
  *
  *   import {
  *     AxDataTableComponent, AxCellDirective, AxRowExpandDirective,

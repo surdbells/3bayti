@@ -170,7 +170,7 @@ final class GiftCardDeliveryServiceTest extends TestCase
     public function smsNotConfiguredLeavesChannelUndeliveredAndEmailStillDelivers(): void
     {
         // NullSmsSender = SMS not enabled/configured. A card with a phone must
-        // NOT be marked SMS-delivered off the silent no-op — it stays pending so
+        // NOT be marked SMS-delivered off the silent no-op, it stays pending so
         // the scheduled dispatcher actually sends it once real SMS is enabled.
         $card = $this->makeCard(email: 'sara@example.com', phone: '+971501234567');
         $service = new GiftCardDeliveryService(

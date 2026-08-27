@@ -11,7 +11,7 @@ use Bayti\Api\Domain\Catalog\VendorLabel;
  *
  * publicShape: storefront-facing view (id, slug, name, display_order).
  *
- * The vendor reference is intentionally omitted — labels are always
+ * The vendor reference is intentionally omitted, labels are always
  * listed in the context of a vendor (the GET /v3/vendors/{slug}/labels
  * endpoint already locates the response under a known vendor), so
  * embedding the vendor on each label is redundant payload.

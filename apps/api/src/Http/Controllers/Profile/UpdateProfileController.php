@@ -34,16 +34,16 @@ use Psr\Http\Message\ServerRequestInterface;
  *   - timezone (IANA timezone identifier)
  *
  * Not editable here:
- *   - email, phone, password — separate flows with re-verification
- *   - country_code — set at registration
- *   - role flags — admin-only
+ *   - email, phone, password, separate flows with re-verification
+ *   - country_code, set at registration
+ *   - role flags, admin-only
  *
  * Empty body (no fields provided)
  * --------------------------------
  * Returns 200 with the current profile (no-op). Mirrors what HTTP
  * does with idempotent operations and avoids forcing the caller to
  * branch on "did I have changes to send?". The only cost of an empty
- * PATCH is a request round-trip and a serialization — no DB write
+ * PATCH is a request round-trip and a serialization, no DB write
  * happens.
  *
  * Response shape
@@ -73,7 +73,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * -------------------
  * In M3+ we may want to email/SMS the user "Your profile was updated"
  * as a security signal (helpful if their account was hijacked).
- * That's M3+ work — needs ZeptoMail integration and template support.
+ * That's M3+ work, needs ZeptoMail integration and template support.
  */
 final class UpdateProfileController
 {
@@ -112,7 +112,7 @@ final class UpdateProfileController
             ]);
         }
 
-        // M1.6.1.C — capture pre-mutation state for audit diff. Must
+        // M1.6.1.C, capture pre-mutation state for audit diff. Must
         // happen BEFORE applyChanges or we'd compare a mutated entity
         // against itself.
         $beforeSnapshot = $this->audit->snapshot($user);
@@ -123,7 +123,7 @@ final class UpdateProfileController
         // setTime to midnight, etc).
         $this->applyChanges($user, $input);
 
-        // One flush per request — Doctrine batches the UPDATE.
+        // One flush per request, Doctrine batches the UPDATE.
         $this->em->flush();
 
         // Emit audit AFTER flush so we know the change actually
@@ -145,7 +145,7 @@ final class UpdateProfileController
 
     /**
      * Apply the DTO's non-null fields to the User entity. Pulled out
-     * for testability — easier to assert "after applyChanges, user
+     * for testability, easier to assert "after applyChanges, user
      * has these fields" without reaching for the EM.
      */
     private function applyChanges(User $user, UpdateProfileInput $input): void
@@ -167,7 +167,7 @@ final class UpdateProfileController
         }
 
         if ($input->dob !== null) {
-            // Already validated as YYYY-MM-DD — createFromFormat will
+            // Already validated as YYYY-MM-DD, createFromFormat will
             // succeed. setDob normalizes to midnight.
             $dob = DateTimeImmutable::createFromFormat('Y-m-d', $input->dob);
             if ($dob !== false) {

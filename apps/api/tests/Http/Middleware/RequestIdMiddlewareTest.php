@@ -88,7 +88,7 @@ final class RequestIdMiddlewareTest extends TestCase
 
         $this->middleware->process($request, $handler);
 
-        // Lowercased — important for log grepping consistency.
+        // Lowercased, important for log grepping consistency.
         self::assertSame(strtolower($clientId), $capturedId);
     }
 
@@ -101,7 +101,7 @@ final class RequestIdMiddlewareTest extends TestCase
         // Note: actual newline / control-character injection is
         // rejected by Slim's PSR-7 implementation BEFORE our middleware
         // runs (Slim throws InvalidArgumentException from withHeader()
-        // per RFC 7230 — header values can't contain LF). So we don't
+        // per RFC 7230, header values can't contain LF). So we don't
         // need to test that here; the framework handles it. We test
         // the cases that DO reach our middleware: well-formed but
         // non-UUID strings.

@@ -43,7 +43,7 @@ export class AxCopyToClipboardDirective {
 
   private readonly host = inject(ElementRef<HTMLElement>);
 
-  // HotToastService is optional — don't throw if unavailable
+  // HotToastService is optional, don't throw if unavailable
   constructor(@Optional() private readonly toast: HotToastService | null) {}
 
   @HostListener('click', ['$event'])

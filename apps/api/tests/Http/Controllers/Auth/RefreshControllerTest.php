@@ -43,7 +43,7 @@ final class RefreshControllerTest extends HttpTestCase
         // After rotation, a new row MUST be persisted.
         $refreshRepo->expects(self::once())->method('save');
 
-        // NB: no ->with(RefreshToken::class) constraint — the success path
+        // NB: no ->with(RefreshToken::class) constraint, the success path
         // also serialises the user (UserSerializer looks up other
         // repositories), so pinning getRepository to a single class throws.
         $em = $this->stubEm(fn ($em) =>
@@ -59,7 +59,7 @@ final class RefreshControllerTest extends HttpTestCase
         $body = $this->jsonBody($response);
         self::assertNotEmpty($body['access_token']);
         self::assertNotEmpty($body['refresh_token']);
-        // Different from the old refresh — proves rotation happened.
+        // Different from the old refresh, proves rotation happened.
         self::assertNotSame($oldPair->refreshToken, $body['refresh_token']);
         self::assertSame(7, $body['user']['id']);
 
@@ -74,7 +74,7 @@ final class RefreshControllerTest extends HttpTestCase
     }
 
     // -------------------------------------------------------------------
-    // Failure modes — all return 401 AUTH_REFRESH_TOKEN_INVALID
+    // Failure modes, all return 401 AUTH_REFRESH_TOKEN_INVALID
     // -------------------------------------------------------------------
 
     #[Test]
@@ -134,7 +134,7 @@ final class RefreshControllerTest extends HttpTestCase
         $pair = $jwt->issueTokenPair($user);
 
         $row = $this->makeRefreshRow($user, $pair);
-        // Token deliberately revoked (logout) — a replay of it is genuine
+        // Token deliberately revoked (logout), a replay of it is genuine
         // reuse, NOT the rotation lost-response race, so it must trip the
         // defensive wholesale revocation regardless of timing.
         $row->revoke('logout');
@@ -163,7 +163,7 @@ final class RefreshControllerTest extends HttpTestCase
         // The mobile lost-response race: the server rotated this token
         // moments ago, but the client never received/persisted the
         // replacement and retried with the token it still holds. Within the
-        // grace window this must re-issue a fresh pair — NOT log the customer
+        // grace window this must re-issue a fresh pair, NOT log the customer
         // out of every session.
         $user = $this->makeUser(id: 99);
         $jwt = $this->app->getContainer()->get(JwtService::class);
@@ -178,7 +178,7 @@ final class RefreshControllerTest extends HttpTestCase
         $refreshRepo->expects(self::once())->method('save');
         $refreshRepo->expects(self::never())->method('revokeAllForUser');
 
-        // No ->with(RefreshToken::class) — the success path serialises the
+        // No ->with(RefreshToken::class), the success path serialises the
         // user, which looks up other repositories (see happy-path note).
         $em = $this->stubEm(fn ($em) =>
             $em->method('getRepository')->willReturn($refreshRepo));
@@ -204,7 +204,7 @@ final class RefreshControllerTest extends HttpTestCase
         $jwt = $this->app->getContainer()->get(JwtService::class);
         $pair = $jwt->issueTokenPair($user);
 
-        // Now deactivate AFTER issuing the token — simulates admin
+        // Now deactivate AFTER issuing the token, simulates admin
         // disabling the account between login and refresh.
         $user->deactivate();
 

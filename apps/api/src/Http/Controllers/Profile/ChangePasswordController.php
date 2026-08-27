@@ -74,7 +74,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * token-invalidation mechanism. In practice, changing the hash
  * always invalidates the current access token on next request, so
  * "204 + don't revoke other sessions" would still kick the user
- * out — just inconsistently.
+ * out, just inconsistently.
  *
  * Mirroring /v3/auth/reset/confirm gives consistent UX, consistent
  * security properties, and a single audit trail. M3.1.1h will
@@ -179,7 +179,7 @@ final class ChangePasswordController
         //
         // Social-only accounts (Google/Apple sign-in) have a NULL
         // password_hash and no "current password" to verify against.
-        // Reject cleanly with the same 401 — they can't change a
+        // Reject cleanly with the same 401, they can't change a
         // password they never set. (A future "set initial password"
         // flow would be a separate endpoint that skips re-auth.)
         $currentPasswordOk = $user->hasPassword() && password_verify(
@@ -189,7 +189,7 @@ final class ChangePasswordController
         if (!$currentPasswordOk) {
             // Same status (401) and code as login failure. Don't
             // leak that the user exists / token is valid / token's
-            // user mapping is valid — only that the credential the
+            // user mapping is valid, only that the credential the
             // body supplied is wrong.
             throw HttpException::unauthorized(
                 ErrorCodes::AUTH_INVALID_CREDENTIALS,
@@ -197,7 +197,7 @@ final class ChangePasswordController
             );
         }
 
-        // Reject "new == current" — UX safeguard against accidental
+        // Reject "new == current", UX safeguard against accidental
         // re-setting and a tiny security improvement (each change
         // should advance the secret). Check AFTER verifying current
         // to avoid telling an attacker "your guess for current is
@@ -210,7 +210,7 @@ final class ChangePasswordController
         }
 
         // Capture pre-mutation state for audit. We snapshot a minimal
-        // view of the user (just the password_changed_at) — never
+        // view of the user (just the password_changed_at), never
         // log hashes.
         $beforeSnapshot = $this->minimalSnapshot($user);
 
@@ -236,7 +236,7 @@ final class ChangePasswordController
             // AuthMiddleware pwd_changed_at check on the next request.
             $user->setPasswordHash($newPasswordHash);
 
-            // Revoke all refresh tokens — including the requesting
+            // Revoke all refresh tokens, including the requesting
             // client's. We then issue a fresh pair, so the user stays
             // logged in on THIS device. All others are kicked out.
             // Same security posture as reset-confirm.
@@ -259,7 +259,7 @@ final class ChangePasswordController
         });
 
         // Audit AFTER flush so the change is durable when the row lands.
-        // Use recordUpdate with minimal before/after — the diff shows
+        // Use recordUpdate with minimal before/after, the diff shows
         // that password_changed_at advanced; no hash content logged.
         $this->audit->recordUpdate(
             request: $request,
@@ -279,7 +279,7 @@ final class ChangePasswordController
     }
 
     /**
-     * Minimal audit snapshot — records only that the password
+     * Minimal audit snapshot, records only that the password
      * changed (via the timestamp). We deliberately do NOT call
      * AuditEmitter::snapshot($user) because that returns the full
      * user shape, which is overkill for a password-change diff

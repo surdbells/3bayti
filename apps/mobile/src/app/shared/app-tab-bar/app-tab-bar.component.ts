@@ -20,7 +20,7 @@ import { PendingOrdersService } from '../../core/services/pending-orders.service
  *
  * The 'home' tab always navigates to /account (the customer
  * landing page). For account.page itself, the home tab does a
- * pull-to-refresh instead of routing — that page keeps its
+ * pull-to-refresh instead of routing, that page keeps its
  * footer inline rather than using this component.
  */
 export type AppTabBarTab = 'home' | 'explore' | 'cart' | 'sketch' | 'gift' | 'profile';
@@ -139,7 +139,7 @@ export class AppTabBarComponent implements OnInit {
   ngOnInit(): void {
     // Refresh the shared cart count so the cart-tab badge reflects the current
     // cart (guest local cart OR authed server cart) on whatever page mounts the
-    // tab bar — giving guests a visible indication of items in their local cart.
+    // tab bar, giving guests a visible indication of items in their local cart.
     this.cartCount.refresh();
   }
 

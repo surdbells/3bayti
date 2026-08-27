@@ -13,13 +13,13 @@ import { MessagesService } from './messages.service';
 import type { ConversationSummary } from './messages.service';
 
 /**
- * /account/messages — the customer's order chat inbox.
+ * /account/messages, the customer's order chat inbox.
  *
  * Auth-gated. Lists every order conversation the server has provisioned
  * (one per paid order item): the vendor name, the order reference + item
  * snapshot, a last-message preview, an unread-count pill, and the last
  * activity time. Each row links to /account/messages/:uuid for the
- * thread. There is no "start a new chat" action — conversations exist
+ * thread. There is no "start a new chat" action, conversations exist
  * only for orders, created server-side on payment.
  */
 @Component({

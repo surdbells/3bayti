@@ -63,7 +63,7 @@ final class InitiateCheckoutPromoTest extends HttpTestCase
     }
 
     // -------------------------------------------------------------------
-    // Happy path — promo resolved, redemption recorded
+    // Happy path, promo resolved, redemption recorded
     // -------------------------------------------------------------------
 
     #[Test]
@@ -168,7 +168,7 @@ final class InitiateCheckoutPromoTest extends HttpTestCase
     }
 
     // -------------------------------------------------------------------
-    // Promo failure — 422, no order persisted
+    // Promo failure, 422, no order persisted
     // -------------------------------------------------------------------
 
     #[Test]
@@ -263,7 +263,7 @@ final class InitiateCheckoutPromoTest extends HttpTestCase
     }
 
     // -------------------------------------------------------------------
-    // Legacy discount path — preserved + deprecation header
+    // Legacy discount path, preserved + deprecation header
     // -------------------------------------------------------------------
 
     #[Test]
@@ -443,7 +443,7 @@ final class InitiateCheckoutPromoTest extends HttpTestCase
             ]),
         );
 
-        // 200 expected — empty promo treated as no promo; no legacy
+        // 200 expected, empty promo treated as no promo; no legacy
         // discount either (defaults to '0.00') → no deprecation.
         self::assertSame(200, $response->getStatusCode());
         self::assertFalse($response->hasHeader('X-Bayti-Deprecation'));

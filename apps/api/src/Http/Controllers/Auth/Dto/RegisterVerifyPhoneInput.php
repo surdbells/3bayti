@@ -13,7 +13,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * they received against the verification_id from /register/initiate.
  * On success the endpoint returns a short-lived registration token.
  *
- * Code format mirrors ConfirmInput (4–6 digits — MessageCentral issues
+ * Code format mirrors ConfirmInput (4–6 digits, MessageCentral issues
  * 4-digit codes in this account; ceiling stays 6).
  */
 final class RegisterVerifyPhoneInput

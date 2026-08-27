@@ -35,7 +35,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   - Order exists but contains NO items from any of the requesting
  *     vendor's stores
  *
- * 404 (not 403) is intentional — returning 403 would reveal the
+ * 404 (not 403) is intentional, returning 403 would reveal the
  * existence of orders the vendor isn't part of.
  *
  * Returns:
@@ -109,7 +109,7 @@ final class GetVendorOrderController
         // The customer's saved body measurements (profile), so the vendor can
         // fulfil made-to-measure orders. The per-item `measurement` snapshot is
         // only captured for custom-size lines (and not for legacy-migrated
-        // orders), whereas the profile is the customer's authoritative set — the
+        // orders), whereas the profile is the customer's authoritative set, the
         // same measurements the mobile app snapshots into custom orders. Empty
         // list when the customer has none on file.
         /** @var MeasurementRepository $measurementRepo */

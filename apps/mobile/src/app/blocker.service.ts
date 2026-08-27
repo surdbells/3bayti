@@ -22,7 +22,7 @@ export class BlockerService {
 
   /**
    * Block navigation gestures and hardware back.
-   * Call multiple times from different components — first call applies the block,
+   * Call multiple times from different components, first call applies the block,
    * subsequent calls increment refcount. Call `unblock()` to release.
    *
    * @param opts.disableSwipe - whether to disable swipe-to-go-back (default: true)

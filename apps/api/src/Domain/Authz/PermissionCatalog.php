@@ -7,7 +7,7 @@ namespace Bayti\Api\Domain\Authz;
 /**
  * The single source of truth for the platform's granular permissions.
  *
- * Permissions are keyed `module.action` and intentionally go well beyond CRUD —
+ * Permissions are keyed `module.action` and intentionally go well beyond CRUD -
  * each meaningful feature of an admin module is its own permission so roles can
  * be composed as granularly as the business needs. The catalog is seeded into
  * the `permissions` table by migration and is also used by the API to validate

@@ -26,7 +26,7 @@ use Psr\Log\NullLogger;
  * POST /v3/admin/orders/{id}/resend-vendor-notification
  *
  * Re-dispatches the "new order" (ORDER_PLACED_VENDOR) email to the order's
- * vendor(s) — used to recover a delivery that failed the first time (e.g. the
+ * vendor(s), used to recover a delivery that failed the first time (e.g. the
  * vendor's contact email was malformed and has since been corrected). Optional
  * body { "vendor_id": N } targets a single vendor; omitted resends to every
  * vendor on the order.

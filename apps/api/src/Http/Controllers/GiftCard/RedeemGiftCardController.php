@@ -22,7 +22,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * A buyer can also redeem their own card (if they want to use it
  * themselves). Cards are redeemable as long as they are active or
- * partially_used — idempotent for the same user.
+ * partially_used, idempotent for the same user.
  */
 final class RedeemGiftCardController
 {

@@ -24,7 +24,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Returns a single promo code with its redemption count attached.
  * The count is the GROSS figure (including redemptions tied to
- * cancelled / failed orders) — operationally meaningful for "how
+ * cancelled / failed orders), operationally meaningful for "how
  * many times has this code been used" reports. The effective count
  * (used by the resolver's limit enforcement) is documented in
  * PromoRedemptionRepository.
@@ -34,7 +34,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   - Id not found → 404
  *   - Non-admin caller → 403 (AdminAuthMiddleware)
  *
- * No audit — read-only single lookups are typically not audited
+ * No audit, read-only single lookups are typically not audited
  * (only list views, per the convention in
  * ListNotificationLogsController).
  */

@@ -13,7 +13,7 @@ use Doctrine\Migrations\AbstractMigration;
  * SendPendingOrderRemindersCommand / PendingOrderReminderFinder scan orders
  * WHERE status IN ('pending_payment','failed') within a created_at window,
  * every 30–60 minutes. A partial index on created_at restricted to just those
- * two statuses keeps that range scan cheap as the orders table grows —
+ * two statuses keeps that range scan cheap as the orders table grows -
  * without indexing the (vast) majority of paid/shipped/delivered rows.
  *
  * IF NOT EXISTS so re-running against an already-patched DB is safe.

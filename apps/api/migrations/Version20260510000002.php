@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M2.1 — Catalog foundations: vendors, categories, brands
+ * M2.1, Catalog foundations: vendors, categories, brands
  * ========================================================
  *
  * Three new tables that together form the static skeleton of the
@@ -25,7 +25,7 @@ use Doctrine\Migrations\AbstractMigration;
  *
  *   - categories: adjacency list (parent_id) + denormalised path
  *     (Q6). Path lets us answer "products in /clothing/womens/abayas
- *     and below" via a simple LIKE — no recursive CTE needed.
+ *     and below" via a simple LIKE, no recursive CTE needed.
  *
  *   - brands: simple lookup table. Not all products have a brand
  *     (made-to-order custom abayas often don't), so brand_id on
@@ -37,12 +37,12 @@ use Doctrine\Migrations\AbstractMigration;
  * What's NOT here
  * ---------------
  *   - Vendor onboarding fields (bank account, KYC docs, settlement
- *     details) — M4
- *   - Vendor-product relationships beyond the FK — products table
+ *     details), M4
+ *   - Vendor-product relationships beyond the FK, products table
  *     itself ships M2.2
  *   - Category-attribute templates (per-category required attribute
- *     schemas) — M5+ if we ever need them
- *   - Brand-category many-to-many — not needed; products link to
+ *     schemas), M5+ if we ever need them
+ *   - Brand-category many-to-many, not needed; products link to
  *     both directly
  */
 final class Version20260510000002 extends AbstractMigration
@@ -150,7 +150,7 @@ final class Version20260510000002 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        // Reverse order — brands and categories can have no dependents
+        // Reverse order, brands and categories can have no dependents
         // yet (products table doesn't exist until M2.2). Vendors same.
         // If down() is run after M2.2 ships, the products table's FKs
         // would prevent these drops, which is fine: catastrophic rollback

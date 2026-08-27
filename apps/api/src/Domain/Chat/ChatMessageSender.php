@@ -11,7 +11,7 @@ use Doctrine\ORM\EntityManagerInterface;
  * Sends a customer or vendor chat message through PII moderation. A clean
  * message is persisted and recorded on the conversation (bumping the
  * recipient's unread counter); a message that trips the moderator is
- * persisted in a BLOCKED state for audit but is never delivered — keeping
+ * persisted in a BLOCKED state for audit but is never delivered, keeping
  * personal contact details out of the thread without silently dropping the
  * attempt. HTTP concerns stay in the controller: this returns a SendResult
  * and never throws for a block.

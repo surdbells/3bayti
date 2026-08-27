@@ -1,5 +1,5 @@
 /**
- * AxBottomSheet — premium FLOATING + SEARCHABLE bottom-sheet primitive.
+ * AxBottomSheet, premium FLOATING + SEARCHABLE bottom-sheet primitive.
  *
  * Replaces <ion-modal> usage for bottom-sheet patterns across the app.
  * Renders into a CDK Overlay so the sheet is not constrained by the
@@ -38,9 +38,9 @@
  *
  * INPUTS:
  *   - isOpen            two-way-able boolean to show/hide
- *   - inset             boolean, default true — premium floating mode
+ *   - inset             boolean, default true, premium floating mode
  *                       (inset margins, all-corners rounded, max-width)
- *   - fullscreen        boolean, default false — convenience alias for
+ *   - fullscreen        boolean, default false, convenience alias for
  *                       [inset]="false" (edge-to-edge full-height sheet)
  *   - snapPoints        number[] of fractions (0-1) of viewport height.
  *                       Defaults to [0.6, 0.85] in floating mode and [1]
@@ -52,7 +52,7 @@
  *   - showHandle        boolean, default true (show the drag handle pill)
  *   - title             string (optional inline title)
  *   - showCloseButton   boolean, default true when title is set
- *   - searchable        boolean, default false — render a built-in native
+ *   - searchable        boolean, default false, render a built-in native
  *                       search input below the header
  *   - searchPlaceholder string placeholder for the search input
  *   - searchQuery       two-way-able current query string
@@ -67,7 +67,7 @@
  *   - SEARCH INPUT CONSTRAINT: the built-in search MUST be a plain NATIVE
  *     <input type="text"> styled to match the design system. Do NOT use
  *     <ion-searchbar> / <ion-select> (or any Ionic overlay-backed control)
- *     inside this sheet — Ionic overlay components render their popovers in
+ *     inside this sheet, Ionic overlay components render their popovers in
  *     a separate overlay layer that lands BEHIND this CDK overlay, producing
  *     the documented z-index trap. Native inputs render inline and are safe.
  *   - Drag-to-close uses pointer events for cross-input support.
@@ -178,7 +178,7 @@ export class AxBottomSheetComponent implements OnChanges, OnDestroy, AfterViewIn
   /**
    * Emitted once when the body scrolls within ~120px of the bottom, then
    * latches until the user scrolls back up. Lets consumers drive
-   * infinite-scroll / load-more — ion-infinite-scroll does NOT work inside
+   * infinite-scroll / load-more, ion-infinite-scroll does NOT work inside
    * this sheet because the body is a plain scroll container, not an
    * <ion-content>. Additive + optional: existing consumers are unaffected.
    */
@@ -330,7 +330,7 @@ export class AxBottomSheetComponent implements OnChanges, OnDestroy, AfterViewIn
 
   /**
    * Resolved snap points. Honours a caller-supplied [snapPoints]; otherwise
-   * falls back to a sensible per-mode default — a content-ish [0.6, 0.85] in
+   * falls back to a sensible per-mode default, a content-ish [0.6, 0.85] in
    * floating mode (intentionally NOT full-screen) or [1] in fullscreen mode.
    */
   get effectiveSnapPoints(): number[] {

@@ -130,7 +130,7 @@ final class LoginController
         }
 
         // Account-level disable check. Distinct error code so frontend
-        // can show "your account has been disabled — contact support"
+        // can show "your account has been disabled, contact support"
         // instead of "wrong password".
         if (!$user->isActive()) {
             throw HttpException::unauthorized(

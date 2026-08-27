@@ -108,17 +108,17 @@ describe('CheckoutStatusService', () => {
         intervalMs: 2000, ceilingMs: 60000, ...timing,
       });
 
-      /* Poll #0 — pending. */
+      /* Poll #0, pending. */
       controller.expectOne(`${V3_BASE}/v3/checkout/status/V3-ORDER-001`)
         .flush(makeStatus({ status: 'pending_payment', terminal: false }));
       await drain();
 
-      /* Poll #1 — pending. */
+      /* Poll #1, pending. */
       controller.expectOne(`${V3_BASE}/v3/checkout/status/V3-ORDER-001`)
         .flush(makeStatus({ status: 'pending_payment', terminal: false }));
       await drain();
 
-      /* Poll #2 — now paid. */
+      /* Poll #2, now paid. */
       controller.expectOne(`${V3_BASE}/v3/checkout/status/V3-ORDER-001`)
         .flush(makeStatus({ status: 'paid', terminal: true, paid: true }));
 
@@ -154,17 +154,17 @@ describe('CheckoutStatusService', () => {
         intervalMs: 2000, ceilingMs: 60000, ...timing,
       });
 
-      /* Poll #0 — pending (good). */
+      /* Poll #0, pending (good). */
       controller.expectOne(`${V3_BASE}/v3/checkout/status/V3-ORDER-001`)
         .flush(makeStatus({ status: 'pending_payment', terminal: false }));
       await drain();
 
-      /* Poll #1 — transient 500; loop must continue. */
+      /* Poll #1, transient 500; loop must continue. */
       controller.expectOne(`${V3_BASE}/v3/checkout/status/V3-ORDER-001`)
         .flush({}, { status: 500, statusText: 'Server Error' });
       await drain();
 
-      /* Poll #2 — paid. */
+      /* Poll #2, paid. */
       controller.expectOne(`${V3_BASE}/v3/checkout/status/V3-ORDER-001`)
         .flush(makeStatus({ status: 'paid', terminal: true, paid: true }));
 

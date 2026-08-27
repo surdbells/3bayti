@@ -60,7 +60,7 @@ export class GiftCardDetailPage implements OnInit {
         this.notify.success(this.i18n.t('gcd_details_copied'));
       }
     } catch {
-      // User dismissed — no-op
+      // User dismissed, no-op
     }
   }
 

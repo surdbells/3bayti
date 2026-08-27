@@ -161,7 +161,7 @@ describe('PhoneInputComponent', () => {
 
   it('validate() returns null for empty value (lets Validators.required own emptiness)', () => {
     expect(host.form.controls['phone'].errors).toMatchObject({ required: true });
-    /* phoneInvalid is NOT present — that's the assertion. */
+    /* phoneInvalid is NOT present, that's the assertion. */
     expect(host.form.controls['phone'].errors?.['phoneInvalid']).toBeUndefined();
   });
 

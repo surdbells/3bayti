@@ -9,7 +9,7 @@ use League\Flysystem\FilesystemOperator;
 use League\Flysystem\Visibility;
 
 /**
- * Stores OTA bundle .zips on the application's own server — the shared uploads
+ * Stores OTA bundle .zips on the application's own server, the shared uploads
  * volume at apps/api/var/uploads/ota/<platform>/<version>.zip, which Apache
  * already serves publicly under /uploads/ (no extra web-server config). The
  * @capgo/capacitor-updater plugin then downloads the .zip statically from that

@@ -10,7 +10,7 @@ namespace Bayti\Api\Domain\Order;
  *
  * Carries the storage_path + normalized metadata that the caller
  * uses to construct the OrderReturnRequestPhoto entity. Pure
- * value object — immutable, no logic.
+ * value object, immutable, no logic.
  *
  * The originalFilename may be null if the client didn't send one
  * (or sent an empty/whitespace-only filename, which the service

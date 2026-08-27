@@ -13,7 +13,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/admin/notification-templates/variables
  *
- * The catalog of supported {{variables}} (key + label + sample) — the compose
+ * The catalog of supported {{variables}} (key + label + sample), the compose
  * UI renders these as insertable chips and validates against them.
  */
 final class GetTemplateVariablesController

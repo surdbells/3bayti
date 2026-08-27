@@ -75,7 +75,7 @@ final class GetAdminReturnController
         }
 
         // Compute the suggested refund amount for the operator UI.
-        // This is purely informational — admin can override in the
+        // This is purely informational, admin can override in the
         // record-refund DTO.
         $items = iterator_to_array($returnRequest->getItems());
         $suggested = $this->refundCalculator->compute(

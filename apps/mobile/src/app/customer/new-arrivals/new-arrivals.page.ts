@@ -271,7 +271,7 @@ export class NewArrivalsPage implements OnInit, OnDestroy {
 
   onFilterApply(state: ProductFilterState): void {
     this.filterState = state;
-    // The sheet is now the sole price authority — reset the legacy chip
+    // The sheet is now the sole price authority, reset the legacy chip
     // ceiling so a stale chip value doesn't leak through buildQuery's
     // fallback when the sheet leaves max_price unset.
     this.selectedFilter = 'all';
@@ -287,7 +287,7 @@ export class NewArrivalsPage implements OnInit, OnDestroy {
     this.resetImageStates();
     this.cdr.markForCheck();
 
-    // Direct v3 (GET /v3/products) — public catalog read, no auth. The
+    // Direct v3 (GET /v3/products), public catalog read, no auth. The
     // registered response transform still applies via get_v3, so
     // response.data keeps its product-array shape. Query params now carry
     // the full sort/size/colour/price filter set (buildQuery).
@@ -323,7 +323,7 @@ export class NewArrivalsPage implements OnInit, OnDestroy {
     this.resetImageStates();
     this.cdr.markForCheck();
 
-    // Direct v3 (GET /v3/products) — public catalog read, no auth. Same
+    // Direct v3 (GET /v3/products), public catalog read, no auth. Same
     // paginated listing as newArrivals() with a price ceiling (buildQuery).
     this.networkAdapter.get_v3('GET /mobile/new-arrivals-listing', {
       queryParams: this.buildQuery(),
@@ -351,7 +351,7 @@ export class NewArrivalsPage implements OnInit, OnDestroy {
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit;
 
-    // Direct v3 (GET /v3/products) — public catalog read, no auth. Advances
+    // Direct v3 (GET /v3/products), public catalog read, no auth. Advances
     // offset for infinite scroll; buildQuery preserves the active filter.
     this.networkAdapter.get_v3('GET /mobile/new-arrivals-listing', {
       queryParams: this.buildQuery(),

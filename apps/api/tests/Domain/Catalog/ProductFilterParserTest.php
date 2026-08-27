@@ -331,8 +331,8 @@ final class ProductFilterParserTest extends TestCase
             'min_price' => '50',
             'sizes' => 'S,M',
             'featured' => 'true',
-            'sale' => 'false',     // false flag — not echoed
-            // 'category' absent — not echoed
+            'sale' => 'false',     // false flag, not echoed
+            // 'category' absent, not echoed
         ]);
 
         self::assertSame('almas', $applied['vendor']);

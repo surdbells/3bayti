@@ -25,7 +25,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * feeds, but scoped + sanitized for a shopper:
  *
  *   - Ownership: OrderRepository::findForUser → 404 on any other user's or
- *     a missing order (opaque, no existence leak — same posture as
+ *     a missing order (opaque, no existence leak, same posture as
  *     GET /v3/orders/{id}).
  *   - Event whitelist: only customer-relevant lifecycle events
  *     (order.created/paid/status_changed/item_status_changed + return.*).
@@ -104,7 +104,7 @@ final class GetOrderTimelineController
 
         // Build the full timeline (customer orders are small; MAX_LIMIT covers
         // them), then filter + sanitize down to the customer-safe subset before
-        // paginating — so `total` reflects what the customer can actually see.
+        // paginating, so `total` reflects what the customer can actually see.
         $result = $this->builder->build(
             orderId: $orderId,
             vendorIdFilter: null,
@@ -137,7 +137,7 @@ final class GetOrderTimelineController
     }
 
     /**
-     * Collapse an internal actor to a customer-safe generic — a shopper only
+     * Collapse an internal actor to a customer-safe generic, a shopper only
      * learns whether the actor was themselves, the store, or the system, never
      * a staff user id or name.
      *

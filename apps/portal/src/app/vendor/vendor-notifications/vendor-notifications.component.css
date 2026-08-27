@@ -1,4 +1,4 @@
-/* Row dividers for the preferences list — keeps HTML tidy without
+/* Row dividers for the preferences list, keeps HTML tidy without
    bolting these rules into the global design system. */
 .ax-notification-row {
   padding: var(--ax-space-4) var(--ax-space-5);

@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.5 Gift Cards — three schema additions.
+ * M3.5 Gift Cards, three schema additions.
  *
  * All additive (no column removal, no destructive ALTER).
  * Safe to apply to a live database with zero downtime.
@@ -27,7 +27,7 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * 3. orders.gift_card_amount + orders.gift_card_code_snapshot  (M3.5)
  *    Records the portion of an order paid via gift card.
- *    gift_card_amount defaults to '0.00' — backward-compatible.
+ *    gift_card_amount defaults to '0.00', backward-compatible.
  *    The remainder (total - gift_card_amount) is the gateway charge.
  */
 final class Version20260526000001 extends AbstractMigration

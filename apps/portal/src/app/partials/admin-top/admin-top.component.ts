@@ -92,7 +92,7 @@ export class AdminTopComponent implements OnInit, OnDestroy {
     this.notification.token = this.user_session.token;
     this.get_notifications();
 
-    // Debounced global search — one keystroke stream, cancels stale requests.
+    // Debounced global search, one keystroke stream, cancels stale requests.
     this.perms.load();
     this.searchInput$
       .pipe(

@@ -20,7 +20,7 @@ use Doctrine\ORM\Mapping as ORM;
  * -----
  * All admin mutations (markInReview, markResolved) emit AuditLog
  * entries via the controller layer. The entity itself doesn't emit
- * audit — it's a pure state holder.
+ * audit, it's a pure state holder.
  *
  * Idempotent webhook handling
  * ---------------------------
@@ -33,7 +33,7 @@ use Doctrine\ORM\Mapping as ORM;
  * Why no FK on resolved_by_user_id
  * --------------------------------
  * Admin users may be deleted later (offboarding, account closure).
- * The dispute resolution audit trail must survive — we keep the
+ * The dispute resolution audit trail must survive, we keep the
  * id as data, not as a referential constraint that could either
  * CASCADE-delete history or RESTRICT future deletes.
  */
@@ -103,7 +103,7 @@ class OrderDispute
     #[ORM\Column(name: 'resolution_note', type: 'text', nullable: true)]
     private ?string $resolutionNote = null;
 
-    /** NOT a FK — admin users may be removed; audit must survive. */
+    /** NOT a FK, admin users may be removed; audit must survive. */
     #[ORM\Column(name: 'resolved_by_user_id', type: 'bigint', nullable: true)]
     private ?int $resolvedByUserId = null;
 

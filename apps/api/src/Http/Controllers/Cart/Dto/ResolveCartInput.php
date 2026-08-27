@@ -7,11 +7,11 @@ namespace Bayti\Api\Http\Controllers\Cart\Dto;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Input DTO for POST /v3/cart/resolve (public — no auth).
+ * Input DTO for POST /v3/cart/resolve (public, no auth).
  *
  * Resolves a guest device-local cart payload into a server-priced cart
  * for display: current product name, image, and unit price per line,
- * with computed line + cart subtotals. No persistence, no auth — it is
+ * with computed line + cart subtotals. No persistence, no auth, it is
  * a read-only price/display resolution so the storefront drawer and
  * cart page show authoritative, up-to-date prices even if a product's
  * price changed since it was added locally.
