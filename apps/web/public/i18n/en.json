@@ -238,7 +238,7 @@
         "phoneTakenHint": "This phone is already registered.",
         "sessionExpired": "Your session expired. Please start again."
       },
-      "phoneSubtitle": "Let's start with your phone number — we'll send a verification code.",
+      "phoneSubtitle": "Let's start with your phone number, we'll send a verification code.",
       "continue": "Continue",
       "verify": "Verify",
       "codeLabel": "Verification code",
@@ -247,7 +247,7 @@
       "verifyPhoneSubtitle": "We sent a 6-digit code to {{phone}}.",
       "changeNumber": "Change number",
       "detailsTitle": "Your details",
-      "detailsSubtitle": "Almost done — tell us a bit about yourself.",
+      "detailsSubtitle": "Almost done, tell us a bit about yourself.",
       "confirmPasswordLabel": "Confirm password",
       "verifyEmailTitle": "Verify your email",
       "verifyEmailSubtitle": "We sent a 6-digit code to {{email}}.",
@@ -276,12 +276,12 @@
         "unexpected": "Something went wrong. Please try again.",
         "phoneTaken": "That phone number is already in use."
       },
-      "socialPrompt": "Almost there — add your phone number to finish setting up your account.",
+      "socialPrompt": "Almost there, add your phone number to finish setting up your account.",
       "phoneLabel": "Phone number"
     },
     "forgot": {
       "title": "Reset your password",
-      "subtitle": "Enter your email — we'll send a verification code to your registered phone.",
+      "subtitle": "Enter your email, we'll send a verification code to your registered phone.",
       "emailLabel": "Email address",
       "submit": "Send code",
       "backToLogin": "Back to sign in",
@@ -358,7 +358,7 @@
       "titleCreate": "Add a new address",
       "titleEdit": "Edit address",
       "labelLabel": "Label",
-      "labelHint": "Optional — e.g. Home, Office",
+      "labelHint": "Optional, e.g. Home, Office",
       "labelPlaceholder": "Home",
       "recipientNameLabel": "Recipient name",
       "recipientPhoneLabel": "Recipient phone",
@@ -366,7 +366,7 @@
       "emiratePlaceholder": "Select an emirate",
       "areaLabel": "Area / Neighbourhood",
       "streetLabel": "Street address",
-      "streetHint": "Optional — useful for delivery",
+      "streetHint": "Optional, useful for delivery",
       "buildingLabel": "Building / Unit",
       "postalCodeLabel": "Postal code",
       "setAsDefault": "Set as my default shipping address",
@@ -415,7 +415,7 @@
       "giftWalletAvailable": "Available to use on this order",
       "giftWalletApply": "Use balance",
       "giftWalletApplied": "Gift balance applied",
-      "giftWalletCovers": "Your gift balance covers this order — nothing to pay.",
+      "giftWalletCovers": "Your gift balance covers this order, nothing to pay.",
       "giftCardPlaceholder": "Gift card code",
       "giftCardApply": "Apply",
       "giftCardApplied": "Gift card {{code}} applied",
@@ -444,9 +444,9 @@
     },
     "return": {
       "title": "Confirming your payment",
-      "confirming": "Hang tight — we're confirming your payment. This usually takes a few seconds.",
+      "confirming": "Hang tight, we're confirming your payment. This usually takes a few seconds.",
       "failedBody": "Your payment wasn't completed. No charge was made. You can try again or head back to your bag.",
-      "processingBody": "We haven't been able to confirm your payment just yet. It may still be processing — check your orders in a few minutes.",
+      "processingBody": "We haven't been able to confirm your payment just yet. It may still be processing, check your orders in a few minutes.",
       "tryAgain": "Try again",
       "backToBag": "Back to bag",
       "viewOrders": "View my orders"
@@ -620,7 +620,7 @@
       },
       "whatsapp": {
         "title": "WhatsApp support",
-        "desc": "Chat with our team on WhatsApp — we’re here to help."
+        "desc": "Chat with our team on WhatsApp, we’re here to help."
       },
       "verify": {
         "title": "Verify your phone number",
@@ -827,17 +827,17 @@
     "loadMore": "Load more",
     "bestSellers": {
       "title": "Best Sellers",
-      "subtitle": "The pieces our community keeps coming back to — shop the most-loved abayas, kaftans and modest wear.",
+      "subtitle": "The pieces our community keeps coming back to, shop the most-loved abayas, kaftans and modest wear.",
       "empty": "No best sellers to show just yet. Check back soon."
     },
     "newArrivals": {
       "title": "New Arrivals",
-      "subtitle": "The latest pieces just added — discover fresh abayas, kaftans and modest wear from our designers.",
+      "subtitle": "The latest pieces just added, discover fresh abayas, kaftans and modest wear from our designers.",
       "empty": "No new arrivals to show just yet. Check back soon."
     },
     "discounted": {
       "title": "Discounted",
-      "subtitle": "On-sale pieces across the boutique — shop discounted abayas, kaftans and modest wear while they last.",
+      "subtitle": "On-sale pieces across the boutique, shop discounted abayas, kaftans and modest wear while they last.",
       "empty": "No discounted pieces right now. Check back soon."
     }
   },
@@ -856,7 +856,7 @@
     "landing": {
       "eyebrow": "The 3bayti gift card",
       "title": "Gift Cards",
-      "subtitle": "Give the gift of choice — a beautifully designed card for every occasion, delivered instantly or scheduled for the perfect moment.",
+      "subtitle": "Give the gift of choice, a beautifully designed card for every occasion, delivered instantly or scheduled for the perfect moment.",
       "chooseTheme": "Choose a design",
       "chooseAmount": "Choose an amount",
       "customAmount": "Custom",
@@ -876,7 +876,7 @@
       "deliverySchedule": "Schedule",
       "scheduleNeedsContact": "Add a recipient email or phone number to schedule delivery.",
       "photoLabel": "Recipient photo",
-      "photoHint": "Add a personal photo to the Luxury card — JPG, PNG, WebP or GIF, up to 10 MB.",
+      "photoHint": "Add a personal photo to the Luxury card, JPG, PNG, WebP or GIF, up to 10 MB.",
       "photoChoose": "Choose a photo",
       "photoUploading": "Uploading…",
       "photoRemove": "Remove photo",
@@ -892,7 +892,7 @@
       "errorSubmit": "Something went wrong starting your purchase. Please try again.",
       "reassure": "You'll be taken to our secure checkout to pay.",
       "seoTitle": "Gift Cards · 3bayti",
-      "seoDescription": "Give the gift of choice with a beautifully designed 3bayti gift card — six occasions, delivered instantly or scheduled for the perfect moment."
+      "seoDescription": "Give the gift of choice with a beautifully designed 3bayti gift card, six occasions, delivered instantly or scheduled for the perfect moment."
     },
     "mine": {
       "title": "My Gift Cards",
@@ -961,7 +961,7 @@
       "expiresLabel": "Expires",
       "notFound": "We couldn't find a gift card with that code. Please check and try again.",
       "checkError": "We couldn't check that code right now. Please try again.",
-      "notRedeemable": "This gift card can't be redeemed — it may be used up, expired, or not yet active.",
+      "notRedeemable": "This gift card can't be redeemed, it may be used up, expired, or not yet active.",
       "redeemError": "We couldn't redeem that code right now. Please try again.",
       "notSpendable": "This card isn't currently spendable, so it can't be added to your account."
     }
@@ -1005,7 +1005,7 @@
     "hero": {
       "eyebrow": "Sell on 3bayti",
       "title": "Sell locally. Ship globally.",
-      "lead": "Create a beautiful storefront, manage inventory, and get paid — all from one dashboard.",
+      "lead": "Create a beautiful storefront, manage inventory, and get paid, all from one dashboard.",
       "startSelling": "Start selling",
       "signIn": "Sign in",
       "trust": {
@@ -1023,7 +1023,7 @@
     "why": {
       "eyebrow": "Why vendors choose 3bayti",
       "title": "Everything you need to grow",
-      "subtitle": "From onboarding to payout — it's all streamlined.",
+      "subtitle": "From onboarding to payout, it's all streamlined.",
       "features": {
         "storefront": {
           "title": "Beautiful storefront",
@@ -1078,7 +1078,7 @@
       "bandAria": "Modest fashion from the UAE's independent designers",
       "eyebrow": "Curated · UAE designers",
       "title": "Modest fashion, beautifully curated.",
-      "lede": "Abayas, kaftans and ready-to-wear from the UAE's independent labels — gathered into one place worth browsing.",
+      "lede": "Abayas, kaftans and ready-to-wear from the UAE's independent labels, gathered into one place worth browsing.",
       "shopNewArrivals": "Shop new arrivals",
       "browseStores": "Browse stores",
       "trustAria": "Why shop with 3bayti",
@@ -1089,9 +1089,9 @@
     "categories": {
       "eyebrow": "Browse",
       "title": "Shop by category",
-      "tileAria": "{{name}} — {{count}} products",
+      "tileAria": "{{name}}: {{count}} products",
       "discounted": "Discounted",
-      "discountedAria": "Discounted — {{count}} products on sale",
+      "discountedAria": "Discounted: {{count}} products on sale",
       "piece": "piece",
       "pieces": "pieces"
     },
@@ -1128,7 +1128,7 @@
     "sell": {
       "eyebrow": "Become a seller",
       "title": "Sell on 3bayti",
-      "lead": "Open a beautiful storefront, reach thousands of shoppers across the UAE, and get paid — all from one dashboard.",
+      "lead": "Open a beautiful storefront, reach thousands of shoppers across the UAE, and get paid, all from one dashboard.",
       "point1": "No setup required",
       "point2": "Secure payments & daily payouts",
       "point3": "Go live in minutes",
@@ -1137,14 +1137,14 @@
     "giftPromo": {
       "eyebrow": "Gift Cards",
       "heading": "Give the gift of choice",
-      "subtitle": "Buy a 3bayti gift card, then share the code yourself or let us deliver it automatically by email or SMS — perfect for birthdays, Eid and weddings.",
+      "subtitle": "Buy a 3bayti gift card, then share the code yourself or let us deliver it automatically by email or SMS, perfect for birthdays, Eid and weddings.",
       "ctaBuy": "Buy a gift card",
       "ctaRedeem": "Have a code? Redeem"
     },
     "getApp": {
       "eyebrow": "Get the app",
       "title": "Shop 3bayti on the go",
-      "subtitle": "Browse new arrivals, track your orders and check out faster — all from the 3bayti app on iPhone and Android.",
+      "subtitle": "Browse new arrivals, track your orders and check out faster, all from the 3bayti app on iPhone and Android.",
       "point1": "Faster checkout",
       "point2": "Order tracking & alerts",
       "point3": "Exclusive app offers",
@@ -1152,8 +1152,8 @@
       "androidGetItOn": "GET IT ON",
       "appStoreAria": "Download 3bayti on the App Store",
       "playStoreAria": "Get 3bayti on Google Play",
-      "appStoreSoon": "3bayti for iPhone — coming soon to the App Store",
-      "playStoreSoon": "3bayti for Android — coming soon to Google Play",
+      "appStoreSoon": "3bayti for iPhone, coming soon to the App Store",
+      "playStoreSoon": "3bayti for Android, coming soon to Google Play",
       "comingSoon": "Coming soon"
     },
     "heroTiles": {
@@ -1229,7 +1229,7 @@
         "titleLabel": "Title (optional)",
         "titlePlaceholder": "Sum up your review",
         "commentLabel": "Your review",
-        "commentPlaceholder": "Share what you liked — fit, fabric, quality…",
+        "commentPlaceholder": "Share what you liked: fit, fabric, quality…",
         "submit": "Submit review",
         "submitting": "Submitting…",
         "thanksTitle": "Thanks for your review",
@@ -1244,7 +1244,7 @@
     "sizeGuide": {
       "trigger": "Size guide",
       "title": "Size guide",
-      "note": "All measurements are in centimetres (cm). Use this as a guide — fit may vary by style.",
+      "note": "All measurements are in centimetres (cm). Use this as a guide, fit may vary by style.",
       "sizeColumn": "Size",
       "close": "Close size guide",
       "empty": "This store hasn't published a size guide yet.",
@@ -1397,7 +1397,7 @@
     "indexLede": "Curated abayas, kaftans, accessories and modest-wear collections from independent UAE designers.",
     "loadingIndex": "Loading categories…",
     "emptyIndex": "No categories available right now. Please check back soon.",
-    "tileAria": "{{name}} — {{count}} products",
+    "tileAria": "{{name}}: {{count}} products",
     "product": "product",
     "products": "products",
     "filterAria": "Filter products",
@@ -1442,7 +1442,7 @@
         "submit": "Submit deletion request",
         "submitting": "Submitting…",
         "successTitle": "Request received",
-        "successBody": "Thanks — we have received your request. After we verify your identity, your account and data will be deleted; you will get a confirmation by email.",
+        "successBody": "Thanks, we have received your request. After we verify your identity, your account and data will be deleted; you will get a confirmation by email.",
         "errors": {
           "emailInvalid": "Please enter a valid email address.",
           "generic": "We couldn't submit your request. Please try again."
@@ -1454,7 +1454,7 @@
     "privacy": "Privacy Policy · 3bayti",
     "deleteAccount": "Delete your account · 3bayti",
     "styleCreate": "Create a style · 3bayti",
-    "home": "3bayti — Premium Abayas, Kaftans & Modest Wear",
+    "home": "3bayti: Premium Abayas, Kaftans & Modest Wear",
     "categories": "Shop by Category · 3bayti",
     "product": "Product · 3bayti",
     "stores": "Stores · 3bayti",
@@ -1487,9 +1487,9 @@
     "accountOrders": "Your orders · 3bayti",
     "accountOrderDetail": "Order details · 3bayti",
     "accountOrderReturn": "Request a return · 3bayti",
-    "checkoutAddress": "Checkout — Shipping · 3bayti",
-    "checkoutReview": "Checkout — Review · 3bayti",
-    "checkoutPayment": "Checkout — Payment · 3bayti",
+    "checkoutAddress": "Checkout: Shipping · 3bayti",
+    "checkoutReview": "Checkout: Review · 3bayti",
+    "checkoutPayment": "Checkout: Payment · 3bayti",
     "checkoutReturn": "Confirming payment · 3bayti",
     "checkoutSuccess": "Order placed · 3bayti",
     "notFound": "Page not found · 3bayti",
@@ -1503,7 +1503,7 @@
       "description": "Internal UI primitive showcase."
     },
     "title": "Component preview",
-    "intro": "Visual showcase of the shared UI primitives. Add a new component here when you ship one — keeps the design language consistent and lets you eyeball every state at once.",
+    "intro": "Visual showcase of the shared UI primitives. Add a new component here when you ship one, keeps the design language consistent and lets you eyeball every state at once.",
     "headings": {
       "title": "Headings",
       "note": "Decoupled semantic level (h1..h6) from visual size.",
@@ -1569,7 +1569,7 @@
       }
     },
     "title": "Styles",
-    "subtitle": "Shop the look — curated outfits that bundle pieces our community and editors love.",
+    "subtitle": "Shop the look, curated outfits that bundle pieces our community and editors love.",
     "tabs": {
       "community": "Community",
       "editorial": "3bayti",

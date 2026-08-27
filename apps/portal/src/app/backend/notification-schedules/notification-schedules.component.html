@@ -23,7 +23,7 @@
         <div class="ax-field">
           <label class="ax-label" for="sch-template">Start from template (optional)</label>
           <select id="sch-template" class="ax-input" [(ngModel)]="form.template_id" (ngModelChange)="onTemplateChange()">
-            <option value="">— None —</option>
+            <option value="">None</option>
             <option *ngFor="let t of templates" [value]="t.id">{{ t.name }}</option>
           </select>
         </div>
@@ -43,7 +43,7 @@
       <div class="tpl-vars" *ngIf="variables.length">
         <span class="tpl-vars-label">Insert variable:</span>
         <button type="button" class="tpl-chip" *ngFor="let v of variables" (click)="insertVariable(v.key)"
-                [title]="v.label + ' — e.g. ' + v.sample">{{ '{{' + v.key + '}}' }}</button>
+                [title]="v.label + ', e.g. ' + v.sample">{{ '{{' + v.key + '}}' }}</button>
       </div>
 
       <div class="ax-grid-2 ax-mt-3">

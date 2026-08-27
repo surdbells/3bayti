@@ -120,7 +120,7 @@
                   <div class="ax-form-field">
                     <label class="ax-label">Emirate</label>
                     <app-ax-combobox name="emirate" [(ngModel)]="store.emirate" [options]="emirateOptions"
-                      [searchable]="true" placeholder="— Select emirate —" ariaLabel="Emirate"></app-ax-combobox>
+                      [searchable]="true" placeholder="Select emirate" ariaLabel="Emirate"></app-ax-combobox>
                   </div>
                   <div class="ax-form-field">
                     <label class="ax-label">Country</label>
@@ -265,7 +265,7 @@
                   </div>
 
                   <div class="ax-form-field ax-mb-3">
-                    <label class="ax-label">Tax Registration Number (TRN) — 15 digits</label>
+                    <label class="ax-label">Tax Registration Number (TRN), 15 digits</label>
                     <input type="text" class="ax-input" readonly [(ngModel)]="store.tax_registration_number" name="tax_registration_number" />
                   </div>
 
@@ -331,7 +331,7 @@
                 <!-- Prior review outcome -->
                 <p *ngIf="compliance.reviewed_at" class="ax-text-sm ax-text-secondary ax-mt-4 ax-mb-0">
                   Last reviewed {{ compliance.reviewed_at | date:'medium' }}<span *ngIf="compliance.review_note">
-                  — “{{ compliance.review_note }}”</span>
+                  : “{{ compliance.review_note }}”</span>
                 </p>
 
                 <!-- Review actions -->

@@ -15,7 +15,7 @@
       <div class="ax-field" *ngIf="templates.length">
         <label class="ax-label" for="notif-template">Start from a template (optional)</label>
         <select id="notif-template" class="ax-input" [ngModel]="form.template_id" (ngModelChange)="applyTemplate($event)">
-          <option [ngValue]="null">— None —</option>
+          <option [ngValue]="null">None</option>
           <option *ngFor="let t of templates" [ngValue]="t.id">{{ t.name }}</option>
         </select>
       </div>
@@ -39,7 +39,7 @@
       <div class="notif-vars" *ngIf="variables.length">
         <span class="notif-vars-label">Insert variable:</span>
         <button type="button" class="notif-chip" *ngFor="let v of variables" (click)="insertVariable(v.key)"
-                [title]="v.label + ' — e.g. ' + v.sample">{{ '{{' + v.key + '}}' }}</button>
+                [title]="v.label + ', e.g. ' + v.sample">{{ '{{' + v.key + '}}' }}</button>
       </div>
 
       <div class="ax-field">

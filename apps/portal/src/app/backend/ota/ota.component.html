@@ -39,12 +39,12 @@
         </label>
 
         <label class="ota-field ota-field--wide">
-          <span class="ota-label">Session key <span class="ota-hint">(signed bundles only — the ivSessionKey from <code>capgo encrypt</code>)</span></span>
+          <span class="ota-label">Session key <span class="ota-hint">(signed bundles only, the ivSessionKey from <code>capgo encrypt</code>)</span></span>
           <input class="ax-input" type="text" [(ngModel)]="form.session_key" name="session_key" placeholder="leave empty for an unsigned .zip" autocomplete="off" />
         </label>
 
         <label class="ota-field ota-field--wide">
-          <span class="ota-label">Checksum <span class="ota-hint">(signed bundles only — from <code>capgo encrypt</code>; auto-computed for a plain .zip)</span></span>
+          <span class="ota-label">Checksum <span class="ota-hint">(signed bundles only, from <code>capgo encrypt</code>; auto-computed for a plain .zip)</span></span>
           <input class="ax-input" type="text" [(ngModel)]="form.checksum" name="checksum" placeholder="auto (SHA256) when unsigned" autocomplete="off" />
         </label>
 
@@ -56,7 +56,7 @@
 
       <div class="ax-flex ax-justify-between ax-items-center ax-mt-3">
         <p class="ax-text-2xs ax-text-tertiary ax-m-0">
-          Build the web bundle, zip it (<code>npx &#64;capgo/cli bundle zip com.threebayti.app --path www</code>), then upload the .zip here — the server stores it and computes the checksum.
+          Build the web bundle, zip it (<code>npx &#64;capgo/cli bundle zip com.threebayti.app --path www</code>), then upload the .zip here. The server stores it and computes the checksum.
         </p>
         <button type="button" class="ax-btn ax-btn-primary" [disabled]="uploading()" (click)="upload()">
           <app-icon name="upload_file" aria-hidden="true"></app-icon>
