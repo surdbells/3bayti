@@ -166,7 +166,9 @@
 .axdt-row-interactive { cursor: pointer; }
 .axdt-row-selected { background: var(--ax-color-accent-subtle, var(--ax-color-bg-subtle)); }
 .axdt-td-actions, .axdt-th-actions { width: 1%; white-space: nowrap; padding-right: 1rem; }
-.axdt-row-actions { display: inline-flex; gap: 0.5rem; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+/* nowrap: row-action buttons always sit on ONE line; the cell (width:1% +
+   white-space:nowrap) sizes to fit and extras collapse into the ⋯ menu. */
+.axdt-row-actions { display: inline-flex; gap: 0.5rem; justify-content: flex-end; align-items: center; flex-wrap: nowrap; }
 .axdt-action-btn { white-space: nowrap; }
 .axdt-action-label { line-height: 1; }
 .axdt-action-danger { color: var(--ax-color-danger, #dc2626); border-color: var(--ax-color-danger, #dc2626); }
