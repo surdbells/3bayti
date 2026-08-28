@@ -158,6 +158,7 @@ export class AdminCouponListComponent implements OnInit {
         },
       ],
       rowActions: [
+        { id: 'usage', label: 'Usage report', icon: 'bar_chart' },
         { id: 'edit', label: 'Edit', icon: 'edit' },
         { id: 'toggle', label: 'Activate / deactivate', icon: 'toggle_on' },
         { id: 'delete', label: 'Delete', icon: 'delete', variant: 'danger' },
@@ -217,7 +218,9 @@ export class AdminCouponListComponent implements OnInit {
 
   onRowAction(e: { action: { id: string }; row: CouponRow }): void {
     const { action, row } = e;
-    if (action.id === 'edit') {
+    if (action.id === 'usage') {
+      this.router.navigate(['/admin/coupons/usage'], { queryParams: { id: row.id } });
+    } else if (action.id === 'edit') {
       this.router.navigate(['/admin/coupons/form'], { queryParams: { id: row.id } });
     } else if (action.id === 'toggle') {
       this.toggle(row);

@@ -1,0 +1,77 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to coupons
+        </button>
+        <span class="ax-page-header-eyebrow">Marketing</span>
+        <h1 class="ax-page-title">
+          Usage
+          @if (coupon) { <span class="acu-code">{{ coupon.code }}</span> }
+        </h1>
+        <p class="ax-page-subtitle">
+          @if (coupon) {
+            {{ scopeLabel() }} ·
+            {{ coupon.discount_type === 'percentage' ? (coupon.discount_value + '%') : ('AED ' + coupon.discount_value) }} off
+            · {{ coupon.is_active ? 'Active' : 'Inactive' }}
+          } @else {
+            Redemptions, discount given and revenue for this code.
+          }
+        </p>
+      </div>
+    </header>
+
+    @if (loading) {
+      <div class="ax-flex ax-justify-center ax-py-8">
+        <span class="ax-spinner ax-spinner-lg" aria-label="Loading"></span>
+      </div>
+    } @else {
+      <!-- KPI cards -->
+      <section class="acu-kpis">
+        <div class="acu-kpi">
+          <span class="acu-kpi__label">Total uses</span>
+          <span class="acu-kpi__value">{{ (stats?.total_uses ?? 0).toLocaleString() }}</span>
+        </div>
+        <div class="acu-kpi">
+          <span class="acu-kpi__label">Discount given</span>
+          <span class="acu-kpi__value">AED {{ (stats?.total_discount_given ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</span>
+        </div>
+        <div class="acu-kpi">
+          <span class="acu-kpi__label">Unique customers</span>
+          <span class="acu-kpi__value">{{ (stats?.unique_customers ?? 0).toLocaleString() }}</span>
+        </div>
+        <div class="acu-kpi">
+          <span class="acu-kpi__label">Revenue with code</span>
+          <span class="acu-kpi__value">AED {{ (stats?.total_revenue_generated ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</span>
+        </div>
+      </section>
+
+      <!-- Usage over time (last 30 days) -->
+      <section class="ax-card ax-p-5 ax-mt-4">
+        <h3 class="ax-h6 ax-m-0 ax-mb-3">Redemptions, last 30 days</h3>
+        @if (overTime.length > 0) {
+          <div class="acu-bars" role="img" aria-label="Daily redemptions for the last 30 days">
+            @for (p of overTime; track p.day) {
+              <div class="acu-bar-col" [title]="p.day + ': ' + p.uses + ' uses, AED ' + p.discount">
+                <div class="acu-bar" [style.height.%]="barHeight(p.uses)"></div>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="ax-text-secondary ax-m-0">No redemptions in the last 30 days.</p>
+        }
+      </section>
+
+      <!-- Redemption log -->
+      <section class="ax-card ax-p-0 ax-mt-4">
+        <div class="ax-p-4 ax-pb-0">
+          <h3 class="ax-h6 ax-m-0">Redemption log</h3>
+        </div>
+        @if (config) {
+          <app-ax-data-table [config]="config" [dataSource]="dataSource"></app-ax-data-table>
+        }
+      </section>
+    }
+  </div>
+</app-admin-shell>

@@ -939,6 +939,8 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\PromoCode\ListPromoCodesController::class)->add($perm->for('coupons.view'));
         $group->get('/promo-codes/{id:[0-9]+}',
             \Bayti\Api\Http\Controllers\Admin\PromoCode\GetPromoCodeController::class)->add($perm->for('coupons.view'));
+        $group->get('/promo-codes/{id:[0-9]+}/analytics',
+            \Bayti\Api\Http\Controllers\Admin\PromoCode\GetPromoCodeAnalyticsController::class)->add($perm->for('coupons.view'));
         $group->post('/promo-codes',
             \Bayti\Api\Http\Controllers\Admin\PromoCode\CreatePromoCodeController::class)->add($perm->for('coupons.create'));
         $group->put('/promo-codes/{id:[0-9]+}',

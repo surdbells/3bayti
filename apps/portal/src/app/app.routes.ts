@@ -432,6 +432,12 @@ export const routes: Routes = [
     title: 'Coupon'
   },
   {
+    path: 'admin/coupons/usage',  // usage report for one code (?id=123)
+    loadComponent: () => import('./backend/admin-coupons/admin-coupon-usage.component').then(m => m.AdminCouponUsageComponent),
+    canActivate: [adminGuard, requirePermission('coupons.view')],
+    title: 'Coupon usage'
+  },
+  {
     path: 'admin/order-manage',
     loadComponent: () => import('./backend/processing/single/single.component').then(m => m.SingleComponent),
     canActivate: [adminGuard, requirePermission('orders.view_detail')],

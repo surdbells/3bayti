@@ -1,0 +1,49 @@
+.acu-code {
+  font-family: var(--ax-font-mono, monospace);
+  font-weight: 600;
+  color: var(--ax-color-text-brand, #906952);
+}
+
+.acu-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 12px;
+}
+.acu-kpi {
+  background: var(--ax-color-bg-surface, #fff);
+  border: 0.5px solid var(--ax-color-border-default, #e6ddd0);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.acu-kpi__label {
+  font-size: 12px;
+  color: var(--ax-color-text-secondary, #6b6056);
+}
+.acu-kpi__value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ax-color-text-primary, #2e241c);
+}
+
+/* Compact daily bar chart. */
+.acu-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 96px;
+}
+.acu-bar-col {
+  flex: 1 1 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.acu-bar {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 3px 3px 0 0;
+  background: var(--ax-color-bg-brand, #906952);
+}

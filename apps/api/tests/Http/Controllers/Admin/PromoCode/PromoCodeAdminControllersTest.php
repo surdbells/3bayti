@@ -179,6 +179,19 @@ final class PromoCodeAdminControllersTest extends HttpTestCase
     }
 
     #[Test]
+    public function analyticsReturns404ForMissingCode(): void
+    {
+        $admin = $this->makeAdminUser(99);
+
+        $promoRepo = $this->createMock(PromoCodeRepository::class);
+        $promoRepo->method('find')->willReturn(null);
+
+        $this->bindEm($admin, $promoRepo);
+        $response = $this->makeGet($admin, '/v3/admin/promo-codes/999/analytics');
+        self::assertSame(404, $response->getStatusCode());
+    }
+
+    #[Test]
     public function listEmitsAuditViewedWithFilters(): void
     {
         $admin = $this->makeAdminUser(99);
