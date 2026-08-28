@@ -44,17 +44,25 @@
               </div>
 
               <!-- Measurements + customer note, everything the vendor needs to make/pack the item. -->
-              <ng-container *ngIf="measurementPairs(item) as pairs">
-                <div *ngIf="pairs.length" class="voi-detail">
-                  <div class="voi-detail-label">Measurements</div>
+
+              <!-- Customer's saved body measurements (profile). Shown so the vendor
+              can make/fit the order even when a per-item snapshot wasn't captured. -->
+              <section class="ax-card ax-p-4" *ngIf="customerMeasurements().length">
+                <h3 class="ax-h6 ax-mb-2">Customer measurements</h3>
+                <div *ngFor="let m of customerMeasurements(); let last = last" [class.ax-mb-3]="!last">
                   <dl class="voi-msmt">
-                    <div class="voi-msmt-row" *ngFor="let p of pairs">
-                      <dt>{{ p.label }}</dt>
-                      <dd>{{ p.value }}</dd>
+                    <div class="voi-msmt-row" *ngFor="let r of measurementValueRows(m)">
+                      <dt>{{ r.label }}</dt>
+                      <dd>{{ r.value }}</dd>
                     </div>
                   </dl>
+                  <div *ngIf="m.notes" class="voi-detail voi-detail-note ax-mt-2">
+                    <div class="voi-detail-label">Notes</div>
+                    <div class="voi-detail-text">{{ m.notes }}</div>
+                  </div>
                 </div>
-              </ng-container>
+              </section>                    
+              
               <div *ngIf="extraMeasurementText(item)" class="voi-detail">
                 <div class="voi-detail-label">Extra measurement</div>
                 <div class="voi-detail-text">{{ extraMeasurementText(item) }}</div>
@@ -128,24 +136,6 @@
             <div *ngIf="a.postal_code">{{ a.postal_code }}</div>
             <div *ngIf="a.country_code">{{ a.country_code }}</div>
             <div *ngIf="a.email" class="ax-mt-1"><a [href]="'mailto:' + a.email">{{ a.email }}</a></div>
-          </div>
-        </section>
-
-        <!-- Customer's saved body measurements (profile). Shown so the vendor
-             can make/fit the order even when a per-item snapshot wasn't captured. -->
-        <section class="ax-card ax-p-4" *ngIf="customerMeasurements().length">
-          <h3 class="ax-h6 ax-mb-2">Customer measurements</h3>
-          <div *ngFor="let m of customerMeasurements(); let last = last" [class.ax-mb-3]="!last">
-            <dl class="voi-msmt">
-              <div class="voi-msmt-row" *ngFor="let r of measurementValueRows(m)">
-                <dt>{{ r.label }}</dt>
-                <dd>{{ r.value }}</dd>
-              </div>
-            </dl>
-            <div *ngIf="m.notes" class="voi-detail voi-detail-note ax-mt-2">
-              <div class="voi-detail-label">Notes</div>
-              <div class="voi-detail-text">{{ m.notes }}</div>
-            </div>
           </div>
         </section>
       </aside>
