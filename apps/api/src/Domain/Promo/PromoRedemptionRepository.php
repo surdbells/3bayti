@@ -128,6 +128,38 @@ class PromoRedemptionRepository extends EntityRepository
     }
 
     /**
+     * Gross redemption counts for many promo codes in ONE grouped query, keyed
+     * by promo_code_id. Backs the admin list "Used" column without an N+1 count
+     * per row. Gross = all redemptions (same definition as
+     * countByPromoCodeIdGross). Ids with no redemptions are simply absent from
+     * the map (caller defaults them to 0).
+     *
+     * @param list<int> $promoCodeIds
+     * @return array<int, int>
+     */
+    public function grossCountsByPromoCodeIds(array $promoCodeIds): array
+    {
+        if ($promoCodeIds === []) {
+            return [];
+        }
+
+        /** @var list<array{pid: int|string, cnt: int|string}> $rows */
+        $rows = $this->createQueryBuilder('r')
+            ->select('IDENTITY(r.promoCode) AS pid', 'COUNT(r.id) AS cnt')
+            ->where('r.promoCode IN (:ids)')
+            ->setParameter('ids', $promoCodeIds)
+            ->groupBy('r.promoCode')
+            ->getQuery()
+            ->getScalarResult();
+
+        $out = [];
+        foreach ($rows as $row) {
+            $out[(int) $row['pid']] = (int) $row['cnt'];
+        }
+        return $out;
+    }
+
+    /**
      * Reverse lookup from an order to its redemption. Used by
      * OrderSerializer to surface the applied_promo block on
      * GET /v3/orders/{id} when a redemption exists. Returns null

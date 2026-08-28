@@ -33,6 +33,7 @@ interface CouponRow extends Record<string, unknown> {
   min_subtotal: string | null;
   usage_limit_global: number | null;
   usage_limit_per_user: number | null;
+  times_used: number;
   valid_until: string | null;
   is_active: boolean;
   created_at: string;
@@ -144,8 +145,8 @@ export class AdminCouponListComponent implements OnInit {
           value: (r) => (r.min_subtotal != null ? `AED ${Number(r.min_subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'),
         },
         {
-          key: 'usage_limit_global', label: 'Global limit', align: 'center', hideOnMobile: true,
-          value: (r) => (r.usage_limit_global != null ? String(r.usage_limit_global) : '∞'),
+          key: 'times_used', label: 'Used', align: 'center',
+          value: (r) => (r.usage_limit_global != null ? `${r.times_used} / ${r.usage_limit_global}` : `${r.times_used}`),
         },
         {
           key: 'valid_until', label: 'Expires', hideOnMobile: true,
@@ -204,6 +205,7 @@ export class AdminCouponListComponent implements OnInit {
       min_subtotal: c.min_subtotal ?? null,
       usage_limit_global: c.usage_limit_global ?? null,
       usage_limit_per_user: c.usage_limit_per_user ?? null,
+      times_used: c.redemption_count ?? 0,
       valid_until: c.valid_until ?? null,
       is_active: !!c.is_active,
       created_at: c.created_at ?? '',

@@ -7,6 +7,8 @@ namespace Bayti\Api\Http\Controllers\Admin\PromoCode;
 use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\Promo\PromoCode;
 use Bayti\Api\Domain\Promo\PromoCodeRepository;
+use Bayti\Api\Domain\Promo\PromoRedemption;
+use Bayti\Api\Domain\Promo\PromoRedemptionRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
@@ -125,8 +127,29 @@ final class ListPromoCodesController
             ],
         );
 
+        // "Used" column: gross redemption counts for THIS page in one grouped
+        // query (no N+1). Codes with no redemptions default to 0.
+        $ids = [];
+        foreach ($result['items'] as $code) {
+            $id = $code->getId();
+            if ($id !== null) {
+                $ids[] = $id;
+            }
+        }
+        /** @var PromoRedemptionRepository $redemptions */
+        $redemptions = $this->em->getRepository(PromoRedemption::class);
+        $counts = $ids === [] ? [] : $redemptions->grossCountsByPromoCodeIds($ids);
+
+        $items = array_map(
+            fn (PromoCode $code): array => $this->serializer->adminShapeWithCount(
+                $code,
+                $counts[$code->getId()] ?? 0,
+            ),
+            $result['items'],
+        );
+
         return $this->ok(PaginatedEnvelope::build(
-            items: $this->serializer->adminShapeMany($result['items']),
+            items: $items,
             total: $result['total'],
             limit: $filters['limit'],
             offset: $filters['offset'],
