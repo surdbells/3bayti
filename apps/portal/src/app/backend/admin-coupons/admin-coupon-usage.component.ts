@@ -12,7 +12,6 @@ import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.comp
 import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
-  AxCellDirective,
   AxServerDataSource,
   type AxDataTableConfig,
   type AxQueryState,
@@ -46,7 +45,7 @@ interface DailyPoint {
 @Component({
   selector: 'app-admin-coupon-usage',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective, IconComponent],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, IconComponent],
   templateUrl: './admin-coupon-usage.component.html',
   styleUrl: './admin-coupon-usage.component.css',
 })
