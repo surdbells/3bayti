@@ -127,8 +127,9 @@ final class ListPromoCodesController
             ],
         );
 
-        // "Used" column: gross redemption counts for THIS page in one grouped
-        // query (no N+1). Codes with no redemptions default to 0.
+        // "Used" column: PAID redemption counts for THIS page in one grouped
+        // query (no N+1) — paid orders only (pending/cancelled/failed excluded).
+        // Codes with no paid redemptions default to 0.
         $ids = [];
         foreach ($result['items'] as $code) {
             $id = $code->getId();
@@ -138,7 +139,7 @@ final class ListPromoCodesController
         }
         /** @var PromoRedemptionRepository $redemptions */
         $redemptions = $this->em->getRepository(PromoRedemption::class);
-        $counts = $ids === [] ? [] : $redemptions->grossCountsByPromoCodeIds($ids);
+        $counts = $ids === [] ? [] : $redemptions->paidCountsByPromoCodeIds($ids);
 
         $items = array_map(
             fn (PromoCode $code): array => $this->serializer->adminShapeWithCount(

@@ -76,16 +76,21 @@ final class VendorCouponAnalyticsController
 
     // ── analytics shapes ─────────────────────────────────────────────
 
-    /** This coupon's lifetime totals. */
+    /**
+     * This coupon's lifetime totals. Scoped to PAID orders only — a redemption
+     * on a pending / cancelled / failed order isn't counted as usage.
+     */
     private function couponStats(Connection $conn, int $couponId): array
     {
         $row = $conn->fetchAssociative(
             "SELECT
-                COUNT(*)                          AS total_uses,
-                COALESCE(SUM(discount_amount), 0) AS total_discount_given,
-                COUNT(DISTINCT user_id)           AS unique_customers
-             FROM promo_redemptions
-             WHERE promo_code_id = ?",
+                COUNT(*)                            AS total_uses,
+                COALESCE(SUM(r.discount_amount), 0) AS total_discount_given,
+                COUNT(DISTINCT r.user_id)           AS unique_customers
+             FROM promo_redemptions r
+             JOIN orders o ON o.id = r.order_id
+             WHERE r.promo_code_id = ?
+               AND o.status NOT IN ('pending_payment', 'cancelled', 'failed')",
             [$couponId]
         ) ?: [];
 
@@ -93,7 +98,8 @@ final class VendorCouponAnalyticsController
             "SELECT COALESCE(SUM(o.total), 0)
              FROM promo_redemptions r
              JOIN orders o ON o.id = r.order_id
-             WHERE r.promo_code_id = ?",
+             WHERE r.promo_code_id = ?
+               AND o.status NOT IN ('pending_payment', 'cancelled', 'failed')",
             [$couponId]
         );
 
@@ -122,17 +128,19 @@ final class VendorCouponAnalyticsController
         ];
     }
 
-    /** Daily redemption counts for the last N days (default 30). */
+    /** Daily PAID redemption counts for the last N days (default 30). */
     private function usageOverTime(Connection $conn, int $couponId, ServerRequestInterface $request): array
     {
         $daysBack = max(1, min(365, (int) ($request->getQueryParams()['days_back'] ?? 30)));
         $rows = $conn->fetchAllAssociative(
-            "SELECT to_char(date_trunc('day', redeemed_at), 'YYYY-MM-DD') AS day,
+            "SELECT to_char(date_trunc('day', r.redeemed_at), 'YYYY-MM-DD') AS day,
                     COUNT(*) AS uses,
-                    COALESCE(SUM(discount_amount), 0) AS discount
-             FROM promo_redemptions
-             WHERE promo_code_id = ?
-               AND redeemed_at >= (NOW() - (? || ' days')::interval)
+                    COALESCE(SUM(r.discount_amount), 0) AS discount
+             FROM promo_redemptions r
+             JOIN orders o ON o.id = r.order_id
+             WHERE r.promo_code_id = ?
+               AND o.status NOT IN ('pending_payment', 'cancelled', 'failed')
+               AND r.redeemed_at >= (NOW() - (? || ' days')::interval)
              GROUP BY 1 ORDER BY 1 ASC",
             [$couponId, $daysBack]
         );
@@ -151,15 +159,20 @@ final class VendorCouponAnalyticsController
         $perPage = max(1, min(100, (int) ($q['per_page'] ?? 20)));
         $offset = ($page - 1) * $perPage;
 
+        // Paid redemptions only — the log mirrors the reported "used" counts.
         $total = (int) $conn->fetchOne(
-            'SELECT COUNT(*) FROM promo_redemptions WHERE promo_code_id = ?',
+            "SELECT COUNT(*)
+             FROM promo_redemptions r
+             JOIN orders o ON o.id = r.order_id
+             WHERE r.promo_code_id = ?
+               AND o.status NOT IN ('pending_payment', 'cancelled', 'failed')",
             [$couponId]
         );
 
         // order_total_after = the final total the customer paid (discount applied);
-        // order_total_before = that plus this coupon's discount. Both come back NULL
-        // when the redemption has no order total (defensive; order_id is normally set).
-        // customer_name/email come from the redeemer (promo_redemptions.user_id).
+        // order_total_before = that plus this coupon's discount. customer_name/email
+        // come from the redeemer (promo_redemptions.user_id). Only paid orders are
+        // listed (pending/cancelled/failed excluded), so the order join is inner.
         $rows = $conn->fetchAllAssociative(
             "SELECT r.id,
                     to_char(r.redeemed_at, 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS redeemed_at,
@@ -171,9 +184,10 @@ final class VendorCouponAnalyticsController
                     NULLIF(TRIM(CONCAT(COALESCE(cust.first_name, ''), ' ', COALESCE(cust.last_name, ''))), '') AS customer_name,
                     cust.email AS customer_email
              FROM promo_redemptions r
-             LEFT JOIN orders o ON o.id = r.order_id
+             JOIN orders o ON o.id = r.order_id
              LEFT JOIN users cust ON cust.id = r.user_id
              WHERE r.promo_code_id = ?
+               AND o.status NOT IN ('pending_payment', 'cancelled', 'failed')
              ORDER BY r.redeemed_at DESC
              LIMIT ? OFFSET ?",
             [$couponId, $perPage, $offset]
@@ -212,12 +226,17 @@ final class VendorCouponAnalyticsController
         $limit = max(1, min(50, (int) ($q['limit'] ?? 5)));
         $sortBy = ((string) ($q['sort_by'] ?? 'uses')) === 'discount' ? 'discount' : 'uses';
 
+        // Paid usage only: the orders join carries the status filter, and we count
+        // o.id (NULL for non-paid / no redemption) so pending/cancelled/failed
+        // redemptions don't inflate the ranking. LEFT JOINs keep zero-use coupons.
         $rows = $conn->fetchAllAssociative(
             "SELECT pc.id, pc.code, pc.name,
-                    COUNT(r.id) AS uses,
-                    COALESCE(SUM(r.discount_amount), 0) AS discount
+                    COUNT(o.id) AS uses,
+                    COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN r.discount_amount ELSE 0 END), 0) AS discount
              FROM promo_codes pc
              LEFT JOIN promo_redemptions r ON r.promo_code_id = pc.id
+             LEFT JOIN orders o ON o.id = r.order_id
+               AND o.status NOT IN ('pending_payment', 'cancelled', 'failed')
              WHERE pc.vendor_id = ?
              GROUP BY pc.id, pc.code, pc.name
              ORDER BY {$sortBy} DESC
@@ -234,11 +253,15 @@ final class VendorCouponAnalyticsController
         ], $rows);
     }
 
-    /** Current redemption count for this coupon (live counter). */
+    /** Current PAID redemption count for this coupon (live counter). */
     private function liveCount(Connection $conn, int $couponId): int
     {
         return (int) $conn->fetchOne(
-            'SELECT COUNT(*) FROM promo_redemptions WHERE promo_code_id = ?',
+            "SELECT COUNT(*)
+             FROM promo_redemptions r
+             JOIN orders o ON o.id = r.order_id
+             WHERE r.promo_code_id = ?
+               AND o.status NOT IN ('pending_payment', 'cancelled', 'failed')",
             [$couponId]
         );
     }

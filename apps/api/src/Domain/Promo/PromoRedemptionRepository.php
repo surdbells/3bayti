@@ -48,6 +48,20 @@ class PromoRedemptionRepository extends EntityRepository
     ];
 
     /**
+     * Order statuses excluded from REPORTED usage ("used" counts + analytics):
+     * a code only counts as used when it landed on a PAID order. Unlike the
+     * effective-count set above, this ALSO excludes pending_payment — a
+     * checkout that never paid isn't a real use. Refunded stays counted (it was
+     * paid, then reversed). See paidCountByPromoCodeId / the analytics
+     * controllers.
+     */
+    public const STATUSES_EXCLUDED_FROM_PAID_USAGE = [
+        Order::STATUS_PENDING_PAYMENT,
+        Order::STATUS_CANCELLED,
+        Order::STATUS_FAILED,
+    ];
+
+    /**
      * Persist a redemption row. Called from inside the checkout EM
      * transaction in M3.2.X.8-D; the caller flushes once at the end
      * of the transaction along with the Order and PaymentTransaction,
@@ -128,16 +142,34 @@ class PromoRedemptionRepository extends EntityRepository
     }
 
     /**
-     * Gross redemption counts for many promo codes in ONE grouped query, keyed
-     * by promo_code_id. Backs the admin list "Used" column without an N+1 count
-     * per row. Gross = all redemptions (same definition as
-     * countByPromoCodeIdGross). Ids with no redemptions are simply absent from
-     * the map (caller defaults them to 0).
+     * PAID redemption count for a code — the reporting figure for "how many
+     * times was this code actually used on a paid order". Excludes
+     * pending_payment / cancelled / failed orders
+     * (STATUSES_EXCLUDED_FROM_PAID_USAGE). Used by the admin single-code display.
+     */
+    public function paidCountByPromoCodeId(int $promoCodeId): int
+    {
+        return (int) $this->createQueryBuilder('r')
+            ->select('COUNT(r.id)')
+            ->innerJoin('r.order', 'o')
+            ->where('r.promoCode = :pid')
+            ->andWhere('o.status NOT IN (:excluded)')
+            ->setParameter('pid', $promoCodeId)
+            ->setParameter('excluded', self::STATUSES_EXCLUDED_FROM_PAID_USAGE)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Paid redemption counts for many codes in ONE grouped query, keyed by
+     * promo_code_id — same paid-only definition as paidCountByPromoCodeId.
+     * Backs the admin list "Used" column with no N+1. Ids with no paid
+     * redemptions are absent from the map (caller defaults them to 0).
      *
      * @param list<int> $promoCodeIds
      * @return array<int, int>
      */
-    public function grossCountsByPromoCodeIds(array $promoCodeIds): array
+    public function paidCountsByPromoCodeIds(array $promoCodeIds): array
     {
         if ($promoCodeIds === []) {
             return [];
@@ -146,8 +178,11 @@ class PromoRedemptionRepository extends EntityRepository
         /** @var list<array{pid: int|string, cnt: int|string}> $rows */
         $rows = $this->createQueryBuilder('r')
             ->select('IDENTITY(r.promoCode) AS pid', 'COUNT(r.id) AS cnt')
+            ->innerJoin('r.order', 'o')
             ->where('r.promoCode IN (:ids)')
+            ->andWhere('o.status NOT IN (:excluded)')
             ->setParameter('ids', $promoCodeIds)
+            ->setParameter('excluded', self::STATUSES_EXCLUDED_FROM_PAID_USAGE)
             ->groupBy('r.promoCode')
             ->getQuery()
             ->getScalarResult();

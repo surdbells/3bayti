@@ -23,11 +23,11 @@ use Psr\Http\Message\ServerRequestInterface;
  * GET /v3/admin/promo-codes/{id}
  *
  * Returns a single promo code with its redemption count attached.
- * The count is the GROSS figure (including redemptions tied to
- * cancelled / failed orders), operationally meaningful for "how
- * many times has this code been used" reports. The effective count
- * (used by the resolver's limit enforcement) is documented in
- * PromoRedemptionRepository.
+ * The count is the PAID figure: redemptions on paid orders only
+ * (pending_payment / cancelled / failed excluded), so "how many
+ * times has this code been used" reflects real, paid usage. The
+ * effective count (used by the resolver's limit enforcement, which
+ * DOES count pending) is documented in PromoRedemptionRepository.
  *
  * Failure modes:
  *   - Non-numeric id → 404
@@ -82,7 +82,7 @@ final class GetPromoCodeController
 
         /** @var PromoRedemptionRepository $redemptionRepo */
         $redemptionRepo = $this->em->getRepository(PromoRedemption::class);
-        $count = $redemptionRepo->countByPromoCodeIdGross($id);
+        $count = $redemptionRepo->paidCountByPromoCodeId($id);
 
         return $this->ok([
             'data' => $this->serializer->adminShapeWithCount($promo, $count),

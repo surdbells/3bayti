@@ -90,24 +90,30 @@ final class GetPromoCodeAnalyticsController
         ]);
     }
 
-    /** This code's lifetime totals. */
+    /**
+     * This code's lifetime totals. Scoped to PAID orders only — a redemption on
+     * a pending / cancelled / failed order isn't counted usage.
+     */
     private function couponStats(Connection $conn, int $couponId): array
     {
         $row = $conn->fetchAssociative(
-            'SELECT
-                COUNT(*)                          AS total_uses,
-                COALESCE(SUM(discount_amount), 0) AS total_discount_given,
-                COUNT(DISTINCT user_id)           AS unique_customers
-             FROM promo_redemptions
-             WHERE promo_code_id = ?',
+            "SELECT
+                COUNT(*)                            AS total_uses,
+                COALESCE(SUM(r.discount_amount), 0) AS total_discount_given,
+                COUNT(DISTINCT r.user_id)           AS unique_customers
+             FROM promo_redemptions r
+             JOIN orders o ON o.id = r.order_id
+             WHERE r.promo_code_id = ?
+               AND o.status NOT IN ('pending_payment', 'cancelled', 'failed')",
             [$couponId],
         ) ?: [];
 
         $revenue = $conn->fetchOne(
-            'SELECT COALESCE(SUM(o.total), 0)
+            "SELECT COALESCE(SUM(o.total), 0)
              FROM promo_redemptions r
              JOIN orders o ON o.id = r.order_id
-             WHERE r.promo_code_id = ?',
+             WHERE r.promo_code_id = ?
+               AND o.status NOT IN ('pending_payment', 'cancelled', 'failed')",
             [$couponId],
         );
 
@@ -119,17 +125,19 @@ final class GetPromoCodeAnalyticsController
         ];
     }
 
-    /** Daily redemption counts + discount for the last N days (default 30). */
+    /** Daily PAID redemption counts + discount for the last N days (default 30). */
     private function usageOverTime(Connection $conn, int $couponId, ServerRequestInterface $request): array
     {
         $daysBack = max(1, min(365, (int) ($request->getQueryParams()['days_back'] ?? 30)));
         $rows = $conn->fetchAllAssociative(
-            "SELECT to_char(date_trunc('day', redeemed_at), 'YYYY-MM-DD') AS day,
+            "SELECT to_char(date_trunc('day', r.redeemed_at), 'YYYY-MM-DD') AS day,
                     COUNT(*) AS uses,
-                    COALESCE(SUM(discount_amount), 0) AS discount
-             FROM promo_redemptions
-             WHERE promo_code_id = ?
-               AND redeemed_at >= (NOW() - (? || ' days')::interval)
+                    COALESCE(SUM(r.discount_amount), 0) AS discount
+             FROM promo_redemptions r
+             JOIN orders o ON o.id = r.order_id
+             WHERE r.promo_code_id = ?
+               AND o.status NOT IN ('pending_payment', 'cancelled', 'failed')
+               AND r.redeemed_at >= (NOW() - (? || ' days')::interval)
              GROUP BY 1 ORDER BY 1 ASC",
             [$couponId, $daysBack],
         );
@@ -148,8 +156,13 @@ final class GetPromoCodeAnalyticsController
         $perPage = max(1, min(100, (int) ($q['per_page'] ?? 20)));
         $offset = ($page - 1) * $perPage;
 
+        // Paid redemptions only — the log mirrors the "used" counts.
         $total = (int) $conn->fetchOne(
-            'SELECT COUNT(*) FROM promo_redemptions WHERE promo_code_id = ?',
+            "SELECT COUNT(*)
+             FROM promo_redemptions r
+             JOIN orders o ON o.id = r.order_id
+             WHERE r.promo_code_id = ?
+               AND o.status NOT IN ('pending_payment', 'cancelled', 'failed')",
             [$couponId],
         );
 
@@ -164,9 +177,10 @@ final class GetPromoCodeAnalyticsController
                     NULLIF(TRIM(CONCAT(COALESCE(cust.first_name, ''), ' ', COALESCE(cust.last_name, ''))), '') AS customer_name,
                     cust.email AS customer_email
              FROM promo_redemptions r
-             LEFT JOIN orders o ON o.id = r.order_id
+             JOIN orders o ON o.id = r.order_id
              LEFT JOIN users cust ON cust.id = r.user_id
              WHERE r.promo_code_id = ?
+               AND o.status NOT IN ('pending_payment', 'cancelled', 'failed')
              ORDER BY r.redeemed_at DESC
              LIMIT ? OFFSET ?",
             [$couponId, $perPage, $offset],

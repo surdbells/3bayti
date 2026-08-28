@@ -250,9 +250,11 @@ final class PromoCodeAdminControllersTest extends HttpTestCase
         $promoRepo = $this->createMock(PromoCodeRepository::class);
         $promoRepo->method('find')->with(7)->willReturn($promo);
 
+        // The single-code display shows PAID usage (paidCountByPromoCodeId),
+        // not the gross figure — pending/cancelled/failed orders don't count.
         $redemptionRepo = $this->createMock(PromoRedemptionRepository::class);
         $redemptionRepo->expects(self::once())
-            ->method('countByPromoCodeIdGross')
+            ->method('paidCountByPromoCodeId')
             ->with(7)
             ->willReturn(42);
 
