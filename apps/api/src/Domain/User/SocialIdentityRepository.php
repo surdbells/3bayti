@@ -61,4 +61,29 @@ class SocialIdentityRepository extends EntityRepository
             $em->flush();
         }
     }
+
+    /**
+     * Move every social identity from one user to another (account merge).
+     *
+     * A bulk DQL UPDATE rather than an entity mutator: SocialIdentity has no
+     * setUser() by design (identities aren't casually reassigned), and this is
+     * the single sanctioned path. The UNIQUE(provider, provider_uid) constraint
+     * is unaffected — only user_id changes — so moving the source's identities
+     * onto the target can't collide (the target never held those provider/uid
+     * pairs). Returns the number of rows moved.
+     *
+     * Bulk updates bypass the UnitOfWork, so run this inside the merge
+     * transaction and don't rely on already-loaded identity collections
+     * afterwards.
+     */
+    public function reassignToUser(int $fromUserId, int $toUserId): int
+    {
+        $em = $this->getEntityManager();
+        return (int) $em->createQuery(
+            'UPDATE ' . SocialIdentity::class . ' s SET s.user = :to WHERE s.user = :from',
+        )
+            ->setParameter('to', $em->getReference(User::class, $toUserId))
+            ->setParameter('from', $em->getReference(User::class, $fromUserId))
+            ->execute();
+    }
 }

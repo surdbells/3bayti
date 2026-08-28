@@ -228,6 +228,14 @@ return function (App $app): void {
         // Primary use case: users who signed up via Google/Apple adding a phone.
         $group->post('/phone', \Bayti\Api\Http\Controllers\Me\SetPhoneController::class);
         $group->post('/phone/verify', \Bayti\Api\Http\Controllers\Me\VerifyPhoneController::class);
+        //   POST /phone/claim         phone belongs to an existing account →
+        //                             OTP it (purpose account_link)
+        //   POST /phone/claim/verify  confirm OTP → absorb the social identity
+        //                             into that account + log into it
+        // Recovers the phone-after-social wall for migrated customers whose real
+        // number already belongs to their pre-existing account.
+        $group->post('/phone/claim', \Bayti\Api\Http\Controllers\Me\ClaimPhoneController::class);
+        $group->post('/phone/claim/verify', \Bayti\Api\Http\Controllers\Me\ClaimPhoneVerifyController::class);
 
         // M3.2.Y.6-A, account deletion (authenticated, re-auth via
         // current_password). Deactivates + soft-deletes the user and

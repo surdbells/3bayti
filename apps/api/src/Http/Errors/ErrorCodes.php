@@ -96,6 +96,15 @@ final class ErrorCodes
     /** A uniquely-named resource with that name already exists. */
     public const CONFLICT_DUPLICATE = 'CONFLICT_DUPLICATE';
 
+    /**
+     * Account-link (POST /me/phone/claim): the phone doesn't map to a single
+     * existing account that can be linked — either no other account owns it,
+     * or (the legacy shared-number case) more than one active account does, so
+     * we can't safely pick one. Client should route the user to support.
+     */
+    public const PHONE_LINK_NO_ACCOUNT = 'PHONE_LINK_NO_ACCOUNT';
+    public const PHONE_LINK_AMBIGUOUS = 'PHONE_LINK_AMBIGUOUS';
+
     // -------------------------------------------------------------------
     // GENERIC
     // -------------------------------------------------------------------

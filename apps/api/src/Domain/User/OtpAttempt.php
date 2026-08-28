@@ -61,12 +61,21 @@ class OtpAttempt
     public const PURPOSE_PASSWORD_RESET = 'password_reset';
     public const PURPOSE_PHONE_CHANGE = 'phone_change';
     public const PURPOSE_LOGIN_2FA = 'login_2fa';
+    /**
+     * Account link/merge: a social sign-in proves control of a phone that
+     * already belongs to an EXISTING account, so that account absorbs the
+     * social identity. Distinct from PHONE_CHANGE so a "change my phone" OTP
+     * can never be replayed to trigger an account merge. See
+     * ClaimPhoneController / ClaimPhoneVerifyController.
+     */
+    public const PURPOSE_ACCOUNT_LINK = 'account_link';
 
     public const ALL_PURPOSES = [
         self::PURPOSE_REGISTRATION,
         self::PURPOSE_PASSWORD_RESET,
         self::PURPOSE_PHONE_CHANGE,
         self::PURPOSE_LOGIN_2FA,
+        self::PURPOSE_ACCOUNT_LINK,
     ];
 
     /**

@@ -99,6 +99,13 @@ export class LoginPage implements OnInit, OnDestroy {
      * Preferences round-trip on each tap.
      */
     private socialAuthToken = '';
+    /**
+     * True once the entered phone was found to already belong to an existing
+     * account: the OTP step then runs the LINK/merge endpoints
+     * (POST /me/phone/claim[/verify]) instead of the plain add-phone ones, and
+     * success logs the user into that existing account.
+     */
+    socialLinkMode = false;
     /** Phone the social user is verifying (separate model from login `phone`). */
     socialPhone = '';
 
@@ -676,6 +683,7 @@ export class LoginPage implements OnInit, OnDestroy {
       this.show_error(this.i18n.t('text_phone_required'));
       return;
     }
+    this.socialLinkMode = false;
     this.ui_controls.login_loading = true;
     this.networkAdapter.post_v3(
       'POST /me/phone',
@@ -695,6 +703,43 @@ export class LoginPage implements OnInit, OnDestroy {
           this.view = 'social-otp';
           this.startResendCooldown();
           this.success_notification(this.i18n.t('text_otp_sent'));
+        } else if (response?.error_code === 'CONFLICT_PHONE_TAKEN') {
+          // The number already belongs to an existing (usually migrated)
+          // account. Instead of a dead end, offer to prove ownership and link
+          // this social identity into that account.
+          this.startSocialClaim();
+        } else {
+          this.handleOtpError(response);
+        }
+      },
+      error: (e) => this.handleHttpError(e),
+    });
+  }
+
+  /**
+   * The entered number belongs to an existing account. Send a code to it
+   * (POST /me/phone/claim); on verify we absorb this social identity into that
+   * account and sign in as it. Distinct dedicated OTP purpose server-side.
+   */
+  private startSocialClaim(): void {
+    this.ui_controls.login_loading = true;
+    this.networkAdapter.post_v3(
+      'POST /me/phone/claim',
+      { phone: this.fullSocialPhone, country_code: mapDialToIso(this.countryCode) },
+      { authToken: this.socialAuthToken },
+    ).subscribe({
+      next: (response: any) => {
+        this.ui_controls.login_loading = false;
+        if (response.response_code === 200 && response.status === 'success') {
+          this.socialLinkMode = true;
+          this.verificationId = response.data?.verification_id ?? '';
+          this.otp.code = '';
+          this.view = 'social-otp';
+          this.startResendCooldown();
+          this.success_notification(this.i18n.t('text_phone_link_notice'));
+        } else if (response?.error_code === 'PHONE_LINK_AMBIGUOUS') {
+          // Number shared by several accounts, can't safely pick one.
+          this.show_error(this.i18n.t('text_phone_link_ambiguous'));
         } else {
           this.handleOtpError(response);
         }
@@ -710,8 +755,11 @@ export class LoginPage implements OnInit, OnDestroy {
       return;
     }
     this.ui_controls.login_loading = true;
+    // Link mode absorbs the identity into the existing account (returns a full
+    // login envelope for THAT account); plain mode just verifies the new phone.
+    const route = this.socialLinkMode ? 'POST /me/phone/claim/verify' : 'POST /me/phone/verify';
     this.networkAdapter.post_v3(
-      'POST /me/phone/verify',
+      route,
       // verification_id is required by the API; strip any spaces the OTP
       // field may carry so the code matches the server's ^\d{4,6}$ rule.
       { verification_id: this.verificationId, code: this.otp.code.replace(/\D/g, '') },
@@ -720,10 +768,18 @@ export class LoginPage implements OnInit, OnDestroy {
       next: (response: any) => {
         this.ui_controls.login_loading = false;
         if (response.response_code === 200 && response.status === 'success') {
-          // Phone now verified, flip the cached flag and continue home,
-          // reusing the shared post-auth navigation (cart merge already ran
-          // at social login; keep it idempotent + non-blocking).
-          this.finishSocialGate();
+          if (this.socialLinkMode) {
+            // Merge succeeded: response.data is a login envelope for the
+            // EXISTING account. Swap the session to it via the shared post-auth
+            // block (its phone is already verified → normal success path).
+            this.clearOtpTimer();
+            this.onLoginSuccess(response.data);
+          } else {
+            // Phone now verified, flip the cached flag and continue home,
+            // reusing the shared post-auth navigation (cart merge already ran
+            // at social login; keep it idempotent + non-blocking).
+            this.finishSocialGate();
+          }
         } else {
           this.handleOtpError(response);
         }
@@ -732,15 +788,20 @@ export class LoginPage implements OnInit, OnDestroy {
     });
   }
 
-  /** Re-send the social-gate OTP (re-call POST /me/phone). */
+  /** Re-send the social-gate OTP (re-call the claim or the add-phone send). */
   resendSocialPhoneOtp(): void {
     if (this.otpCooldown > 0) return;
-    this.sendSocialPhone();
+    if (this.socialLinkMode) {
+      this.startSocialClaim();
+    } else {
+      this.sendSocialPhone();
+    }
   }
 
   /** Back from the social OTP screen to the phone-entry screen. */
   changeSocialPhone(): void {
     this.view = 'social-phone';
+    this.socialLinkMode = false;
     this.otp.code = '';
     this.clearOtpTimer();
     this.otpCooldown = 0;

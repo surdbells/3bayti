@@ -711,6 +711,18 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/phone/verify',
     shape: 'v3-envelope',
   },
+  'POST /me/phone/claim': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/phone/claim',
+    shape: 'v3-envelope',
+  },
+  'POST /me/phone/claim/verify': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/phone/claim/verify',
+    shape: 'v3-envelope',
+  },
   'POST /auth/logout': {
     target: 'new',
     oldPath: '',

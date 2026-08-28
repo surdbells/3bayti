@@ -83,6 +83,34 @@ class UserRepository extends EntityRepository
     }
 
     /**
+     * All ACTIVE (non-deleted) users whose phone matches, up to $limit. Used by
+     * the account-link flow to decide whether a phone uniquely identifies one
+     * existing account (link) vs several (the legacy shared-number case, refuse)
+     * vs none. Reuses phoneMatchCandidates so legacy local-format numbers match
+     * the E.164 the app sends.
+     *
+     * @return list<User>
+     */
+    public function findActiveOwnersByPhone(string $phone, int $limit = 5): array
+    {
+        $candidates = self::phoneMatchCandidates($phone);
+        if ($candidates === []) {
+            return [];
+        }
+
+        /** @var list<User> */
+        return $this->createQueryBuilder('u')
+            ->where('u.phone IN (:phones)')
+            ->andWhere('u.deletedAt IS NULL')
+            ->andWhere('u.isActive = true')
+            ->setParameter('phones', $candidates)
+            ->orderBy('u.phone', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * Every plausible stored shape of a phone number, so a lookup matches
      * whether it was saved as E.164 ('+971506995999'), with the country code
      * but no '+', or as a local number with/without a leading zero. Bare

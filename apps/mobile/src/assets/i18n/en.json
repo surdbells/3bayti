@@ -126,6 +126,8 @@
   "text_otp_provider_error": "Could not send verification code right now. Please try again in a moment.",
   "text_email_already_registered": "That email address is already registered.",
   "text_phone_already_registered": "That phone number is already registered.",
+  "text_phone_link_notice": "This number belongs to an existing account. Enter the code we sent to verify and sign in to it.",
+  "text_phone_link_ambiguous": "This number is linked to more than one account, so we can't sign you in automatically. Please contact support.",
   "otp_sent_to": "We sent a verification code to",
   "otp_sent_to_email": "We sent a verification code to the phone linked to",
   "new_password": "New password",
