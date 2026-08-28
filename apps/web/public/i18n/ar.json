@@ -557,6 +557,7 @@
     },
     "detail": {
       "productsHeading": "المجموعة",
+      "allLabel": "الكل",
       "loadMore": "تحميل المزيد",
       "emptyProducts": "لم يُدرج هذا المتجر أي قطع بعد.",
       "notFoundTitle": "المتجر غير موجود",

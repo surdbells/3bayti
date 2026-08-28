@@ -7,6 +7,7 @@ import type {
   StoreListParams,
   StoreReview,
   StoreReviewsPage,
+  VendorLabel,
 } from './store.model';
 import type { Product, StoreSizeChartRow } from './product.model';
 import type { FeaturedVendor } from './store-card';
@@ -119,20 +120,44 @@ export class StoreService {
     return env.data;
   }
 
+  /**
+   * A store's merchandising labels (collections) for the chip filter.
+   * Stateless. Returns [] on any failure so the detail page degrades to
+   * "no chips" rather than breaking the whole store view.
+   */
+  async listLabels(slug: string): Promise<VendorLabel[]> {
+    const env = await firstValueFrom(
+      this.http.get<VendorLabel[]>('GET /vendors/:slug/labels', {
+        params: { slug },
+      }),
+    );
+    return Array.isArray(env.data) ? env.data : [];
+  }
+
   /** A page of a store's products. Stateless, the detail page
-   *  owns the accumulator. */
+   *  owns the accumulator. When `params.label` is set the fetch is
+   *  narrowed to that collection via the generic /products endpoint
+   *  (?vendor=&label=), which the plain vendor-products list can't do. */
   async listProducts(
     slug: string,
     params: StoreListParams = {},
   ): Promise<StoreProductsPage> {
     const limit = params.limit ?? DESIGNER_PAGE_SIZE;
     const offset = params.offset ?? 0;
-    const env = await firstValueFrom(
-      this.http.get<Product[]>('GET /vendors/:slug/products', {
-        params: { slug },
-        query: { limit, offset },
-      }),
-    );
+    const label = params.label?.trim() || '';
+
+    const env = label
+      ? await firstValueFrom(
+          this.http.get<Product[]>('GET /products', {
+            query: { vendor: slug, label, limit, offset },
+          }),
+        )
+      : await firstValueFrom(
+          this.http.get<Product[]>('GET /vendors/:slug/products', {
+            params: { slug },
+            query: { limit, offset },
+          }),
+        );
     return {
       items: Array.isArray(env.data) ? env.data : [],
       hasMore: env.meta?.has_more ?? false,

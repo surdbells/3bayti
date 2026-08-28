@@ -52,6 +52,27 @@ export interface DirectoryStore extends FeaturedVendor {
 export interface StoreListParams {
   limit?: number;
   offset?: number;
+  /**
+   * Optional label (collection) slug to filter a store's products by, the
+   * storefront chip filter. When set, the product fetch routes through the
+   * generic /products endpoint (?vendor=&label=) instead of the plain
+   * vendor-products list. Absent/empty = the store's full catalogue.
+   */
+  label?: string;
+}
+
+/**
+ * A store's merchandising collection ("label"), mirrors
+ * VendorLabelSerializer::publicShape from GET /v3/vendors/{slug}/labels.
+ * Rendered as filter chips above the product grid on the store detail page.
+ */
+export interface VendorLabel {
+  id: number;
+  slug: string;
+  name: string;
+  display_order: number | null;
+  /** Active-product count in this collection, shown as a chip badge. */
+  count: number;
 }
 
 /**

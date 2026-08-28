@@ -285,6 +285,18 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/vendors/:slug/products',
     shape: 'v3-envelope',
   },
+  // PUBLIC store labels (merchandising collections) by SLUG, the web
+  // storefront's chip filter above a store's product grid. Slug-native
+  // sibling of the mobile 'GET /mobile/store-labels' entry; both hit
+  // ListVendorLabelsController and return
+  // { data:[{id,slug,name,display_order,count}], meta:{total} }.
+  // v3-only; no legacy path.
+  'GET /vendors/:slug/labels': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/vendors/:slug/labels',
+    shape: 'v3-envelope',
+  },
   // PUBLIC store size guide by SLUG (web PDP size-guide modal). Slug-native
   // sibling of the mobile 'GET /vendors/:vendorId/size-chart' (legacy-id)
   // entry. Both return the canonical

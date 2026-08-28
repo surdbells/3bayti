@@ -10,7 +10,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ProductCardComponent } from '../catalog/product-card';
 import { StoreService, DESIGNER_PAGE_SIZE } from '../catalog/store.service';
-import type { Store } from '../catalog/store.model';
+import type { Store, VendorLabel } from '../catalog/store.model';
 import type { Product } from '../catalog/product.model';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
@@ -105,6 +105,35 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
                 {{ 'stores.detail.productsHeading' | translate }}
               </h2>
 
+              <!-- Collection filter chips (labels), mirrors the mobile
+                   vendor storefront. Hidden when the store has no labels. -->
+              <div
+                *ngIf="labels().length > 0"
+                class="store-detail__labels"
+                data-testid="store-labels"
+              >
+                <button
+                  type="button"
+                  class="store-detail__label-chip"
+                  [class.store-detail__label-chip--active]="activeLabel() === null"
+                  [attr.aria-pressed]="activeLabel() === null"
+                  (click)="selectLabel(null)"
+                >
+                  {{ 'stores.detail.allLabel' | translate }}
+                </button>
+                <button
+                  *ngFor="let l of labels(); trackBy: trackLabel"
+                  type="button"
+                  class="store-detail__label-chip"
+                  [class.store-detail__label-chip--active]="activeLabel() === l.slug"
+                  [attr.aria-pressed]="activeLabel() === l.slug"
+                  (click)="selectLabel(l.slug)"
+                >
+                  {{ l.name }}
+                  <span class="store-detail__label-count">{{ l.count }}</span>
+                </button>
+              </div>
+
               <ng-container *ngIf="products().length > 0; else emptyOrLoadingProducts">
                 <div class="store-detail__grid" data-testid="store-product-grid">
                   <ui-product-card
@@ -188,6 +217,14 @@ export class StoreDetailPageComponent implements OnInit {
   private readonly _isLoadingProducts = signal<boolean>(false);
   protected readonly isLoadingProducts = this._isLoadingProducts.asReadonly();
 
+  /** The store's collection labels (chips). Empty when the store has none. */
+  private readonly _labels = signal<VendorLabel[]>([]);
+  protected readonly labels = this._labels.asReadonly();
+
+  /** Currently selected label slug, or null for "All". */
+  private readonly _activeLabel = signal<string | null>(null);
+  protected readonly activeLabel = this._activeLabel.asReadonly();
+
   private slug = '';
 
   async ngOnInit(): Promise<void> {
@@ -206,7 +243,26 @@ export class StoreDetailPageComponent implements OnInit {
       return;
     }
 
-    /* Store loaded, fetch the first page of their collection. */
+    /* Store loaded, fetch the first page of their collection + the label
+       chips. Labels are best-effort (a failure just hides the chip row). */
+    await Promise.all([this.onLoadMoreProducts(), this.loadLabels()]);
+  }
+
+  private async loadLabels(): Promise<void> {
+    try {
+      this._labels.set(await this.storeService.listLabels(this.slug));
+    } catch {
+      /* No chips rather than a broken page. */
+      this._labels.set([]);
+    }
+  }
+
+  /** Switch the active collection filter and reload the grid from page 0. */
+  protected async selectLabel(slug: string | null): Promise<void> {
+    if (this._activeLabel() === slug) return;
+    this._activeLabel.set(slug);
+    this._products.set([]);
+    this._productsHasMore.set(false);
     await this.onLoadMoreProducts();
   }
 
@@ -217,6 +273,7 @@ export class StoreDetailPageComponent implements OnInit {
       const page = await this.storeService.listProducts(this.slug, {
         limit: DESIGNER_PAGE_SIZE,
         offset: this._products().length,
+        label: this._activeLabel() ?? undefined,
       });
       this._products.set([...this._products(), ...page.items]);
       this._productsHasMore.set(page.hasMore);
@@ -229,5 +286,9 @@ export class StoreDetailPageComponent implements OnInit {
 
   protected trackById(_idx: number, p: { id: number }): number {
     return p.id;
+  }
+
+  protected trackLabel(_idx: number, l: VendorLabel): number {
+    return l.id;
   }
 }

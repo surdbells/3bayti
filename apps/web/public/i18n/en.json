@@ -557,6 +557,7 @@
     },
     "detail": {
       "productsHeading": "Collection",
+      "allLabel": "All",
       "loadMore": "Load more",
       "emptyProducts": "This store hasn't listed any pieces yet.",
       "notFoundTitle": "Store not found",

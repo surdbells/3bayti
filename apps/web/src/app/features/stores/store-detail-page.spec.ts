@@ -8,7 +8,7 @@ import { StoreDetailPageComponent } from './store-detail-page';
 import { StoreService } from '../catalog/store.service';
 import type { StoreProductsPage } from '../catalog/store.service';
 import { provideI18n } from '../../core/i18n';
-import type { Store } from '../catalog/store.model';
+import type { Store, VendorLabel } from '../catalog/store.model';
 import type { Product } from '../catalog/product.model';
 
 function makeStore(o: Partial<Store> = {}): Store {
@@ -27,6 +27,10 @@ function makeProduct(o: Partial<Product> = {}): Product {
   } as Product;
 }
 
+function makeLabel(o: Partial<VendorLabel> = {}): VendorLabel {
+  return { id: 1, slug: 'eid', name: 'Eid Collection', display_order: 1, count: 3, ...o };
+}
+
 class StubStoreService {
   isLoadingList = signal(false).asReadonly();
   directory = signal<Store[]>([]).asReadonly();
@@ -34,8 +38,12 @@ class StubStoreService {
 
   getBySlugCalls: string[] = [];
   listProductsCalls: Array<{ slug: string; offset: number }> = [];
+  /** Label slug passed to each listProducts call (undefined = All). */
+  productLabelCalls: Array<string | undefined> = [];
+  listLabelsCalls: string[] = [];
   storeResult: Store = makeStore();
   productPages: StoreProductsPage[] = [{ items: [], hasMore: false }];
+  labelResult: VendorLabel[] = [];
   private pageIdx = 0;
   getThrows = false;
   listThrows = false;
@@ -45,12 +53,20 @@ class StubStoreService {
     if (this.getThrows) throw new Error('not found');
     return this.storeResult;
   }
-  async listProducts(slug: string, params: { limit?: number; offset?: number } = {}): Promise<StoreProductsPage> {
+  async listProducts(
+    slug: string,
+    params: { limit?: number; offset?: number; label?: string } = {},
+  ): Promise<StoreProductsPage> {
     this.listProductsCalls.push({ slug, offset: params.offset ?? 0 });
+    this.productLabelCalls.push(params.label);
     if (this.listThrows) throw new Error('products failed');
     const page = this.productPages[Math.min(this.pageIdx, this.productPages.length - 1)];
     this.pageIdx++;
     return page;
+  }
+  async listLabels(slug: string): Promise<VendorLabel[]> {
+    this.listLabelsCalls.push(slug);
+    return this.labelResult;
   }
 }
 
@@ -58,6 +74,7 @@ function setup(opts: {
   slug?: string | null;
   store?: Store;
   productPages?: StoreProductsPage[];
+  labels?: VendorLabel[];
   getThrows?: boolean;
   listThrows?: boolean;
 } = {}): {
@@ -67,6 +84,7 @@ function setup(opts: {
   const service = new StubStoreService();
   if (opts.store !== undefined) service.storeResult = opts.store;
   if (opts.productPages !== undefined) service.productPages = opts.productPages;
+  if (opts.labels !== undefined) service.labelResult = opts.labels;
   if (opts.getThrows === true) service.getThrows = true;
   if (opts.listThrows === true) service.listThrows = true;
 
@@ -208,6 +226,57 @@ describe('StoreDetailPageComponent', () => {
       expect(fixture.nativeElement.querySelectorAll('ui-product-card')).toHaveLength(2);
       /* Button gone now that hasMore is false. */
       expect(fixture.nativeElement.querySelector('[data-testid="store-products-load-more"]')).toBeNull();
+    });
+  });
+
+  describe('collection labels (chips)', () => {
+    it('omits the chip row when the store has no labels', async () => {
+      const { fixture } = setup({ productPages: [{ items: [makeProduct()], hasMore: false }] });
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="store-labels"]')).toBeNull();
+    });
+
+    it('renders an "All" chip plus one chip per label with its count', async () => {
+      const { fixture } = setup({
+        productPages: [{ items: [makeProduct()], hasMore: false }],
+        labels: [makeLabel({ id: 1, slug: 'eid', name: 'Eid', count: 4 }), makeLabel({ id: 2, slug: 'new-in', name: 'New In', count: 7 })],
+      });
+      await flush();
+      fixture.detectChanges();
+      const chips = fixture.nativeElement.querySelectorAll('.store-detail__label-chip');
+      /* All + 2 labels. */
+      expect(chips).toHaveLength(3);
+      expect(fixture.nativeElement.textContent).toContain('Eid');
+      expect(fixture.nativeElement.textContent).toContain('New In');
+      /* Count badges rendered. */
+      const badges = fixture.nativeElement.querySelectorAll('.store-detail__label-count');
+      expect(badges).toHaveLength(2);
+      expect(badges[0].textContent).toContain('4');
+    });
+
+    it('selecting a label refetches the grid filtered by that label slug', async () => {
+      const { fixture, service } = setup({
+        productPages: [{ items: [makeProduct()], hasMore: false }],
+        labels: [makeLabel({ id: 1, slug: 'eid', name: 'Eid', count: 4 })],
+      });
+      await flush();
+      fixture.detectChanges();
+      /* Initial load was the unfiltered ("All") page. */
+      expect(service.productLabelCalls).toEqual([undefined]);
+
+      /* Click the label chip (index 1; index 0 is "All"). */
+      const chips = fixture.nativeElement.querySelectorAll('.store-detail__label-chip') as NodeListOf<HTMLButtonElement>;
+      chips[1].click();
+      await flush();
+      fixture.detectChanges();
+
+      /* Refetched from offset 0 with the label filter. */
+      expect(service.productLabelCalls).toEqual([undefined, 'eid']);
+      expect(service.listProductsCalls[1]).toEqual({ slug: 'acme', offset: 0 });
+      /* The clicked chip is now the active one. */
+      const active = fixture.nativeElement.querySelector('.store-detail__label-chip--active');
+      expect(active?.textContent).toContain('Eid');
     });
   });
 
