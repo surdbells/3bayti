@@ -4,7 +4,7 @@ import { BehaviorSubject } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { PermissionService } from '../../services/permission.service';
-import { SALES_STATUSES } from '../../backend/shared/order-filters';
+import { ACTIVE_ORDER_STATUS_VALUE } from '../../backend/shared/order-filters';
 
 /**
  * Feeds the sidenav "new items" count badges.
@@ -93,9 +93,12 @@ export class NavBadgeService {
       return;
     }
     const since = localStorage.getItem(NavBadgeService.SALES_SEEN_KEY) ?? new Date().toISOString();
+    // Count only ACTIVE orders (paid/fulfilling/shipped/delivered/refunded),
+    // the same set as the table's default "Active" chip, so the badge never
+    // counts pending-payment, cancelled or failed orders the page won't show.
     this.adapter
       .get_v3('GET /admin/orders', {
-        query: { since, status: SALES_STATUSES.join(','), limit: 1 },
+        query: { since, status: ACTIVE_ORDER_STATUS_VALUE, limit: 1 },
       })
       .subscribe({
         next: (res: any) => this.sales$.next(this.readTotal(res)),
