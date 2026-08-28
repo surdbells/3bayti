@@ -814,6 +814,9 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\User\ListUsersController::class)->add($perm->for('users.view'));
         $group->get('/users/{id:[0-9]+}',
             \Bayti\Api\Http\Controllers\Admin\User\GetUserController::class)->add($perm->for('users.view'));
+        // Admin support-edit of a user's contact details (name/email/phone).
+        $group->put('/users/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\User\UpdateUserController::class)->add($perm->for('users.edit'));
         $group->post('/users/{id:[0-9]+}/activate',
             \Bayti\Api\Http\Controllers\Admin\User\ActivateUserController::class)->add($perm->for('users.deactivate'));
         $group->post('/users/{id:[0-9]+}/deactivate',

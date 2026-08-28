@@ -1770,6 +1770,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/users/:id': {
     target: 'new', oldPath: '/admin/common/get-users', newPath: '/v3/admin/users/:id', shape: 'v3-envelope',
   },
+  // Admin support-edit of a user's contact details (name/email/phone). v3-only.
+  'PUT /admin/users/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/users/:id', shape: 'raw',
+  },
   'GET /admin/vendor-metrics': {
     target: 'new', oldPath: '/admin/common/dashboard-activity', newPath: '/v3/admin/vendor-metrics', shape: 'v3-envelope',
   },

@@ -79,6 +79,20 @@
   flex-wrap: wrap;
 }
 
+/* ── Edit contact form ────────────────────────────────────────── */
+.cd-edit { padding-top: 0.25rem; }
+.cd-hint {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--ax-palette-espresso-300, #9b9185);
+}
+.cd-edit-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  color: var(--ax-palette-espresso-300, #9b9185);
+}
+
 /* ── Orders card ──────────────────────────────────────────────── */
 .cd-orders { padding: 1.25rem; }
 .cd-orders-head {

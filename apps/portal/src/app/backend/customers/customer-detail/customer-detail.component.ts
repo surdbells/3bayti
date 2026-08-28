@@ -1,11 +1,13 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { AxCanDirective } from '../../../shared/security/ax-can.directive';
 import { AxConfirmService } from '../../../shared/overlays';
 import { apiErrorMessage } from '../../../shared/http/api-error';
 
@@ -41,7 +43,7 @@ interface CustomerOrder {
 @Component({
   selector: 'app-customer-detail',
   standalone: true,
-  imports: [CommonModule, AdminShellComponent, IconComponent],
+  imports: [CommonModule, FormsModule, AdminShellComponent, IconComponent, AxCanDirective],
   templateUrl: './customer-detail.component.html',
   styleUrl: './customer-detail.component.css',
 })
@@ -58,6 +60,11 @@ export class CustomerDetailComponent implements OnInit {
 
   loading = true;
   profile: CustomerProfile | null = null;
+
+  /** Contact-info edit form (name/email/phone), populated from the profile. */
+  editing = false;
+  saving = false;
+  form = { first_name: '', last_name: '', email: '', phone: '' };
 
   ordersLoading = true;
   orders: CustomerOrder[] = [];
@@ -104,6 +111,56 @@ export class CustomerDetailComponent implements OnInit {
         this.ordersLoading = false;
       },
     });
+  }
+
+  /** Enter edit mode, seeding the form from the loaded profile. */
+  startEdit(): void {
+    const p = this.profile;
+    if (!p) return;
+    this.form = {
+      first_name: p.first_name ?? '',
+      last_name: p.last_name ?? '',
+      email: p.email ?? '',
+      phone: p.phone ?? '',
+    };
+    this.editing = true;
+  }
+
+  cancelEdit(): void {
+    this.editing = false;
+  }
+
+  /** Persist the contact-info edit via PUT /admin/users/:id. */
+  saveEdit(): void {
+    if (this.saving) return;
+    const email = this.form.email.trim();
+    if (!email) {
+      this.toast.error('Email is required.');
+      return;
+    }
+    this.saving = true;
+    const body = {
+      first_name: this.form.first_name.trim(),
+      last_name: this.form.last_name.trim(),
+      email,
+      // Empty phone clears it server-side.
+      phone: this.form.phone.trim(),
+    };
+    this.adapter
+      .put_v3('PUT /admin/users/:id', body, { params: { id: String(this.id) } })
+      .subscribe({
+        next: (res: any) => {
+          this.profile = (res?.data ?? res) as CustomerProfile;
+          this.displayName = `${this.profile.first_name ?? ''} ${this.profile.last_name ?? ''}`.trim();
+          this.saving = false;
+          this.editing = false;
+          this.toast.success('Customer details updated.');
+        },
+        error: (err: any) => {
+          this.saving = false;
+          this.toast.error(apiErrorMessage(err, 'Unable to update customer details.'));
+        },
+      });
   }
 
   get initials(): string {

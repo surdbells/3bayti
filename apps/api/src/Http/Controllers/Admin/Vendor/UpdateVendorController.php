@@ -69,6 +69,14 @@ final class UpdateVendorController
 
         $vendor->setName($input->name);
         $vendor->setContactEmail($input->contact_email);
+        // The store profile shows store_email/store_phone, which prefer the
+        // storeEmail/storePhoneRaw override columns over the contact fields.
+        // Keep an existing override in sync so an admin's contact edit is
+        // actually reflected (a null override already falls back to the
+        // contact value, so we leave those untouched).
+        if ($vendor->getStoreEmail() !== null) {
+            $vendor->setStoreEmail($input->contact_email);
+        }
 
         if ($input->slug !== null && $input->slug !== $vendor->getSlug()) {
             if ($repo->slugExists($input->slug, excludeId: $vendor->getId())) {
@@ -84,6 +92,10 @@ final class UpdateVendorController
         $vendor->setLogoUrl($input->logo_url);
         $vendor->setCoverImageUrl($input->cover_image_url);
         $vendor->setContactPhone($input->contact_phone);
+        // Same store-facing override sync as the email above.
+        if ($vendor->getStorePhoneRaw() !== null) {
+            $vendor->setStorePhoneRaw($input->contact_phone);
+        }
 
         if ($input->commission_rate !== null) {
             $vendor->setCommissionRate($input->commission_rate);

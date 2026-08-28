@@ -102,7 +102,6 @@
                     type="text"
                     class="ax-input"
                     [maxlength]="50"
-                    readonly
                     [(ngModel)]="store.store_name"
                     name="store_name" />
                 </div>
@@ -133,33 +132,37 @@
                       placeholder="United Arab Emirates" />
                   </div>
                 </div>
-                <div class="ax-flex ax-justify-end ax-mb-3">
-                  <button type="button" class="ax-btn ax-btn-primary ax-btn-sm"
-                          (click)="saveLocation()" [disabled]="ui_controls.saving">
-                    <span *ngIf="ui_controls.saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-                    <app-icon *ngIf="!ui_controls.saving" name="save" aria-hidden="true"></app-icon>
-                    Save location
-                  </button>
-                </div>
                 <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-3">
                   <div class="ax-form-field">
                     <label class="ax-label">Email</label>
                     <input
-                      type="text"
+                      type="email"
                       class="ax-input"
-                      readonly
+                      [maxlength]="255"
                       [(ngModel)]="store.store_email"
                       name="store_email" />
                   </div>
                   <div class="ax-form-field">
                     <label class="ax-label">Phone</label>
                     <input
-                      type="text"
+                      type="tel"
                       class="ax-input"
-                      readonly
+                      [maxlength]="20"
                       [(ngModel)]="store.store_phone"
-                      name="store_phone" />
+                      name="store_phone"
+                      placeholder="+9715XXXXXXXX" />
+                    <small class="ax-text-xs ax-text-secondary ax-mt-1" style="display:block;">
+                      International format, e.g. +971501234567. Leave blank to clear.
+                    </small>
                   </div>
+                </div>
+                <div class="ax-flex ax-justify-end ax-mb-3" *axCan="'vendors.edit'">
+                  <button type="button" class="ax-btn ax-btn-primary ax-btn-sm"
+                          (click)="saveVendor()" [disabled]="ui_controls.saving">
+                    <span *ngIf="ui_controls.saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                    <app-icon *ngIf="!ui_controls.saving" name="save" aria-hidden="true"></app-icon>
+                    Save changes
+                  </button>
                 </div>
                 <div class="ax-form-field">
                   <label class="ax-label">Description</label>

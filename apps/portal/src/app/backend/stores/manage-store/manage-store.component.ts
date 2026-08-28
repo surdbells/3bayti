@@ -152,16 +152,22 @@ export class ManageStoreComponent implements OnInit {
   }
 
   /**
-   * Persist the store's emirate + country via PUT /admin/vendors/{id}.
-   * name + contact_email are required by the update endpoint, so we
-   * echo the current values back alongside the location fields.
+   * Persist the store's editable details (name, contact email + phone,
+   * emirate, country) via PUT /admin/vendors/{id}, so support staff can
+   * correct a store's information. name + contact_email are required by the
+   * update endpoint.
+   *
+   * Phone must be E.164 (+9715XXXXXXXX); a blank value is sent as null to
+   * clear it (an empty string would fail the endpoint's length rule).
    */
-  saveLocation() {
+  saveVendor() {
     if (!this.storeId) return;
     this.ui_controls.saving = true;
+    const phone = String(this.store.store_phone ?? '').trim();
     const body = {
       name: this.store.store_name,
       contact_email: this.store.store_email || this.store.email,
+      contact_phone: phone || null,
       emirate: this.store.emirate || null,
       country: this.store.country || null,
     };
@@ -169,15 +175,18 @@ export class ManageStoreComponent implements OnInit {
       .subscribe({
         next: (r: any) => {
           if (r) {
-            this.toast.success('Store location updated.');
+            this.toast.success('Store details updated.');
             if (r?.vendor) {
+              this.store.store_name = r.vendor.store_name ?? this.store.store_name;
+              this.store.store_email = r.vendor.store_email ?? this.store.store_email;
+              this.store.store_phone = r.vendor.store_phone ?? this.store.store_phone;
               this.store.emirate = r.vendor.emirate ?? this.store.emirate;
               this.store.country = r.vendor.country ?? this.store.country;
             }
           }
           this.ui_controls.saving = false;
         },
-        error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to update store location.')); this.ui_controls.saving = false; },
+        error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to update store details.')); this.ui_controls.saving = false; },
       });
   }
 

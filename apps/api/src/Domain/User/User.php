@@ -583,14 +583,28 @@ class User
     public function getRefreshTokens(): Collection { return $this->refreshTokens; }
 
     // -------------------------------------------------------------------
-    // Mutators (deliberately narrow, no public setId, no setEmail
-    // until we've thought through what email-change requires)
+    // Mutators (deliberately narrow, no public setId)
     // -------------------------------------------------------------------
 
     public function setName(?string $firstName, ?string $lastName): void
     {
         $this->firstName = $firstName !== null ? trim($firstName) : null;
         $this->lastName  = $lastName  !== null ? trim($lastName)  : null;
+    }
+
+    /**
+     * Set (or change) the email address. Normalises to lowercase/trimmed,
+     * mirroring the constructor. A changed address has not been proven owned,
+     * so this resets is_email_verified to false (parallels setPhone).
+     *
+     * Used by the admin support-edit flow (PUT /v3/admin/users/{id}); callers
+     * validate format + uniqueness before calling. Empty string is rejected
+     * upstream, this setter trusts a non-empty value.
+     */
+    public function setEmail(string $email): void
+    {
+        $this->email = strtolower(trim($email));
+        $this->isEmailVerified = false;
     }
 
     /**

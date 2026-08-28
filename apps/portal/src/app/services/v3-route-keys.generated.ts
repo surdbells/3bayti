@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 312 route keys.
+ * 314 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -178,6 +178,7 @@ export type V3RouteKey =
   | 'GET /vendor/store/tax'
   | 'GET /vendors'
   | 'GET /vendors/:slug'
+  | 'GET /vendors/:slug/labels'
   | 'GET /vendors/:slug/products'
   | 'GET /vendors/:slug/reviews'
   | 'GET /vendors/:slug/size-chart'
@@ -312,6 +313,7 @@ export type V3RouteKey =
   | 'PUT /admin/products/:id'
   | 'PUT /admin/promo-codes/:id'
   | 'PUT /admin/roles/:id'
+  | 'PUT /admin/users/:id'
   | 'PUT /admin/vendors/:id'
   | 'PUT /me/addresses/:id'
   | 'PUT /me/measurements/:id'
@@ -493,6 +495,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /vendor/store/tax',
   'GET /vendors',
   'GET /vendors/:slug',
+  'GET /vendors/:slug/labels',
   'GET /vendors/:slug/products',
   'GET /vendors/:slug/reviews',
   'GET /vendors/:slug/size-chart',
@@ -627,6 +630,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PUT /admin/products/:id',
   'PUT /admin/promo-codes/:id',
   'PUT /admin/roles/:id',
+  'PUT /admin/users/:id',
   'PUT /admin/vendors/:id',
   'PUT /me/addresses/:id',
   'PUT /me/measurements/:id',

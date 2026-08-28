@@ -27,7 +27,8 @@
           </div>
         </div>
 
-        <dl class="cd-fields">
+        <!-- ── Read-only fields ──────────────────────────────────── -->
+        <dl class="cd-fields" *ngIf="!editing">
           <div class="cd-field">
             <dt>Email</dt>
             <dd>
@@ -62,13 +63,59 @@
           </div>
         </dl>
 
+        <!-- ── Edit contact details ──────────────────────────────── -->
+        <form class="cd-edit" *ngIf="editing" (ngSubmit)="saveEdit()">
+          <div class="ax-form-field ax-mb-3">
+            <label class="ax-label" for="cd-first">First name</label>
+            <input id="cd-first" type="text" class="ax-input" name="first_name"
+                   [(ngModel)]="form.first_name" autocomplete="off" maxlength="100" />
+          </div>
+          <div class="ax-form-field ax-mb-3">
+            <label class="ax-label" for="cd-last">Last name</label>
+            <input id="cd-last" type="text" class="ax-input" name="last_name"
+                   [(ngModel)]="form.last_name" autocomplete="off" maxlength="100" />
+          </div>
+          <div class="ax-form-field ax-mb-3">
+            <label class="ax-label ax-label-required" for="cd-email">Email</label>
+            <input id="cd-email" type="email" class="ax-input" name="email"
+                   [(ngModel)]="form.email" autocomplete="off" maxlength="255" required />
+          </div>
+          <div class="ax-form-field ax-mb-3">
+            <label class="ax-label" for="cd-phone">Phone</label>
+            <input id="cd-phone" type="tel" class="ax-input" name="phone"
+                   [(ngModel)]="form.phone" autocomplete="off" placeholder="+9715XXXXXXXX" maxlength="20" />
+            <small class="cd-hint">International format, e.g. +971501234567. Leave blank to clear.</small>
+          </div>
+          <p class="cd-edit-note">
+            Changing the email or phone marks it unverified until the customer confirms it.
+          </p>
+        </form>
+
         <div class="cd-actions">
-          <button type="button" class="ax-btn ax-btn-sm"
-                  [class.ax-btn-outline]="isActive" [class.ax-btn-primary]="!isActive"
-                  (click)="toggleActive()">
-            <app-icon [name]="isActive ? 'block' : 'check_circle'" aria-hidden="true"></app-icon>
-            {{ isActive ? 'Deactivate account' : 'Activate account' }}
-          </button>
+          <ng-container *ngIf="!editing">
+            <button *axCan="'users.edit'" type="button" class="ax-btn ax-btn-sm ax-btn-primary"
+                    [disabled]="!profile" (click)="startEdit()">
+              <app-icon name="edit" aria-hidden="true"></app-icon>
+              Edit details
+            </button>
+            <button type="button" class="ax-btn ax-btn-sm"
+                    [class.ax-btn-outline]="isActive" [class.ax-btn-primary]="!isActive"
+                    (click)="toggleActive()">
+              <app-icon [name]="isActive ? 'block' : 'check_circle'" aria-hidden="true"></app-icon>
+              {{ isActive ? 'Deactivate account' : 'Activate account' }}
+            </button>
+          </ng-container>
+          <ng-container *ngIf="editing">
+            <button type="button" class="ax-btn ax-btn-sm ax-btn-primary"
+                    [disabled]="saving" (click)="saveEdit()">
+              <app-icon name="check" aria-hidden="true"></app-icon>
+              {{ saving ? 'Saving…' : 'Save changes' }}
+            </button>
+            <button type="button" class="ax-btn ax-btn-sm ax-btn-outline"
+                    [disabled]="saving" (click)="cancelEdit()">
+              Cancel
+            </button>
+          </ng-container>
         </div>
       </section>
 
