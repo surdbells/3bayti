@@ -271,6 +271,14 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
    */
   protected readonly lockedOut = signal(false);
 
+  /**
+   * True once the entered phone was found to already belong to an existing
+   * account: the code step then completes an account MERGE
+   * (AuthService.completePhoneClaim → BFF /phone-claim-verify) and signs the
+   * user into that account, instead of just verifying a new phone.
+   */
+  protected readonly linkMode = signal(false);
+
   private readonly verificationId = signal<string | null>(null);
   private readonly phone = signal<string | null>(null);
 
@@ -411,6 +419,12 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
       this.startCooldown();
       this.toast.success('auth.verifyPhone.codeSent');
     } catch (err) {
+      // The number already belongs to an existing (usually migrated) account.
+      // Offer to prove ownership by OTP and merge this social identity into it.
+      if (this.extractApiCode(err) === AUTH_ERROR_CODES.CONFLICT_PHONE_TAKEN) {
+        await this.startClaim(phone);
+        return;
+      }
       const result = mapApiErrors(err, this.phoneForm, SOCIAL_PHONE_ERROR_MAP);
       if (result.isNetworkError) {
         this.toast.error('auth.login.errors.network');
@@ -431,6 +445,43 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * The entered number belongs to an existing account. Send a code to it
+   * (PhoneService.claim → POST /me/phone/claim) and switch the OTP step into
+   * link mode; verifying then merges this social identity into that account.
+   * A shared number (>1 owner) comes back as PHONE_LINK_AMBIGUOUS → support.
+   */
+  private async startClaim(phone: string): Promise<void> {
+    this.sending.set(true);
+    try {
+      const res = await this.phoneSvc.claim(phone);
+      this.verificationId.set(res.verification_id);
+      this.phone.set(phone);
+      this.linkMode.set(true);
+      this.form.reset({ code: '' });
+      this.startCooldown();
+      this.toast.info('auth.verifyPhone.linkNotice');
+    } catch (err) {
+      const code = this.extractApiCode(err);
+      if (code === AUTH_ERROR_CODES.PHONE_LINK_AMBIGUOUS) {
+        this.toast.error('auth.verifyPhone.errors.linkAmbiguous');
+      } else if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
+        this.toast.error('auth.verifyPhone.errors.rateLimited');
+        this.startLockout(err);
+      } else {
+        this.toast.error('auth.verifyPhone.errors.unexpected');
+      }
+    } finally {
+      this.sending.set(false);
+    }
+  }
+
+  /** Pull the v3 error code out of a failed direct/BFF request, or null. */
+  private extractApiCode(err: unknown): string | null {
+    const body = (err as { error?: { error?: { code?: string }; error_code?: string } } | null)?.error;
+    return body?.error?.code ?? body?.error_code ?? null;
+  }
+
   protected async onSubmit(): Promise<void> {
     const vid = this.verificationId();
     if (vid === null) return;
@@ -442,7 +493,11 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
        rather than the BFF registration /confirm. The user is already signed in;
        there's no token pair to issue, just flip is_phone_verified. */
     if (this.isSocial()) {
-      await this.submitSocialOtp(vid);
+      if (this.linkMode()) {
+        await this.submitClaim(vid);
+      } else {
+        await this.submitSocialOtp(vid);
+      }
       return;
     }
 
@@ -484,6 +539,40 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
    * On success the user's phone is verified server-side (PhoneService mirrors
    * it into the cached auth user); we continue to the returnUrl / home.
    */
+  /**
+   * Link mode: complete the account merge. AuthService.completePhoneClaim posts
+   * the OTP through the BFF, which (on success) merged this social identity into
+   * the existing account and parked ITS session — we're now signed in as that
+   * account, so continue to returnUrl / home like any login.
+   */
+  private async submitClaim(vid: string): Promise<void> {
+    this.submitting.set(true);
+    try {
+      await this.auth.completePhoneClaim({ verification_id: vid, code: this.form.controls.code.value });
+      this.removeFromSession(VERIFICATION_ID_STORAGE_KEY);
+      this.removeFromSession(PHONE_STORAGE_KEY);
+      await this.navigateAfter();
+    } catch (err) {
+      const result = mapApiErrors(err, this.form, VERIFY_ERROR_MAP);
+      if (result.isNetworkError) {
+        this.toast.error('auth.login.errors.network');
+      } else if (result.unmapped.length > 0) {
+        for (const code of result.unmapped) {
+          if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
+            this.toast.error('auth.verifyPhone.errors.rateLimited');
+            this.startLockout(err);
+          } else if (code === AUTH_ERROR_CODES.PHONE_LINK_AMBIGUOUS) {
+            this.toast.error('auth.verifyPhone.errors.linkAmbiguous');
+          } else {
+            this.toast.error('auth.verifyPhone.errors.unexpected');
+          }
+        }
+      }
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
   private async submitSocialOtp(vid: string): Promise<void> {
     this.submitting.set(true);
     try {
@@ -543,7 +632,11 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
       if (phone === null || phone.length === 0) return;
       this.resending.set(true);
       try {
-        const res = await this.phoneSvc.sendOtp(phone);
+        // In link mode re-send the claim OTP (to the existing account's phone);
+        // otherwise the normal add-phone send.
+        const res = this.linkMode()
+          ? await this.phoneSvc.claim(phone)
+          : await this.phoneSvc.sendOtp(phone);
         this.verificationId.set(res.verification_id);
         this.toast.success('auth.verifyPhone.codeSent');
       } catch (err) {

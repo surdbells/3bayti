@@ -359,6 +359,27 @@ export class AuthService {
   }
 
   /**
+   * Complete the phone-claim account merge (phone-after-social "already
+   * registered" recovery). POSTs the OTP to the BFF /auth-proxy/phone-claim-verify,
+   * forwarding the CURRENT access token so the API can authenticate the /me
+   * call; on success the API merged this social identity into the existing
+   * account and the BFF parked THAT account's refresh cookie. We adopt the
+   * returned session, so we're now signed in as the existing account. Errors
+   * (invalid OTP, CONFLICT/PHONE_LINK_AMBIGUOUS, …) propagate to the caller.
+   */
+  async completePhoneClaim(input: ConfirmInput): Promise<AuthUser> {
+    const token = this.tokenStore.getToken();
+    const response = await firstValueFrom(
+      this.http.post<BffLoginResponse>(`${this.proxyBase}/phone-claim-verify`, input, {
+        withCredentials: true,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }),
+    );
+    this.applyAuthState(response);
+    return response.user;
+  }
+
+  /**
    * Resend a registration OTP. Returns a new verification_id (the
    * previous one is invalidated by the API).
    */

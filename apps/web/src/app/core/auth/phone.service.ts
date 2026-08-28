@@ -43,6 +43,22 @@ export class PhoneService {
   }
 
   /**
+   * Start linking to an EXISTING account that already owns this phone (the
+   * phone-after-social "already registered" recovery). Dispatches an OTP to the
+   * number via POST /me/phone/claim and returns the verification_id. The merge
+   * itself is completed by AuthService.completePhoneClaim (it swaps the
+   * session), since it changes which account is signed in. 409
+   * PHONE_LINK_AMBIGUOUS propagates when the number is shared by several
+   * accounts (refused, contact support).
+   */
+  async claim(phone: string): Promise<SetPhoneResponse> {
+    const env = await firstValueFrom(
+      this.http.post<SetPhoneResponse>('POST /me/phone/claim', { body: { phone } }),
+    );
+    return env.data;
+  }
+
+  /**
    * Confirm the OTP. On success marks the user's phone verified server-side;
    * we mirror that into the cached AuthService user so guards / banners that
    * read is_phone_verified update without a /me refetch.

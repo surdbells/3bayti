@@ -301,6 +301,9 @@ export const AUTH_ERROR_CODES = {
   ACCOUNT_INACTIVE: 'AUTH_ACCOUNT_INACTIVE',
   CONFLICT_EMAIL_TAKEN: 'CONFLICT_EMAIL_TAKEN',
   CONFLICT_PHONE_TAKEN: 'CONFLICT_PHONE_TAKEN',
+  /* Account-link (phone-claim): the number is shared by >1 account, so the
+     merge is refused and the user is sent to support. */
+  PHONE_LINK_AMBIGUOUS: 'PHONE_LINK_AMBIGUOUS',
   OTP_RATE_LIMITED: 'OTP_RATE_LIMITED',
   OTP_PROVIDER_ERROR: 'OTP_PROVIDER_ERROR',
   OTP_INVALID_CODE: 'OTP_INVALID_CODE',

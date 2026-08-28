@@ -267,6 +267,7 @@
       "sendPrompt": "We'll text you a verification code.",
       "sendButton": "Send code",
       "codeSent": "We sent a code to {{phone}}.",
+      "linkNotice": "This number belongs to an existing account. Enter the code we sent to verify and sign in to it.",
       "errors": {
         "invalidCode": "That code isn't right. Check it and try again.",
         "rateLimited": "Too many attempts. Please wait a moment and try again.",
@@ -274,7 +275,8 @@
         "resendUnavailable": "Couldn't resend the code right now. Please try again shortly.",
         "startOver": "Something went wrong. Please start over.",
         "unexpected": "Something went wrong. Please try again.",
-        "phoneTaken": "That phone number is already in use."
+        "phoneTaken": "That phone number is already in use.",
+        "linkAmbiguous": "This number is linked to more than one account, so we can't sign you in automatically. Please contact support."
       },
       "socialPrompt": "Almost there, add your phone number to finish setting up your account.",
       "phoneLabel": "Phone number"
