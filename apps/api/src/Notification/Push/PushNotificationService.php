@@ -194,13 +194,17 @@ class PushNotificationService
         ]);
     }
 
-    /** An item in the order was delivered. */
+    /**
+     * An item in the order was delivered. The copy nudges the customer to
+     * rate the store / their pieces; tapping deep-links to the order (where
+     * the review action lives) via the order.delivered type.
+     */
     public function itemDelivered(Order $order): void
     {
         $ref = $order->getOrderReference();
         $this->pushToCustomer($order, 'order.delivered', [
-            'en' => ['Order delivered', sprintf('Your order %s has been delivered. Enjoy!', $ref)],
-            'ar' => ['تم توصيل الطلب', sprintf('تم توصيل طلبك %s. نتمنى لك تجربة سعيدة!', $ref)],
+            'en' => ['Order delivered', sprintf('Your order %s has arrived. Tap to rate the store and the pieces you received.', $ref)],
+            'ar' => ['تم توصيل الطلب', sprintf('وصل طلبك %s. اضغط لتقييم المتجر والقطع التي استلمتها.', $ref)],
         ]);
     }
 
