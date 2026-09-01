@@ -84,6 +84,14 @@ class OtaBundle
     #[ORM\Column(name: 'is_active', type: 'boolean')]
     private bool $isActive = true;
 
+    /**
+     * Human-readable "what's new" notes for this release, shown to the
+     * customer after the update applies (via the OTA update-check response).
+     * Null when the operator didn't provide any.
+     */
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $notes = null;
+
     #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')]
     private DateTimeImmutable $createdAt;
 
@@ -96,6 +104,7 @@ class OtaBundle
         string $checksum,
         string $minNativeVersion,
         ?string $sessionKey = null,
+        ?string $notes = null,
     ) {
         if (!in_array($platform, self::ALL_PLATFORMS, true)) {
             throw new \InvalidArgumentException("Unknown OTA platform: {$platform}");
@@ -108,6 +117,7 @@ class OtaBundle
         $this->checksum = $checksum;
         $this->minNativeVersion = $minNativeVersion !== '' ? $minNativeVersion : '0.0.0';
         $this->sessionKey = $sessionKey;
+        $this->notes = ($notes === null || trim($notes) === '') ? null : trim($notes);
         $this->isActive = true;
         $this->createdAt = new DateTimeImmutable('now', new DateTimeZone('UTC'));
     }
@@ -155,6 +165,11 @@ class OtaBundle
     public function getSessionKey(): ?string
     {
         return $this->sessionKey;
+    }
+
+    public function getNotes(): ?string
+    {
+        return $this->notes;
     }
 
     public function isActive(): bool

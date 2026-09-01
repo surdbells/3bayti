@@ -93,6 +93,16 @@ final class CheckOtaUpdateController
         if ($sessionKey !== null && $sessionKey !== '') {
             $payload['session_key'] = $sessionKey;
         }
+        // "What's new" summary, surfaced by the plugin's getLatest() so the app
+        // can show it after applying. Carried on both `message` (the plugin's
+        // reliable passthrough) and `notes` (for any raw-response reader). Only
+        // set on an update-available response so it can't be mistaken for the
+        // "No update" sentinel.
+        $notes = $bundle->getNotes();
+        if ($notes !== null && $notes !== '') {
+            $payload['message'] = $notes;
+            $payload['notes'] = $notes;
+        }
 
         return $this->ok($payload);
     }

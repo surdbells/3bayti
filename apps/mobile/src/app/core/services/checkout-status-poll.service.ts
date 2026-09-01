@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
-import { Observable, Subject, of, throwError, timer } from 'rxjs';
-import { catchError, map, switchMap, takeUntil, takeWhile } from 'rxjs/operators';
+import { Injectable, inject } from '@angular/core';
+import { Observable, Subject, defer, of, throwError, timer } from 'rxjs';
+import { catchError, finalize, map, switchMap, takeUntil, takeWhile } from 'rxjs/operators';
 
 import { MobileNetworkAdapter } from '../http/mobile-network-adapter';
+import { CheckoutActivityService } from './checkout-activity.service';
 
 /**
  * Status returned by GET /v3/checkout/status/{order_reference}.
@@ -93,6 +94,8 @@ const POLL_MAX_TICKS = Math.ceil(POLL_TIMEOUT_MS / POLL_INTERVAL_MS); // 30
  */
 @Injectable({ providedIn: 'root' })
 export class CheckoutStatusPollService {
+  private readonly checkoutActivity = inject(CheckoutActivityService);
+
   constructor(private readonly networkAdapter: MobileNetworkAdapter) {}
 
   /**
@@ -121,7 +124,11 @@ export class CheckoutStatusPollService {
     let tickCount = 0;
     let lastStatus: CheckoutStatus | null = null;
 
-    return timer(0, POLL_INTERVAL_MS).pipe(
+    // Hold the checkout-activity guard for the whole confirmation window so an
+    // OTA update can't reload the web view while we're settling the payment.
+    return defer(() => {
+      this.checkoutActivity.begin();
+      return timer(0, POLL_INTERVAL_MS).pipe(
       takeUntil(stop$),
       takeWhile(() => tickCount < POLL_MAX_TICKS, true), // emit one final tick for the timeout case
       switchMap((tick): Observable<PollOutcome | null> => {
@@ -158,7 +165,8 @@ export class CheckoutStatusPollService {
       switchMap((maybeOutcome) =>
         maybeOutcome === null ? of() : of(maybeOutcome),
       ),
-    );
+      );
+    }).pipe(finalize(() => this.checkoutActivity.end()));
   }
 
   /**

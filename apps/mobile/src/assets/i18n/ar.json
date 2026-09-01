@@ -1005,6 +1005,8 @@
   "ota_update_downloading_desc": "يجري تنزيل تحديث مطلوب. يرجى إبقاء التطبيق مفتوحًا، سيُعاد تشغيله تلقائيًا عند اكتماله.",
   "ota_update_ready_title": "التحديث جاهز",
   "ota_update_ready_desc": "تم تنزيل التحديث. جارٍ إعادة التشغيل للإنهاء…",
+  "ota_update_version": "الإصدار",
+  "ota_update_whats_new": "الجديد في هذا التحديث",
   "ota_update_restart": "أعد التشغيل الآن",
   "orders_empty_pending_payment": "لا توجد طلبات بانتظار الدفع",
   "orders_empty_paid": "لا توجد طلبات مدفوعة بعد",

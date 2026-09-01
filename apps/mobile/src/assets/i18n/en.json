@@ -1005,6 +1005,8 @@
   "ota_update_downloading_desc": "A required update is downloading. Please keep the app open, it will restart automatically when it's ready.",
   "ota_update_ready_title": "Update ready",
   "ota_update_ready_desc": "The update is downloaded. Restarting to finish…",
+  "ota_update_version": "Version",
+  "ota_update_whats_new": "What's new",
   "ota_update_restart": "Restart now",
   "orders_empty_pending_payment": "No orders awaiting payment",
   "orders_empty_paid": "No paid orders yet",

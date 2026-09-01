@@ -1,6 +1,7 @@
-import { Injectable, Signal, computed, signal } from '@angular/core';
+import { Injectable, Signal, computed, inject, signal } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import { CheckoutActivityService } from './checkout-activity.service';
 
 /**
  * Update lifecycle surfaced to the UI:
@@ -32,9 +33,13 @@ export type OtaStatus = 'idle' | 'checking' | 'downloading' | 'ready' | 'failed'
  */
 @Injectable({ providedIn: 'root' })
 export class OtaUpdateService {
+  private readonly checkout = inject(CheckoutActivityService);
+
   private readonly _status = signal<OtaStatus>('idle');
   private readonly _percent = signal<number>(0);
   private readonly _etaSeconds = signal<number | null>(null);
+  private readonly _summary = signal<string | null>(null);
+  private readonly _version = signal<string | null>(null);
 
   /** Current update lifecycle status (read-only signal). */
   readonly status: Signal<OtaStatus> = this._status.asReadonly();
@@ -46,6 +51,11 @@ export class OtaUpdateService {
   readonly etaSeconds: Signal<number | null> = this._etaSeconds.asReadonly();
   /** True while a bundle is actively streaming, drives the top progress bar. */
   readonly isActive = computed(() => this._status() === 'downloading' || this._status() === 'ready');
+  /** "What's new" summary for the staged bundle, from the OTA release notes;
+   *  null when the release carried none. */
+  readonly summary: Signal<string | null> = this._summary.asReadonly();
+  /** Version string of the staged bundle, for the update modal header. */
+  readonly version: Signal<string | null> = this._version.asReadonly();
 
   /** Wall-clock + percent at the start of the current download, for the ETA. */
   private dlStartMs: number | null = null;
@@ -122,6 +132,16 @@ export class OtaUpdateService {
         return;
       }
 
+      // Capture the "what's new" summary from the release notes (the API sends
+      // it as `message`/`notes`; the plugin surfaces it on getLatest()). Shown
+      // by the update modal once the bundle is ready.
+      const l = latest as unknown as Record<string, unknown>;
+      const note = [l['message'], l['comment'], l['notes'], l['link']]
+        .map((v) => (typeof v === 'string' ? v.trim() : ''))
+        .find((v) => v.length > 0);
+      this._version.set(version);
+      this._summary.set(note ?? null);
+
       // Download now, this fires 'download' percent events (the indicator) -
       // then STAGE it for the next cold start. No reload()/set() mid-session.
       this._percent.set(0);
@@ -188,13 +208,26 @@ export class OtaUpdateService {
   }
 
   /**
-   * Apply a downloaded (staged) bundle immediately by reloading the web view -
-   * user-initiated only (the "Restart now" button), so it can't interrupt a
-   * checkout on its own. Native-only, fully wrapped. If it fails, the bundle
-   * still applies on the next natural cold start.
+   * Whether applying a staged update right now is blocked because a checkout /
+   * payment flow is in progress. The staged bundle still applies on the next
+   * natural cold start, so nothing is lost, just deferred.
+   */
+  get deferredForCheckout(): boolean {
+    return this.checkout.isActive();
+  }
+
+  /**
+   * Apply a downloaded (staged) bundle immediately by reloading the web view.
+   * NEVER reloads while a checkout / payment is in progress (that would tear
+   * down in-flight payment state) — it silently defers, and the bundle applies
+   * on the next cold start. Native-only, fully wrapped.
    */
   async restartToApply(): Promise<void> {
     if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+    // Hard guard: an OTA reload must never interrupt an active checkout.
+    if (this.checkout.isActive()) {
       return;
     }
     try {

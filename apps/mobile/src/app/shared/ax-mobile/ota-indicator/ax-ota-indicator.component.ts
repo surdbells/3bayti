@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { TranslatePipe } from '../../../translate.pipe';
 import { OtaUpdateService } from '../../../core/services/ota-update.service';
+import { CheckoutActivityService } from '../../../core/services/checkout-activity.service';
 
 /**
  * AxOtaIndicatorComponent, the MANDATORY OTA update sheet.
@@ -31,14 +32,27 @@ import { OtaUpdateService } from '../../../core/services/ota-update.service';
       <section class="ota-sheet" role="alertdialog" aria-live="assertive" aria-modal="true"
                [attr.aria-label]="titleKey() | translate">
         <span class="ota-sheet__grip" aria-hidden="true"></span>
-        <h2 class="ota-sheet__title">{{ titleKey() | translate }}</h2>
-        <p class="ota-sheet__desc">{{ descKey() | translate }}</p>
 
         @if (status() === 'ready') {
+          <div class="ota-sheet__whatsnew">
+            <span class="ota-sheet__brandmark">3bayti</span>
+            @if (version()) {
+              <span class="ota-sheet__version">{{ 'ota_update_version' | translate }} {{ version() }}</span>
+            }
+          </div>
+          <h2 class="ota-sheet__title">{{ titleKey() | translate }}</h2>
+          @if (summary()) {
+            <p class="ota-sheet__notes-label">{{ 'ota_update_whats_new' | translate }}</p>
+            <p class="ota-sheet__notes">{{ summary() }}</p>
+          } @else {
+            <p class="ota-sheet__desc">{{ descKey() | translate }}</p>
+          }
           <button type="button" class="ota-sheet__primary" (click)="restart()">
             {{ 'ota_update_restart' | translate }}
           </button>
         } @else {
+          <h2 class="ota-sheet__title">{{ titleKey() | translate }}</h2>
+          <p class="ota-sheet__desc">{{ descKey() | translate }}</p>
           <div class="ota-sheet__progress">
             <div class="ota-sheet__track">
               <div class="ota-sheet__fill" [style.width.%]="percent()"></div>
@@ -58,13 +72,23 @@ import { OtaUpdateService } from '../../../core/services/ota-update.service';
 })
 export class AxOtaIndicatorComponent {
   private readonly ota = inject(OtaUpdateService);
+  private readonly checkout = inject(CheckoutActivityService);
 
   protected readonly status = this.ota.status;
   protected readonly percent = this.ota.percent;
+  protected readonly summary = this.ota.summary;
+  protected readonly version = this.ota.version;
 
-  /** Blocking sheet is up whenever a bundle is downloading or ready to apply. */
+  /**
+   * Blocking sheet is up whenever a bundle is downloading or ready to apply —
+   * BUT never while a checkout / payment is in progress. A full-screen OTA
+   * sheet mid-payment would itself interrupt checkout, so we hold it back until
+   * the checkout window closes (the bundle stays staged and applies then).
+   */
   protected readonly visible = computed(
-    () => this.status() === 'downloading' || this.status() === 'ready',
+    () =>
+      !this.checkout.isActive() &&
+      (this.status() === 'downloading' || this.status() === 'ready'),
   );
   protected readonly titleKey = computed(() =>
     this.status() === 'ready' ? 'ota_update_ready_title' : 'ota_update_downloading_title',
@@ -88,9 +112,12 @@ export class AxOtaIndicatorComponent {
   constructor() {
     effect(() => {
       const s = this.status();
+      const busy = this.checkout.isActive();
       // Auto-apply once the bundle is downloaded, a brief beat so the customer
-      // sees it hit 100%, then reload() swaps in the new bundle.
-      if (s === 'ready' && !this.restartScheduled) {
+      // sees it hit 100%, then reload() swaps in the new bundle. Never while a
+      // checkout is active; when the checkout window closes this effect re-runs
+      // (it reads the checkout signal) and schedules the restart then.
+      if (s === 'ready' && !busy && !this.restartScheduled) {
         this.restartScheduled = true;
         setTimeout(() => void this.ota.restartToApply(), 1200);
       } else if (s !== 'ready') {

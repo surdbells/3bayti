@@ -54,6 +54,53 @@
   color: var(--ax-color-text-secondary);
 }
 
+/* ── Ready: branded "what's new" panel ─────────────── */
+.ota-sheet__whatsnew {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0 -20px 14px;
+  padding: 22px 20px 18px;
+  background: var(--ax-color-bg-brand, #906952);
+  color: #fff;
+}
+
+.ota-sheet__brandmark {
+  font-family: var(--ax-font-display, serif);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #fff;
+}
+
+.ota-sheet__version {
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.9;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.ota-sheet__notes-label {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: var(--ax-color-text-brand, #906952);
+}
+
+.ota-sheet__notes {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: center;
+  white-space: pre-line;
+  color: var(--ax-color-text-primary);
+}
+
 /* ── Download progress ─────────────────────────────── */
 .ota-sheet__progress {
   margin-bottom: 8px;

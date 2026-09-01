@@ -59,6 +59,9 @@ final class UploadOtaBundleController
         $appId = trim((string) ($q['app_id'] ?? '')) ?: self::APP_ID;
         $sessionKeyRaw = trim((string) ($q['session_key'] ?? ''));
         $sessionKey = $sessionKeyRaw !== '' ? $sessionKeyRaw : null;
+        // Optional "what's new" summary shown to customers after this update.
+        $notesRaw = trim((string) ($q['notes'] ?? ''));
+        $notes = $notesRaw !== '' ? $notesRaw : null;
         // For signed/encrypted bundles the plugin verifies against the checksum
         // that `@capgo/cli encrypt` emits (not a SHA256 of the ciphertext), so
         // the operator supplies it. Optional for plain bundles (we compute it).
@@ -149,6 +152,7 @@ final class UploadOtaBundleController
                 $checksum,
                 $minNative,
                 $sessionKey,
+                $notes,
             );
             $this->em->persist($bundle);
             $bundles[] = $bundle;

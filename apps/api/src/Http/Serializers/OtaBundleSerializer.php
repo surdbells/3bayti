@@ -27,6 +27,7 @@ final class OtaBundleSerializer
             'checksum' => $bundle->getChecksum(),
             'min_native_version' => $bundle->getMinNativeVersion(),
             'signed' => $bundle->getSessionKey() !== null,
+            'notes' => $bundle->getNotes(),
             'is_active' => $bundle->isActive(),
             'created_at' => $bundle->getCreatedAt()->format(\DateTimeInterface::ATOM),
         ];

@@ -22,6 +22,7 @@
  *   --channel  <name>           (default production)
  *   --min-native <semver>       (default 0.0.0)
  *   --app-id   <id>             (default com.threebayti.app)
+ *   --notes    "<what's new>"   optional update summary shown to customers
  *   --www      <dir>            (default www)
  *   --skip-build                skip `npm run build`
  *   --sign                      run `@capgo/cli encrypt` and upload signed
@@ -65,6 +66,8 @@ const version = opt('version').trim();
 const channel = opt('channel', 'production').trim();
 const minNative = opt('min-native', '0.0.0').trim();
 const appId = opt('app-id', 'com.threebayti.app').trim();
+// Optional "what's new" summary shown to customers after this update applies.
+const notes = opt('notes', '').trim();
 const wwwDir = opt('www', 'www');
 const doBuild = !flag('skip-build');
 const doSign = flag('sign');
@@ -159,6 +162,7 @@ async function upload(token, zipPath) {
   const qs = new URLSearchParams({ platform, version, channel, min_native: minNative, app_id: appId });
   if (sessionKey) qs.set('session_key', sessionKey);
   if (checksum) qs.set('checksum', checksum);
+  if (notes) qs.set('notes', notes);
 
   const form = new FormData();
   form.append('file', new Blob([readFileSync(zipPath)]), basename(zipPath));

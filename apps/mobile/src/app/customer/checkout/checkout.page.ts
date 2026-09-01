@@ -48,6 +48,7 @@ import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { AxPlaceAutocompleteComponent, PlaceDetails } from '../../shared/ax-mobile/place-autocomplete';
 import { AddressService, SavedAddress, NewAddress } from '../../core/services/address.service';
 import { ClipboardService } from '../../core/services/clipboard.service';
+import { CheckoutActivityService } from '../../core/services/checkout-activity.service';
 @Component({
   selector: 'app-checkout',
   templateUrl: './checkout.page.html',
@@ -135,10 +136,15 @@ export class CheckoutPage implements OnInit, OnDestroy {
     private addressService: AddressService,
     private cdr: ChangeDetectorRef,
     private clipboard: ClipboardService,
+    private checkoutActivity: CheckoutActivityService,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
   }
+
+  /** True once payment has been initiated, so we hold the OTA guard exactly
+   *  once and release it when leaving checkout. */
+  private otaGuardEngaged = false;
   ui_controls = {
     is_loading: false,
     is_creating: false,
@@ -489,6 +495,12 @@ export class CheckoutPage implements OnInit, OnDestroy {
   }
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    // Release the OTA guard when leaving checkout (payment sheet closed or
+    // navigated to the confirmation screen, which holds its own guard).
+    if (this.otaGuardEngaged) {
+      this.checkoutActivity.end();
+      this.otaGuardEngaged = false;
+    }
   }
   user_profile() {
     this.router.navigate(['/', 'settings']);
@@ -652,6 +664,12 @@ export class CheckoutPage implements OnInit, OnDestroy {
     this.checkout.deliveryConfiguration.receipt.toRecipients.push(this.single_user.email);
 
     this.ui_controls.checking_out = true;
+    // Hold the OTA guard for the payment window so an update can't reload the
+    // web view mid-payment. Engaged once; released in ngOnDestroy.
+    if (!this.otaGuardEngaged) {
+      this.otaGuardEngaged = true;
+      this.checkoutActivity.begin();
+    }
     // Return-URL detection. Three shapes the webview may surface after
     // Noon finishes hosted checkout:
     //   Legacy:  https://api-v3.3bayti.ae/customer/complete?orderId=&...
