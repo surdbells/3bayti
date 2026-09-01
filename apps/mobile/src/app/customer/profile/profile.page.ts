@@ -24,7 +24,7 @@ import { apiErrorMessage } from '../../core/http/api-error';
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
-import {DIAL_CODES, DialCode} from "../../dial-codes";
+import {DIAL_CODES, DialCode} from "../../public/shared/dial-codes";
 import { I18nService } from '../../i18n.service';
 import {TranslatePipe} from "../../translate.pipe";
 

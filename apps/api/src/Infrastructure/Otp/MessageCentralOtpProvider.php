@@ -286,6 +286,9 @@ final class MessageCentralOtpProvider implements OtpProvider
     private function resolveDestination(string $phone): array
     {
         $digits = preg_replace('/\D/', '', $phone) ?? '';
+        // An explicit international form: a leading '+' or the '00' access
+        // prefix (both mean "country code follows"). Captured before we strip.
+        $isInternational = str_starts_with(ltrim($phone), '+') || str_starts_with($digits, '00');
         // '00' is the international access prefix, same meaning as '+'.
         if (str_starts_with($digits, '00')) {
             $digits = substr($digits, 2);
@@ -301,6 +304,22 @@ final class MessageCentralOtpProvider implements OtpProvider
             if (str_starts_with($digits, $code) && strlen($digits) > strlen($code)) {
                 return [$code, substr($digits, strlen($code))];
             }
+        }
+
+        // An explicitly-international number whose country code we don't
+        // support. Do NOT fall through to the UAE default: that would send
+        // the OTP to a mangled +971<foreign-number> destination and the code
+        // silently never arrives (the class of bug behind Apple sign-ins that
+        // never verify). Reject clearly so the failure is surfaced + logged
+        // instead of leaving the user waiting for a code that can't come.
+        if ($isInternational) {
+            $this->logger->warning('OTP destination has an unsupported country code', [
+                'phone' => $phone,
+            ]);
+            throw new OtpProviderException(
+                'unsupported_country',
+                'Unsupported country dial code for OTP delivery.',
+            );
         }
 
         // Bare local number: assume the default country, dropping a
