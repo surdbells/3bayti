@@ -118,6 +118,8 @@ interface OrderDetail {
   returns: ReturnSummary[];
   billing_address: OrderAddress | null;
   shipping_address: OrderAddress | null;
+  /** Slowest-store delivery range for the whole order; null for gift cards. */
+  delivery_estimate: { min_days: number; max_days: number } | null;
 }
 
 @Component({
@@ -402,7 +404,21 @@ export class OrderDetailPage implements OnInit {
         : [],
       billing_address: o.billing_address ?? null,
       shipping_address: o.shipping_address ?? null,
+      delivery_estimate:
+        o.delivery_estimate && o.delivery_estimate.max_days != null
+          ? {
+              min_days: Number(o.delivery_estimate.min_days ?? 0),
+              max_days: Number(o.delivery_estimate.max_days ?? 0),
+            }
+          : null,
     };
+  }
+
+  /** "7 - 14" or a single "14" when the range collapses; '' when no estimate. */
+  get deliveryEstimateRange(): string {
+    const e = this.order?.delivery_estimate;
+    if (!e) return '';
+    return e.min_days === e.max_days ? `${e.max_days}` : `${e.min_days} - ${e.max_days}`;
   }
 
   async confirmCancel() {

@@ -100,6 +100,11 @@ final class UpdateVendorController
         if ($input->commission_rate !== null) {
             $vendor->setCommissionRate($input->commission_rate);
         }
+        // Delivery lead-time range: only touch it when both bounds are sent
+        // (the entity keeps min <= max). Omitting either leaves it unchanged.
+        if ($input->min_delivery_days !== null && $input->max_delivery_days !== null) {
+            $vendor->setDeliveryDays($input->min_delivery_days, $input->max_delivery_days);
+        }
         if ($input->is_active !== null) {
             $vendor->setActive($input->is_active);
         }

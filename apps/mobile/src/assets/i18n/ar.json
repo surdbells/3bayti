@@ -662,6 +662,7 @@
   "order_detail_not_found_title": "الطلب غير موجود",
   "order_detail_not_found_subtitle": "لم نتمكن من العثور على هذا الطلب. ربما تمت إزالته.",
   "order_reference": "رقم الطلب",
+  "order_delivery_estimate": "التوصيل المتوقع",
   "order_items": "العناصر",
   "order_returns": "المرتجعات",
   "label_color": "اللون",

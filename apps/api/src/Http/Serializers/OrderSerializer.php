@@ -136,7 +136,35 @@ final class OrderSerializer
         $shape = $this->listShape($order, $returns, $giftCard);
         $shape['billing_address'] = $this->addressShape($order->getBillingAddress());
         $shape['shipping_address'] = $this->addressShape($order->getShippingAddress());
+        $shape['delivery_estimate'] = $this->deliveryEstimate($order);
         return $shape;
+    }
+
+    /**
+     * Customer-facing delivery estimate for the whole order: the lead-time
+     * range of the SLOWEST store in it (the one with the highest
+     * max_delivery_days), so the order is never quoted sooner than its
+     * slowest item can arrive. Null for orders with no real items (e.g.
+     * gift-card purchases).
+     *
+     * @return array{min_days: int, max_days: int}|null
+     */
+    private function deliveryEstimate(Order $order): ?array
+    {
+        $slowest = null;
+        foreach ($order->getItems() as $item) {
+            $vendor = $item->getVendor();
+            if ($slowest === null || $vendor->getMaxDeliveryDays() > $slowest->getMaxDeliveryDays()) {
+                $slowest = $vendor;
+            }
+        }
+        if ($slowest === null) {
+            return null;
+        }
+        return [
+            'min_days' => $slowest->getMinDeliveryDays(),
+            'max_days' => $slowest->getMaxDeliveryDays(),
+        ];
     }
 
     /**

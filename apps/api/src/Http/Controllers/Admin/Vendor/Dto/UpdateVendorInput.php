@@ -47,6 +47,17 @@ final class UpdateVendorInput
     #[Assert\Range(min: 0, max: 100)]
     public readonly ?float $commission_rate;
 
+    /**
+     * Delivery lead-time range in days shown to customers ("X-Y days").
+     * Both must be sent together to change the range; either omitted leaves
+     * the existing values. 0-365; the entity keeps min <= max.
+     */
+    #[Assert\Range(min: 0, max: 365)]
+    public readonly ?int $min_delivery_days;
+
+    #[Assert\Range(min: 0, max: 365)]
+    public readonly ?int $max_delivery_days;
+
     public readonly ?bool $is_active;
     public readonly ?bool $is_verified;
 
@@ -113,6 +124,8 @@ final class UpdateVendorInput
         ?string $cover_image_url = null,
         ?string $contact_phone = null,
         ?float $commission_rate = null,
+        ?int $min_delivery_days = null,
+        ?int $max_delivery_days = null,
         ?bool $is_active = null,
         ?bool $is_verified = null,
         ?bool $is_featured = null,
@@ -131,6 +144,8 @@ final class UpdateVendorInput
             ? (preg_replace('/[\s\-()]/', '', $contact_phone) ?? '')
             : null;
         $this->commission_rate = $commission_rate;
+        $this->min_delivery_days = $min_delivery_days;
+        $this->max_delivery_days = $max_delivery_days;
         $this->is_active = $is_active;
         $this->is_verified = $is_verified;
         $this->is_featured = $is_featured;

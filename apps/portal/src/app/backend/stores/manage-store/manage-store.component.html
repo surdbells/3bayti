@@ -156,6 +156,30 @@
                     </small>
                   </div>
                 </div>
+                <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-1">
+                  <div class="ax-form-field">
+                    <label class="ax-label">Delivery time from (days)</label>
+                    <input
+                      type="number"
+                      class="ax-input"
+                      min="0" max="365"
+                      [(ngModel)]="store.min_delivery_days"
+                      name="min_delivery_days" />
+                  </div>
+                  <div class="ax-form-field">
+                    <label class="ax-label">Delivery time to (days)</label>
+                    <input
+                      type="number"
+                      class="ax-input"
+                      min="0" max="365"
+                      [(ngModel)]="store.max_delivery_days"
+                      name="max_delivery_days" />
+                  </div>
+                </div>
+                <p class="ax-text-xs ax-text-secondary ax-mb-3">
+                  Shown to customers as the delivery estimate. On an order with items from several
+                  stores, the whole order shows the slowest store's range.
+                </p>
                 <div class="ax-flex ax-justify-end ax-mb-3" *axCan="'vendors.edit'">
                   <button type="button" class="ax-btn ax-btn-primary ax-btn-sm"
                           (click)="saveVendor()" [disabled]="ui_controls.saving">

@@ -84,6 +84,7 @@ export class ManageStoreComponent implements OnInit {
     approved: false, store_email: '', store_phone: '',
     store_address: '', store_description: '',
     emirate: '', country: '',
+    min_delivery_days: 7, max_delivery_days: 14,
     vat_status: '', store_legal_name: '', trade_license_number: '',
     licensing_authority: '', tax_registration_number: '',
     vat_registration_effective_date: '', registered_tax_address: '',
@@ -164,12 +165,17 @@ export class ManageStoreComponent implements OnInit {
     if (!this.storeId) return;
     this.ui_controls.saving = true;
     const phone = String(this.store.store_phone ?? '').trim();
+    const minD = Number(this.store.min_delivery_days);
+    const maxD = Number(this.store.max_delivery_days);
     const body = {
       name: this.store.store_name,
       contact_email: this.store.store_email || this.store.email,
       contact_phone: phone || null,
       emirate: this.store.emirate || null,
       country: this.store.country || null,
+      // Delivery lead-time range (days); both required together server-side.
+      min_delivery_days: Number.isFinite(minD) ? minD : null,
+      max_delivery_days: Number.isFinite(maxD) ? maxD : null,
     };
     this.adapter.put_v3('PUT /admin/vendors/:id', body, { params: { id: String(this.storeId) } })
       .subscribe({
@@ -182,6 +188,8 @@ export class ManageStoreComponent implements OnInit {
               this.store.store_phone = r.vendor.store_phone ?? this.store.store_phone;
               this.store.emirate = r.vendor.emirate ?? this.store.emirate;
               this.store.country = r.vendor.country ?? this.store.country;
+              this.store.min_delivery_days = r.vendor.min_delivery_days ?? this.store.min_delivery_days;
+              this.store.max_delivery_days = r.vendor.max_delivery_days ?? this.store.max_delivery_days;
             }
           }
           this.ui_controls.saving = false;

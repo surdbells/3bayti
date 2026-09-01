@@ -218,6 +218,14 @@ interface TimelineEventView {
                 <dd>{{ order()!.currency }} {{ order()!.delivery_fee }}</dd>
               </div>
               <div
+                *ngIf="deliveryEstimateRange()"
+                class="checkout-summary__line"
+                data-testid="order-detail-delivery-estimate"
+              >
+                <dt>{{ 'orders.detail.deliveryEstimate' | translate }}</dt>
+                <dd>{{ deliveryEstimateRange() }} {{ 'orders.detail.days' | translate }}</dd>
+              </div>
+              <div
                 *ngIf="hasDiscount()"
                 class="checkout-summary__line"
                 data-testid="order-detail-discount-line"
@@ -460,6 +468,13 @@ export class AccountOrderDetailPageComponent implements OnInit {
   protected readonly hasReturns = computed(() => {
     const o = this._order();
     return o !== null && Array.isArray(o.returns) && o.returns.length > 0;
+  });
+
+  /** "7–14" or a single "14" when the range collapses; '' when no estimate. */
+  protected readonly deliveryEstimateRange = computed(() => {
+    const e = this._order()?.delivery_estimate;
+    if (!e) return '';
+    return e.min_days === e.max_days ? `${e.max_days}` : `${e.min_days}–${e.max_days}`;
   });
 
   async ngOnInit(): Promise<void> {

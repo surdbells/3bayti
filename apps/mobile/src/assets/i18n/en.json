@@ -670,6 +670,7 @@
   "order_detail_not_found_title": "Order not found",
   "order_detail_not_found_subtitle": "We couldn't find this order. It may have been removed.",
   "order_reference": "Order Reference",
+  "order_delivery_estimate": "Estimated delivery",
   "order_items": "Items",
   "order_returns": "Returns",
   "label_color": "Color",

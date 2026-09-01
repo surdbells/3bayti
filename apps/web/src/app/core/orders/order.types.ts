@@ -101,6 +101,8 @@ export interface OrderListItem {
 export interface Order extends OrderListItem {
   billing_address: OrderAddress | null;
   shipping_address: OrderAddress | null;
+  /** Slowest-store delivery range for the whole order; null for gift cards. */
+  delivery_estimate?: { min_days: number; max_days: number } | null;
 }
 
 /**

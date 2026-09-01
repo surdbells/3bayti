@@ -507,6 +507,8 @@
       "returnsTitle": "Return requests",
       "submitReturn": "Request a return",
       "appliedPromo": "Promo applied",
+      "deliveryEstimate": "Estimated delivery",
+      "days": "days",
       "billingHeading": "Billing address",
       "shippingHeading": "Shipping address",
       "backToList": "← All orders"

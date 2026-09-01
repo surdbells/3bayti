@@ -346,6 +346,19 @@ class Vendor
     #[ORM\Column(name: 'commission_rate', type: 'decimal', precision: 5, scale: 2)]
     private string $commissionRate = '10.00';
 
+    /**
+     * Delivery lead-time range in days, shown to customers as "X-Y days".
+     * On a multi-store order the whole order is quoted the SLOWEST store's
+     * range (the store with the highest max), so a customer is never promised
+     * sooner than the slowest item can arrive. Defaults to 7-14; admins tune
+     * it per store. The setter guarantees min <= max.
+     */
+    #[ORM\Column(name: 'min_delivery_days', type: 'smallint', options: ['default' => 7])]
+    private int $minDeliveryDays = 7;
+
+    #[ORM\Column(name: 'max_delivery_days', type: 'smallint', options: ['default' => 14])]
+    private int $maxDeliveryDays = 14;
+
     public function __construct(
         string $slug,
         string $name,
@@ -377,6 +390,9 @@ class Vendor
     {
         return (float) $this->commissionRate;
     }
+
+    public function getMinDeliveryDays(): int { return $this->minDeliveryDays; }
+    public function getMaxDeliveryDays(): int { return $this->maxDeliveryDays; }
 
     // -----------------------------------------------------------------
     // Mutators, all explicit; no public general-purpose setter
@@ -695,5 +711,21 @@ class Vendor
         }
         // Format with 2 decimals so DB sees consistent values.
         $this->commissionRate = number_format($rate, 2, '.', '');
+    }
+
+    /**
+     * Set the customer-facing delivery lead-time range (days). Clamps each
+     * bound to 0-365 and swaps them if given inverted, so the "X-Y days"
+     * quote is always well-formed (min <= max).
+     */
+    public function setDeliveryDays(int $minDays, int $maxDays): void
+    {
+        $min = max(0, min(365, $minDays));
+        $max = max(0, min(365, $maxDays));
+        if ($min > $max) {
+            [$min, $max] = [$max, $min];
+        }
+        $this->minDeliveryDays = $min;
+        $this->maxDeliveryDays = $max;
     }
 }

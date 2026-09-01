@@ -98,6 +98,36 @@ final class OrderSerializerReturnsEmbeddingTest extends TestCase
     }
 
     #[Test]
+    public function deliveryEstimateReflectsSlowestStore(): void
+    {
+        // Two items from two stores: the whole order is quoted the SLOWEST
+        // store's range (highest max), never the faster one's.
+        $order = $this->makeOrder();
+        $fast = $this->makeVendor(id: 201);
+        $fast->setDeliveryDays(2, 5);
+        $slow = $this->makeVendor(id: 202);
+        $slow->setDeliveryDays(7, 14);
+        $this->addItem($order, $fast, 'Fast item');
+        $this->addItem($order, $slow, 'Slow item');
+
+        $shape = $this->serializer->detailShape($order);
+
+        self::assertSame(
+            ['min_days' => 7, 'max_days' => 14],
+            $shape['delivery_estimate'],
+        );
+    }
+
+    #[Test]
+    public function deliveryEstimateIsNullWithoutItems(): void
+    {
+        // Gift-card purchase orders carry no items → no estimate.
+        $order = $this->makeOrder();
+        $shape = $this->serializer->detailShape($order);
+        self::assertNull($shape['delivery_estimate']);
+    }
+
+    #[Test]
     public function summariesUseOrderTaxonomyAndExposeTerminalFlag(): void
     {
         // A denied return should surface is_terminal=true so the UI
@@ -211,6 +241,7 @@ final class OrderSerializerReturnsEmbeddingTest extends TestCase
     {
         $v = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
         $this->setProp($v, 'id', $id);
+        $this->setProp($v, 'slug', "vendor-{$id}");
         $this->setProp($v, 'name', "Vendor {$id}");
         $this->setProp($v, 'contactEmail', "vendor{$id}@example.com");
         return $v;

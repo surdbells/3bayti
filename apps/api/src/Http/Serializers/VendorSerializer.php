@@ -67,6 +67,9 @@ final class VendorSerializer
             'store_address' => $v->getStoreAddress(),
             'emirate' => $v->getEmirate(),
             'country' => $v->getCountry(),
+            // Customer-facing delivery lead-time range ("X-Y days").
+            'min_delivery_days' => $v->getMinDeliveryDays(),
+            'max_delivery_days' => $v->getMaxDeliveryDays(),
             'legacy_vendor_id' => $v->getLegacyVendorId(),
             'created_at' => $v->getCreatedAt()->format(DateTimeInterface::ATOM),
             'updated_at' => $v->getUpdatedAt()->format(DateTimeInterface::ATOM),
@@ -130,6 +133,9 @@ final class VendorSerializer
             'store_description' => $v->getDescription(),
             'emirate' => $v->getEmirate(),
             'country' => $v->getCountry(),
+            // Customer-facing delivery lead-time range ("X-Y days").
+            'min_delivery_days' => $v->getMinDeliveryDays(),
+            'max_delivery_days' => $v->getMaxDeliveryDays(),
             // Legal / tax registration.
             'store_legal_name' => $v->getLegalName(),
             'vat_status' => $v->getVatStatus(),
