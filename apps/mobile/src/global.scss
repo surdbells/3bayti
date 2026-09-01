@@ -1040,7 +1040,10 @@ ion-header.md ion-toolbar {
 
 .m6d-img-wrap {
   position: relative;
-  aspect-ratio: 3 / 2;
+  /* Portrait frame: product photos are always vertical, so a portrait card
+     shows them whole. Paired with object-fit: contain below, nothing is ever
+     cropped (a landscape 3:2 + cover frame chopped heads and hems off). */
+  aspect-ratio: 3 / 4;
   background: var(--ax-color-bg-placeholder);  /* #ead9ca, warm neutral */
   /* No standalone border-radius here, the parent .m6d-product-card's
      border-radius + overflow:hidden gives the image rounded top corners.
@@ -1069,8 +1072,10 @@ ion-header.md ion-toolbar {
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    object-position: top center;
+    /* contain (not cover) so the whole vertical product image is always
+       visible; any slack is filled by the warm placeholder background. */
+    object-fit: contain;
+    object-position: center;
     opacity: 0;
     transition: opacity 0.3s ease;
     cursor: pointer;
