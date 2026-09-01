@@ -61,7 +61,6 @@
     @if (order.delivery_estimate) {
       <ion-card class="detail-card detail-card--eta" data-testid="order-delivery-estimate">
         <div class="eta-row">
-          <ion-icon name="time-outline" class="eta-icon" aria-hidden="true"></ion-icon>
           <div class="eta-body">
             <span class="eta-label">{{ 'order_delivery_estimate' | translate }}</span>
             <span class="eta-value">{{ deliveryEstimateRange }} {{ 'days' | translate }}</span>
