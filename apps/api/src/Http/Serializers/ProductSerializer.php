@@ -241,7 +241,10 @@ final class ProductSerializer
             'name' => $p->getName(),
             'sku' => null, // legacy has no SKU column; we may add later
             'price' => $this->money($p->getPrice()),
-            'sale_price' => $p->getSalePrice() !== null ? $this->money($p->getSalePrice()) : null,
+            // Customer-facing sale price: only when the product is GENUINELY on
+            // sale (present, > 0, below the regular price). A stored 0 / invalid
+            // sale price emits null here so cards never render a bogus discount.
+            'sale_price' => $p->isOnSale() ? $this->money((string) $p->getSalePrice()) : null,
             'primary_image' => $primaryImage,
             // Full gallery so list-driven carousels (mobile explore) can show
             // multiple images per product. imagesArray reads the already-hydrated

@@ -23,7 +23,11 @@ final class VendorProductInput
     #[Assert\PositiveOrZero(message: 'Price must be zero or positive.')]
     public readonly int|float|null $price;
 
-    /** Optional discounted price. Rendered as on-sale when set and below price. */
+    /**
+     * Optional discounted price. Treated as on-sale only when > 0 AND below the
+     * regular price; 0 (or blank) is normalised to "no sale" by
+     * Product::setSalePrice (matches the form's "Leave blank for no sale" hint).
+     */
     #[Assert\PositiveOrZero(message: 'Sale price must be zero or positive.')]
     public readonly int|float|null $sale_price;
 

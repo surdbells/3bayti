@@ -346,7 +346,7 @@ class ProductRepository extends EntityRepository
             // card sale rendering), the legacy `is_sale` boolean could be
             // set independently of the prices and so returned products that
             // weren't genuinely discounted.
-            $qb->andWhere('p.salePrice IS NOT NULL AND p.salePrice < p.price');
+            $qb->andWhere('p.salePrice IS NOT NULL AND p.salePrice > 0 AND p.salePrice < p.price');
         }
 
         // In-stock filter: mirrors Product::isInStock(), stock_status is

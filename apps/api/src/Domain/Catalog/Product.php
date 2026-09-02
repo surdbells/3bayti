@@ -250,19 +250,32 @@ class Product
     public function getSalePrice(): ?string { return $this->salePrice; }
 
     /**
+     * Whether the product is GENUINELY on sale: it carries a sale price that
+     * is present, strictly positive, AND strictly below the regular price.
+     *
+     * A sale_price of 0 (or blank) means "no sale" — the vendor form's "Leave
+     * blank for no sale" hint — so it must NOT count as discounted anywhere:
+     * the discounted listing, the facet counts, and storefront card rendering
+     * all key off this single rule. (Some vendors typed 0 into the sale-price
+     * field, which previously surfaced the product in the discounted section
+     * without an actual markdown.)
+     */
+    public function isOnSale(): bool
+    {
+        return $this->salePrice !== null
+            && bccomp($this->salePrice, '0.00', 2) > 0
+            && bccomp($this->salePrice, $this->price, 2) < 0;
+    }
+
+    /**
      * The price actually charged: the sale price when the product is genuinely
-     * on sale (sale_price set, > 0, and strictly below the regular price),
-     * otherwise the regular price. Snapshotted into the cart so a discounted
-     * product is charged at its sale price on both mobile and web.
+     * on sale (see isOnSale), otherwise the regular price. Snapshotted into the
+     * cart so a discounted product is charged at its sale price on both mobile
+     * and web.
      */
     public function effectivePrice(): string
     {
-        if ($this->salePrice !== null
-            && bccomp($this->salePrice, '0.00', 2) > 0
-            && bccomp($this->salePrice, $this->price, 2) < 0) {
-            return $this->salePrice;
-        }
-        return $this->price;
+        return $this->isOnSale() ? (string) $this->salePrice : $this->price;
     }
 
     public function getCostPerItem(): ?string { return $this->costPerItem; }
@@ -384,6 +397,13 @@ class Product
 
     public function setSalePrice(?string $price): void
     {
+        // "0" (or any non-positive / non-numeric value) means "no sale" —
+        // matching the vendor form's "Leave blank for no sale" hint. Normalise
+        // it to NULL so 0 and blank are equivalent at the source, and a zero
+        // sale price can never render as a bogus discount downstream.
+        if ($price !== null && (!is_numeric($price) || bccomp($price, '0.00', 2) <= 0)) {
+            $price = null;
+        }
         $this->salePrice = $price;
         $this->touch();
     }
