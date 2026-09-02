@@ -118,7 +118,12 @@ function buildAndZip() {
   if (!existsSync(wwwDir)) die(`www dir not found: ${wwwDir} (build first, or pass --www)`);
 
   console.log('• Zipping bundle (@capgo/cli)…');
-  const out = sh(`npx @capgo/cli bundle zip ${appId} --path ${q(wwwDir)} --json`, true);
+  // --package-json: in this pnpm workspace the CLI otherwise resolves the
+  // repo-ROOT package.json (where @capgo/capacitor-updater isn't declared) and
+  // aborts with "Cannot find @capgo/capacitor-updater in node_modules". Point
+  // it at THIS package's manifest (cwd = apps/mobile) so the plugin check
+  // passes. Run this script from apps/mobile.
+  const out = sh(`npx @capgo/cli bundle zip ${appId} --path ${q(wwwDir)} --package-json package.json --json`, true);
   const json = lastJson(out);
   const zipPath = json?.bundle || json?.path || json?.zip;
   if (!zipPath || !existsSync(zipPath)) {
@@ -139,7 +144,7 @@ function encrypt(zipPath, plainChecksum) {
   if (!plainChecksum) {
     die('No plain checksum from `bundle zip --json` — cannot sign. Re-run with --session-key/--checksum.');
   }
-  const out = sh(`npx @capgo/cli bundle encrypt ${q(zipPath)} ${plainChecksum} --json`, true);
+  const out = sh(`npx @capgo/cli bundle encrypt ${q(zipPath)} ${plainChecksum} --package-json package.json --json`, true);
   const json = lastJson(out);
   const iv =
     json?.ivSessionKey ||
