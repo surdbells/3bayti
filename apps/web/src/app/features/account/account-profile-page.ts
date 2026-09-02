@@ -7,17 +7,21 @@ import {
 } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { FormFieldComponent, ToastService, mapApiErrors } from '../../shared/forms';
 import { ProfileService, ProfileUpdate, ProfileGender } from './profile.service';
 import { PhoneService } from '../../core/auth/phone.service';
+import { EmailService } from '../../core/auth/email.service';
 import { AUTH_ERROR_CODES } from '../../core/auth/auth.types';
 import type { AuthUser } from '../../core/auth/auth.types';
 
 /** Steps of the inline change-phone flow. */
 type PhoneChangeStep = 'enterPhone' | 'enterCode';
+
+/** Steps of the inline change-email flow. */
+type EmailChangeStep = 'enterEmail' | 'enterCode';
 
 const GENDERS: ProfileGender[] = ['male', 'female', 'other', 'prefer_not_to_say'];
 const LOCALES = ['en', 'ar', 'en-AE', 'ar-AE'];
@@ -192,7 +196,142 @@ const LOCALES = ['en', 'ar', 'en-AE', 'ar-AE'];
                     [attr.title]="'account.profile.verified' | translate"
                     data-testid="prof-email-verified"
                   >✓</span>
+                  <button
+                    *ngIf="!emailEditing()"
+                    type="button"
+                    class="account-profile__readonly-action"
+                    (click)="startEmailChange()"
+                    data-testid="prof-email-change"
+                  >
+                    {{ 'account.profile.emailChange.change' | translate }}
+                  </button>
+                  <span
+                    *ngIf="needsEmailUpdate() && !emailEditing()"
+                    class="account-profile__readonly-hint"
+                    data-testid="prof-email-needs-update"
+                  >
+                    {{ 'account.profile.emailChange.needsUpdate' | translate }}
+                  </span>
                 </span>
+              </div>
+
+              <!-- Inline change-email flow (OTP verified). -->
+              <div
+                *ngIf="emailEditing()"
+                class="account-profile__email-change"
+                data-testid="prof-email-change-flow"
+              >
+                <!-- Step 1: enter the new email. -->
+                <ng-container *ngIf="emailStep() === 'enterEmail'">
+                  <label class="account-profile__email-label" for="prof-email-new">
+                    {{ 'account.profile.emailChange.newLabel' | translate }}
+                  </label>
+                  <input
+                    id="prof-email-new"
+                    type="email"
+                    inputmode="email"
+                    autocomplete="email"
+                    spellcheck="false"
+                    class="auth-input"
+                    [placeholder]="'account.profile.emailChange.placeholder' | translate"
+                    [value]="newEmail()"
+                    (input)="onNewEmailInput($event)"
+                    [disabled]="emailBusy()"
+                    data-testid="prof-email-input"
+                  />
+                  <p class="account-profile__email-hint">
+                    {{ 'account.profile.emailChange.hint' | translate }}
+                  </p>
+
+                  <p
+                    *ngIf="emailError() as emailErr"
+                    class="account-profile__email-error"
+                    role="alert"
+                    data-testid="prof-email-error"
+                  >
+                    {{ emailErr | translate }}
+                  </p>
+
+                  <div class="account-profile__email-actions">
+                    <button
+                      type="button"
+                      class="account-profile__email-btn"
+                      (click)="sendEmailOtp()"
+                      [disabled]="emailBusy()"
+                      data-testid="prof-email-send"
+                    >
+                      {{ (emailBusy() ? 'common.loading' : 'account.profile.emailChange.sendCode') | translate }}
+                    </button>
+                    <button
+                      type="button"
+                      class="account-profile__email-btn account-profile__email-btn--ghost"
+                      (click)="cancelEmailChange()"
+                      [disabled]="emailBusy()"
+                      data-testid="prof-email-cancel"
+                    >
+                      {{ 'account.profile.emailChange.cancel' | translate }}
+                    </button>
+                  </div>
+                </ng-container>
+
+                <!-- Step 2: enter the OTP code sent to the new email. -->
+                <ng-container *ngIf="emailStep() === 'enterCode'">
+                  <label class="account-profile__email-label" for="prof-email-otp">
+                    {{ 'account.profile.emailChange.codeLabel' | translate : { email: newEmail() } }}
+                  </label>
+                  <input
+                    id="prof-email-otp"
+                    type="text"
+                    autocomplete="one-time-code"
+                    inputmode="numeric"
+                    maxlength="6"
+                    spellcheck="false"
+                    class="auth-input auth-input--code"
+                    [value]="emailCode()"
+                    (input)="onEmailCodeInput($event)"
+                    [disabled]="emailBusy()"
+                    data-testid="prof-email-code"
+                  />
+
+                  <p
+                    *ngIf="emailError() as emailErr"
+                    class="account-profile__email-error"
+                    role="alert"
+                    data-testid="prof-email-error"
+                  >
+                    {{ emailErr | translate }}
+                  </p>
+
+                  <div class="account-profile__email-actions">
+                    <button
+                      type="button"
+                      class="account-profile__email-btn"
+                      (click)="verifyEmailOtp()"
+                      [disabled]="emailBusy()"
+                      data-testid="prof-email-verify"
+                    >
+                      {{ (emailBusy() ? 'common.loading' : 'account.profile.emailChange.verify') | translate }}
+                    </button>
+                    <button
+                      type="button"
+                      class="account-profile__email-btn account-profile__email-btn--ghost"
+                      (click)="resendEmailOtp()"
+                      [disabled]="emailBusy()"
+                      data-testid="prof-email-resend"
+                    >
+                      {{ 'account.profile.emailChange.resend' | translate }}
+                    </button>
+                    <button
+                      type="button"
+                      class="account-profile__email-btn account-profile__email-btn--ghost"
+                      (click)="cancelEmailChange()"
+                      [disabled]="emailBusy()"
+                      data-testid="prof-email-cancel"
+                    >
+                      {{ 'account.profile.emailChange.cancel' | translate }}
+                    </button>
+                  </div>
+                </ng-container>
               </div>
               <div class="account-profile__readonly-row">
                 <span class="account-profile__readonly-label">{{ 'account.profile.phone' | translate }}</span>
@@ -374,6 +513,8 @@ const LOCALES = ['en', 'ar', 'en-AE', 'ar-AE'];
 export class AccountProfilePageComponent implements OnInit {
   private readonly profileService = inject(ProfileService);
   private readonly phoneService = inject(PhoneService);
+  private readonly emailService = inject(EmailService);
+  private readonly route = inject(ActivatedRoute);
   private readonly toast = inject(ToastService);
 
   protected readonly genders = GENDERS;
@@ -387,6 +528,7 @@ export class AccountProfilePageComponent implements OnInit {
   protected phone = (): string => this._user()?.phone ?? '';
   protected emailVerified = (): boolean => this._user()?.is_email_verified ?? false;
   protected phoneVerified = (): boolean => this._user()?.is_phone_verified ?? false;
+  protected needsEmailUpdate = (): boolean => this._user()?.needs_email_update ?? false;
   protected avatarUrl = (): string | null => this._user()?.avatar_url ?? null;
 
   /* ---- Change-phone (OTP) flow state ---------------------------------
@@ -403,6 +545,20 @@ export class AccountProfilePageComponent implements OnInit {
   /** i18n key of the current inline error, or null when clear. */
   protected readonly phoneError = signal<string | null>(null);
   private readonly phoneVerificationId = signal<string | null>(null);
+
+  /* ---- Change-email (OTP) flow state ---------------------------------
+     Mirror of the change-phone widget: enter a new email → send OTP (to the
+     NEW address, proving deliverability) → enter the 6-digit code → verify.
+     EmailService writes the promoted email back into AuthService; we mirror
+     it into _user so email()/emailVerified()/needsEmailUpdate() update. */
+  protected readonly emailEditing = signal<boolean>(false);
+  protected readonly emailStep = signal<EmailChangeStep>('enterEmail');
+  protected readonly newEmail = signal<string>('');
+  protected readonly emailCode = signal<string>('');
+  protected readonly emailBusy = signal<boolean>(false);
+  /** i18n key of the current inline error, or null when clear. */
+  protected readonly emailError = signal<string | null>(null);
+  private readonly emailVerificationId = signal<string | null>(null);
 
   /** Initials shown as a placeholder when no avatar is set. */
   protected initials(): string {
@@ -455,6 +611,10 @@ export class AccountProfilePageComponent implements OnInit {
         locale: user.locale ?? 'en',
       });
       this.form.markAsPristine();
+      // Deep-link from the "update your email" reminder banner opens the flow.
+      if (this.route.snapshot.queryParamMap.get('editEmail')) {
+        this.startEmailChange();
+      }
     } catch {
       this.toast.error('account.profile.errors.loadFailed');
     }
@@ -703,6 +863,181 @@ export class AccountProfilePageComponent implements OnInit {
       return 'account.profile.phoneChange.errors.rateLimited';
     }
     return 'account.profile.phoneChange.errors.verifyFailed';
+  }
+
+  /* ------------------------------------------------------------------
+     Change-email (OTP) flow
+     ------------------------------------------------------------------ */
+
+  /** Open the inline flow. Starts blank — the point is to move OFF the
+      current (non-deliverable) address, so pre-filling it is unhelpful. */
+  protected startEmailChange(): void {
+    this.emailEditing.set(true);
+    this.emailStep.set('enterEmail');
+    this.newEmail.set('');
+    this.emailCode.set('');
+    this.emailError.set(null);
+    this.emailVerificationId.set(null);
+  }
+
+  /** Close the flow and reset all transient state. */
+  protected cancelEmailChange(): void {
+    if (this.emailBusy()) return;
+    this.emailEditing.set(false);
+    this.emailStep.set('enterEmail');
+    this.newEmail.set('');
+    this.emailCode.set('');
+    this.emailError.set(null);
+    this.emailVerificationId.set(null);
+  }
+
+  protected onNewEmailInput(event: Event): void {
+    this.newEmail.set((event.target as HTMLInputElement).value);
+    if (this.emailError() !== null) this.emailError.set(null);
+  }
+
+  protected onEmailCodeInput(event: Event): void {
+    this.emailCode.set((event.target as HTMLInputElement).value);
+    if (this.emailError() !== null) this.emailError.set(null);
+  }
+
+  /** Basic client-side email check; the server is the real validator. */
+  private isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  /**
+   * Step 1 → 2: validate the address, POST /me/email to dispatch an OTP to it,
+   * store the verification_id and advance to the code step. A 422 (address
+   * itself non-deliverable / invalid) or 409 CONFLICT_EMAIL_TAKEN surfaces
+   * inline.
+   */
+  protected async sendEmailOtp(): Promise<void> {
+    if (this.emailBusy()) return;
+    const email = this.newEmail().trim();
+    if (!this.isValidEmail(email)) {
+      this.emailError.set('account.profile.emailChange.errors.invalidEmail');
+      return;
+    }
+    this.emailBusy.set(true);
+    this.emailError.set(null);
+    try {
+      const res = await this.emailService.sendOtp(email);
+      this.emailVerificationId.set(res.verification_id);
+      this.newEmail.set(email);
+      this.emailCode.set('');
+      this.emailStep.set('enterCode');
+    } catch (err) {
+      this.emailError.set(this.sendEmailErrorKey(err));
+    } finally {
+      this.emailBusy.set(false);
+    }
+  }
+
+  /** Re-dispatch an OTP to the same address (stays on the code step). */
+  protected async resendEmailOtp(): Promise<void> {
+    if (this.emailBusy()) return;
+    const email = this.newEmail().trim();
+    if (!this.isValidEmail(email)) {
+      this.emailError.set('account.profile.emailChange.errors.invalidEmail');
+      return;
+    }
+    this.emailBusy.set(true);
+    this.emailError.set(null);
+    try {
+      const res = await this.emailService.sendOtp(email);
+      this.emailVerificationId.set(res.verification_id);
+      this.emailCode.set('');
+      this.toast.success('account.profile.emailChange.codeResent');
+    } catch (err) {
+      this.emailError.set(this.sendEmailErrorKey(err));
+    } finally {
+      this.emailBusy.set(false);
+    }
+  }
+
+  /**
+   * Step 2: confirm the OTP via POST /me/email/verify. On success EmailService
+   * promotes the email in AuthService; we mirror it into _user so the profile
+   * (and the needs-update hint) update, then close.
+   */
+  protected async verifyEmailOtp(): Promise<void> {
+    if (this.emailBusy()) return;
+    const vid = this.emailVerificationId();
+    const code = this.emailCode().trim();
+    if (vid === null) {
+      this.emailError.set('account.profile.emailChange.errors.sendFailed');
+      return;
+    }
+    if (!/^\d{4,6}$/.test(code)) {
+      this.emailError.set('account.profile.emailChange.errors.invalidCode');
+      return;
+    }
+    this.emailBusy.set(true);
+    this.emailError.set(null);
+    try {
+      const res = await this.emailService.verify(vid, code);
+      const user = this._user();
+      if (user !== null) {
+        this._user.set({
+          ...user,
+          email: res.email,
+          is_email_verified: res.is_email_verified,
+          needs_email_update: res.needs_email_update,
+        });
+      }
+      this.emailEditing.set(false);
+      this.emailStep.set('enterEmail');
+      this.newEmail.set('');
+      this.emailCode.set('');
+      this.emailVerificationId.set(null);
+      this.toast.success('account.profile.emailChange.updated');
+    } catch (err) {
+      this.emailError.set(this.verifyEmailErrorKey(err));
+    } finally {
+      this.emailBusy.set(false);
+    }
+  }
+
+  /** Map a send-OTP failure to an inline i18n key. */
+  private sendEmailErrorKey(err: unknown): string {
+    if (!(err instanceof HttpErrorResponse) || err.status === 0) {
+      return 'common.errors.network';
+    }
+    const code = this.extractErrorCode(err);
+    if (code === AUTH_ERROR_CODES.CONFLICT_EMAIL_TAKEN) {
+      return 'account.profile.emailChange.errors.taken';
+    }
+    if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
+      return 'account.profile.emailChange.errors.rateLimited';
+    }
+    if (code === AUTH_ERROR_CODES.VALIDATION_FAILED) {
+      // The new address is itself non-deliverable (relay / placeholder) or
+      // malformed — the server rejects it with 422 VALIDATION_FAILED.
+      return 'account.profile.emailChange.errors.invalidEmail';
+    }
+    return 'account.profile.emailChange.errors.sendFailed';
+  }
+
+  /** Map a verify-OTP failure to an inline i18n key. */
+  private verifyEmailErrorKey(err: unknown): string {
+    if (!(err instanceof HttpErrorResponse) || err.status === 0) {
+      return 'common.errors.network';
+    }
+    const code = this.extractErrorCode(err);
+    if (
+      code === AUTH_ERROR_CODES.OTP_INVALID_CODE ||
+      code === AUTH_ERROR_CODES.OTP_VERIFICATION_FAILED
+    ) {
+      return 'account.profile.emailChange.errors.invalidCode';
+    }
+    if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
+      return 'account.profile.emailChange.errors.rateLimited';
+    }
+    if (code === AUTH_ERROR_CODES.CONFLICT_EMAIL_TAKEN) {
+      return 'account.profile.emailChange.errors.taken';
+    }
+    return 'account.profile.emailChange.errors.verifyFailed';
   }
 
   /**

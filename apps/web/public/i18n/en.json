@@ -651,6 +651,11 @@
       "desc": "Secure your account and get order updates by SMS. We’ll text a code to confirm it’s yours.",
       "cta": "Add phone number"
     },
+    "updateEmail": {
+      "title": "Update your email address",
+      "desc": "Your current email can’t receive our order updates and receipts. Add a working email so you don’t miss anything.",
+      "cta": "Update email"
+    },
     "profile": {
       "title": "Profile",
       "firstName": "First name",
@@ -693,6 +698,28 @@
           "invalidPhone": "Enter a valid number starting with '+' (e.g. +9715XXXXXXXX).",
           "invalidCode": "That code is incorrect or has expired. Please try again.",
           "taken": "That number is already registered to another account.",
+          "rateLimited": "Too many attempts. Please wait a moment and try again.",
+          "sendFailed": "We couldn't send the code. Please try again.",
+          "verifyFailed": "We couldn't verify that code. Please try again."
+        }
+      },
+      "emailChange": {
+        "change": "Update email",
+        "needsUpdate": "This address can't receive our emails.",
+        "newLabel": "New email address",
+        "placeholder": "you@example.com",
+        "hint": "We'll send a 6-digit code to this address to confirm it works.",
+        "sendCode": "Send code",
+        "codeLabel": "Enter the 6-digit code we sent to {{email}}.",
+        "verify": "Verify",
+        "resend": "Resend code",
+        "cancel": "Cancel",
+        "codeResent": "We've sent a new code.",
+        "updated": "Your email address has been updated.",
+        "errors": {
+          "invalidEmail": "Enter a valid, working email address (not an Apple private-relay address).",
+          "invalidCode": "That code is incorrect or has expired. Please try again.",
+          "taken": "That email is already registered to another account.",
           "rateLimited": "Too many attempts. Please wait a moment and try again.",
           "sendFailed": "We couldn't send the code. Please try again.",
           "verifyFailed": "We couldn't verify that code. Please try again."

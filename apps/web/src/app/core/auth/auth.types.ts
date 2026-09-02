@@ -35,6 +35,12 @@ export interface AuthUser {
   timezone: string | null;
   is_phone_verified: boolean;
   is_email_verified: boolean;
+  /**
+   * True when the account email can't receive our transactional mail (an Apple
+   * private-relay or social-placeholder address). Drives the "update your
+   * email" reminder banner + the profile prompt. Mirrors UserSerializer.
+   */
+  needs_email_update: boolean;
   roles: UserRole[];
   is_store_approved: boolean;
   is_store_active: boolean;

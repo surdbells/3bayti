@@ -19,6 +19,7 @@ import { ProductStripComponent } from '../../shared/ui/product-strip';
 import { CampaignSectionComponent } from './campaign-section';
 import { TopSellersComponent } from './top-sellers';
 import { AddPhonePromptComponent } from '../../shared/ui/add-phone-prompt';
+import { UpdateEmailPromptComponent } from '../../shared/ui/update-email-prompt';
 import type { ActiveCampaigns } from '../campaigns/campaign.model';
 import { StoreCardComponent } from '../catalog/store-card';
 import { RecommendationsService } from '../catalog/recommendations.service';
@@ -64,6 +65,7 @@ import { TranslatePipe } from '@ngx-translate/core';
     NgTemplateOutlet,
     RouterLink,
     AddPhonePromptComponent,
+    UpdateEmailPromptComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.html',

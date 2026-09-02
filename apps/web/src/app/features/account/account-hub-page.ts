@@ -12,6 +12,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { NavIconComponent } from '../../layout/header/nav-icon';
 import { AddPhonePromptComponent } from '../../shared/ui/add-phone-prompt';
+import { UpdateEmailPromptComponent } from '../../shared/ui/update-email-prompt';
 import { MessagesService } from '../messages/messages.service';
 import { SUPPORT_WHATSAPP_URL } from '../../core/config/support.constants';
 
@@ -30,13 +31,16 @@ import { SUPPORT_WHATSAPP_URL } from '../../core/config/support.constants';
 @Component({
   selector: 'app-account-hub',
   standalone: true,
-  imports: [NgIf, RouterLink, TranslatePipe, NavIconComponent, AddPhonePromptComponent],
+  imports: [NgIf, RouterLink, TranslatePipe, NavIconComponent, AddPhonePromptComponent, UpdateEmailPromptComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="account-hub" data-testid="account-hub-page">
       <div class="account-hub__container">
         <!-- No phone on file (social sign-up): prompt to add + verify one. -->
         <app-add-phone-prompt />
+
+        <!-- Email can't receive our mail (Apple relay / placeholder): prompt to update. -->
+        <app-update-email-prompt />
 
         <div
           *ngIf="showVerifyBanner()"
