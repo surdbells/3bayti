@@ -567,12 +567,20 @@ class OrderRepository extends EntityRepository
         ?string $dateFrom,
         ?string $dateTo,
     ): void {
-        // Vendors NEVER see orders still awaiting payment OR whose payment
-        // failed, neither is a real sale with a fulfilment obligation. Applied
-        // unconditionally (not just kept out of the status-filter whitelist),
-        // so the default unfiltered list hides them too.
+        // Vendors NEVER see orders still awaiting payment, whose payment
+        // failed, OR that were cancelled. None is an actionable sale: unpaid /
+        // failed never became one, and a cancelled order must not be fulfilled
+        // (the vendor already got the "do not ship" cancellation email). Hiding
+        // cancelled from the list keeps it uncluttered and avoids inflating the
+        // vendor's sense of what they sold. Applied unconditionally (not just
+        // kept out of the status-filter whitelist), so the default unfiltered
+        // list AND any status filter hide them.
         $qb->andWhere('o.status NOT IN (:nonSaleStatuses)')
-            ->setParameter('nonSaleStatuses', [Order::STATUS_PENDING_PAYMENT, Order::STATUS_FAILED]);
+            ->setParameter('nonSaleStatuses', [
+                Order::STATUS_PENDING_PAYMENT,
+                Order::STATUS_FAILED,
+                Order::STATUS_CANCELLED,
+            ]);
 
         if ($status !== null && $status !== '') {
             $qb->andWhere('o.status = :status')->setParameter('status', $status);

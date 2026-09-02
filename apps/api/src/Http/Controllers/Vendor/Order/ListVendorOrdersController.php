@@ -157,12 +157,13 @@ final class ListVendorOrdersController
             Order::STATUS_FULFILLING,
             Order::STATUS_SHIPPED,
             Order::STATUS_DELIVERED,
-            Order::STATUS_CANCELLED,
             Order::STATUS_REFUNDED,
         ];
-        // pending_payment + failed are NOT vendor-filterable, vendors never
-        // see unpaid or failed-payment orders (no fulfilment obligation); the
-        // repository also excludes them from the default list unconditionally.
+        // pending_payment, failed AND cancelled are NOT vendor-filterable:
+        // vendors never see unpaid/failed orders, and cancelled orders are
+        // hidden from the vendor list entirely. The repository excludes all
+        // three unconditionally, so even a crafted status=cancelled returns
+        // nothing; dropping it here keeps the whitelist honest.
         return in_array($raw, $valid, true) ? $raw : null;
     }
 

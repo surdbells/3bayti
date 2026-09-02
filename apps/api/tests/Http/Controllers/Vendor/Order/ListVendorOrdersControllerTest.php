@@ -136,6 +136,29 @@ final class ListVendorOrdersControllerTest extends HttpTestCase
     }
 
     #[Test]
+    public function cancelledStatusFilterIsIgnored(): void
+    {
+        // Cancelled orders are hidden from vendors, so status=cancelled is no
+        // longer a valid vendor filter: it drops to null (and the repository
+        // excludes cancelled unconditionally regardless).
+        $user = $this->makeVendorUser(7);
+
+        $vendorRepo = $this->createMock(VendorRepository::class);
+        $vendorRepo->method('findIdsByOwnerUser')->willReturn([5]);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->expects(self::once())
+            ->method('paginatedForVendorIds')
+            ->with([5], 10, 0, null, null, null, null)
+            ->willReturn([[], 0]);
+
+        $this->bindEm($user, $orderRepo, $vendorRepo);
+        $response = $this->makeRequest($user, '/v3/vendor/orders?status=cancelled');
+
+        self::assertSame(200, $response->getStatusCode());
+    }
+
+    #[Test]
     public function paginationParamsAreClampedAndForwarded(): void
     {
         $user = $this->makeVendorUser(7);

@@ -90,7 +90,6 @@ export class VendorOrdersComponent implements OnInit {
             { label: 'Fulfilling', value: 'fulfilling' },
             { label: 'Shipped', value: 'shipped' },
             { label: 'Delivered', value: 'delivered' },
-            { label: 'Cancelled', value: 'cancelled' },
             { label: 'Refunded', value: 'refunded' },
             { label: 'Failed', value: 'failed' },
           ],
