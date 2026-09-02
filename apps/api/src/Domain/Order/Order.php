@@ -150,6 +150,15 @@ class Order
     private ?DateTimeImmutable $deletedAt = null;
 
     /**
+     * Checkout channel the order was placed from: 'MOBILE' or 'WEB' (set from
+     * the initiate-checkout channel param). Null for legacy/migrated orders and
+     * anything created before this was tracked. Surfaced on the admin orders
+     * view so the business can see where sales come from.
+     */
+    #[ORM\Column(type: 'string', length: 16, nullable: true)]
+    private ?string $channel = null;
+
+    /**
      * @var Collection<int, OrderItem>
      */
     #[ORM\OneToMany(targetEntity: OrderItem::class, mappedBy: 'order', cascade: ['persist', 'remove'], orphanRemoval: true)]
@@ -209,6 +218,7 @@ class Order
         string $deliveryFee = '0.00',
         string $discount = '0.00',
         string $currency = 'AED',
+        ?string $channel = null,
     ) {
         if ($orderReference === '' || strlen($orderReference) > 32) {
             throw new \InvalidArgumentException(
@@ -226,6 +236,7 @@ class Order
         $this->discount = $discount;
         $this->total = $this->computeTotal($subtotal, $deliveryFee, $discount);
         $this->currency = $currency;
+        $this->channel = ($channel === null || trim($channel) === '') ? null : strtoupper(trim($channel));
         $this->items = new ArrayCollection();
         $this->addresses = new ArrayCollection();
         $this->initTimestamps();
@@ -245,6 +256,12 @@ class Order
     public function getLegacyOrderId(): ?int
     {
         return $this->legacyOrderId;
+    }
+
+    /** Checkout channel ('MOBILE' | 'WEB'), or null if not tracked. */
+    public function getChannel(): ?string
+    {
+        return $this->channel;
     }
 
     public function setLegacyOrderId(?int $legacyOrderId): void

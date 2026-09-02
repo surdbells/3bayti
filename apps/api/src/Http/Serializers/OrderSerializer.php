@@ -94,6 +94,9 @@ final class OrderSerializer
             'total' => $order->getTotal(),
             'currency' => $order->getCurrency(),
             'paid_at' => $order->getPaidAt()?->format(\DateTimeInterface::ATOM),
+            // Checkout channel the order came from ('MOBILE' | 'WEB'), null for
+            // legacy/untracked orders. Shown on the admin orders view.
+            'channel' => $order->getChannel(),
             // The customer who placed the order (order.user). Vendors use this
             // to coordinate delivery, so name + contact are exposed on the
             // vendor order list/detail. (detailShape reuses listShape, so this

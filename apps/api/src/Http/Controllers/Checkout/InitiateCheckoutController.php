@@ -383,6 +383,7 @@ final class InitiateCheckoutController
                     subtotal: $subtotal,
                     deliveryFee: $deliveryFee,
                     discount: $discount,
+                    channel: $input->channel,
                 );
 
                 // Snapshot cart items → order items.
@@ -705,6 +706,7 @@ final class InitiateCheckoutController
                     subtotal: $denomination,
                     deliveryFee: '0.00',
                     discount: '0.00',
+                    channel: $input->channel,
                 );
                 // Same resolved (or synthesized) address as BOTH billing +
                 // shipping, the shipping row only has to exist for Noon.

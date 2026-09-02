@@ -39,6 +39,8 @@ export interface Transaction extends Record<string, unknown> {
   total_paid: string;
   status: string;
   created: string;
+  /** Checkout channel the order came from ('MOBILE' | 'WEB'), null if untracked. */
+  channel: string | null;
 }
 
 @Component({
@@ -116,6 +118,8 @@ export class ProcessingComponent implements OnInit {
         { key: 'total_paid', label: 'Total', align: 'right',
           format: (v) => (v != null ? `AED ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—') },
         { key: 'status', label: 'Status', align: 'center' },
+        { key: 'channel', label: 'Channel', align: 'center', hideOnMobile: true,
+          format: (v) => (v === 'MOBILE' ? 'Mobile' : v === 'WEB' ? 'Web' : '—') },
         { key: 'created', label: 'Date', hideOnMobile: true,
           format: (v) => (v ? new Date(String(v)).toLocaleString() : '—') },
       ],
@@ -177,6 +181,7 @@ export class ProcessingComponent implements OnInit {
       items_count: items.reduce((s, i) => s + (Number(i.quantity) || 0), 0) || items.length,
       total_paid: o.total ?? o.subtotal ?? '0',
       status: o.status ?? '',
+      channel: o.channel ?? null,
       created: o.date ?? o.created_at ?? '',
     } as Transaction;
   }
