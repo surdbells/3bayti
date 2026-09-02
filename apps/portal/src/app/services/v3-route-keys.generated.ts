@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 314 route keys.
+ * 316 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -27,6 +27,7 @@ export type V3RouteKey =
   | 'DELETE /me/social-identities/:provider'
   | 'DELETE /me/wishlist/:productId'
   | 'DELETE /me/wishlist/labels/:id'
+  | 'DELETE /orders/:id'
   | 'DELETE /vendor/coupons/:id'
   | 'DELETE /vendor/labels/:id'
   | 'DELETE /vendor/measurements/:id'
@@ -286,6 +287,7 @@ export type V3RouteKey =
   | 'POST /me/wishlist'
   | 'POST /me/wishlist/labels'
   | 'POST /orders/:id/cancel'
+  | 'POST /orders/:id/reorder'
   | 'POST /payment/webhook/noon'
   | 'POST /products/:productId/reviews'
   | 'POST /reviews/:id/helpful'
@@ -344,6 +346,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'DELETE /me/social-identities/:provider',
   'DELETE /me/wishlist/:productId',
   'DELETE /me/wishlist/labels/:id',
+  'DELETE /orders/:id',
   'DELETE /vendor/coupons/:id',
   'DELETE /vendor/labels/:id',
   'DELETE /vendor/measurements/:id',
@@ -603,6 +606,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /me/wishlist',
   'POST /me/wishlist/labels',
   'POST /orders/:id/cancel',
+  'POST /orders/:id/reorder',
   'POST /payment/webhook/noon',
   'POST /products/:productId/reviews',
   'POST /reviews/:id/helpful',

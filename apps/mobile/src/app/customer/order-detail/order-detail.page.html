@@ -256,6 +256,31 @@
         </ion-button>
       </div>
     }
+
+    <!-- Failed order: reorder (buy again) + remove -->
+    @if (order.status === 'failed') {
+      <div class="failed-actions">
+        <ion-button
+          expand="block"
+          class="failed-actions__reorder"
+          (click)="reorder()"
+          [disabled]="ui_controls.is_reordering"
+          data-testid="reorder-order-btn"
+        >
+          {{ (ui_controls.is_reordering ? 'order_reordering' : 'order_reorder') | translate }}
+        </ion-button>
+        <ion-button
+          expand="block"
+          fill="outline"
+          color="danger"
+          (click)="confirmRemove()"
+          [disabled]="ui_controls.is_removing"
+          data-testid="remove-order-btn"
+        >
+          {{ (ui_controls.is_removing ? 'order_removing' : 'order_remove') | translate }}
+        </ion-button>
+      </div>
+    }
   }
 </ion-content>
 

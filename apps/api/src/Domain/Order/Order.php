@@ -141,6 +141,15 @@ class Order
     private ?DateTimeImmutable $deliveredAt = null;
 
     /**
+     * Customer soft-delete: when the customer removed this order from their
+     * OWN history (failed orders only — see DeleteOrderController). The row is
+     * kept for records/audit; it's just filtered out of the customer's list +
+     * detail (OrderRepository). Null = visible.
+     */
+    #[ORM\Column(name: 'deleted_at', type: 'datetimetz_immutable', nullable: true)]
+    private ?DateTimeImmutable $deletedAt = null;
+
+    /**
      * @var Collection<int, OrderItem>
      */
     #[ORM\OneToMany(targetEntity: OrderItem::class, mappedBy: 'order', cascade: ['persist', 'remove'], orphanRemoval: true)]
@@ -389,6 +398,29 @@ class Order
         }
         $this->status = self::STATUS_FAILED;
         $this->touchUpdatedAt();
+    }
+
+    /**
+     * Customer-initiated soft-delete: hide this order from the customer's own
+     * history. Idempotent. The row is preserved for records/audit; the
+     * customer's list + detail queries filter it out (OrderRepository).
+     */
+    public function softDelete(): void
+    {
+        if ($this->deletedAt === null) {
+            $this->deletedAt = new DateTimeImmutable();
+            $this->touchUpdatedAt();
+        }
+    }
+
+    public function isDeleted(): bool
+    {
+        return $this->deletedAt !== null;
+    }
+
+    public function getDeletedAt(): ?DateTimeImmutable
+    {
+        return $this->deletedAt;
     }
 
     /**

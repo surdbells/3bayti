@@ -189,6 +189,45 @@ export class OrderService {
   }
 
   /**
+   * Reorder ("buy again") — re-add this order's items to the cart. The API
+   * skips items no longer available and reports the counts. Returns the
+   * {added, skipped, total} summary so the caller can message the customer.
+   */
+  async reorder(id: number): Promise<{ added: number; skipped: number; total: number }> {
+    return this.runWithLoadingDetail(async () => {
+      const response = await firstValueFrom(
+        this.http.post<{ reorder?: { added: number; skipped: number; total: number } }>(
+          `${V3_BASE}/v3/orders/${id}/reorder`,
+          {},
+        ),
+      );
+      const r = response?.reorder ?? { added: 0, skipped: 0, total: 0 };
+      return {
+        added: Number(r.added ?? 0),
+        skipped: Number(r.skipped ?? 0),
+        total: Number(r.total ?? 0),
+      };
+    });
+  }
+
+  /**
+   * Remove (soft-delete) a FAILED order from the customer's history. Drops it
+   * from the cached list on success. The API 422s for any non-failed status.
+   */
+  async remove(id: number): Promise<void> {
+    return this.runWithLoadingDetail(async () => {
+      await firstValueFrom(this.http.delete(`${V3_BASE}/v3/orders/${id}`));
+      const list = this._listItems();
+      const idx = list.findIndex(o => o.id === id);
+      if (idx >= 0) {
+        const next = [...list];
+        next.splice(idx, 1);
+        this._listItems.set(next);
+      }
+    });
+  }
+
+  /**
    * Submit a customer return request for an order.
    *
    * Endpoint: POST /v3/orders/:id/returns (multipart/form-data)

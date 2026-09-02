@@ -1305,6 +1305,19 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/orders/:id/cancel',
     shape: 'v3-envelope',
   },
+  // Customer self-serve reorder ("buy again") + remove a failed order (v3-only).
+  'POST /orders/:id/reorder': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/orders/:id/reorder',
+    shape: 'v3-envelope',
+  },
+  'DELETE /orders/:id': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/orders/:id',
+    shape: 'v3-envelope',
+  },
   // M3.1.7-C — vendor order surface (mobile reads in Phase I)
   'GET /vendor/orders': {
     target: 'new',

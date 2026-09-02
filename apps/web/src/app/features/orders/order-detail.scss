@@ -393,6 +393,32 @@
   }
 }
 
+.order-detail__reorder-btn {
+  appearance: none;
+  background: var(--color-text-primary, #2e241c);
+  border: 1px solid var(--color-text-primary, #2e241c);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    background: var(--color-brand-700, #5a3a2c);
+    border-color: var(--color-brand-700, #5a3a2c);
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
 .order-detail__cancel-btn {
   appearance: none;
   background: transparent;

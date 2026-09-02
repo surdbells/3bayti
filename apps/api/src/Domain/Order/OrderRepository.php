@@ -59,6 +59,8 @@ class OrderRepository extends EntityRepository
             ->leftJoin('o.addresses', 'a')
             ->where('o.id = :id')
             ->andWhere('o.user = :user')
+            // Customer-hidden (soft-deleted) orders are invisible to the owner.
+            ->andWhere('o.deletedAt IS NULL')
             ->setParameter('id', $orderId)
             ->setParameter('user', $user)
             ->getQuery()
@@ -109,6 +111,7 @@ class OrderRepository extends EntityRepository
         $totalQb = $this->createQueryBuilder('o')
             ->select('COUNT(o.id)')
             ->where('o.user = :user')
+            ->andWhere('o.deletedAt IS NULL')
             ->setParameter('user', $user);
         if ($status !== null) {
             $totalQb->andWhere('o.status = :status')->setParameter('status', $status);
@@ -126,6 +129,7 @@ class OrderRepository extends EntityRepository
         $idQb = $this->createQueryBuilder('o')
             ->select('o.id')
             ->where('o.user = :user')
+            ->andWhere('o.deletedAt IS NULL')
             ->setParameter('user', $user)
             ->orderBy('o.createdAt', 'DESC')
             ->setMaxResults($limit)

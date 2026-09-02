@@ -377,6 +377,9 @@ return function (App $app): void {
         $group->get('/{id:[0-9]+}/timeline', \Bayti\Api\Http\Controllers\Order\GetOrderTimelineController::class);
         // M3.1.7-F, customer self-serve cancel (pending_payment only)
         $group->post('/{id:[0-9]+}/cancel', \Bayti\Api\Http\Controllers\Order\CancelOrderController::class);
+        // Customer self-serve reorder ("buy again") + remove a failed order.
+        $group->post('/{id:[0-9]+}/reorder', \Bayti\Api\Http\Controllers\Order\ReorderController::class);
+        $group->delete('/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Order\DeleteOrderController::class);
         // M3.2.X.18-D, customer return submission + list per order
         $group->post(
             '/{id:[0-9]+}/returns',

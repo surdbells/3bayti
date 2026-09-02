@@ -412,3 +412,15 @@
   --border-radius: 12px;
   margin: 0;
 }
+
+/* Failed order: reorder + remove actions */
+.failed-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.failed-actions__reorder {
+  --background: var(--ax-color-bg-brand);
+  --border-radius: 12px;
+}

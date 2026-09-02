@@ -158,6 +158,8 @@ export class OrderDetailPage implements OnInit {
     is_loading: false,
     is_cancelling: false,
     is_paying: false,
+    is_reordering: false,
+    is_removing: false,
     not_found: false,
   };
 
@@ -237,6 +239,98 @@ export class OrderDetailPage implements OnInit {
   /** Whether the money breakdown should show a discount line. */
   hasDiscount(): boolean {
     return (this.order?.discount ?? 0) > 0;
+  }
+
+  /** A failed order can be re-ordered (buy again) or removed from history. */
+  canReorder(): boolean {
+    return this.order?.status === 'failed' && !this.ui_controls.is_reordering;
+  }
+
+  canRemove(): boolean {
+    return this.order?.status === 'failed' && !this.ui_controls.is_removing;
+  }
+
+  /**
+   * Re-add this order's items to the cart, then open the cart. Best-effort:
+   * the API skips items that are no longer available and tells us how many.
+   */
+  reorder(): void {
+    const order = this.order;
+    if (order === null || !this.canReorder()) return;
+    this.ui_controls.is_reordering = true;
+    this.mobileAdapter
+      .post_v3('POST /orders/:id/reorder', {}, {
+        authToken: this.token,
+        pathParams: { id: String(order.id) },
+      })
+      .subscribe({
+        next: (response: any) => {
+          this.ui_controls.is_reordering = false;
+          if (response?.response_code !== 200 || response?.status !== 'success') {
+            this.toast.error(response?.message || this.i18n.t('order_detail_network_error'));
+            return;
+          }
+          const added = response?.data?.reorder?.added ?? 0;
+          const skipped = response?.data?.reorder?.skipped ?? 0;
+          if (added > 0) {
+            this.toast.success(
+              skipped > 0
+                ? this.i18n.t('order_reorder_partial')
+                : this.i18n.t('order_reorder_done'),
+            );
+            this.router.navigate(['/', 'cart']);
+          } else {
+            this.toast.error(this.i18n.t('order_reorder_none'));
+          }
+        },
+        error: (err: any) => {
+          this.ui_controls.is_reordering = false;
+          this.toast.error(apiErrorMessage(err, this.i18n.t('order_detail_network_error')));
+        },
+      });
+  }
+
+  async confirmRemove() {
+    const order = this.order;
+    if (order === null || !this.canRemove()) return;
+    const sheet = await this.actionSheetCtrl.create({
+      header: this.i18n.t('order_remove_confirm'),
+      buttons: [
+        {
+          text: this.i18n.t('order_remove_yes'),
+          role: 'destructive',
+          handler: () => this.executeRemove(),
+        },
+        { text: this.i18n.t('order_remove_keep'), role: 'cancel' },
+      ],
+    });
+    await sheet.present();
+  }
+
+  private executeRemove(): void {
+    const order = this.order;
+    if (order === null) return;
+    this.ui_controls.is_removing = true;
+    this.mobileAdapter
+      .delete_v3('DELETE /orders/:id', {
+        authToken: this.token,
+        pathParams: { id: String(order.id) },
+      })
+      .subscribe({
+        next: (response: any) => {
+          this.ui_controls.is_removing = false;
+          if (response?.response_code === 200 && response?.status === 'success') {
+            this.toast.success(this.i18n.t('order_remove_done'));
+            this.router.navigate(['/', 'my-orders']);
+          } else {
+            this.toast.error(response?.message || this.i18n.t('order_detail_network_error'));
+          }
+        },
+        error: (err: any) => {
+          this.ui_controls.is_removing = false;
+          this.toast.error(apiErrorMessage(err, this.i18n.t('order_detail_network_error')));
+        },
+      });
   }
 
   /** Canonical customer lifecycle stages, in order. A stage is "reached" when

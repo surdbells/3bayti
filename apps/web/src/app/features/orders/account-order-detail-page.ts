@@ -7,7 +7,7 @@ import {
   OnInit,
 } from '@angular/core';
 import { NgIf, NgFor, NgClass, DatePipe } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { OrderService, ORDER_STATUS_LABELS } from '../../core/orders';
 import type { Order, OrderTimelineEvent } from '../../core/orders';
@@ -349,7 +349,7 @@ interface TimelineEventView {
           </section>
 
           <div
-            *ngIf="canCancel() || canRequestReturn()"
+            *ngIf="canCancel() || canRequestReturn() || canReorder() || canRemove()"
             class="order-detail__actions"
             data-testid="order-detail-actions"
           >
@@ -361,6 +361,26 @@ interface TimelineEventView {
             >
               {{ 'orders.detail.submitReturn' | translate }}
             </a>
+            <button
+              *ngIf="canReorder()"
+              type="button"
+              class="order-detail__reorder-btn"
+              [disabled]="isReordering()"
+              (click)="onReorderClick()"
+              data-testid="order-detail-reorder"
+            >
+              {{ (isReordering() ? 'common.loading' : 'orders.detail.reorder') | translate }}
+            </button>
+            <button
+              *ngIf="canRemove()"
+              type="button"
+              class="order-detail__cancel-btn"
+              [disabled]="isRemoving()"
+              (click)="onRemoveClick()"
+              data-testid="order-detail-remove"
+            >
+              {{ (isRemoving() ? 'common.loading' : 'orders.detail.remove') | translate }}
+            </button>
             <button
               *ngIf="canCancel()"
               type="button"
@@ -408,12 +428,25 @@ interface TimelineEventView {
         (confirm)="onCancelConfirmed()"
         (cancel)="onCancelDismissed()"
       ></ui-confirm-modal>
+
+      <ui-confirm-modal
+        [open]="showRemoveConfirm()"
+        [title]="'orders.detail.removeConfirmTitle'"
+        [message]="'orders.detail.removeConfirm'"
+        [confirmLabel]="'orders.detail.removeConfirmYes'"
+        [cancelLabel]="'orders.detail.removeConfirmNo'"
+        [danger]="true"
+        [busy]="isRemoving()"
+        (confirm)="onRemoveConfirmed()"
+        (cancel)="onRemoveDismissed()"
+      ></ui-confirm-modal>
     </main>
   `,
   styleUrl: './order-detail.scss',
 })
 export class AccountOrderDetailPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly orderService = inject(OrderService);
   private readonly toast = inject(ToastService);
 
@@ -432,6 +465,12 @@ export class AccountOrderDetailPageComponent implements OnInit {
 
   private readonly _showCancelConfirm = signal(false);
   protected readonly showCancelConfirm = this._showCancelConfirm.asReadonly();
+  private readonly _isReordering = signal(false);
+  protected readonly isReordering = this._isReordering.asReadonly();
+  private readonly _isRemoving = signal(false);
+  protected readonly isRemoving = this._isRemoving.asReadonly();
+  private readonly _showRemoveConfirm = signal(false);
+  protected readonly showRemoveConfirm = this._showRemoveConfirm.asReadonly();
 
   protected readonly canCancel = computed(() => {
     const o = this._order();
@@ -615,6 +654,62 @@ export class AccountOrderDetailPageComponent implements OnInit {
   /** Confirm message i18n key, used by the modal's [message]. */
   protected confirmMessage(): string {
     return 'orders.detail.cancelConfirm';
+  }
+
+  /* -----------------------------------------------------------------
+     Failed order: reorder + remove
+     ----------------------------------------------------------------- */
+
+  protected readonly canReorder = computed(() => this._order()?.status === 'failed');
+  protected readonly canRemove = computed(() => this._order()?.status === 'failed');
+
+  /** Re-add the order's items to the cart, then go to the cart. */
+  protected async onReorderClick(): Promise<void> {
+    const order = this._order();
+    if (order === null || this._isReordering()) return;
+    this._isReordering.set(true);
+    try {
+      const { added, skipped } = await this.orderService.reorder(order.id);
+      if (added > 0) {
+        this.toast.success(skipped > 0 ? 'orders.detail.reorderPartial' : 'orders.detail.reorderDone');
+        await this.router.navigate(['/cart']);
+      } else {
+        this.toast.error('orders.detail.reorderNone');
+      }
+    } catch {
+      this.toast.error('orders.detail.reorderFailed');
+    } finally {
+      this._isReordering.set(false);
+    }
+  }
+
+  protected onRemoveClick(): void {
+    if (!this.canRemove() || this._order() === null) return;
+    this._showRemoveConfirm.set(true);
+  }
+
+  protected onRemoveDismissed(): void {
+    this._showRemoveConfirm.set(false);
+  }
+
+  /** User confirmed removal — soft-delete the failed order, then leave. */
+  protected async onRemoveConfirmed(): Promise<void> {
+    const order = this._order();
+    if (order === null) {
+      this._showRemoveConfirm.set(false);
+      return;
+    }
+    this._isRemoving.set(true);
+    try {
+      await this.orderService.remove(order.id);
+      this.toast.success('orders.detail.removeSuccess');
+      await this.router.navigate(['/account/orders']);
+    } catch {
+      this.toast.error('orders.detail.removeFailed');
+    } finally {
+      this._isRemoving.set(false);
+      this._showRemoveConfirm.set(false);
+    }
   }
 
   /* -----------------------------------------------------------------
