@@ -983,6 +983,10 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\GiftCard\AdjustGiftCardController::class)->add($perm->for('gift_cards.adjust_balance'));
         $group->post('/gift-cards/{id:[0-9]+}/void',
             \Bayti\Api\Http\Controllers\Admin\GiftCard\VoidGiftCardController::class)->add($perm->for('gift_cards.delete'));
+        // Manually (re)send the card to its recipient (email and/or SMS,
+        // whichever is on file). gift_cards.edit = a mutating card action.
+        $group->post('/gift-cards/{id:[0-9]+}/send',
+            \Bayti\Api\Http\Controllers\Admin\GiftCard\SendGiftCardController::class)->add($perm->for('gift_cards.edit'));
 
         // M3.2.X.18-F, Returns admin surface
         $group->get('/returns',

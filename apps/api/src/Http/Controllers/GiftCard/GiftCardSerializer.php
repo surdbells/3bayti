@@ -228,6 +228,11 @@ final class GiftCardSerializer
             'sms_delivered_at'   => $card->getSmsDeliveredAt()?->format(\DateTimeInterface::ATOM),
             'channel'            => self::deliveryChannel($card),
             'delivered'          => $card->getEmailDeliveredAt() !== null || $card->getSmsDeliveredAt() !== null,
+            // Whether the admin "Send to recipient" action is available: the
+            // card is spendable AND has at least one recipient contact to send
+            // to. Drives the Send button's enabled state on the detail page.
+            'can_send'           => $card->isSpendable()
+                && ($card->getRecipientEmail() !== null || $card->getRecipientPhone() !== null),
         ];
 
         // Full ordered ledger (ASC by id, append-only, so chronological).

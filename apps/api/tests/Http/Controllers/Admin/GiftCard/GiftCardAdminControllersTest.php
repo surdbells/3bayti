@@ -14,7 +14,9 @@ use Bayti\Api\Http\Controllers\Admin\GiftCard\AdjustGiftCardController;
 use Bayti\Api\Http\Controllers\Admin\GiftCard\GetGiftCardController;
 use Bayti\Api\Http\Controllers\Admin\GiftCard\IssueGiftCardController;
 use Bayti\Api\Http\Controllers\Admin\GiftCard\ListGiftCardsController;
+use Bayti\Api\Http\Controllers\Admin\GiftCard\SendGiftCardController;
 use Bayti\Api\Http\Controllers\Admin\GiftCard\VoidGiftCardController;
+use Bayti\Api\Notification\GiftCardDeliveryService;
 use Bayti\Api\Http\Controllers\GiftCard\GiftCardSerializer;
 use Bayti\Api\Infrastructure\Auth\JwtService;
 use Bayti\Api\Tests\Http\HttpTestCase;
@@ -42,6 +44,7 @@ use Psr\Http\Message\ResponseInterface;
 #[CoversClass(AdjustGiftCardController::class)]
 #[CoversClass(VoidGiftCardController::class)]
 #[CoversClass(IssueGiftCardController::class)]
+#[CoversClass(SendGiftCardController::class)]
 #[CoversClass(GiftCardSerializer::class)]
 final class GiftCardAdminControllersTest extends HttpTestCase
 {
@@ -329,6 +332,83 @@ final class GiftCardAdminControllersTest extends HttpTestCase
         self::assertSame(422, $response->getStatusCode());
     }
 
+    // ===================== SEND =====================
+
+    #[Test]
+    public function sendDeliversToRecipientAndReturnsPerChannelResult(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $card = $this->makeActiveCard(id: 7, value: '250.00'); // recipient email set
+
+        $repo = $this->createMock(GiftCardRepository::class);
+        $repo->method('findByIdForAdmin')->with(7)->willReturn($card);
+        $this->bindEm($admin, $repo);
+
+        $delivery = $this->createMock(GiftCardDeliveryService::class);
+        $delivery->expects(self::once())->method('resend')->with($card)
+            ->willReturn(['email' => 'sent', 'sms' => 'no_recipient']);
+        $this->bind(GiftCardDeliveryService::class, $delivery);
+
+        $response = $this->makePost($admin, '/v3/admin/gift-cards/7/send', []);
+
+        self::assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+        $body = $this->jsonBody($response);
+        self::assertSame('sent', $body['data']['result']['email']);
+        self::assertSame('no_recipient', $body['data']['result']['sms']);
+        self::assertSame(7, $body['data']['card']['id']);
+        // Manual send is audited.
+        self::assertCount(1, $this->recordedAuditLogs);
+    }
+
+    #[Test]
+    public function sendRejectsNonSpendableCardWith422(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $card = $this->makeActiveCard(id: 7, value: '100.00');
+        $card->voidWithLedger('fraud', 1); // voided -> not spendable
+
+        $repo = $this->createMock(GiftCardRepository::class);
+        $repo->method('findByIdForAdmin')->with(7)->willReturn($card);
+        $this->bindEm($admin, $repo);
+
+        $delivery = $this->createMock(GiftCardDeliveryService::class);
+        $delivery->expects(self::never())->method('resend');
+        $this->bind(GiftCardDeliveryService::class, $delivery);
+
+        self::assertSame(422, $this->makePost($admin, '/v3/admin/gift-cards/7/send', [])->getStatusCode());
+    }
+
+    #[Test]
+    public function sendRejectsCardWithNoRecipientWith422(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $card = $this->makeActiveCard(id: 8, value: '100.00');
+        // Strip both contacts -> spendable but nowhere to send.
+        $this->setEntityProp($card, 'recipientEmail', null);
+        $this->setEntityProp($card, 'recipientPhone', null);
+
+        $repo = $this->createMock(GiftCardRepository::class);
+        $repo->method('findByIdForAdmin')->with(8)->willReturn($card);
+        $this->bindEm($admin, $repo);
+
+        $delivery = $this->createMock(GiftCardDeliveryService::class);
+        $delivery->expects(self::never())->method('resend');
+        $this->bind(GiftCardDeliveryService::class, $delivery);
+
+        self::assertSame(422, $this->makePost($admin, '/v3/admin/gift-cards/8/send', [])->getStatusCode());
+    }
+
+    #[Test]
+    public function sendReturns404ForMissingCard(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $repo = $this->createMock(GiftCardRepository::class);
+        $repo->method('findByIdForAdmin')->willReturn(null);
+        $this->bindEm($admin, $repo);
+
+        self::assertSame(404, $this->makePost($admin, '/v3/admin/gift-cards/999/send', [])->getStatusCode());
+    }
+
     // ===================== AUTH =====================
 
     #[Test]
@@ -431,5 +511,12 @@ final class GiftCardAdminControllersTest extends HttpTestCase
         $ref = new \ReflectionProperty($entity::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($entity, $id);
+    }
+
+    private function setEntityProp(object $entity, string $prop, mixed $value): void
+    {
+        $ref = new \ReflectionProperty($entity::class, $prop);
+        $ref->setAccessible(true);
+        $ref->setValue($entity, $value);
     }
 }

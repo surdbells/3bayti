@@ -110,6 +110,69 @@ class GiftCardDeliveryService
         $this->deliver($card);
     }
 
+    /**
+     * Manually (re)send the card NOW to every channel that has a recipient
+     * contact, regardless of prior delivery — the admin "Send to recipient"
+     * action. Unlike deliver(), this bypasses the needs*Delivery() idempotency
+     * guards, so a card can be re-sent (e.g. the recipient lost the original
+     * email, or we're reaching out after enabling SMS).
+     *
+     * Returns a per-channel outcome so the caller can report exactly what
+     * happened:
+     *   - 'sent'           delivered + the *_delivered_at timestamp refreshed
+     *   - 'failed'         a recipient exists but the send errored (logged)
+     *   - 'not_configured' SMS only: no SMS provider is wired (NullSmsSender)
+     *   - 'no_recipient'   no email / phone on file for that channel
+     *
+     * Non-blocking: the private deliver* helpers catch + log their own
+     * failures, so this never throws.
+     *
+     * @return array{email: string, sms: string}
+     */
+    public function resend(GiftCard $card): array
+    {
+        $result = ['email' => 'no_recipient', 'sms' => 'no_recipient'];
+        $sentAny = false;
+
+        $email = $card->getRecipientEmail();
+        if ($email !== null && $email !== '') {
+            $ok = $this->deliverEmail($card);
+            $result['email'] = $ok ? 'sent' : 'failed';
+            if ($ok) {
+                $sentAny = true;
+            }
+        }
+
+        $phone = $card->getRecipientPhone();
+        if ($phone !== null && $phone !== '') {
+            if (!$this->smsSender->isEnabled()) {
+                // Distinguish "no SMS provider wired" from a genuine failure so
+                // the admin toast can say so instead of a scary "failed".
+                $result['sms'] = 'not_configured';
+            } else {
+                $ok = $this->deliverSms($card);
+                $result['sms'] = $ok ? 'sent' : 'failed';
+                if ($ok) {
+                    $sentAny = true;
+                }
+            }
+        }
+
+        if ($sentAny) {
+            try {
+                $this->em->flush();
+            } catch (\Throwable $e) {
+                $this->logger->error('gift_card.resend.flush_failed', [
+                    'gift_card_id' => $card->getId(),
+                    'error' => $e->getMessage(),
+                    'class' => $e::class,
+                ]);
+            }
+        }
+
+        return $result;
+    }
+
     /** @return bool true if the email was delivered + the card marked. */
     private function deliverEmail(GiftCard $card): bool
     {

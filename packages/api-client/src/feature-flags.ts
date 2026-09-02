@@ -205,6 +205,12 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/admin/gift-cards/:id/void',
     shape: 'v3-envelope',
   },
+  'POST /admin/gift-cards/:id/send': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/gift-cards/:id/send',
+    shape: 'v3-envelope',
+  },
   // Admin RBAC — roles, permission catalog, user-role assignment. These
   // endpoints exist in the portal + API but had gone missing from this map
   // (the generated route keys had drifted); restored here so both stay in

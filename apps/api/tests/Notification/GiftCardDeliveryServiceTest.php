@@ -191,6 +191,83 @@ final class GiftCardDeliveryServiceTest extends TestCase
         self::assertTrue($card->needsSmsDelivery());
     }
 
+    // ---- resend() : the admin manual "Send to recipient" action --------
+
+    #[Test]
+    public function resendForceSendsEvenWhenAlreadyDelivered(): void
+    {
+        $card = $this->makeCard(email: 'sara@example.com', phone: '+971501234567');
+        $service = $this->makeService();
+
+        $service->deliver($card);
+        self::assertCount(1, $this->mailer->sent());
+        self::assertCount(1, $this->sms->sent());
+
+        // deliver() again is a no-op (idempotency guard); resend() must force
+        // a fresh send on both channels.
+        $result = $service->resend($card);
+
+        self::assertSame(['email' => 'sent', 'sms' => 'sent'], $result);
+        self::assertCount(2, $this->mailer->sent());
+        self::assertCount(2, $this->sms->sent());
+        self::assertNotNull($card->getEmailDeliveredAt());
+        self::assertNotNull($card->getSmsDeliveredAt());
+    }
+
+    #[Test]
+    public function resendReportsNoRecipientForAbsentChannel(): void
+    {
+        $card = $this->makeCard(email: 'sara@example.com', phone: null);
+
+        $result = $this->makeService()->resend($card);
+
+        self::assertSame(['email' => 'sent', 'sms' => 'no_recipient'], $result);
+        self::assertCount(1, $this->mailer->sent());
+        self::assertCount(0, $this->sms->sent());
+    }
+
+    #[Test]
+    public function resendReportsNotConfiguredWhenSmsDisabled(): void
+    {
+        $card = $this->makeCard(email: null, phone: '+971501234567');
+        $service = new GiftCardDeliveryService(
+            renderer: new GiftCardEmailTemplateRenderer(),
+            mailer: $this->mailer,
+            smsSender: new NullSmsSender(),
+            em: $this->makeEm(),
+            logger: new NullLogger(),
+        );
+
+        $result = $service->resend($card);
+
+        self::assertSame(['email' => 'no_recipient', 'sms' => 'not_configured'], $result);
+        self::assertNull($card->getSmsDeliveredAt());
+    }
+
+    #[Test]
+    public function resendReportsFailedWhenChannelThrows(): void
+    {
+        $throwingMailer = new class implements MailerInterface {
+            public function send(string $to, string $subject, string $textBody, string $htmlBody, array $context = []): void
+            {
+                throw new MailerException(MailerException::KIND_TRANSPORT, 'boom');
+            }
+        };
+        $card = $this->makeCard(email: 'sara@example.com', phone: null);
+        $service = new GiftCardDeliveryService(
+            renderer: new GiftCardEmailTemplateRenderer(),
+            mailer: $throwingMailer,
+            smsSender: $this->sms,
+            em: $this->makeEm(),
+            logger: new NullLogger(),
+        );
+
+        $result = $service->resend($card);
+
+        self::assertSame('failed', $result['email']);
+        self::assertNull($card->getEmailDeliveredAt());
+    }
+
     // -----------------------------------------------------------------
 
     private function makeService(): GiftCardDeliveryService

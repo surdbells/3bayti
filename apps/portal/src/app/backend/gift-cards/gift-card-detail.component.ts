@@ -12,12 +12,13 @@ import { TranslatePipe } from '../../translate.pipe';
 import { AxConfirmService } from '../../shared/overlays';
 import { I18nService } from '../../i18n.service';
 import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
+import { AxCopyToClipboardDirective } from '../../shared/rich';
 import { apiErrorMessage } from '../../shared/http/api-error';
 
 @Component({
   selector: 'app-gift-card-detail',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent, TranslatePipe, AxComboboxComponent],
+  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent, TranslatePipe, AxComboboxComponent, AxCopyToClipboardDirective],
   styles: [`
     /* Consistent inner padding for the summary / delivery / ledger cards. */
     .gc-summary,
@@ -54,6 +55,30 @@ import { apiErrorMessage } from '../../shared/http/api-error';
     .gc-ledger-header {
       padding: 1.25rem 1.5rem;
     }
+    /* Card-number title with an inline copy affordance. */
+    .gc-code-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .gc-code-copy {
+      padding: 0.25rem;
+    }
+    /* Header actions wrap gracefully on narrow screens. */
+    .gc-actions {
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    /* Recipient phone with inline copy + WhatsApp affordances. */
+    .gc-phone-row {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+    }
+    .gc-inline-btn {
+      padding: 0.15rem 0.35rem;
+    }
   `],
   template: `
 <app-admin-shell>
@@ -64,9 +89,28 @@ import { apiErrorMessage } from '../../shared/http/api-error';
           <app-icon name="arrow_back" aria-hidden="true"></app-icon> {{ 'gift_cards_admin.back_to_list' | translate }}
         </button>
         <span class="ax-page-header-eyebrow">{{ 'gift_cards_admin.eyebrow' | translate }}</span>
-        <h1 class="ax-page-title" *ngIf="card">{{ card.code }}</h1>
+        <h1 class="ax-page-title gc-code-title" *ngIf="card">
+          <span>{{ card.code }}</span>
+          <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm gc-code-copy"
+            [axCopyToClipboard]="card.code" [axCopyLabel]="'gift_cards_admin.copy_card_number' | translate"
+            [attr.aria-label]="'gift_cards_admin.copy_card_number' | translate">
+            <app-icon name="content_copy" aria-hidden="true"></app-icon>
+          </button>
+        </h1>
       </div>
-      <div class="ax-flex ax-gap-2 ax-items-center" *ngIf="card">
+      <div class="ax-flex ax-gap-2 ax-items-center gc-actions" *ngIf="card">
+        <button type="button" class="ax-btn ax-btn-primary ax-btn-sm"
+          (click)="startSend()"
+          [disabled]="sending || !card.delivery?.can_send"
+          [title]="!card.delivery?.can_send ? ('gift_cards_admin.send_unavailable' | translate) : ''">
+          <span *ngIf="sending" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+          <app-icon *ngIf="!sending" name="send" aria-hidden="true"></app-icon>
+          {{ 'gift_cards_admin.send_now' | translate }}
+        </button>
+        <button type="button" class="ax-btn ax-btn-outline ax-btn-sm"
+          [axCopyToClipboard]="copyBlock" [axCopyLabel]="'gift_cards_admin.copy_details_done' | translate">
+          <app-icon name="content_copy" aria-hidden="true"></app-icon> {{ 'gift_cards_admin.copy_details' | translate }}
+        </button>
         <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="openAdjust()" [disabled]="card.status === 'voided'">
           <app-icon name="tune" aria-hidden="true"></app-icon> {{ 'gift_cards_admin.adjust_balance' | translate }}
         </button>
@@ -154,12 +198,33 @@ import { apiErrorMessage } from '../../shared/http/api-error';
           </div>
           <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.delivery_phone' | translate }}</span>
-            <div>{{ card.delivery.recipient_phone || '—' }}</div>
-            <span *ngIf="card.delivery.sms_delivered_at" class="ax-text-sm ax-text-secondary">{{ fmtDate(card.delivery.sms_delivered_at) }}</span>
+            <div class="gc-phone-row">
+              <span>{{ card.delivery.recipient_phone || '—' }}</span>
+              <ng-container *ngIf="card.delivery.recipient_phone">
+                <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm gc-inline-btn"
+                  [axCopyToClipboard]="card.delivery.recipient_phone"
+                  [axCopyLabel]="'gift_cards_admin.copy_phone_done' | translate"
+                  [attr.aria-label]="'gift_cards_admin.copy_phone' | translate">
+                  <app-icon name="content_copy" aria-hidden="true"></app-icon>
+                </button>
+                <a *ngIf="waLink" [href]="waLink" target="_blank" rel="noopener"
+                  class="ax-btn ax-btn-ghost ax-btn-sm gc-inline-btn"
+                  [attr.aria-label]="'gift_cards_admin.open_whatsapp' | translate"
+                  [title]="'gift_cards_admin.open_whatsapp' | translate">
+                  <app-icon name="chat" aria-hidden="true"></app-icon>
+                </a>
+              </ng-container>
+            </div>
+            <span *ngIf="card.delivery.sms_delivered_at" class="ax-text-sm ax-text-secondary">
+              {{ 'gift_cards_admin.delivery_sent_at' | translate }}: {{ fmtDate(card.delivery.sms_delivered_at) }}
+            </span>
           </div>
           <div class="gc-cell" *ngIf="card.delivery.scheduled_at">
             <span class="ax-field-label">{{ 'gift_cards_admin.delivery_scheduled' | translate }}</span>
             <div>{{ fmtDate(card.delivery.scheduled_at) }}</div>
+            <span class="ax-badge" [class.ax-badge-warning]="scheduleInfo?.pending" [class.ax-badge-neutral]="!scheduleInfo?.pending" *ngIf="!card.delivery.delivered">
+              {{ (scheduleInfo?.pending ? 'gift_cards_admin.schedule_pending' : 'gift_cards_admin.schedule_due') | translate }}
+            </span>
           </div>
         </div>
       </section>
@@ -258,6 +323,7 @@ export class GiftCardDetailComponent implements OnInit {
   id = '';
   card: any = null;
   loading = false;
+  sending = false;
 
   adjusting = false;
   adjustSaving = false;
@@ -310,6 +376,45 @@ export class GiftCardDetailComponent implements OnInit {
 
   fmtDate(v: any): string {
     return v ? new Date(String(v)).toLocaleString() : '—';
+  }
+
+  // ── Copy / WhatsApp outreach ────────────────────────────────────────
+  /**
+   * A WhatsApp-ready block for reaching out to the recipient manually:
+   * card number, amount, who it's from, the personal message, and the
+   * recipient's phone. Copied via the axCopyToClipboard directive.
+   */
+  get copyBlock(): string {
+    const c = this.card;
+    if (!c) return '';
+    const cur = c.currency || 'AED';
+    const lines: string[] = [
+      this.i18n.t('gift_cards_admin.copy_heading'),
+      `${this.i18n.t('gift_cards_admin.copy_card_number')}: ${c.code}`,
+    ];
+    if (c.denomination) lines.push(`${this.i18n.t('gift_cards_admin.detail_denomination')}: ${c.denomination} ${cur}`);
+    if (c.purchaser?.name) lines.push(`${this.i18n.t('gift_cards_admin.copy_from')}: ${c.purchaser.name}`);
+    if (c.recipient_message) lines.push(`${this.i18n.t('gift_cards_admin.detail_message')}: ${c.recipient_message}`);
+    const phone = c.recipient_phone || c.delivery?.recipient_phone;
+    if (phone) lines.push(`${this.i18n.t('gift_cards_admin.delivery_phone')}: ${phone}`);
+    return lines.join('\n');
+  }
+
+  /** wa.me deep link to the recipient (digits only), or '' if no phone. */
+  get waLink(): string {
+    const phone = this.card?.recipient_phone || this.card?.delivery?.recipient_phone;
+    if (!phone) return '';
+    const digits = String(phone).replace(/[^0-9]/g, '');
+    return digits ? `https://wa.me/${digits}` : '';
+  }
+
+  /** Scheduling state for the delivery block: pending = future + not sent. */
+  get scheduleInfo(): { pending: boolean } | null {
+    const at = this.card?.delivery?.scheduled_at;
+    if (!at) return null;
+    const when = new Date(String(at)).getTime();
+    const pending = !this.card?.delivery?.delivered && Number.isFinite(when) && when > Date.now();
+    return { pending };
   }
 
   // ── Adjust ──────────────────────────────────────────────────────────
@@ -380,6 +485,52 @@ export class GiftCardDetailComponent implements OnInit {
         },
       });
     });
+  }
+
+  // ── Send / resend to recipient ──────────────────────────────────────
+  startSend() {
+    if (!this.card || !this.card.delivery?.can_send || this.sending) return;
+
+    const targets: string[] = [];
+    if (this.card.delivery?.recipient_email) targets.push(this.card.delivery.recipient_email);
+    if (this.card.delivery?.recipient_phone) targets.push(this.card.delivery.recipient_phone);
+    const to = targets.join(', ');
+
+    this.confirm.confirm({
+      title: this.i18n.t('gift_cards_admin.send_confirm_title'),
+      message: this.i18n.t('gift_cards_admin.send_confirm_message') + (to ? '\n\n' + to : ''),
+      confirmLabel: this.i18n.t('gift_cards_admin.send_now'),
+      cancelLabel: this.i18n.t('gift_cards_admin.cancel'),
+      variant: 'default',
+    }).then((ok) => {
+      if (!ok) return;
+      this.sending = true;
+      this.adapter.post_v3('POST /admin/gift-cards/:id/send', {}, { params: { id: this.id } }).subscribe({
+        next: (res: any) => {
+          this.sending = false;
+          const result = (res?.data ?? res)?.result ?? {};
+          const anySent = result.email === 'sent' || result.sms === 'sent';
+          const msg = this.sendResultMessage(result);
+          if (anySent) this.toast.success(msg); else this.toast.error(msg);
+          this.load();
+        },
+        error: (err: any) => {
+          this.sending = false;
+          this.toast.error(apiErrorMessage(err, this.i18n.t('gift_cards_admin.send_failed')));
+        },
+      });
+    });
+  }
+
+  /** Human summary of the per-channel send result for the toast. */
+  private sendResultMessage(result: { email?: string; sms?: string }): string {
+    const parts: string[] = [];
+    if (result.email === 'sent') parts.push(this.i18n.t('gift_cards_admin.send_email_sent'));
+    else if (result.email === 'failed') parts.push(this.i18n.t('gift_cards_admin.send_email_failed'));
+    if (result.sms === 'sent') parts.push(this.i18n.t('gift_cards_admin.send_sms_sent'));
+    else if (result.sms === 'failed') parts.push(this.i18n.t('gift_cards_admin.send_sms_failed'));
+    else if (result.sms === 'not_configured') parts.push(this.i18n.t('gift_cards_admin.send_sms_not_configured'));
+    return parts.length ? parts.join(' · ') : this.i18n.t('gift_cards_admin.send_nothing');
   }
 
   goBack() { this.navHistory.back('/admin-gift-cards'); }
