@@ -35,6 +35,10 @@ final class GetProductByLegacyIdControllerTest extends HttpTestCase
     public function returnsProductWhenLegacyIdMatchesActiveProduct(): void
     {
         $vendor = new Vendor('almas-fashion', 'Almas Fashion', 'almas@example.test');
+        // Post-approval gate: a product is only orderable/returnable when its
+        // vendor canSell() (approved + active). New vendors default to
+        // STATUS_PENDING, so transition this success-path vendor to approved.
+        $vendor->approve();
         $product = new Product($vendor, 'silk-abaya', 'Silk Abaya');
         $product->setLegacyProductId(123);
         $product->setStatus(Product::STATUS_ACTIVE);

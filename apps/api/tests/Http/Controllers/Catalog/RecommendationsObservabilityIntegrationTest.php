@@ -197,6 +197,10 @@ final class RecommendationsObservabilityIntegrationTest extends HttpTestCase
     {
         // Bind a Product so the controller's slug lookup succeeds.
         $vendor = new Vendor('test-vendor', 'Test Vendor', 'tv@example.com');
+        // Recommendations now drop products that aren't orderable (inactive or
+        // from a non-sellable store), so the fallback product below must be
+        // active and its store approved to survive the filter.
+        $vendor->approve();
         $vRef = new \ReflectionProperty(Vendor::class, 'id');
         $vRef->setAccessible(true);
         $vRef->setValue($vendor, 5);
@@ -212,6 +216,8 @@ final class RecommendationsObservabilityIntegrationTest extends HttpTestCase
         $popIdRef->setAccessible(true);
         $popIdRef->setValue($popular, 200);
         $popular->setPrice('99.00');
+        // Active so it passes the recommendations orderability filter.
+        $popular->setStatus(Product::STATUS_ACTIVE);
 
         // The pre-computed rec repo returns EMPTY → service falls
         // back to popular query.

@@ -9,6 +9,7 @@ use Bayti\Api\Domain\Cart\CartItem;
 use Bayti\Api\Domain\Cart\CartRepository;
 use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\ProductRepository;
+use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Cart\MergeAnonCartController;
@@ -246,7 +247,19 @@ final class MergeAnonCartControllerTest extends HttpTestCase
         $this->setEntityProp($product, 'name', $name);
         $this->setEntityProp($product, 'price', $price);
         $this->setEntityProp($product, 'isActive', true);
+        // The vendor-approval gate (Product::isOrderable → Vendor::canSell)
+        // means a success-path product needs an approved + active vendor,
+        // else isOrderable() 500s on the uninitialized typed vendor prop.
+        $this->setEntityProp($product, 'vendor', $this->makeVendor());
         return $product;
+    }
+
+    /** A sellable (approved + active) vendor for success-path fixtures. */
+    private function makeVendor(): Vendor
+    {
+        $vendor = new Vendor(slug: 'almas-fashion', name: 'Almas Fashion', contactEmail: 'store@example.com');
+        $vendor->approve(); // pending → approved; is_active already defaults true
+        return $vendor;
     }
 
     private function setEntityProp(object $entity, string $prop, mixed $value): void

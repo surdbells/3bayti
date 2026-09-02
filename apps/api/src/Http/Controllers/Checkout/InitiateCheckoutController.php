@@ -191,6 +191,21 @@ final class InitiateCheckoutController
         // tampered with) so a vendor never receives an un-fulfillable line.
         foreach ($cart->getItems() as $cartItem) {
             $itemProduct = $cartItem->getProduct();
+            // Vendor gate — the authoritative order-time check. A product whose
+            // store is not approved + active (or the product itself inactive)
+            // must never become an order line. This is the trust boundary: even
+            // if an add-to-cart path missed the gate, checkout refuses the whole
+            // order here, BEFORE any Order row is created, so an unapproved
+            // store's item can never end up in a customer's order.
+            if (!$itemProduct->isOrderable()) {
+                throw HttpException::businessRuleViolation(
+                    ErrorCodes::VALIDATION_FAILED,
+                    sprintf(
+                        '"%s" is no longer available and can\'t be ordered. Please remove it from your cart.',
+                        $itemProduct->getName(),
+                    ),
+                );
+            }
             if ($itemProduct->requiresExtraMsmt() && trim((string) $cartItem->getExtraMeasurement()) === '') {
                 throw HttpException::businessRuleViolation(
                     ErrorCodes::VALIDATION_FAILED,

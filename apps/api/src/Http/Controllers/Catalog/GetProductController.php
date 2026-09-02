@@ -59,7 +59,10 @@ final class GetProductController
         $productRepo = $this->em->getRepository(Product::class);
         $product = $productRepo->findBySlug($slug);
 
-        if ($product === null || !$product->isActive()) {
+        // isOrderable() = product active AND vendor may sell (approved+active):
+        // an unapproved/suspended store's product must be unreachable by direct
+        // URL too, not just hidden from listings.
+        if ($product === null || !$product->isOrderable()) {
             throw HttpException::notFound('Product not found.');
         }
 

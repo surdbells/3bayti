@@ -176,6 +176,9 @@ final class ListVendorProductsByLegacyIdControllerTest extends HttpTestCase
     private function makeVendorWithInternalId(string $slug, int $internalId): Vendor
     {
         $vendor = new Vendor($slug, ucfirst($slug), $slug . '@example.test');
+        // The route now 404s unless the vendor may sell (approved + active);
+        // approve() moves it from the default pending → approved.
+        $vendor->approve();
         $ref = new \ReflectionProperty(Vendor::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($vendor, $internalId);

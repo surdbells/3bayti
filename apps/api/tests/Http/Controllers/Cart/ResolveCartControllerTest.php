@@ -6,6 +6,7 @@ namespace Bayti\Api\Tests\Http\Controllers\Cart;
 
 use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\ProductRepository;
+use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Http\Controllers\Cart\ResolveCartController;
 use Bayti\Api\Tests\Http\HttpTestCase;
 use Doctrine\ORM\EntityManagerInterface;
@@ -192,7 +193,22 @@ final class ResolveCartControllerTest extends HttpTestCase
         $this->setEntityProp($product, 'price', $price);
         $this->setEntityProp($product, 'primaryImageUrl', $image);
         $this->setEntityProp($product, 'isActive', $active);
+        // Product::isOrderable() gates on the owning vendor being able to
+        // sell (approved + active), so give every fixture an approved,
+        // active vendor. Inactive products still drop (isOrderable()
+        // short-circuits on is_active=false), but active fixtures must
+        // resolve, and canSell() would fatal on an unset vendor.
+        $this->setEntityProp($product, 'vendor', $this->makeSellableVendor());
         return $product;
+    }
+
+    private function makeSellableVendor(): Vendor
+    {
+        $vendor = new Vendor('test-vendor', 'Test Vendor', 'vendor@test.example');
+        // Constructor leaves status = STATUS_PENDING; approve() transitions
+        // it to STATUS_APPROVED. is_active already defaults to true.
+        $vendor->approve();
+        return $vendor;
     }
 
     private function setEntityProp(object $entity, string $prop, mixed $value): void

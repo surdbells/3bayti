@@ -9,6 +9,7 @@ use Bayti\Api\Domain\Cart\CartItem;
 use Bayti\Api\Domain\Cart\CartRepository;
 use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\ProductRepository;
+use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Cart\AddCartItemController;
@@ -510,12 +511,29 @@ final class AddCartItemControllerTest extends HttpTestCase
         $this->setEntityProp($product, 'price', $price);
         $this->setEntityProp($product, 'isActive', true);
         $this->setEntityProp($product, 'requiresExtraMsmt', $requiresMsmt);
+        // Product::isOrderable() (add-to-cart gate) requires an approved + active
+        // owning vendor, else canSell() short-circuits (or TypeErrors on the
+        // uninitialised $vendor). Attach a sellable vendor to every fixture.
+        $this->setEntityProp($product, 'vendor', $this->makeSellableVendor());
         if ($categorySlug !== null) {
             $category = (new \ReflectionClass(\Bayti\Api\Domain\Catalog\Category::class))->newInstanceWithoutConstructor();
             $this->setEntityProp($category, 'slug', $categorySlug);
             $this->setEntityProp($product, 'category', $category);
         }
         return $product;
+    }
+
+    /**
+     * Build an approved + active vendor so Product::isOrderable() / canSell()
+     * lets the product through the add-to-cart gate. The real constructor sets
+     * isActive=true; approve() transitions status from pending to approved.
+     */
+    private function makeSellableVendor(): Vendor
+    {
+        $vendor = new Vendor('test-vendor', 'Test Vendor', 'vendor@example.com');
+        $vendor->approve();
+
+        return $vendor;
     }
 
     private function setEntityProp(object $entity, string $prop, mixed $value): void

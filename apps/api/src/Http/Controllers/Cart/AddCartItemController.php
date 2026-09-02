@@ -75,7 +75,10 @@ final class AddCartItemController
         /** @var ProductRepository $products */
         $products = $this->em->getRepository(Product::class);
         $product = $products->find($input->product_id);
-        if (!$product instanceof Product || !$product->isActive()) {
+        // isOrderable = product active AND its vendor may sell (approved+active).
+        // A plain isActive() check let an unapproved/suspended store's product
+        // into the cart; 404 keeps it indistinguishable from a hidden product.
+        if (!$product instanceof Product || !$product->isOrderable()) {
             throw HttpException::notFound('Product not found.');
         }
 

@@ -36,6 +36,13 @@ final class CampaignSerializer
     {
         $items = [];
         foreach ($c->getItems() as $item) {
+            // Campaign items are loaded without a product-active / vendor filter,
+            // so an unapproved/suspended store's product (or an inactive one)
+            // could otherwise surface on the home feed. Only show orderable
+            // products — isOrderable() = product active AND vendor may sell.
+            if (!$item->getProduct()->isOrderable()) {
+                continue;
+            }
             $items[] = $this->shapeItem($item, $products);
         }
 

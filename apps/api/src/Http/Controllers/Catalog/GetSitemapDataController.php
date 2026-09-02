@@ -72,21 +72,29 @@ final class GetSitemapDataController
             ORDER BY updated_at DESC
         ");
 
+        // Only APPROVED + active vendors are orderable, so only they belong in
+        // the sitemap (a pending/suspended store must not be indexed).
         $vendors = $conn->fetchAllAssociative("
             SELECT slug, updated_at
             FROM vendors
-            WHERE is_active = TRUE
+            WHERE is_active = TRUE AND status = 'approved'
             ORDER BY updated_at DESC
         ");
 
         // Products limited to 50K to bound payload size, if we exceed
         // that we have bigger architectural problems. Current production
         // is 1928, so plenty of headroom.
+        // Only index products whose store may sell — join vendors and require
+        // the vendor approved + active, mirroring the listing gate. Otherwise
+        // an unapproved/suspended store's product gets crawled + indexed.
         $products = $conn->fetchAllAssociative("
-            SELECT slug, updated_at
-            FROM products
-            WHERE is_active = TRUE
-            ORDER BY updated_at DESC
+            SELECT p.slug, p.updated_at
+            FROM products p
+            JOIN vendors v ON v.id = p.vendor_id
+            WHERE p.is_active = TRUE
+              AND v.is_active = TRUE
+              AND v.status = 'approved'
+            ORDER BY p.updated_at DESC
             LIMIT 50000
         ");
 

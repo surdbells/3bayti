@@ -454,12 +454,22 @@ final class RecommendationsServiceTest extends TestCase
         $vNameRef = new \ReflectionProperty(Vendor::class, 'name');
         $vNameRef->setAccessible(true);
         $vNameRef->setValue($vendor, 'V');
+        // Recommendations now drop products that aren't orderable, so the
+        // fixture vendor must be sellable (approved + active) and the product
+        // active — the realistic state of a recommendable product.
+        $vStatusRef = new \ReflectionProperty(Vendor::class, 'status');
+        $vStatusRef->setAccessible(true);
+        $vStatusRef->setValue($vendor, Vendor::STATUS_APPROVED);
+        $vActiveRef = new \ReflectionProperty(Vendor::class, 'isActive');
+        $vActiveRef->setAccessible(true);
+        $vActiveRef->setValue($vendor, true);
 
         $product = new Product($vendor, "slug-{$id}", "Product {$id}");
         $idRef = new \ReflectionProperty(Product::class, 'id');
         $idRef->setAccessible(true);
         $idRef->setValue($product, $id);
         $product->setPrice('100.00');
+        $product->setStatus(Product::STATUS_ACTIVE);
         return $product;
     }
 

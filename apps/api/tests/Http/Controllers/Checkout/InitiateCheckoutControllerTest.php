@@ -1055,6 +1055,12 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
     {
         $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($vendor, 'id', $id);
+        // The vendor-approval gate (Vendor::canSell()) requires approved +
+        // active. newInstanceWithoutConstructor leaves both 'status' and
+        // 'isActive' uninitialized, so canSell() would TypeError; set them
+        // here so every product built off this fixture is orderable.
+        $this->setEntityProp($vendor, 'status', Vendor::STATUS_APPROVED);
+        $this->setEntityProp($vendor, 'isActive', true);
         return $vendor;
     }
 }

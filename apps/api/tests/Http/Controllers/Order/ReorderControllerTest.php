@@ -31,8 +31,8 @@ final class ReorderControllerTest extends HttpTestCase
         $vendor = $this->makeVendor(5);
         $order = $this->makeOrder($user, 100);
         // One active product (added), one inactive product (skipped).
-        $order->addItem($this->makeItem($this->makeProduct(200, active: true), $vendor, 'Abaya'));
-        $order->addItem($this->makeItem($this->makeProduct(201, active: false), $vendor, 'Kaftan'));
+        $order->addItem($this->makeItem($this->makeProduct(200, active: true, vendor: $vendor), $vendor, 'Abaya'));
+        $order->addItem($this->makeItem($this->makeProduct(201, active: false, vendor: $vendor), $vendor, 'Kaftan'));
 
         $this->bindEm($user, $order, new Cart(user: $user));
         $response = $this->post($user, '/v3/orders/100/reorder');
@@ -81,7 +81,7 @@ final class ReorderControllerTest extends HttpTestCase
         );
     }
 
-    private function makeProduct(int $id, bool $active): Product
+    private function makeProduct(int $id, bool $active, Vendor $vendor): Product
     {
         $product = (new \ReflectionClass(Product::class))->newInstanceWithoutConstructor();
         $this->setProp($product, 'id', $id);
@@ -90,6 +90,9 @@ final class ReorderControllerTest extends HttpTestCase
         $this->setProp($product, 'salePrice', null);
         $this->setProp($product, 'isActive', $active);
         $this->setProp($product, 'requiresExtraMsmt', false);
+        // Product::isOrderable() reads $this->vendor->canSell(); the active
+        // (success-path) product needs its owning vendor set to a sellable one.
+        $this->setProp($product, 'vendor', $vendor);
         // CartSerializer::itemShape reads the primary image on the added line.
         $this->setProp($product, 'primaryImageUrl', null);
         return $product;
@@ -99,6 +102,11 @@ final class ReorderControllerTest extends HttpTestCase
     {
         $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
         $this->setProp($vendor, 'id', $id);
+        // Vendor::canSell() (approved + active) now gates orderability; the
+        // reflection-built vendor leaves both props uninitialized, so set them
+        // explicitly to make this success-path vendor sellable.
+        $this->setProp($vendor, 'status', Vendor::STATUS_APPROVED);
+        $this->setProp($vendor, 'isActive', true);
         return $vendor;
     }
 

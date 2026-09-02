@@ -125,7 +125,11 @@ final class ReorderController
     private function addItemToCart(Cart $cart, OrderItem $item): bool
     {
         $product = $item->getProduct();
-        if (!$product instanceof Product || !$product->isActive()) {
+        // Skip lines whose product is inactive OR whose store may no longer
+        // sell (unapproved/suspended). This is the highest-risk leak: a
+        // customer who ordered from a store that was later suspended would
+        // otherwise re-add its items via "Buy again".
+        if (!$product instanceof Product || !$product->isOrderable()) {
             return false;
         }
 

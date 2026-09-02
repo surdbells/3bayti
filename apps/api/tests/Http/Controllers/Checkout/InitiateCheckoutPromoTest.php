@@ -624,6 +624,11 @@ final class InitiateCheckoutPromoTest extends HttpTestCase
     {
         $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($vendor, 'id', $id);
+        // Vendor-approval gate: canSell() = isApproved() && isActive().
+        // A reflection-built vendor leaves these uninitialized, so set
+        // them explicitly to make the success-path vendor sellable.
+        $this->setEntityProp($vendor, 'status', Vendor::STATUS_APPROVED);
+        $this->setEntityProp($vendor, 'isActive', true);
         return $vendor;
     }
 

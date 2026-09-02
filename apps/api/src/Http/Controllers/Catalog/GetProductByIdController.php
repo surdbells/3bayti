@@ -64,7 +64,9 @@ final class GetProductByIdController
         $productRepo = $this->em->getRepository(Product::class);
         $product = $productRepo->find($id);
 
-        if ($product === null || !$product->isActive()) {
+        // Also 404 when the store may not sell (unapproved/suspended); a plain
+        // isActive() check left the product reachable by direct id URL.
+        if ($product === null || !$product->isOrderable()) {
             throw HttpException::notFound('Product not found.');
         }
 

@@ -84,7 +84,9 @@ final class GetProductByLegacyIdController
         $productRepo = $this->em->getRepository(Product::class);
         $product = $productRepo->findByLegacyId($legacyId);
 
-        if ($product === null || !$product->isActive()) {
+        // Also 404 when the store may not sell (unapproved/suspended); mobile
+        // cards resolve by legacy id, so this closes that direct-URL entry too.
+        if ($product === null || !$product->isOrderable()) {
             throw HttpException::notFound('Product not found.');
         }
 

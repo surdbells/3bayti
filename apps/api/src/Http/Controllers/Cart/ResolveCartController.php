@@ -75,7 +75,10 @@ final class ResolveCartController
             $quantity = (int) ($incoming['quantity'] ?? 1);
 
             $product = $products->find($productId);
-            if (!$product instanceof Product || !$product->isActive()) {
+            // Treat an inactive product OR one whose store may not sell
+            // (unapproved/suspended) as removed, so the resolved cart matches
+            // exactly what checkout will accept.
+            if (!$product instanceof Product || !$product->isOrderable()) {
                 if ($productId > 0) {
                     $removed[] = $productId;
                 }

@@ -66,7 +66,10 @@ final class ListVendorProductsByLegacyIdController
         /** @var VendorRepository $vendorRepo */
         $vendorRepo = $this->em->getRepository(Vendor::class);
         $vendor = $vendorRepo->findByLegacyId($legacyId);
-        if ($vendor === null || !$vendor->isActive()) {
+        // canSell() = approved AND active — align with the slug variant
+        // (ListVendorProductsController) so a pending/suspended store's
+        // storefront 404s consistently across the slug and legacy-id routes.
+        if ($vendor === null || !$vendor->canSell()) {
             throw HttpException::notFound('Vendor not found.');
         }
 

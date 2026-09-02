@@ -91,7 +91,10 @@ final class MergeAnonCartController
             $quantity = (int) ($incoming['quantity'] ?? 1);
 
             $product = $products->find($productId);
-            if (!$product instanceof Product || !$product->isActive()) {
+            // Skip products that are inactive OR whose store may not sell
+            // (unapproved/suspended) — a guest→server merge must not smuggle
+            // an unapproved store's line into the cart.
+            if (!$product instanceof Product || !$product->isOrderable()) {
                 $skipped[] = [
                     'product_id' => $productId,
                     'reason' => 'product_unavailable',

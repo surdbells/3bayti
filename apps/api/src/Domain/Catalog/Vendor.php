@@ -485,6 +485,24 @@ class Vendor
     public function isSuspended(): bool { return $this->status === self::STATUS_SUSPENDED; }
 
     /**
+     * Authoritative "this store may sell / its products are orderable"
+     * predicate: approved AND active. Same condition
+     * ProductRepository::findActivePaginated enforces on listings, so every
+     * write/order path that reaches a product by id/slug (add-to-cart,
+     * reorder, cart-merge, checkout) MUST gate on it too — otherwise an
+     * unapproved (pending, incl. migrated) or suspended vendor's product
+     * leaks into a cart and onward into a persisted order.
+     *
+     * Deliberately NOT isStoreApproved(): that legacy boolean is TRUE on
+     * migrated vendors still at status='pending', so it would let unapproved
+     * migrated stores through.
+     */
+    public function canSell(): bool
+    {
+        return $this->isApproved() && $this->isActive();
+    }
+
+    /**
      * Transition this vendor to STATUS_APPROVED.
      *
      * Valid from: STATUS_PENDING (initial admin approval),

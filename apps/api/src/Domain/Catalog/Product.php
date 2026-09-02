@@ -232,6 +232,20 @@ class Product
     public function getDescription(): ?string { return $this->description; }
     public function getStatus(): string { return $this->status; }
     public function isActive(): bool { return $this->isActive; }
+
+    /**
+     * Is this product actually orderable right now: its own is_active flag AND
+     * its vendor may sell (approved + active). Mirrors the listing query's
+     * gate (ProductRepository::findActivePaginated joins the vendor with
+     * status='approved' AND is_active). Use this at every write/order path that
+     * resolves a product by id/slug — plain isActive() alone lets an
+     * unapproved/suspended vendor's active product through.
+     */
+    public function isOrderable(): bool
+    {
+        return $this->isActive && $this->vendor->canSell();
+    }
+
     public function getPrice(): string { return $this->price; }
     public function getSalePrice(): ?string { return $this->salePrice; }
 

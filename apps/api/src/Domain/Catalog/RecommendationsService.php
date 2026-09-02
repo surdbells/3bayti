@@ -110,7 +110,7 @@ class RecommendationsService
             'duration_ms' => $duration,
         ]);
 
-        return $result;
+        return $this->onlyOrderable($result);
     }
 
     /**
@@ -238,7 +238,7 @@ class RecommendationsService
                 'path' => 'popular_fallback_no_history',
                 'duration_ms' => (int) ((microtime(true) - $start) * 1000),
             ]);
-            return $result;
+            return $this->onlyOrderable($result);
         }
 
         $result = $this->getProductsInCategoryUserHasntBought(
@@ -259,7 +259,7 @@ class RecommendationsService
                 'category_id' => $topCategoryId,
                 'duration_ms' => (int) ((microtime(true) - $start) * 1000),
             ]);
-            return $result;
+            return $this->onlyOrderable($result);
         }
 
         $this->logger->debug('recommendations.user.served', [
@@ -270,7 +270,7 @@ class RecommendationsService
             'category_id' => $topCategoryId,
             'duration_ms' => (int) ((microtime(true) - $start) * 1000),
         ]);
-        return $result;
+        return $this->onlyOrderable($result);
     }
 
     /**
@@ -450,6 +450,24 @@ class RecommendationsService
     private function formatScore(string $count): string
     {
         return bcadd($count, '0', 4);
+    }
+
+    /**
+     * Drop recommendations whose product is no longer orderable (inactive, or
+     * its store unapproved/suspended). Precomputed + popular-fallback rows are
+     * read from historical data with no vendor gate, so we filter them at the
+     * read boundary to match the catalogue's listing gate. May return fewer
+     * than `limit` items — acceptable for a recommendations strip.
+     *
+     * @param list<array{product: Product, score: string, source: string}> $rows
+     * @return list<array{product: Product, score: string, source: string}>
+     */
+    private function onlyOrderable(array $rows): array
+    {
+        return array_values(array_filter(
+            $rows,
+            static fn (array $r): bool => $r['product']->isOrderable(),
+        ));
     }
 
     private function setStatementTimeout(): void
