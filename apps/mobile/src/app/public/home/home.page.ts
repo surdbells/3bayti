@@ -27,6 +27,7 @@ import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AddPhoneBannerComponent } from '../../shared/add-phone-banner.component';
+import { AddEmailBannerComponent } from '../../shared/add-email-banner.component';
 interface Category {
   readonly id: number;
   readonly name: string;
@@ -65,6 +66,7 @@ export interface Store {
     AxIconComponent,
     AxLoaderComponent,
     AddPhoneBannerComponent,
+    AddEmailBannerComponent,
   ]
 })
 export class HomePage implements OnInit, OnDestroy {

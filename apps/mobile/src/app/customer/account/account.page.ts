@@ -48,6 +48,7 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxWishlistSheetComponent } from '../../shared/ax-mobile/wishlist-sheet';
 import { AddPhoneBannerComponent } from '../../shared/add-phone-banner.component';
+import { AddEmailBannerComponent } from '../../shared/add-email-banner.component';
 import { cfImage } from '../../shared/cf-image';
 interface Category {
   readonly id: number;
@@ -79,7 +80,7 @@ export interface Store {
   templateUrl: './account.page.html',
   styleUrls: ['./account.page.scss'],
   standalone: true,
-  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonRow, IonCol, IonGrid, IonIcon, IonRefresher, IonRefresherContent, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxWishlistSheetComponent, RouterLink, AppTabBarComponent, AddPhoneBannerComponent]
+  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonRow, IonCol, IonGrid, IonIcon, IonRefresher, IonRefresherContent, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxWishlistSheetComponent, RouterLink, AppTabBarComponent, AddPhoneBannerComponent, AddEmailBannerComponent]
 })
 
 export class AccountPage implements OnInit, OnDestroy {
@@ -236,7 +237,9 @@ export class AccountPage implements OnInit, OnDestroy {
     is_vendor: false,
     is_store_active: false,
     is_store_approved: false,
-    is_customer: false
+    is_customer: false,
+    is_email_verified: false,
+    needs_email_update: false
   }
 
 
@@ -422,6 +425,24 @@ export class AccountPage implements OnInit, OnDestroy {
           if (typeof user.is_store_approved === 'boolean'
               && user.is_store_approved !== this.single_user.is_store_approved) {
             this.single_user.is_store_approved = user.is_store_approved;
+            changed = true;
+          }
+
+          // Email deliverability: re-derive needs_email_update (+ email /
+          // verified) so the "update your email" banner appears for sessions
+          // that pre-date this field, without forcing a re-login.
+          if (typeof user.needs_email_update === 'boolean'
+              && user.needs_email_update !== this.single_user.needs_email_update) {
+            this.single_user.needs_email_update = user.needs_email_update;
+            changed = true;
+          }
+          if (typeof user.is_email_verified === 'boolean'
+              && user.is_email_verified !== this.single_user.is_email_verified) {
+            this.single_user.is_email_verified = user.is_email_verified;
+            changed = true;
+          }
+          if (typeof user.email === 'string' && user.email !== this.single_user.email) {
+            this.single_user.email = user.email;
             changed = true;
           }
 

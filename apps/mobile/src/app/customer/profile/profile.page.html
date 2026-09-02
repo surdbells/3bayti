@@ -105,6 +105,26 @@
               </button>
             </ion-col>
           </ion-row>
+          <!-- Email is shown read-only; edited only via the OTP-verified flow. -->
+          <ion-row class="profile-row">
+            <ion-col class="ion-no-padding">
+              <ax-text-field
+                [label]="'label_email' | translate"
+                type="email"
+                [disabled]="true"
+                [hint]="single_user.needs_email_update ? ('hint_email_not_deliverable' | translate) : ''"
+                [(ngModel)]="single_user.email"
+                name="email">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+          <ion-row class="profile-row profile-row--change-phone">
+            <ion-col class="ion-no-padding">
+              <button type="button" class="profile-change-phone-btn" (click)="openChangeEmail()">
+                {{ 'change_email' | translate }}
+              </button>
+            </ion-col>
+          </ion-row>
         }
         @if (!ui_controls.is_loading || !ui_controls.is_updating) {
           <ion-row class="profile-row">
@@ -299,6 +319,79 @@
 
     @if (filteredChangeCodes().length === 0) {
       <div class="cc-list__empty">{{ 'label_no_results' | translate }}</div>
+    }
+  </ax-bottom-sheet>
+
+  <!-- Change-email flow (2 steps: enter email -> verify OTP) -->
+  <ax-bottom-sheet
+    [isOpen]="emailFlow.isOpen"
+    (didDismiss)="onEmailSheetDismissed()"
+    [title]="'change_email' | translate">
+
+    @if (emailFlow.loading) {
+      <div class="cp-loader"><ax-loader></ax-loader></div>
+    }
+
+    <!-- Step 1: enter new email -->
+    @if (!emailFlow.loading && emailFlow.step === 1) {
+      <p class="cp-help">{{ 'change_email_enter_new' | translate }}</p>
+      <ax-text-field
+        [label]="'label_email' | translate"
+        type="email"
+        inputmode="email"
+        autocomplete="email"
+        [placeholder]="'placeholder_email' | translate"
+        [(ngModel)]="emailFlow.email"
+        name="change_email_input">
+      </ax-text-field>
+      <ion-button expand="block" class="profile-submit-btn" type="button" (click)="sendEmailCode()">
+        {{ 'button_send_code' | translate }}
+      </ion-button>
+      <ion-button expand="block" fill="clear" type="button" (click)="emailFlow.isOpen = false">
+        {{ 'cancel' | translate }}
+      </ion-button>
+    }
+
+    <!-- Step 2: verify OTP -->
+    @if (!emailFlow.loading && emailFlow.step === 2) {
+      <p class="cp-help">
+        {{ 'otp_sent_to' | translate }} <strong>{{ emailFlow.email }}</strong>
+      </p>
+      <ax-text-field
+        [label]="'otp' | translate"
+        type="text"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        [(ngModel)]="emailFlow.code"
+        name="change_email_otp">
+      </ax-text-field>
+      <ion-button
+        expand="block"
+        class="profile-submit-btn"
+        type="button"
+        [disabled]="emailFlow.locked && emailFlow.cooldown > 0"
+        (click)="verifyEmailCode()">
+        {{ 'button_verify' | translate }}
+      </ion-button>
+      <div class="cp-secondary-row">
+        <ion-button
+          fill="clear"
+          size="small"
+          type="button"
+          [disabled]="emailFlow.cooldown > 0"
+          (click)="resendEmailCode()">
+          @if (emailFlow.locked && emailFlow.cooldown > 0) {
+            {{ 'otp_locked_countdown' | translate:{ seconds: emailFlow.cooldown } }}
+          } @else if (emailFlow.cooldown > 0) {
+            {{ 'resend_otp_countdown' | translate:{ seconds: emailFlow.cooldown } }}
+          } @else {
+            {{ 'resend_otp' | translate }}
+          }
+        </ion-button>
+        <ion-button fill="clear" size="small" type="button" (click)="emailFlow.isOpen = false">
+          {{ 'cancel' | translate }}
+        </ion-button>
+      </div>
     }
   </ax-bottom-sheet>
 </ion-content>

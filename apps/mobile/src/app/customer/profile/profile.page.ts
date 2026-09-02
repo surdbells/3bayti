@@ -107,7 +107,9 @@ export class ProfilePage implements OnInit, OnDestroy {
     is_active: false,
     is_admin: false,
     is_vendor: false,
-    is_customer: false
+    is_customer: false,
+    is_email_verified: false,
+    needs_email_update: false
   }
   update = {
     id: 0,
@@ -382,6 +384,207 @@ export class ProfilePage implements OnInit, OnDestroy {
     }
   }
 
+  // ── Change-email (OTP) flow ────────────────────────────────────────────
+  // Mirrors the change-phone flow for customers whose email can't receive our
+  // mail (Apple private-relay / social placeholder). The OTP is sent to the
+  // NEW address, proving deliverability before the switch.
+  //   step 1: enter new email -> POST /me/email        -> verification_id
+  //   step 2: enter OTP        -> POST /me/email/verify -> { email, is_email_verified, needs_email_update }
+  emailFlow = {
+    isOpen: false,
+    step: 1 as 1 | 2,
+    email: '',
+    code: '',
+    verificationId: '',
+    loading: false,
+    cooldown: 0,
+    locked: false,
+  };
+  private emailOtpTimer: ReturnType<typeof setInterval> | null = null;
+
+  /** Open the change-email sheet (blank — the point is to move OFF the
+      current, non-deliverable address). */
+  openChangeEmail() {
+    this.clearEmailOtpTimer();
+    this.emailFlow = {
+      isOpen: true,
+      step: 1,
+      email: '',
+      code: '',
+      verificationId: '',
+      loading: false,
+      cooldown: 0,
+      locked: false,
+    };
+  }
+
+  onEmailSheetDismissed() {
+    this.emailFlow.isOpen = false;
+    this.clearEmailOtpTimer();
+    this.emailFlow.cooldown = 0;
+    this.emailFlow.locked = false;
+  }
+
+  private isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  /** Step 1 (and Resend): request an OTP for the entered email. */
+  sendEmailCode() {
+    if (!this.isOnline) {
+      this.error_notification(this.i18n.t('text_offline_check_connection'));
+      return;
+    }
+    const email = (this.emailFlow.email || '').trim();
+    if (!this.isValidEmail(email)) {
+      this.error_notification(this.i18n.t('text_email_required'));
+      return;
+    }
+    this.emailFlow.loading = true;
+    this.networkAdapter
+      .post_v3('POST /me/email', { email }, { authToken: this.single_user.token })
+      .subscribe({
+        next: (response: any) => {
+          this.emailFlow.loading = false;
+          if (response.response_code === 200 && response.status === 'success') {
+            const vid = response.data?.verification_id;
+            if (typeof vid !== 'string' || vid.length === 0) {
+              this.error_notification(this.i18n.t('text_request_failed'));
+              return;
+            }
+            this.emailFlow.email = email;
+            this.emailFlow.verificationId = vid;
+            this.emailFlow.code = '';
+            this.emailFlow.step = 2;
+            this.startEmailCooldown(this.CHANGE_RESEND_COOLDOWN);
+            this.success_notification(this.i18n.t('text_otp_sent'));
+          } else {
+            this.handleEmailOtpError(response);
+          }
+        },
+        error: (err: any) => {
+          this.emailFlow.loading = false;
+          this.error_notification(apiErrorMessage(err, this.i18n.t('text_request_failed')));
+        },
+      });
+  }
+
+  resendEmailCode() {
+    if (this.emailFlow.cooldown > 0) return;
+    this.sendEmailCode();
+  }
+
+  /** Step 2: verify the OTP; on success promote + persist the new email. */
+  verifyEmailCode() {
+    const code = (this.emailFlow.code ?? '').trim();
+    if (code.length === 0) {
+      this.error_notification(this.i18n.t('text_otp_required'));
+      return;
+    }
+    if (!this.emailFlow.verificationId) {
+      this.error_notification(this.i18n.t('text_request_failed'));
+      return;
+    }
+    this.emailFlow.loading = true;
+    this.networkAdapter
+      .post_v3(
+        'POST /me/email/verify',
+        { verification_id: this.emailFlow.verificationId, code },
+        { authToken: this.single_user.token },
+      )
+      .subscribe({
+        next: async (response: any) => {
+          this.emailFlow.loading = false;
+          if (response.response_code === 200 && response.status === 'success') {
+            const newEmail = response.data?.email;
+            this.single_user.email =
+              typeof newEmail === 'string' && newEmail.length > 0 ? newEmail : this.emailFlow.email;
+            this.single_user.is_email_verified = response.data?.is_email_verified === true;
+            // Server returns false here; clears the "update your email" banner.
+            this.single_user.needs_email_update = response.data?.needs_email_update === true;
+            try {
+              await Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+            } catch {
+              /* non-fatal */
+            }
+            this.clearEmailOtpTimer();
+            this.emailFlow.isOpen = false;
+            this.success_notification(this.i18n.t('text_email_updated'));
+          } else {
+            this.handleEmailOtpError(response);
+          }
+        },
+        error: (err: any) => {
+          this.emailFlow.loading = false;
+          this.error_notification(apiErrorMessage(err, this.i18n.t('text_otp_verification_failed')));
+        },
+      });
+  }
+
+  private handleEmailOtpError(response: any) {
+    if (response?.error_code === 'OTP_RATE_LIMITED') {
+      const ra = Number(response?.error_details?.retry_after ?? response?.retry_after);
+      this.startEmailLockout(Number.isFinite(ra) && ra > 0 ? Math.ceil(ra) : this.CHANGE_DEFAULT_LOCKOUT);
+    }
+    this.error_notification(this.mapEmailError(response));
+  }
+
+  private mapEmailError(response: any): string {
+    switch (response?.error_code) {
+      case 'CONFLICT_EMAIL_TAKEN':
+        return this.i18n.t('text_email_already_registered');
+      case 'VALIDATION_FAILED':
+        // The new address is itself non-deliverable (relay / placeholder) or
+        // malformed — the server rejects it with 422 VALIDATION_FAILED.
+        return this.i18n.t('text_email_not_deliverable');
+      case 'OTP_VERIFICATION_FAILED':
+        return this.i18n.t('text_otp_verification_failed');
+      case 'OTP_RATE_LIMITED':
+        return this.i18n.t('text_otp_rate_limited');
+      case 'OTP_PROVIDER_ERROR':
+        return this.i18n.t('text_otp_provider_error');
+      default:
+        break;
+    }
+    if (typeof response?.message === 'string' && response.message.trim() !== '') {
+      return response.message;
+    }
+    return this.i18n.t('text_request_failed');
+  }
+
+  private startEmailCooldown(seconds: number) {
+    this.startEmailCountdown(seconds, false);
+  }
+
+  private startEmailLockout(seconds: number) {
+    this.startEmailCountdown(seconds, true);
+  }
+
+  private startEmailCountdown(seconds: number, locked: boolean) {
+    this.clearEmailOtpTimer();
+    this.emailFlow.locked = locked;
+    this.emailFlow.cooldown = Math.max(0, Math.ceil(seconds));
+    if (this.emailFlow.cooldown === 0) {
+      this.emailFlow.locked = false;
+      return;
+    }
+    this.emailOtpTimer = setInterval(() => {
+      this.emailFlow.cooldown -= 1;
+      if (this.emailFlow.cooldown <= 0) {
+        this.clearEmailOtpTimer();
+        this.emailFlow.cooldown = 0;
+        this.emailFlow.locked = false;
+      }
+    }, 1000);
+  }
+
+  private clearEmailOtpTimer() {
+    if (this.emailOtpTimer) {
+      clearInterval(this.emailOtpTimer);
+      this.emailOtpTimer = null;
+    }
+  }
+
   ngOnInit() {
     this.getObject();
     // Opened from the "add your phone" banner (home / account) with
@@ -389,10 +592,15 @@ export class ProfilePage implements OnInit, OnDestroy {
     if (this.route.snapshot.queryParamMap.get('addPhone')) {
       this.openChangePhone();
     }
+    // Opened from the "update your email" banner with ?addEmail=1.
+    if (this.route.snapshot.queryParamMap.get('addEmail')) {
+      this.openChangeEmail();
+    }
   }
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
     this.clearChangeOtpTimer();
+    this.clearEmailOtpTimer();
   }
   // Hardware back is left to Ionic's default IonRouterOutlet handling so it
   // pops to the previous screen natively (and closes any open overlay first)

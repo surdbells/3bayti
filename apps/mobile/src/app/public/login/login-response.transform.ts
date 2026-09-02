@@ -100,6 +100,12 @@ export interface LegacyUserShape {
   // login/social handler reads this to gate fresh social accounts behind
   // the phone-capture step. Email/OTP/password logins surface true.
   is_phone_verified?: boolean;
+  // Whether the account email is verified, and whether it can't receive our
+  // transactional mail (Apple private-relay / social placeholder). Social
+  // sign-ins surface needs_email_update=true; the customer dashboard shows an
+  // "update your email" banner off this cached blob.
+  is_email_verified?: boolean;
+  needs_email_update?: boolean;
   // Allow arbitrary extra fields so a legacy passthrough preserves
   // everything the legacy backend returned (e.g. avatar, billing_*).
   // The defined fields above are the contract; extras are best-effort.
@@ -140,6 +146,8 @@ export function transformV3LoginResponse(data: unknown): LegacyUserShape | null 
       is_store_active: u['is_store_active'] === true,
       is_store_approved: u['is_store_approved'] === true,
       is_phone_verified: u['is_phone_verified'] === true,
+      is_email_verified: u['is_email_verified'] === true,
+      needs_email_update: u['needs_email_update'] === true,
       // Avatar: v3 emits `avatar_url` (UserSerializer::publicProfile); the
       // mobile single_user shape + /account + /settings templates bind
       // `avatar`. Persist it at login so the avatar shows from the cached
