@@ -502,6 +502,41 @@ final class OrderEmailTemplateRendererTest extends TestCase
         }
     }
 
+    #[Test]
+    public function vendorOrderEmailShowsOnlyThatVendorsItemsTotalNotTheWholeOrder(): void
+    {
+        // Multi-vendor order. Store A sells 150 + 55 = 205; Store B sells 90.
+        // Whole order: subtotal 295, delivery 33, total 328.
+        $order = new Order(
+            user: $this->makeUser(),
+            orderReference: 'V3-MULTI',
+            subtotal: '295.00',
+            deliveryFee: '33.00',
+        );
+        $this->setEntityId($order, 100);
+        $a1 = $this->addVendorItem($order, 5, 'Store A', 'Silk Abaya', '150.00', 501);
+        $a2 = $this->addVendorItem($order, 5, 'Store A', 'Gold Earrings', '55.00', 502);
+        $this->addVendorItem($order, 6, 'Store B', 'Leather Bag', '90.00', 503);
+
+        $rendered = $this->renderer->render(
+            EmailTemplate::ORDER_PLACED_VENDOR,
+            $order,
+            ['vendor_order_items' => [$a1, $a2], 'vendor_name' => 'Store A'],
+        );
+
+        foreach (['text' => $rendered->textBody, 'html' => $rendered->htmlBody] as $where => $body) {
+            // Shows ONLY this vendor's items total (150 + 55 = 205).
+            self::assertStringContainsString('205.00', $body, "vendor items total missing in {$where}");
+            self::assertStringContainsString('Silk Abaya', $body);
+            self::assertStringContainsString('Gold Earrings', $body);
+            // NOT the delivery fee, whole-order subtotal/total, or other store's item.
+            self::assertStringNotContainsString('33.00', $body, "delivery fee leaked into {$where}");
+            self::assertStringNotContainsString('328.00', $body, "whole-order total leaked into {$where}");
+            self::assertStringNotContainsString('295.00', $body, "whole-order subtotal leaked into {$where}");
+            self::assertStringNotContainsString('Leather Bag', $body, "other store's item leaked into {$where}");
+        }
+    }
+
     // ===== Helpers =====
 
     private function makeOrder(string $reference, string $subtotal = '99.00'): Order
@@ -539,6 +574,36 @@ final class OrderEmailTemplateRendererTest extends TestCase
         );
         $this->setEntityId($item, 500);
         $order->addItem($item);
+    }
+
+    /** Add one line item for a specific vendor; returns it for vendor_order_items. */
+    private function addVendorItem(
+        Order $order,
+        int $vendorId,
+        string $vendorName,
+        string $name,
+        string $unitPrice,
+        int $itemId,
+    ): OrderItem {
+        $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
+        $this->setEntityProp($vendor, 'id', $vendorId);
+        $this->setEntityProp($vendor, 'name', $vendorName);
+        $this->setEntityProp($vendor, 'contactEmail', 'v' . $vendorId . '@example.com');
+
+        $product = (new \ReflectionClass(Product::class))->newInstanceWithoutConstructor();
+        $this->setEntityProp($product, 'id', 200 + $vendorId);
+        $this->setEntityProp($product, 'name', $name);
+        $this->setEntityProp($product, 'vendor', $vendor);
+
+        $item = new OrderItem(
+            product: $product, vendor: $vendor,
+            quantity: 1, unitPrice: $unitPrice,
+            productNameSnapshot: $name,
+            productImageSnapshot: '',
+        );
+        $this->setEntityId($item, $itemId);
+        $order->addItem($item);
+        return $item;
     }
 
     private function setEntityId(object $entity, int $id): void

@@ -944,8 +944,10 @@ TXT,
     {
         $items = $extra['vendor_order_items'] ?? null;
         if (is_array($items) && $items !== []) {
-            // Vendors need the full fulfilment detail, measurements included.
-            return $this->orderDetails($order, $items, $isArabic, true);
+            // Vendors need the full fulfilment detail, measurements included,
+            // and totals scoped to THEIR items only (no delivery fee / other
+            // stores) — vendorScoped: true.
+            return $this->orderDetails($order, $items, $isArabic, true, true);
         }
 
         // Fallback: names only.
@@ -1169,24 +1171,32 @@ HTML,
      * @param bool $withMeasurements include custom measurements per item
      * @return array{0: string, 1: string} [text, html]
      */
-    private function orderDetails(Order $order, iterable $items, bool $ar, bool $withMeasurements): array
+    private function orderDetails(Order $order, iterable $items, bool $ar, bool $withMeasurements, bool $vendorScoped = false): array
     {
         $cur = $order->getCurrency();
         $l = $ar
             ? ['items' => 'المنتجات', 'size' => 'المقاس', 'color' => 'اللون', 'qty' => 'الكمية',
                'measures' => 'القياسات', 'sub' => 'المجموع الفرعي', 'del' => 'التوصيل', 'disc' => 'الخصم',
-               'gc' => 'بطاقة هدية', 'total' => 'الإجمالي', 'pricing' => 'التسعير', 'ship' => 'عنوان التسليم']
+               'gc' => 'بطاقة هدية', 'total' => 'الإجمالي', 'pricing' => 'التسعير', 'ship' => 'عنوان التسليم',
+               'items_total' => 'إجمالي منتجاتك']
             : ['items' => 'Items', 'size' => 'Size', 'color' => 'Color', 'qty' => 'Qty',
                'measures' => 'Measurements', 'sub' => 'Subtotal', 'del' => 'Delivery', 'disc' => 'Discount',
-               'gc' => 'Gift card', 'total' => 'Total', 'pricing' => 'Pricing', 'ship' => 'Delivery address'];
+               'gc' => 'Gift card', 'total' => 'Total', 'pricing' => 'Pricing', 'ship' => 'Delivery address',
+               'items_total' => 'Your items total'];
 
         $rows = '';
         $text = "{$l['items']}:\n";
+        // Vendor-scoped card: sum ONLY the passed (this-vendor's) line items,
+        // so the totals reflect what this store sold — never the whole order.
+        $vendorSubtotal = '0.00';
         foreach ($items as $item) {
             /** @var OrderItem $item */
             $name  = $item->getProductNameSnapshot();
             $qty   = (string) $item->getQuantity();
             $price = $item->getUnitPrice();
+            if ($vendorScoped) {
+                $vendorSubtotal = bcadd($vendorSubtotal, $item->getSubtotal(), 2);
+            }
 
             $img = trim((string) $item->getProductImageSnapshot());
             $imgCell = $img !== ''
@@ -1242,20 +1252,29 @@ HTML,
             $text .= $measText;
         }
 
-        // Totals.
-        $totalRows  = $this->totalRowHtml($l['sub'], $order->getSubtotal(), $cur, false);
-        $totalRows .= $this->totalRowHtml($l['del'], $order->getDeliveryFee(), $cur, false);
-        $text .= "\n{$l['sub']}: {$order->getSubtotal()} {$cur}\n{$l['del']}: {$order->getDeliveryFee()} {$cur}\n";
-        if ($this->isPositiveAmount($order->getDiscount())) {
-            $totalRows .= $this->totalRowHtml($l['disc'], '-' . $order->getDiscount(), $cur, false);
-            $text .= "{$l['disc']}: -{$order->getDiscount()} {$cur}\n";
+        // Totals. Vendor-scoped emails show ONLY the subtotal of THIS store's
+        // items — never the delivery fee, order-level discount/gift-card, or
+        // other vendors' items (all of which belong to the customer's order
+        // total, not this vendor's payout basis). This is the fix for vendors
+        // thinking they sold/are owed more than they actually are.
+        if ($vendorScoped) {
+            $totalRows  = $this->totalRowHtml($l['items_total'], $vendorSubtotal, $cur, true);
+            $text .= "\n{$l['items_total']}: {$vendorSubtotal} {$cur}\n";
+        } else {
+            $totalRows  = $this->totalRowHtml($l['sub'], $order->getSubtotal(), $cur, false);
+            $totalRows .= $this->totalRowHtml($l['del'], $order->getDeliveryFee(), $cur, false);
+            $text .= "\n{$l['sub']}: {$order->getSubtotal()} {$cur}\n{$l['del']}: {$order->getDeliveryFee()} {$cur}\n";
+            if ($this->isPositiveAmount($order->getDiscount())) {
+                $totalRows .= $this->totalRowHtml($l['disc'], '-' . $order->getDiscount(), $cur, false);
+                $text .= "{$l['disc']}: -{$order->getDiscount()} {$cur}\n";
+            }
+            if ($this->isPositiveAmount($order->getGiftCardAmount())) {
+                $totalRows .= $this->totalRowHtml($l['gc'], '-' . $order->getGiftCardAmount(), $cur, false);
+                $text .= "{$l['gc']}: -{$order->getGiftCardAmount()} {$cur}\n";
+            }
+            $totalRows .= $this->totalRowHtml($l['total'], $order->getTotal(), $cur, true);
+            $text .= "{$l['total']}: {$order->getTotal()} {$cur}\n";
         }
-        if ($this->isPositiveAmount($order->getGiftCardAmount())) {
-            $totalRows .= $this->totalRowHtml($l['gc'], '-' . $order->getGiftCardAmount(), $cur, false);
-            $text .= "{$l['gc']}: -{$order->getGiftCardAmount()} {$cur}\n";
-        }
-        $totalRows .= $this->totalRowHtml($l['total'], $order->getTotal(), $cur, true);
-        $text .= "{$l['total']}: {$order->getTotal()} {$cur}\n";
 
         $sectionHead = static fn (string $t): string =>
             '<tr><td style="padding-top:10px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#B9935A;font-weight:700;">'
