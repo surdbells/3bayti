@@ -144,6 +144,47 @@ final class OrderSerializer
     }
 
     /**
+     * Scope an already-built list/detail shape to a single vendor: keep only
+     * that vendor's line items AND recompute the money fields from those items,
+     * so a vendor never sees the whole order's subtotal / delivery fee / total
+     * (which include the delivery fee + other stores' items). Mirrors the
+     * vendor notification email, which shows "your items total" only —
+     * vendors were thinking they'd sold more than they're paid.
+     *
+     * Call AFTER listShape()/detailShape() in the vendor order controllers.
+     *
+     * @param array<string,mixed> $shape       a listShape()/detailShape() result
+     * @param array<int,int>      $vendorIdSet  flipped vendor ids (isset() check)
+     * @return array<string,mixed>
+     */
+    public function scopeToVendor(array $shape, array $vendorIdSet): array
+    {
+        $items = array_values(array_filter(
+            is_array($shape['items'] ?? null) ? $shape['items'] : [],
+            static function ($item) use ($vendorIdSet): bool {
+                $vid = is_array($item) ? ($item['vendor_id'] ?? null) : null;
+                return is_int($vid) && isset($vendorIdSet[$vid]);
+            },
+        ));
+
+        $subtotal = '0.00';
+        foreach ($items as $it) {
+            $subtotal = bcadd($subtotal, (string) ($it['subtotal'] ?? '0'), 2);
+        }
+
+        $shape['items']        = $items;
+        // A vendor's figures reflect ONLY their items — no delivery fee, no
+        // order-level discount / gift card / promo, no other stores.
+        $shape['subtotal']     = $subtotal;
+        $shape['total']        = $subtotal;
+        $shape['delivery_fee'] = '0.00';
+        $shape['discount']     = '0.00';
+        $shape['applied_promo'] = null;
+
+        return $shape;
+    }
+
+    /**
      * Customer-facing delivery estimate for the whole order: the lead-time
      * range of the SLOWEST store in it (the one with the highest
      * max_delivery_days), so the order is never quoted sooner than its

@@ -97,14 +97,10 @@ final class GetVendorOrderController
         $vendorIdSet = array_flip($vendorIds);
         $shape = $this->serializer->detailShape($order);
 
-        // Filter items[] to caller's vendor.
-        $shape['items'] = array_values(array_filter(
-            $shape['items'],
-            static function (array $item) use ($vendorIdSet): bool {
-                $vid = $item['vendor_id'] ?? null;
-                return is_int($vid) && isset($vendorIdSet[$vid]);
-            },
-        ));
+        // Scope items AND money fields to the caller's vendor: only their line
+        // items, and subtotal/total recomputed from those (never the whole
+        // order's totals or the delivery fee, which aren't this vendor's).
+        $shape = $this->serializer->scopeToVendor($shape, $vendorIdSet);
 
         // The customer's saved body measurements (profile), so the vendor can
         // fulfil made-to-measure orders. The per-item `measurement` snapshot is

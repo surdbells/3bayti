@@ -106,27 +106,21 @@ final class ListVendorOrdersController
     }
 
     /**
-     * List-shape with items filtered to those belonging to the
-     * requesting vendor. Items from other vendors are stripped at
-     * serialisation time (the order entity still has them, but the
-     * caller doesn't see them).
+     * List-shape scoped to the requesting vendor: items from other vendors are
+     * stripped AND the money fields (subtotal/total) are recomputed from this
+     * vendor's items, with delivery fee / order-level discount zeroed — a
+     * vendor never sees the whole order's total or the delivery fee (the order
+     * entity still has them; the caller just doesn't).
      *
      * @param array<int, int> $vendorIdSet Flipped vendor ids for O(1) membership check.
      * @return array<string, mixed>
      */
     private function vendorListShape(Order $order, array $vendorIdSet): array
     {
-        $shape = $this->serializer->listShape($order);
-
-        $shape['items'] = array_values(array_filter(
-            $shape['items'],
-            static function (array $item) use ($vendorIdSet): bool {
-                $vid = $item['vendor_id'] ?? null;
-                return is_int($vid) && isset($vendorIdSet[$vid]);
-            },
-        ));
-
-        return $shape;
+        return $this->serializer->scopeToVendor(
+            $this->serializer->listShape($order),
+            $vendorIdSet,
+        );
     }
 
     private function clampLimit(mixed $raw): int

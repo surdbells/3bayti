@@ -239,15 +239,11 @@ final class TransitionVendorOrderItemController
             $this->pushNotifications->itemDelivered($order);
         }
 
-        // Return the updated order, filtered to vendor's items.
-        $shape = $this->serializer->detailShape($order);
-        $shape['items'] = array_values(array_filter(
-            $shape['items'],
-            static function (array $itemShape) use ($vendorIdSet): bool {
-                $vid = $itemShape['vendor_id'] ?? null;
-                return is_int($vid) && isset($vendorIdSet[$vid]);
-            },
-        ));
+        // Return the updated order, scoped to the vendor's items + money.
+        $shape = $this->serializer->scopeToVendor(
+            $this->serializer->detailShape($order),
+            $vendorIdSet,
+        );
 
         return $this->ok(['order' => $shape]);
     }
