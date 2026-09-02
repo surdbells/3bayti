@@ -24,9 +24,9 @@ use Psr\Http\Message\ServerRequestInterface;
  * records/audit but filtered out of the customer's list + detail
  * (OrderRepository).
  *
- * Only 'failed' orders can be removed — they never took payment, so there is
- * nothing financial to preserve for the customer. Any other status returns
- * 422 (a paid/delivered order can't be "deleted"; a pending one should be
+ * Only 'failed' or 'cancelled' orders can be removed — neither is an active
+ * purchase the customer still needs in view. Any other status returns 422 (a
+ * paid/delivered/refunded order can't be "deleted"; a pending one should be
  * cancelled or paid instead).
  *
  * Authorization:
@@ -77,11 +77,12 @@ final class DeleteOrderController
             throw HttpException::notFound('Order not found.');
         }
 
-        if ($order->getStatus() !== Order::STATUS_FAILED) {
+        $removable = [Order::STATUS_FAILED, Order::STATUS_CANCELLED];
+        if (!in_array($order->getStatus(), $removable, true)) {
             throw new HttpException(
                 status: 422,
                 errorCode: 'order_not_deletable',
-                publicMessage: 'Only failed orders can be removed.',
+                publicMessage: 'Only failed or cancelled orders can be removed.',
                 details: ['current_status' => $order->getStatus()],
             );
         }

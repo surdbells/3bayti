@@ -968,7 +968,7 @@
   "order_reorder_none": "لا يتوفر أي من هذه المنتجات لإعادة الطلب.",
   "order_remove": "إزالة الطلب",
   "order_removing": "جارٍ الإزالة…",
-  "order_remove_confirm": "إزالة هذا الطلب الفاشل من سجلك؟",
+  "order_remove_confirm": "إزالة هذا الطلب من سجلك؟",
   "order_remove_yes": "نعم، أزِل",
   "order_remove_keep": "احتفظ به",
   "order_remove_done": "تمت إزالة الطلب.",

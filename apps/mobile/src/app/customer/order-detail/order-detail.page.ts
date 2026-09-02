@@ -241,13 +241,15 @@ export class OrderDetailPage implements OnInit {
     return (this.order?.discount ?? 0) > 0;
   }
 
-  /** A failed order can be re-ordered (buy again) or removed from history. */
+  /** A failed order can be re-ordered (buy again). */
   canReorder(): boolean {
     return this.order?.status === 'failed' && !this.ui_controls.is_reordering;
   }
 
+  /** Failed or cancelled orders can be cleared from history. */
   canRemove(): boolean {
-    return this.order?.status === 'failed' && !this.ui_controls.is_removing;
+    const s = this.order?.status;
+    return (s === 'failed' || s === 'cancelled') && !this.ui_controls.is_removing;
   }
 
   /**

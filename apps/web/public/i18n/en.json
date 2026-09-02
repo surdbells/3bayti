@@ -516,7 +516,7 @@
       "reorderFailed": "Couldn't reorder. Please try again.",
       "remove": "Remove order",
       "removeConfirmTitle": "Remove order?",
-      "removeConfirm": "Remove this failed order from your history? This can't be undone.",
+      "removeConfirm": "Remove this order from your history? This can't be undone.",
       "removeConfirmYes": "Yes, remove",
       "removeConfirmNo": "Keep order",
       "removeSuccess": "Order removed.",

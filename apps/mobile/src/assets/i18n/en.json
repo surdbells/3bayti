@@ -976,7 +976,7 @@
   "order_reorder_none": "None of these items are available to reorder.",
   "order_remove": "Remove order",
   "order_removing": "Removing…",
-  "order_remove_confirm": "Remove this failed order from your history?",
+  "order_remove_confirm": "Remove this order from your history?",
   "order_remove_yes": "Yes, remove",
   "order_remove_keep": "Keep",
   "order_remove_done": "Order removed.",

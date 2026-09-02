@@ -661,7 +661,10 @@ export class AccountOrderDetailPageComponent implements OnInit {
      ----------------------------------------------------------------- */
 
   protected readonly canReorder = computed(() => this._order()?.status === 'failed');
-  protected readonly canRemove = computed(() => this._order()?.status === 'failed');
+  protected readonly canRemove = computed(() => {
+    const s = this._order()?.status;
+    return s === 'failed' || s === 'cancelled';
+  });
 
   /** Re-add the order's items to the cart, then go to the cart. */
   protected async onReorderClick(): Promise<void> {

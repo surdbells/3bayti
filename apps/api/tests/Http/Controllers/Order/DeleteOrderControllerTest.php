@@ -38,10 +38,24 @@ final class DeleteOrderControllerTest extends HttpTestCase
     }
 
     #[Test]
-    public function rejectsANonFailedOrderWith422(): void
+    public function softDeletesACancelledOrder(): void
     {
         $user = $this->makeUser(id: 7);
-        $order = $this->makeOrder($user, 100); // pending_payment
+        $order = $this->makeOrder($user, 100);
+        $this->setStatus($order, Order::STATUS_CANCELLED);
+
+        $this->bindEm($user, $order);
+        $response = $this->delete($user, '/v3/orders/100');
+
+        self::assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+        self::assertTrue($order->isDeleted(), 'cancelled order is soft-deleted');
+    }
+
+    #[Test]
+    public function rejectsANonRemovableOrderWith422(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $order = $this->makeOrder($user, 100); // pending_payment (not removable)
         $this->bindEm($user, $order);
 
         $response = $this->delete($user, '/v3/orders/100');
@@ -76,6 +90,13 @@ final class DeleteOrderControllerTest extends HttpTestCase
         $ref->setAccessible(true);
         $ref->setValue($order, $id);
         return $order;
+    }
+
+    private function setStatus(Order $order, string $status): void
+    {
+        $ref = new \ReflectionProperty(Order::class, 'status');
+        $ref->setAccessible(true);
+        $ref->setValue($order, $status);
     }
 
     private function bindEm(User $user, ?Order $order): void
