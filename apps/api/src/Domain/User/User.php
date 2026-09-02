@@ -129,6 +129,16 @@ class User
     private ?string $pendingPhone = null;
 
     /**
+     * An email awaiting OTP verification (does NOT touch the active email until
+     * confirmed). Mirrors the pending-phone model — used when a customer whose
+     * email can't receive our mail (an Apple private-relay or the social-login
+     * placeholder) updates to a deliverable address. See SetEmailController /
+     * VerifyEmailController.
+     */
+    #[ORM\Column(name: 'pending_email', type: 'string', length: 255, nullable: true)]
+    private ?string $pendingEmail = null;
+
+    /**
      * ISO 3166-1 alpha-2 country code (e.g. 'AE', 'SA'). Stored
      * separately from phone so we can prefix-strip when displaying
      * and country-format when sending SMS.
@@ -608,6 +618,34 @@ class User
     }
 
     /**
+     * Whether this account's email CANNOT receive our transactional mail and
+     * should be updated: an Apple private-relay address (relay forwarding is
+     * not configured for this app, so it bounces) or the social-login
+     * placeholder we mint when Apple withholds the email entirely.
+     */
+    public function needsEmailUpdate(): bool
+    {
+        return self::isNonDeliverableEmail($this->email);
+    }
+
+    /**
+     * True for addresses our transactional mail can't reach: Apple private
+     * relay (…@privaterelay.appleid.com) and the .invalid social placeholder.
+     * Used both to flag existing accounts and to reject such an address as the
+     * NEW email in the update flow.
+     */
+    public static function isNonDeliverableEmail(string $email): bool
+    {
+        $normalized = strtolower(trim($email));
+        if ($normalized === '') {
+            return true;
+        }
+        $domain = substr(strrchr($normalized, '@') ?: '', 1);
+        return $domain === 'privaterelay.appleid.com'
+            || str_ends_with($domain, '.invalid');
+    }
+
+    /**
      * Set gender. Accepts a Gender enum or null. Callers that have
      * a raw string from user input should validate via
      * Gender::fromStringOrNull() first; this setter trusts its input.
@@ -718,6 +756,27 @@ class User
         $this->phone = $verifiedPhone;
         $this->isPhoneVerified = true;
         $this->pendingPhone = null;
+    }
+
+    public function getPendingEmail(): ?string { return $this->pendingEmail; }
+
+    /** Stash an email awaiting OTP verification (does not touch `email`). */
+    public function setPendingEmail(?string $email): void
+    {
+        $email = $email !== null ? strtolower(trim($email)) : null;
+        $this->pendingEmail = ($email === null || $email === '') ? null : $email;
+    }
+
+    /**
+     * Promote an OTP-verified email to the active email: set it, mark verified
+     * (the OTP proved the address is deliverable), and clear the pending value.
+     * Called only after the email OTP succeeds (VerifyEmailController).
+     */
+    public function promotePendingEmail(string $verifiedEmail): void
+    {
+        $this->email = strtolower(trim($verifiedEmail));
+        $this->isEmailVerified = true;
+        $this->pendingEmail = null;
     }
 
     public function markPhoneVerified(): void

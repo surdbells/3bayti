@@ -237,6 +237,14 @@ return function (App $app): void {
         $group->post('/phone/claim', \Bayti\Api\Http\Controllers\Me\ClaimPhoneController::class);
         $group->post('/phone/claim/verify', \Bayti\Api\Http\Controllers\Me\ClaimPhoneVerifyController::class);
 
+        // Email-change, set/verify a deliverable email on the current account.
+        //   POST /email        send OTP to the new email (stores it pending)
+        //   POST /email/verify  confirm the OTP → email switched + verified
+        // Primary use case: Apple sign-ins whose private-relay / placeholder
+        // email can't receive our transactional mail, moving to a real address.
+        $group->post('/email', \Bayti\Api\Http\Controllers\Me\SetEmailController::class);
+        $group->post('/email/verify', \Bayti\Api\Http\Controllers\Me\VerifyEmailController::class);
+
         // M3.2.Y.6-A, account deletion (authenticated, re-auth via
         // current_password). Deactivates + soft-deletes the user and
         // revokes all refresh tokens. Order history is retained.

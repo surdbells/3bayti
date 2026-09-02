@@ -735,6 +735,20 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/phone/claim/verify',
     shape: 'v3-envelope',
   },
+  // Email-change (set a deliverable email + verify by OTP), for Apple
+  // private-relay / placeholder accounts. v3-only.
+  'POST /me/email': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/email',
+    shape: 'v3-envelope',
+  },
+  'POST /me/email/verify': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/email/verify',
+    shape: 'v3-envelope',
+  },
   'POST /auth/logout': {
     target: 'new',
     oldPath: '',

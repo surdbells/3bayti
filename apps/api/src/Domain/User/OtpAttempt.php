@@ -70,12 +70,22 @@ class OtpAttempt
      */
     public const PURPOSE_ACCOUNT_LINK = 'account_link';
 
+    /**
+     * Email change: a customer whose email can't receive our mail (Apple
+     * private relay / social placeholder) updates to a deliverable address,
+     * confirmed by an OTP sent to the NEW email. Distinct from registration so
+     * a registration email-OTP can't be replayed to switch an account's email.
+     * See SetEmailController / VerifyEmailController.
+     */
+    public const PURPOSE_EMAIL_CHANGE = 'email_change';
+
     public const ALL_PURPOSES = [
         self::PURPOSE_REGISTRATION,
         self::PURPOSE_PASSWORD_RESET,
         self::PURPOSE_PHONE_CHANGE,
         self::PURPOSE_LOGIN_2FA,
         self::PURPOSE_ACCOUNT_LINK,
+        self::PURPOSE_EMAIL_CHANGE,
     ];
 
     /**

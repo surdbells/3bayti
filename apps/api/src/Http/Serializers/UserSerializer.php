@@ -94,6 +94,10 @@ final class UserSerializer
 
             'is_phone_verified' => $user->isPhoneVerified(),
             'is_email_verified' => $user->isEmailVerified(),
+            // True when the email can't receive our transactional mail (Apple
+            // private relay / social placeholder) — the customer dashboard
+            // shows an "update your email" reminder.
+            'needs_email_update' => $user->needsEmailUpdate(),
             'roles' => $this->extractActiveRoles($user, $hasVendor),
             // RBAC: the granular permission keys the user effectively holds
             // (union of assigned roles; empty for plain customers/vendors) and
