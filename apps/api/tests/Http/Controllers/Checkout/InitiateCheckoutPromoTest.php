@@ -168,6 +168,52 @@ final class InitiateCheckoutPromoTest extends HttpTestCase
     }
 
     // -------------------------------------------------------------------
+    // Channel tracking (regression: PHP-25)
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function persistsTheCheckoutChannelOnTheCreatedOrder(): void
+    {
+        // Regression for PHP-25: the order-creation closure referenced
+        // $input->channel without importing $input into its `use` clause. In
+        // production the undefined variable threw (warning→ErrorException),
+        // rolling back the whole checkout. Assert the request channel is
+        // captured on the persisted order — before the fix it was null.
+        $user = $this->makeUser(id: 7);
+        [$cart] = $this->makeCartWithOneItem($user, '100.00');
+        $billing = $this->makeAddress($user, id: 50, isDefaultBilling: true);
+        $shipping = $this->makeAddress($user, id: 51, isDefaultShipping: true);
+
+        $persistedOrders = [];
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->method('initiateCheckout')->willReturn(
+            new CheckoutInitiation(
+                checkoutUrl: 'https://test.noon/checkout/xyz',
+                providerOrderRef: '999',
+                rawResponse: ['result' => ['checkoutData' => ['postUrl' => 'https://test.noon/checkout/xyz']]],
+            ),
+        );
+
+        $em = $this->bindStandardEm(
+            $user, $cart, $billing, $shipping,
+            promo: null,
+            persistedOrdersRef: $persistedOrders,
+        );
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/checkout/initiate', ['channel' => 'web'], [
+                'Authorization' => 'Bearer ' . $this->token($user),
+            ]),
+        );
+
+        self::assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+        self::assertCount(1, $persistedOrders);
+        self::assertSame('WEB', $persistedOrders[0]->getChannel(), 'channel from the request is persisted');
+    }
+
+    // -------------------------------------------------------------------
     // Promo failure, 422, no order persisted
     // -------------------------------------------------------------------
 

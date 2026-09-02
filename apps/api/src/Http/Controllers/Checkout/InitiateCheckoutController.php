@@ -402,7 +402,7 @@ final class InitiateCheckoutController
         $order = $this->em->wrapInTransaction(
             function (EntityManagerInterface $em) use (
                 $user, $cart, $orderReference, $subtotal, $deliveryFee, $discount,
-                $billing, $shipping, $resolution, $giftCardPlan,
+                $billing, $shipping, $resolution, $giftCardPlan, $input,
             ): Order {
                 $order = new Order(
                     user: $user,
@@ -729,7 +729,7 @@ final class InitiateCheckoutController
         // Create the synthetic order (no cart items, just the denomination).
         $order = $this->em->wrapInTransaction(
             function (\Doctrine\ORM\EntityManagerInterface $em) use (
-                $user, $orderReference, $denomination, $payerAddress,
+                $user, $orderReference, $denomination, $payerAddress, $input,
             ): Order {
                 $order = new Order(
                     user: $user,
