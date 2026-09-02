@@ -158,6 +158,51 @@ if ($exitCode !== 0) {
 
 $out('migrations applied successfully');
 
+// Prune stale Doctrine metadata/query cache namespaces (incident PHP-24 /
+// PHP-26). config/doctrine.php namespaces that cache by a per-deploy version
+// tag, so a redeploy that changes an entity mapping rotates to a fresh, empty
+// namespace and can never read stale ClassMetadata. The previous namespaces
+// are then orphaned — delete them here (single-process deploy step, no races)
+// so var/cache/doctrine doesn't grow unbounded. The proxies subdir is kept
+// (it's regenerated just below). Any failure is non-fatal: migrations already
+// succeeded, and a lingering cache dir is harmless.
+try {
+    // getProxyDir() is <root>/var/cache/doctrine/proxies; its parent is the
+    // cache root the metadata/query PhpFilesAdapter writes namespaced subdirs
+    // into. Deriving it this way keeps in lock-step with config/doctrine.php.
+    $cacheRoot = dirname($em->getConfiguration()->getProxyDir());
+    if (is_dir($cacheRoot)) {
+        $rrmdir = static function (string $dir) use (&$rrmdir): void {
+            foreach (scandir($dir) ?: [] as $entry) {
+                if ($entry === '.' || $entry === '..') {
+                    continue;
+                }
+                $path = $dir . DIRECTORY_SEPARATOR . $entry;
+                if (is_dir($path) && !is_link($path)) {
+                    $rrmdir($path);
+                } else {
+                    @unlink($path);
+                }
+            }
+            @rmdir($dir);
+        };
+
+        $pruned = 0;
+        foreach (new \DirectoryIterator($cacheRoot) as $entry) {
+            // Only namespaced metadata/query cache dirs; never the proxies dir
+            // (regenerated below) or any stray file at the cache root.
+            if ($entry->isDot() || !$entry->isDir() || $entry->getFilename() === 'proxies') {
+                continue;
+            }
+            $rrmdir($entry->getPathname());
+            $pruned++;
+        }
+        $out("pruned {$pruned} stale doctrine cache namespace(s)");
+    }
+} catch (\Throwable $e) {
+    $out('WARNING: doctrine cache prune failed (non-fatal): ' . $e->getMessage());
+}
+
 // Generate Doctrine proxy classes. In production (APP_ENV=prod), our
 // config sets setAutoGenerateProxyClasses(false), Doctrine refuses
 // to write proxies on-demand at request time (perf optimization).

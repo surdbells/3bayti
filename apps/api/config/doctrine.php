@@ -21,6 +21,7 @@ declare(strict_types=1);
  *   - getConfiguration().setMetadataCache() is mandatory (no defaults)
  */
 
+use Bayti\Api\Infrastructure\Cache\MappingCacheVersion;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\Configuration;
 use Doctrine\ORM\Mapping\Driver\AttributeDriver;
@@ -85,9 +86,26 @@ return [
         // Caching, array adapter in dev (no persistence between requests
         // but no setup either), file-based in prod (faster than no cache,
         // doesn't need Redis). We can swap to RedisAdapter in M5 hardening.
+        //
+        // Cross-deploy safety (incident PHP-24 / PHP-26, 2026-09-02)
+        // ---------------------------------------------------------
+        // The file cache stores serialized ClassMetadata + parsed DQL and does
+        // NOT invalidate when an entity mapping changes (unlike proxies, which
+        // self-heal above via FILE_NOT_EXISTS_OR_CHANGED). A deploy that added
+        // Order::$deletedAt while stale metadata lingered made every DQL that
+        // referenced the new field fail with a "has no field" semantical error
+        // — the whole customer order list 500'd for all users until the cache
+        // was cleared by hand. Namespacing the cache by a per-deploy version
+        // tag (MappingCacheVersion) makes that impossible: a redeploy rotates
+        // to a fresh, empty namespace, so stale metadata can never be read.
+        // Orphaned old namespaces are pruned by bin/migrate.php on deploy.
         $cache = $isDev
             ? new ArrayAdapter()
-            : new PhpFilesAdapter('doctrine.metadata', 0, $rootPath . '/var/cache/doctrine');
+            : new PhpFilesAdapter(
+                'doctrine.' . MappingCacheVersion::compute($rootPath),
+                0,
+                $rootPath . '/var/cache/doctrine',
+            );
 
         $config->setMetadataCache($cache);
         $config->setQueryCache($cache);
