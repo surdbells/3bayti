@@ -226,16 +226,43 @@ export class AdminComponent implements OnInit {
     this.router.navigate(['/admin/customers', it.id], { queryParams: { name: it.name } });
   }
 
-  // ── Period-over-period insight (GET /admin/insights?days=N) ───────────
+  // ── Period-over-period insight (GET /admin/insights) ──────────────────
+  // Window modes: a rolling N-day window (7/30/90), the current calendar
+  // month, or a custom from→to date range.
   readonly rangeOptions = [7, 30, 90];
   rangeDays = 30;
+  rangeMode: 'days' | 'current_month' | 'custom' = 'days';
+  /** Custom-range inputs (YYYY-MM-DD) + whether the date row is expanded. */
+  showCustom = false;
+  customFrom = '';
+  customTo = '';
   insightsLoading = true;
   insights: {
     kpis: Record<string, { value: number; prev: number }>;
     revenue_series: number[];
     sales_by_status: { status: string; count: number }[];
     at_risk: { pending_payment: number; stuck_fulfilling: number };
+    range_mode?: string;
+    range_start?: string;
+    range_end?: string;
+    range_days?: number;
   } | null = null;
+
+  /** Today as YYYY-MM-DD, to cap the custom-range date pickers. */
+  get todayStr(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  /** Dynamic caption under "Platform insight" reflecting the active window. */
+  get insightSubtitle(): string {
+    if (this.rangeMode === 'current_month') {
+      return 'This month to date vs the prior period';
+    }
+    if (this.rangeMode === 'custom' && this.insights?.range_start && this.insights?.range_end) {
+      return `${this.insights.range_start} → ${this.insights.range_end} vs the prior period`;
+    }
+    return `Last ${this.rangeDays} days vs the prior ${this.rangeDays}`;
+  }
 
   readonly kpiCards = [
     { key: 'revenue', label: 'Revenue', icon: 'payments', money: true, spark: true },
@@ -248,14 +275,54 @@ export class AdminComponent implements OnInit {
   statusDonutOptions: any = {};
 
   setRange(days: number): void {
-    if (this.rangeDays === days) { return; }
+    if (this.rangeMode === 'days' && this.rangeDays === days) { return; }
+    this.rangeMode = 'days';
     this.rangeDays = days;
+    this.showCustom = false;
     this.loadInsights();
+  }
+
+  /** Switch to the current calendar month (1st → today). */
+  setCurrentMonth(): void {
+    if (this.rangeMode === 'current_month') { return; }
+    this.rangeMode = 'current_month';
+    this.showCustom = false;
+    this.loadInsights();
+  }
+
+  /** Reveal the custom date-range inputs, seeding a sensible default span. */
+  toggleCustom(): void {
+    this.showCustom = !this.showCustom;
+    if (this.showCustom && (!this.customFrom || !this.customTo)) {
+      const to = new Date();
+      const from = new Date();
+      from.setDate(from.getDate() - 29);
+      this.customTo = to.toISOString().slice(0, 10);
+      this.customFrom = from.toISOString().slice(0, 10);
+    }
+  }
+
+  /** Apply the chosen custom from→to range. */
+  applyCustomRange(): void {
+    if (!this.customFrom || !this.customTo) { return; }
+    this.rangeMode = 'custom';
+    this.loadInsights();
+  }
+
+  /** Build the insights query for the active window mode. */
+  private insightsQuery(): Record<string, string | number> {
+    if (this.rangeMode === 'current_month') {
+      return { period: 'current_month' };
+    }
+    if (this.rangeMode === 'custom' && this.customFrom && this.customTo) {
+      return { from: this.customFrom, to: this.customTo };
+    }
+    return { days: this.rangeDays };
   }
 
   private loadInsights(): void {
     this.insightsLoading = true;
-    this.adapter.get_v3('GET /admin/insights', { query: { days: this.rangeDays } }).subscribe({
+    this.adapter.get_v3('GET /admin/insights', { query: this.insightsQuery() }).subscribe({
       next: (res: any) => {
         this.insights = res ?? null;
         this.buildInsightCharts();

@@ -129,13 +129,33 @@
         <div class="adm-insight-head">
           <div>
             <h2 class="ax-card-title">Platform insight</h2>
-            <p class="ax-card-subtitle">Last {{ rangeDays }} days vs the prior {{ rangeDays }}</p>
+            <p class="ax-card-subtitle">{{ insightSubtitle }}</p>
           </div>
           <div class="ax-segment adm-range" role="tablist" aria-label="Time range">
             <button *ngFor="let r of rangeOptions" type="button" class="ax-segment-item"
-                    [class.ax-segment-item-active]="rangeDays === r"
-                    [attr.aria-selected]="rangeDays === r" (click)="setRange(r)">{{ r }} days</button>
+                    [class.ax-segment-item-active]="rangeMode === 'days' && rangeDays === r"
+                    [attr.aria-selected]="rangeMode === 'days' && rangeDays === r" (click)="setRange(r)">{{ r }} days</button>
+            <button type="button" class="ax-segment-item"
+                    [class.ax-segment-item-active]="rangeMode === 'current_month'"
+                    [attr.aria-selected]="rangeMode === 'current_month'" (click)="setCurrentMonth()">This month</button>
+            <button type="button" class="ax-segment-item"
+                    [class.ax-segment-item-active]="rangeMode === 'custom'"
+                    [attr.aria-selected]="rangeMode === 'custom'" (click)="toggleCustom()">Custom</button>
           </div>
+        </div>
+
+        <!-- Custom date-range picker (revealed by the "Custom" segment) -->
+        <div class="adm-range-custom" *ngIf="showCustom">
+          <label class="adm-range-custom__field">
+            <span class="adm-range-custom__label">From</span>
+            <input type="date" class="ax-input" [(ngModel)]="customFrom" [max]="customTo || todayStr" />
+          </label>
+          <label class="adm-range-custom__field">
+            <span class="adm-range-custom__label">To</span>
+            <input type="date" class="ax-input" [(ngModel)]="customTo" [min]="customFrom" [max]="todayStr" />
+          </label>
+          <button type="button" class="ax-btn ax-btn-primary ax-btn-sm adm-range-custom__apply"
+                  [disabled]="!customFrom || !customTo" (click)="applyCustomRange()">Apply</button>
         </div>
 
         <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-4 ax-gap-5 adm-kpis" [class.adm-dim]="insightsLoading">

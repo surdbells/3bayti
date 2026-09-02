@@ -15,13 +15,19 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * GET /v3/admin/insights?days=N
+ * GET /v3/admin/insights
  *
  * Period-over-period dashboard insight: revenue / orders / units / new
- * customers for the last N days each with the prior N-day window (for
- * ▲/▼ deltas), a daily revenue series (sparkline), the order status
- * breakdown, and an "at risk" count (unpaid + stuck-in-fulfilment).
- * N is clamped to 1..365 (the UI offers 7/30/90).
+ * customers for a window, each with the equally-long immediately-preceding
+ * window (for ▲/▼ deltas), a daily revenue series (sparkline), the order
+ * status breakdown, and an "at risk" count (unpaid + stuck-in-fulfilment).
+ *
+ * The window is selected via (in precedence order):
+ *   - from=YYYY-MM-DD&to=YYYY-MM-DD  → a custom date range (both days inclusive,
+ *     span clamped to 366 days)
+ *   - period=current_month           → 1st of the current month 00:00 → now
+ *   - days=N                         → the last N days (default 30, 1..365;
+ *     the UI offers 7/30/90)
  */
 final class GetAdminInsightsController
 {
@@ -63,17 +69,24 @@ final class GetAdminInsightsController
             );
         }
 
-        $days = (int) ($request->getQueryParams()['days'] ?? 30);
-        $days = max(1, min(365, $days));
-
         $conn = $this->em->getConnection();
         $now = new \DateTimeImmutable('now');
         $fmt = static fn (\DateTimeImmutable $d): string => $d->format('Y-m-d H:i:sP');
 
-        $curStart  = $fmt($now->modify("-{$days} days"));
-        $curEnd    = $fmt($now);
-        $prevStart = $fmt($now->modify('-' . ($days * 2) . ' days'));
+        // Resolve the current window [start, end) from days= / period= / from&to.
+        [$curStartDt, $curEndDt, $mode] = $this->resolveWindow($request->getQueryParams(), $now);
+
+        // Prior window of the same length, immediately before, for ▲/▼ deltas.
+        $lenSeconds  = max(1, $curEndDt->getTimestamp() - $curStartDt->getTimestamp());
+        $prevStartDt = $curStartDt->modify("-{$lenSeconds} seconds");
+
+        $curStart  = $fmt($curStartDt);
+        $curEnd    = $fmt($curEndDt);
+        $prevStart = $fmt($prevStartDt);
         $prevEnd   = $curStart;
+
+        // Whole days spanned, for the response caption.
+        $days = max(1, (int) ceil($lenSeconds / 86400));
 
         $sale = self::SALE;
         $noGiftCards = self::NO_GIFT_CARDS;
@@ -113,10 +126,13 @@ final class GetAdminInsightsController
         foreach ($rows as $r) {
             $byDay[(string) $r['d']] = (float) $r['v'];
         }
+        // One gap-filled point per calendar day in the window (oldest→newest).
+        // Guarded at 400 iterations (the custom-range span is clamped to 366).
         $series = [];
-        for ($i = $days - 1; $i >= 0; $i--) {
-            $day = $now->modify("-{$i} days")->format('Y-m-d');
-            $series[] = $byDay[$day] ?? 0.0;
+        $cursor = $curStartDt->setTime(0, 0, 0);
+        for ($guard = 0; $cursor < $curEndDt && $guard < 400; $guard++) {
+            $series[] = $byDay[$cursor->format('Y-m-d')] ?? 0.0;
+            $cursor = $cursor->modify('+1 day');
         }
 
         // Order status breakdown over the window.
@@ -138,10 +154,71 @@ final class GetAdminInsightsController
 
         return $this->ok([
             'range_days'      => $days,
+            'range_mode'      => $mode,
+            'range_start'     => $curStartDt->format('Y-m-d'),
+            // end is exclusive (start of the day after the last included day);
+            // report the last INCLUDED calendar day for display.
+            'range_end'       => $curEndDt->modify('-1 second')->format('Y-m-d'),
             'kpis'            => $kpis,
             'revenue_series'  => $series,
             'sales_by_status' => $salesByStatus,
             'at_risk'         => ['pending_payment' => $pendingPayment, 'stuck_fulfilling' => $stuck],
         ]);
+    }
+
+    /**
+     * Resolve the current window [start, end) from the query params.
+     * Precedence: from&to (custom) → period=current_month → days=N.
+     *
+     * @param array<string,mixed> $params
+     * @return array{0: \DateTimeImmutable, 1: \DateTimeImmutable, 2: string}
+     *         [start (inclusive), end (exclusive), mode]
+     */
+    private function resolveWindow(array $params, \DateTimeImmutable $now): array
+    {
+        $from = isset($params['from']) ? $this->parseDate((string) $params['from']) : null;
+        $to   = isset($params['to']) ? $this->parseDate((string) $params['to']) : null;
+        if ($from !== null && $to !== null) {
+            if ($to < $from) {
+                [$from, $to] = [$to, $from]; // tolerate a swapped range
+            }
+            $start = $from->setTime(0, 0, 0);
+            // Exclusive end = start of the day after `to`, so `to` is included.
+            $end = $to->setTime(0, 0, 0)->modify('+1 day');
+            // Clamp the span to 366 days to keep the query + series bounded.
+            $maxEnd = $start->modify('+366 days');
+            if ($end > $maxEnd) {
+                $end = $maxEnd;
+            }
+            // Never let a future end run past "now" for the current bucket.
+            if ($end > $now) {
+                $end = $now;
+            }
+            if ($end <= $start) {
+                $end = $start->modify('+1 day');
+            }
+            return [$start, $end, 'custom'];
+        }
+
+        $period = isset($params['period']) ? (string) $params['period'] : '';
+        if ($period === 'current_month' || $period === 'month') {
+            $start = $now->setTime(0, 0, 0)->modify('first day of this month');
+            return [$start, $now, 'current_month'];
+        }
+
+        $days = (int) ($params['days'] ?? 30);
+        $days = max(1, min(365, $days));
+        return [$now->modify("-{$days} days"), $now, 'days'];
+    }
+
+    /** Parse a strict YYYY-MM-DD date (midnight), or null if invalid. */
+    private function parseDate(string $value): ?\DateTimeImmutable
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+        $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+        return $d !== false ? $d : null;
     }
 }
