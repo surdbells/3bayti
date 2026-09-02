@@ -103,7 +103,10 @@ interface VendorOrder {
 })
 export class VendorOrdersPage implements OnInit {
   orders: VendorOrder[] = [];
-  statuses: VendorFilterStatus[] = ['all', 'paid', 'fulfilling', 'shipped', 'delivered'];
+  // Post-payment statuses only (pending_payment / failed are never a vendor
+  // concern). 'cancelled' is included so a vendor can see + filter orders that
+  // were cancelled (e.g. to confirm they should NOT ship them).
+  statuses: VendorFilterStatus[] = ['all', 'paid', 'fulfilling', 'shipped', 'delivered', 'cancelled'];
   selectedStatus: VendorFilterStatus = 'all';
 
   ui_controls = {
