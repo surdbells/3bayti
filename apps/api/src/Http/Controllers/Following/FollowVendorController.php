@@ -14,6 +14,7 @@ use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\VendorSerializer;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -67,14 +68,27 @@ final class FollowVendorController
         /** @var VendorFollowRepository $repo */
         $repo = $this->em->getRepository(VendorFollow::class);
 
+        // Serialize the vendor up-front, while the EM is guaranteed open — a
+        // failed flush below closes the EM, so we must not serialize after it.
+        $envelope = PaginatedEnvelope::single($this->serializer->publicShape($vendor));
+
         // Idempotent: already following → no-op 200.
         $existing = $repo->findOneForUserAndVendor($user, $vendor);
         if ($existing !== null) {
-            return $this->ok(PaginatedEnvelope::single($this->serializer->publicShape($vendor)));
+            return $this->ok($envelope);
         }
 
-        $repo->save(new VendorFollow($user, $vendor));
+        try {
+            $repo->save(new VendorFollow($user, $vendor));
+        } catch (UniqueConstraintViolationException) {
+            // Concurrent double-tap: another request created the follow between
+            // our existence check and this insert. The unique index is the race
+            // backstop (uq_vendor_follow_user_vendor); treat the collision as
+            // the idempotent success it is — the user now follows the vendor —
+            // rather than surfacing a 500 (PHP-23).
+            return $this->ok($envelope);
+        }
 
-        return $this->created(PaginatedEnvelope::single($this->serializer->publicShape($vendor)));
+        return $this->created($envelope);
     }
 }

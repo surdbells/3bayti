@@ -115,8 +115,12 @@ class NotificationLog
      * later changes, this is the audit record of what we tried, not
      * a live link to the current user state.
      */
+    // Defaulted to '' so a row hydrated without a recipient value (e.g. a
+    // broadcast/feed row that has no single recipient, or a legacy NULL) never
+    // fatals with "typed property accessed before initialization" when the feed
+    // reads getRecipient() (PHP-22). '' reads as "no/unknown recipient".
     #[ORM\Column(name: 'recipient', type: 'string', length: 255)]
-    private string $recipient;
+    private string $recipient = '';
 
     /** One of STATUS_* constants. */
     #[ORM\Column(name: 'status', type: 'string', length: 16)]
