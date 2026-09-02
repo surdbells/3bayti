@@ -198,7 +198,13 @@ final class InitiateCheckoutController
         foreach ($cart->getItems() as $cartItem) {
             if (!$cartItem->getProduct()->isOrderable()) {
                 $unavailable[] = $cartItem;
-                $droppedItems[] = $cartItem->getProduct()->getName();
+                // Returned to the client so it can tell the customer WHICH
+                // items were removed and WHY, before payment.
+                $droppedItems[] = [
+                    'product_id' => $cartItem->getProduct()->getId(),
+                    'name' => $cartItem->getProduct()->getName(),
+                    'reason' => 'store_unavailable',
+                ];
             }
         }
         foreach ($unavailable as $cartItem) {
@@ -565,6 +571,7 @@ final class InitiateCheckoutController
                 'order_id'          => $order->getId() ?? 0,
                 'idempotent'        => false,
                 'gift_card_amount'  => $order->getGiftCardAmount(),
+                'dropped_items'     => $droppedItems,
             ]);
         }
 
@@ -637,6 +644,9 @@ final class InitiateCheckoutController
             'order_id' => $order->getId() ?? 0,
             'idempotent' => false,
             'gift_card_amount' => $order->getGiftCardAmount(),
+            // So the client can tell the customer which items were removed
+            // (store no longer available) and that they weren't charged for them.
+            'dropped_items' => $droppedItems,
         ]);
 
         // M3.2.X.8-D, Deprecation header on legacy raw-discount path.

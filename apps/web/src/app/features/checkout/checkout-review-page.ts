@@ -790,6 +790,15 @@ export class CheckoutReviewPageComponent implements OnInit {
         use_gift_wallet: this.walletApplied() ? true : undefined,
       });
 
+      /* Some lines may have been auto-removed at checkout (their store is no
+         longer available). Tell the customer what was dropped and that they
+         aren't charged for it; the toast persists across the handoff. */
+      const dropped = Array.isArray(response.dropped_items) ? response.dropped_items : [];
+      if (dropped.length > 0) {
+        const items = dropped.map((d) => d.name).filter((n) => !!n).join(', ');
+        this.toast.warning('checkout.droppedItems', { items });
+      }
+
       /* Gift card / wallet covered the whole total: the server skipped Noon
          and the order is already paid, so there is no checkout_url to hand
          off to. Go straight to the return page, which resolves the order

@@ -27,7 +27,7 @@ import {
 } from "@ionic/angular/standalone";
 import {ConnectionService} from "../../service/connection.service";
 import {Router, RouterLink} from "@angular/router";
-import {ActionSheetController} from "@ionic/angular";
+import {ActionSheetController, AlertController} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import { apiErrorMessage } from '../../core/http/api-error';
@@ -129,6 +129,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     private platform: Platform,
     private router: Router,
     private actionSheetCtrl: ActionSheetController,
+    private alertCtrl: AlertController,
     private networkService: NetworkService,
     private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
@@ -709,8 +710,19 @@ export class CheckoutPage implements OnInit, OnDestroy {
     };
     this.networkAdapter.post_v3('POST /checkout/initiate', initiateBody, { authToken: this.single_user.token })
       .subscribe({
-        next: (response: any) => {
+        next: async (response: any) => {
           this.ui_controls.checking_out = false;
+
+          // Some cart lines may have been auto-removed at checkout because
+          // their store is no longer available. Tell the customer WHICH items
+          // and WHY, and that they aren't charged for them, BEFORE the payment
+          // sheet opens — awaited so they must acknowledge first.
+          const dropped: any[] = Array.isArray(response?.data?.dropped_items)
+            ? response.data.dropped_items
+            : [];
+          if (dropped.length > 0) {
+            await this.showDroppedItemsAlert(dropped);
+          }
 
           // Detect response shape (dual-shape strangler-fig support):
           //   v3 (post-transform): response.response_code === 200,
@@ -1092,6 +1104,27 @@ export class CheckoutPage implements OnInit, OnDestroy {
     this.toast.error(message, {
       position: "top-center"
     });
+  }
+
+  /**
+   * Blocking notice that some cart lines were removed at checkout (their store
+   * is no longer available). Names the items + reason so the customer knows
+   * why the total dropped and that they aren't charged for them. Resolves when
+   * the customer acknowledges, so payment only opens after they've seen it.
+   */
+  private async showDroppedItemsAlert(dropped: any[]): Promise<void> {
+    const names = dropped
+      .map((d) => (d && typeof d.name === 'string' ? d.name : ''))
+      .filter((n) => n.length > 0)
+      .join(', ');
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('checkout_dropped_title'),
+      message: `${this.i18n.t('checkout_dropped_message')}${names ? ' ' + names + '.' : ''}`,
+      buttons: [{ text: this.i18n.t('checkout_dropped_continue'), role: 'confirm' }],
+      backdropDismiss: false,
+    });
+    await alert.present();
+    await alert.onDidDismiss();
   }
   success_notification(message: string) {
     this.toast.success(message, {

@@ -465,7 +465,8 @@
       "emptyCart": "Your bag is empty.",
       "networkError": "Network error. Please try again.",
       "phoneNotVerified": "Please verify your phone number before placing your order."
-    }
+    },
+    "droppedItems": "Some items were removed because their store is currently unavailable, and you won't be charged for them: {{items}}"
   },
   "orders": {
     "status": {

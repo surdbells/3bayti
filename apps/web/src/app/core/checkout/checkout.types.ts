@@ -48,6 +48,12 @@ export interface InitiateCheckoutResponse {
   gateway_skipped?: boolean;
   /** Amount drawn from gift-card balance (aggregate when the wallet is used). */
   gift_card_amount?: string;
+  /**
+   * Cart lines the server auto-removed at checkout because their store is no
+   * longer available. The customer isn't charged for them; the review page
+   * tells them what was dropped before handing off to payment.
+   */
+  dropped_items?: Array<{ product_id: number | null; name: string; reason: string }>;
 }
 
 /**

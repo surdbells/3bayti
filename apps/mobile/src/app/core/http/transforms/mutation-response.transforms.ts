@@ -328,6 +328,9 @@ export function transformInitiatePaymentResponse(data: unknown): unknown {
     // empty url, matched no known shape, and showed "something went wrong".
     gateway_skipped: v3['gateway_skipped'] === true,
     gift_card_amount: v3['gift_card_amount'] ?? '0.00',
+    // Lines the server auto-removed at checkout (store no longer available).
+    // The checkout page tells the customer before opening the payment sheet.
+    dropped_items: Array.isArray(v3['dropped_items']) ? v3['dropped_items'] : [],
   };
 }
 
