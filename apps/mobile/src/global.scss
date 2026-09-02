@@ -1072,10 +1072,12 @@ ion-header.md ion-toolbar {
   img {
     width: 100%;
     height: 100%;
-    /* contain (not cover) so the whole vertical product image is always
-       visible; any slack is filled by the warm placeholder background. */
-    object-fit: contain;
-    object-position: center;
+    /* cover so the image fills the portrait 3:4 frame edge-to-edge — no warm
+       pillarbox behind photos that aren't wide enough to fill the width. The
+       taller portrait frame keeps the vertical crop small; anchored to the top
+       so the top of the garment is kept. */
+    object-fit: cover;
+    object-position: top center;
     opacity: 0;
     transition: opacity 0.3s ease;
     cursor: pointer;
