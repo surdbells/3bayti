@@ -185,27 +185,48 @@ final class InitiateCheckoutController
             );
         }
 
-        // Extra-measurement backstop: every line whose product requires the
-        // vendor's extra measurement must carry it. AddCartItemController blocks
-        // these at add time; this guards carts that predate that rule (or were
-        // tampered with) so a vendor never receives an un-fulfillable line.
+        // Vendor gate — the authoritative order-time check. A line whose store
+        // is not approved + active (or whose product went inactive) must never
+        // become an order line. Rather than failing the whole checkout, we
+        // AUTO-DROP those lines and proceed with the rest: everything below
+        // (subtotal, delivery fee, promo, the order-item snapshot) reads the
+        // cart AFTER these removals, so it reflects only the kept items. This
+        // is still the trust boundary — even if an add-to-cart path missed the
+        // gate, an unapproved store's item can never reach a persisted order.
+        $droppedItems = [];
+        $unavailable = [];
+        foreach ($cart->getItems() as $cartItem) {
+            if (!$cartItem->getProduct()->isOrderable()) {
+                $unavailable[] = $cartItem;
+                $droppedItems[] = $cartItem->getProduct()->getName();
+            }
+        }
+        foreach ($unavailable as $cartItem) {
+            $cart->removeItem($cartItem);
+        }
+        if ($cart->getItems()->isEmpty()) {
+            throw HttpException::businessRuleViolation(
+                ErrorCodes::VALIDATION_FAILED,
+                'The items in your cart are no longer available. Please add something else before checking out.',
+            );
+        }
+        if ($droppedItems !== []) {
+            // Visibility for support: the order will have fewer items than the
+            // customer's cart because these lines' stores became unsellable.
+            $this->logger->info('checkout.initiate: dropped unavailable items', [
+                'user_id' => $user->getId(),
+                'cart_id' => $cart->getId(),
+                'dropped' => $droppedItems,
+            ]);
+        }
+
+        // Extra-measurement backstop: every REMAINING line whose product
+        // requires the vendor's extra measurement must carry it.
+        // AddCartItemController blocks these at add time; this guards carts that
+        // predate that rule (or were tampered with) so a vendor never receives
+        // an un-fulfillable line.
         foreach ($cart->getItems() as $cartItem) {
             $itemProduct = $cartItem->getProduct();
-            // Vendor gate — the authoritative order-time check. A product whose
-            // store is not approved + active (or the product itself inactive)
-            // must never become an order line. This is the trust boundary: even
-            // if an add-to-cart path missed the gate, checkout refuses the whole
-            // order here, BEFORE any Order row is created, so an unapproved
-            // store's item can never end up in a customer's order.
-            if (!$itemProduct->isOrderable()) {
-                throw HttpException::businessRuleViolation(
-                    ErrorCodes::VALIDATION_FAILED,
-                    sprintf(
-                        '"%s" is no longer available and can\'t be ordered. Please remove it from your cart.',
-                        $itemProduct->getName(),
-                    ),
-                );
-            }
             if ($itemProduct->requiresExtraMsmt() && trim((string) $cartItem->getExtraMeasurement()) === '') {
                 throw HttpException::businessRuleViolation(
                     ErrorCodes::VALIDATION_FAILED,

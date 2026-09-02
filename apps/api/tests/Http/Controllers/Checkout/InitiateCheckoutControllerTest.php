@@ -935,6 +935,101 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
     /**
      * @return array{0: Cart, 1: Product}
      */
+    #[Test]
+    public function dropsUnavailableLinesAndProceeds(): void
+    {
+        $user = $this->makeUser(id: 7);
+        [$cart, $keep] = $this->makeCartWithSellableAndUnsellableItems($user);
+        $billing = $this->makeAddress($user, id: 50, isDefaultBilling: true);
+        $shipping = $this->makeAddress($user, id: 51, isDefaultShipping: true);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+        $cartRepo = $this->createMock(CartRepository::class);
+        $cartRepo->method('findActiveForUser')->with($user)->willReturn($cart);
+        $addressRepo = $this->createMock(AddressRepository::class);
+        $addressRepo->method('findDefaultBillingForUser')->willReturn($billing);
+        $addressRepo->method('findDefaultShippingForUser')->willReturn($shipping);
+        $txRepo = $this->createMock(PaymentTransactionRepository::class);
+        $txRepo->method('findByIdempotencyKey')->willReturn(null);
+        $txRepo->method('save');
+
+        // The order still goes to the gateway (with only the surviving line).
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::once())
+            ->method('initiateCheckout')
+            ->willReturnCallback(fn (Order $order): CheckoutInitiation => new CheckoutInitiation(
+                checkoutUrl: 'https://api-test.noonpayments.com/checkout/abc123',
+                providerOrderRef: '123456789012',
+                rawResponse: ['resultCode' => 0],
+            ));
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $cartRepo, $addressRepo, $txRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Cart::class, $cartRepo],
+                [Address::class, $addressRepo],
+                [PaymentTransaction::class, $txRepo],
+            ]);
+            $em->method('persist');
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+        $response = $this->handle($this->jsonRequest('POST', '/v3/checkout/initiate', [], [
+            'Authorization' => 'Bearer ' . $pair->accessToken,
+        ]));
+
+        self::assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+        // The unsellable store's line was dropped; only the sellable one stays.
+        self::assertCount(1, $cart->getItems());
+        self::assertSame($keep->getId(), $cart->getItems()->first()->getProduct()->getId());
+    }
+
+    #[Test]
+    public function rejectsWhenAllLinesAreUnavailable(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $vendor = $this->makeUnsellableVendor(id: 9);
+        $product = $this->makeProduct(id: 300, name: 'Gone', price: '500.00', vendor: $vendor);
+        $cart = new Cart(user: $user);
+        $this->setEntityId($cart, 42);
+        $item = new CartItem(product: $product, quantity: 1, unitPriceSnapshot: '500.00');
+        $this->setEntityId($item, 555);
+        $cart->addItem($item);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+        $cartRepo = $this->createMock(CartRepository::class);
+        $cartRepo->method('findActiveForUser')->with($user)->willReturn($cart);
+
+        // The gateway must NOT be reached — no order is created.
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::never())->method('initiateCheckout');
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $cartRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Cart::class, $cartRepo],
+            ]);
+            $em->method('persist');
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+        $response = $this->handle($this->jsonRequest('POST', '/v3/checkout/initiate', [], [
+            'Authorization' => 'Bearer ' . $pair->accessToken,
+        ]));
+
+        self::assertSame(422, $response->getStatusCode());
+    }
+
     private function makeCartWithOneItem(User $user): array
     {
         $vendor = $this->makeVendor(id: 5);
@@ -1062,5 +1157,40 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
         $this->setEntityProp($vendor, 'status', Vendor::STATUS_APPROVED);
         $this->setEntityProp($vendor, 'isActive', true);
         return $vendor;
+    }
+
+    /** A vendor that may NOT sell (pending approval) — its lines are dropped. */
+    private function makeUnsellableVendor(int $id): Vendor
+    {
+        $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
+        $this->setEntityProp($vendor, 'id', $id);
+        $this->setEntityProp($vendor, 'status', Vendor::STATUS_PENDING);
+        $this->setEntityProp($vendor, 'isActive', true);
+        return $vendor;
+    }
+
+    /**
+     * A cart with one line from a sellable store (kept) and one from an
+     * unsellable store (auto-dropped at checkout). Returns [cart, keptProduct].
+     *
+     * @return array{0: Cart, 1: Product}
+     */
+    private function makeCartWithSellableAndUnsellableItems(User $user): array
+    {
+        $keep = $this->makeProduct(id: 100, name: 'Silk Abaya', price: '299.00', vendor: $this->makeVendor(id: 5));
+        $drop = $this->makeProduct(id: 200, name: 'Suspended Store Abaya', price: '500.00', vendor: $this->makeUnsellableVendor(id: 9));
+
+        $cart = new Cart(user: $user);
+        $this->setEntityId($cart, 42);
+
+        $keepItem = new CartItem(product: $keep, quantity: 1, unitPriceSnapshot: '299.00');
+        $this->setEntityId($keepItem, 555);
+        $cart->addItem($keepItem);
+
+        $dropItem = new CartItem(product: $drop, quantity: 1, unitPriceSnapshot: '500.00');
+        $this->setEntityId($dropItem, 556);
+        $cart->addItem($dropItem);
+
+        return [$cart, $keep];
     }
 }
