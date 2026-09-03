@@ -196,14 +196,24 @@ final class InitiateCheckoutController
         $droppedItems = [];
         $unavailable = [];
         foreach ($cart->getItems() as $cartItem) {
-            if (!$cartItem->getProduct()->isOrderable()) {
+            $itemProduct = $cartItem->getProduct();
+            // Same auto-drop for out-of-stock lines: a product that sold out (or
+            // was flagged out_of_stock) between add-to-cart and checkout must not
+            // become an order line. isOrderable omits stock, so check both.
+            $reason = null;
+            if (!$itemProduct->isOrderable()) {
+                $reason = 'store_unavailable';
+            } elseif (!$itemProduct->isInStock()) {
+                $reason = 'out_of_stock';
+            }
+            if ($reason !== null) {
                 $unavailable[] = $cartItem;
                 // Returned to the client so it can tell the customer WHICH
                 // items were removed and WHY, before payment.
                 $droppedItems[] = [
-                    'product_id' => $cartItem->getProduct()->getId(),
-                    'name' => $cartItem->getProduct()->getName(),
-                    'reason' => 'store_unavailable',
+                    'product_id' => $itemProduct->getId(),
+                    'name' => $itemProduct->getName(),
+                    'reason' => $reason,
                 ];
             }
         }

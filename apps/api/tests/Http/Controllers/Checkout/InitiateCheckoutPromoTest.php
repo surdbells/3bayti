@@ -172,6 +172,40 @@ final class InitiateCheckoutPromoTest extends HttpTestCase
     // -------------------------------------------------------------------
 
     #[Test]
+    public function dropsOutOfStockLineAtCheckout(): void
+    {
+        // A product that went out of stock between add-to-cart and checkout must
+        // be auto-dropped (never become an order line). When it's the only line,
+        // the cart is empty after the drop → 422, no order, no gateway call.
+        $user = $this->makeUser(id: 7);
+        [$cart, $product] = $this->makeCartWithOneItem($user, '100.00');
+        $this->setEntityProp($product, 'stockStatus', 'out_of_stock');
+        $billing = $this->makeAddress($user, id: 50, isDefaultBilling: true);
+        $shipping = $this->makeAddress($user, id: 51, isDefaultShipping: true);
+
+        $persistedOrders = [];
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::never())->method('initiateCheckout');
+
+        $em = $this->bindStandardEm(
+            $user, $cart, $billing, $shipping,
+            promo: null,
+            persistedOrdersRef: $persistedOrders,
+        );
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/checkout/initiate', [], [
+                'Authorization' => 'Bearer ' . $this->token($user),
+            ]),
+        );
+
+        self::assertSame(422, $response->getStatusCode(), (string) $response->getBody());
+        self::assertSame([], $persistedOrders, 'no order for an out-of-stock-only cart');
+    }
+
+    #[Test]
     public function persistsTheCheckoutChannelOnTheCreatedOrder(): void
     {
         // Regression for PHP-25: the order-creation closure referenced

@@ -496,6 +496,51 @@ final class AddCartItemControllerTest extends HttpTestCase
         self::assertSame(401, $response->getStatusCode());
     }
 
+    #[Test]
+    public function rejectsAddingAnOutOfStockProduct(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $product = $this->makeProduct(id: 100, name: 'Silk Abaya', price: '299.00');
+        // Sellable (active + approved vendor) but flagged out of stock.
+        $this->setEntityProp($product, 'stockStatus', 'out_of_stock');
+
+        $cart = new Cart(user: $user);
+        $this->setEntityId($cart, 42);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('find')->with(100)->willReturn($product);
+        $cartRepo = $this->createMock(CartRepository::class);
+        $cartRepo->method('findActiveForUser')->with($user)->willReturn($cart);
+        $cartRepo->expects(self::never())->method('saveWithItems');
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $cartRepo, $productRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Cart::class, $cartRepo],
+                [Product::class, $productRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/cart/items', [
+                'product_id' => 100,
+                'quantity' => 1,
+                'size' => 'M',
+            ], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(422, $response->getStatusCode(), (string) $response->getBody());
+        self::assertStringContainsStringIgnoringCase('out of stock', (string) $response->getBody());
+    }
+
     private function setEntityId(object $entity, int $id): void
     {
         $ref = new \ReflectionProperty($entity::class, 'id');

@@ -82,6 +82,17 @@ final class AddCartItemController
             throw HttpException::notFound('Product not found.');
         }
 
+        // Out-of-stock guard: the product exists + is sellable, but has no stock
+        // (stock_status = out_of_stock and oversell off). isOrderable deliberately
+        // omits stock, so without this an out-of-stock item can be added to the
+        // cart and bought. 422 (not 404) so the client can show a clear reason.
+        if (!$product->isInStock()) {
+            throw HttpException::businessRuleViolation(
+                ErrorCodes::BUSINESS_RULE_VIOLATION,
+                'This product is out of stock.',
+            );
+        }
+
         // Products flagged requiresExtraMsmt need the vendor's EXTRA measurement
         // (an additional measurement beyond the account profile). Rejected here
         // when empty so a vendor never receives an un-fulfillable line. (The
