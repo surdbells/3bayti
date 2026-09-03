@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Sms;
 
+use Bayti\Api\Domain\Common\PhoneNumber;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
@@ -81,9 +82,15 @@ final class MessageCentralSmsSender implements SmsSenderInterface
     {
         $authToken = $this->getAuthToken();
 
+        // Canonicalise defensively first: legacy / client-malformed rows can
+        // carry a stray national trunk zero right after the country code
+        // (e.g. "+9710508816837"), which would otherwise be sent as part of the
+        // subscriber number ("0508816837" instead of "508816837") and rejected.
+        $canonical = PhoneNumber::toE164($toPhone, $this->country) ?? $toPhone;
+
         // CPaaS expects the mobile number WITHOUT the leading '+' and
         // WITHOUT the country code (country is a separate param).
-        $localNumber = $this->stripCountryCode($toPhone);
+        $localNumber = $this->stripCountryCode($canonical);
 
         try {
             $response = $this->http->post($this->buildUrl($this->sendPath, [

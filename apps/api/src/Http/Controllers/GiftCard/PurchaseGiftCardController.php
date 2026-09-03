@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\GiftCard;
 
+use Bayti\Api\Domain\Common\PhoneNumber;
 use Bayti\Api\Domain\GiftCard\GiftCard;
 use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Domain\User\User;
@@ -86,8 +87,15 @@ final class PurchaseGiftCardController
 
         $recipientPhone = isset($body['recipient_phone']) && trim((string) $body['recipient_phone']) !== ''
             ? trim((string) $body['recipient_phone']) : null;
-        if ($recipientPhone !== null && !preg_match('/^\+?[0-9]{7,15}$/', $recipientPhone)) {
-            throw HttpException::badRequest('recipient_phone must be a valid phone number (E.164-ish, 7-15 digits).');
+        if ($recipientPhone !== null) {
+            if (!preg_match('/^\+?[0-9]{7,15}$/', $recipientPhone)) {
+                throw HttpException::badRequest('recipient_phone must be a valid phone number (E.164-ish, 7-15 digits).');
+            }
+            // Canonicalise to E.164 before storing so a client that concatenated
+            // the country code onto a local number WITH its trunk zero (e.g.
+            // "+971" + "0508816837" → "+9710508816837") doesn't persist a number
+            // that the SMS gateway / wa.me link would then misroute.
+            $recipientPhone = PhoneNumber::toE164($recipientPhone) ?? $recipientPhone;
         }
 
         // Scheduled delivery
