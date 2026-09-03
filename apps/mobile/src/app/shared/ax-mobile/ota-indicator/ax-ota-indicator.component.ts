@@ -55,7 +55,15 @@ import { CheckoutActivityService } from '../../../core/services/checkout-activit
             @if (summary()) {
               <p class="ota-sheet__notes-label">{{ 'ota_update_whats_new' | translate }}</p>
               <div class="ota-sheet__notes-scroll">
-                <p class="ota-sheet__notes">{{ summary() }}</p>
+                @if (summaryLines().length > 1) {
+                  <ul class="ota-sheet__notes-list">
+                    @for (line of summaryLines(); track $index) {
+                      <li>{{ line }}</li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="ota-sheet__notes">{{ summary() }}</p>
+                }
               </div>
             } @else {
               <p class="ota-sheet__desc">{{ descKey() | translate }}</p>
@@ -99,6 +107,23 @@ export class AxOtaIndicatorComponent implements OnDestroy {
   protected readonly percent = this.ota.percent;
   protected readonly summary = this.ota.summary;
   protected readonly version = this.ota.version;
+
+  /**
+   * The summary split into clean lines (leading bullet markers stripped) for
+   * proper left-aligned list rendering — centered bullet text read poorly.
+   * More than one line renders as a bulleted list; a single line stays a
+   * paragraph. Empty when there's no summary.
+   */
+  protected readonly summaryLines = computed(() => {
+    const s = this.summary();
+    if (!s) {
+      return [];
+    }
+    return s
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^\s*(?:[•·▪‣]\s*|[-*]\s+)/, '').trim())
+      .filter((line) => line.length > 0);
+  });
 
   /** Seconds shown, then counted down, before the ready bundle auto-applies. */
   private readonly RESTART_SECONDS = 6;
