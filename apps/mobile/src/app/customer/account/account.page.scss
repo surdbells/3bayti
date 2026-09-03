@@ -1062,3 +1062,12 @@ ion-modal ion-content {
   font-size: 20px;
   color: var(--ax-color-text-brand, #906952);
 }
+
+/* Customer dashboard keeps the ORIGINAL landscape 3:2 product frame for its
+   rails (best sellers, new arrivals). Everything else keeps the shared
+   portrait 3:4 frame from global.scss. Component-scoped, so this only overrides
+   the .m6d-img-wrap cards rendered on this page; the img fill (cover, top
+   centre) is inherited from global.scss and suits the landscape crop. */
+.m6d-img-wrap {
+  aspect-ratio: 3 / 2;
+}
