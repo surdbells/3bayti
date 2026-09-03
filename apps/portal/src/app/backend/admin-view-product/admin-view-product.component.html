@@ -411,5 +411,72 @@
             </app-ax-accordion-item>
           </app-ax-accordion>
         </aside>
-      </div>  </div>
+      </div>
+
+      <!-- ═══════ Change history (full width) ═══════ -->
+      <section *ngIf="!ui_controls.page_loading" class="ax-card ax-p-5 ax-mt-5 product-history">
+        <div class="ax-flex ax-items-center ax-gap-2 ax-mb-4">
+          <app-icon name="history" aria-hidden="true"></app-icon>
+          <h3 class="ax-h5 ax-m-0">Change history</h3>
+          <span *ngIf="history.length" class="ax-badge ax-badge-neutral">{{ history.length }}</span>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="history_loading" class="ax-flex ax-justify-center ax-py-6">
+          <span class="ax-spinner ax-spinner-md" aria-label="Loading history"></span>
+        </div>
+
+        <!-- Error -->
+        <p *ngIf="!history_loading && history_error" class="ax-text-danger ax-m-0">{{ history_error }}</p>
+
+        <!-- Empty -->
+        <div *ngIf="!history_loading && !history_error && !history.length" class="ax-py-6 ax-text-center">
+          <p class="ax-text-muted ax-m-0">
+            No recorded changes yet. Edits from here on will appear in this timeline.
+          </p>
+        </div>
+
+        <!-- Timeline -->
+        <ol *ngIf="!history_loading && !history_error && history.length" class="ph-timeline">
+          <li *ngFor="let log of history" class="ph-entry">
+            <span class="ph-dot" [ngClass]="historyActionMeta(log.action).dot"></span>
+            <div class="ph-body">
+              <div class="ph-head">
+                <span [ngClass]="historyActionMeta(log.action).badge">{{ historyActionMeta(log.action).label }}</span>
+                <span
+                  class="ph-avatar"
+                  [class.ph-avatar-system]="!log.actor"
+                  [attr.title]="historyActorName(log)">{{ historyActorInitials(log) }}</span>
+                <span class="ph-actor">{{ historyActorName(log) }}</span>
+                <span class="ph-time" [attr.title]="absoluteTime(log.created_at)">{{ relativeTime(log.created_at) }}</span>
+              </div>
+
+              <ul *ngIf="historyChangeRows(log).length" class="ph-changes">
+                <li *ngFor="let ch of historyVisibleRows(log)" class="ph-change">
+                  <span class="ph-field">{{ ch.field }}</span>
+                  <ng-container *ngIf="ch.before; else onlyAfter">
+                    <span class="ph-before">{{ ch.before }}</span>
+                    <app-icon name="arrow_forward" class="ph-arrow" aria-hidden="true"></app-icon>
+                    <span class="ph-after">{{ ch.after }}</span>
+                  </ng-container>
+                  <ng-template #onlyAfter>
+                    <span class="ph-after">{{ ch.after }}</span>
+                  </ng-template>
+                </li>
+              </ul>
+
+              <button
+                *ngIf="historyHiddenCount(log)"
+                type="button"
+                class="ax-btn ax-btn-ghost ax-btn-sm ph-more"
+                (click)="toggleHistoryEntry(log.id)">
+                {{ isHistoryExpanded(log.id) ? 'Show less' : 'Show ' + historyHiddenCount(log) + ' more' }}
+              </button>
+
+              <p *ngIf="!historyChangeRows(log).length" class="ph-nochange">No field-level detail recorded.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+      </div>
 </app-admin-shell>

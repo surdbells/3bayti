@@ -1794,6 +1794,9 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/products/:id': {
     target: 'new', oldPath: '', newPath: '/v3/admin/products/:id', shape: 'v3-envelope',
   },
+  'GET /admin/products/:id/history': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/products/:id/history', shape: 'v3-envelope',
+  },
   'GET /admin/transactions': {
     target: 'new', oldPath: '/admin/common/transactions', newPath: '/v3/admin/transactions', shape: 'v3-envelope',
   },

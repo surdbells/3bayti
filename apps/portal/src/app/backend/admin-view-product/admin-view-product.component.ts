@@ -32,6 +32,29 @@ interface ColorOption {
   hex: string;
 }
 
+/** A single before→after field change rendered in the history timeline. */
+interface HistoryChange {
+  field: string;
+  before: string;
+  after: string;
+}
+
+/**
+ * Visual treatment per audit action, mirrors the audit-log console so the
+ * badge colours/labels read the same across the portal.
+ */
+const HISTORY_ACTION_META: Record<string, { label: string; badge: string; dot: string }> = {
+  created:    { label: 'Created',    badge: 'ax-badge ax-badge-success', dot: 'ph-dot-created' },
+  updated:    { label: 'Updated',    badge: 'ax-badge ax-badge-info',    dot: 'ph-dot-updated' },
+  deleted:    { label: 'Deleted',    badge: 'ax-badge ax-badge-danger',  dot: 'ph-dot-deleted' },
+  overridden: { label: 'Overridden', badge: 'ax-badge ax-badge-warning', dot: 'ph-dot-overridden' },
+  viewed:     { label: 'Viewed',     badge: 'ax-badge ax-badge-neutral', dot: 'ph-dot-viewed' },
+  default:    { label: 'Changed',    badge: 'ax-badge ax-badge-neutral', dot: 'ph-dot-default' },
+};
+
+/** Field changes past this count are hidden behind a "show all" toggle. */
+const HISTORY_PREVIEW_ROWS = 5;
+
 @Component({
   selector: 'app-admin-view-product',
   standalone: true,
@@ -127,6 +150,12 @@ export class AdminViewProductComponent implements OnInit {
   vendor_labels = { id: 0, token: '' };
   vendor_label_create = { id: 0, token: '', label: '' };
   single_product = { id: 0, product: 0, token: '' };
+
+  // ── Change history (audit timeline) ──────────────────────────────────
+  history: any[] = [];
+  history_loading = false;
+  history_error = '';
+  private readonly historyExpanded = new Set<number>();
 
   selected = new Set<string>();
   trackById = (_: number, item: ColorOption) => item.id;
@@ -368,7 +397,37 @@ export class AdminViewProductComponent implements OnInit {
             this.selected.add(item);
           }
           this.ui_controls.page_loading = false;
+
+          // The route param is a LEGACY id (this page loads via by-legacy-id),
+          // but the audit trail is keyed by the v3 product id, which the
+          // detail shape exposes as `id`. Load the history with that.
+          const v3Id = Number(response.data?.id) || 0;
+          if (v3Id > 0) {
+            this.get_product_history(v3Id);
+          }
         }
+      },
+    });
+  }
+
+  /**
+   * Load the product's change history (audit timeline) from the append-only
+   * audit_log. Newest first; actor names are denormalised server-side.
+   */
+  get_product_history(productId: number) {
+    this.history_loading = true;
+    this.history_error = '';
+    this.adapter.get_v3('GET /admin/products/:id/history', { params: { id: String(productId) } }).subscribe({
+      next: (res: any) => {
+        // Envelope shape is defensive: `logs` may sit at the top level or
+        // under `data`, matching the audit-log console's own access.
+        const body = res?.logs ? res : (res?.data ?? res);
+        this.history = Array.isArray(body?.logs) ? body.logs : [];
+        this.history_loading = false;
+      },
+      error: (e: any) => {
+        this.history_loading = false;
+        this.history_error = apiErrorMessage(e, 'Unable to load product history.');
       },
     });
   }
@@ -384,5 +443,117 @@ export class AdminViewProductComponent implements OnInit {
       .then((response) => {
         if (response) this.updateProduct();
       });
+  }
+
+  // ── History presentation helpers ─────────────────────────────────────
+
+  historyActionMeta(action: string) {
+    return HISTORY_ACTION_META[action] ?? HISTORY_ACTION_META['default'];
+  }
+
+  historyActorName(log: any): string {
+    const a = log?.actor;
+    if (!a) return 'System';
+    return a.name || a.email || `User #${a.id}`;
+  }
+
+  historyActorInitials(log: any): string {
+    if (!log?.actor) return 'SYS';
+    const name = this.historyActorName(log);
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+  }
+
+  /**
+   * Normalise a log's `changes` payload into before→after rows. Handles the
+   * diff shape ({ before, after }), create/delete (only one side present) and
+   * the rare flat map. Empty when there's nothing structured to show.
+   */
+  historyChangeRows(log: any): HistoryChange[] {
+    const c = log?.changes;
+    if (!c || typeof c !== 'object') return [];
+
+    const hasBefore = c.before && typeof c.before === 'object';
+    const hasAfter = c.after && typeof c.after === 'object';
+    if (hasBefore || hasAfter) {
+      const before = c.before ?? {};
+      const after = c.after ?? {};
+      const keys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)])).sort();
+      return keys.map((k) => ({
+        field: this.humanizeKey(k),
+        before: this.formatValue(before[k]),
+        after: this.formatValue(after[k]),
+      }));
+    }
+
+    return Object.entries(c)
+      .filter(([k]) => k !== 'before' && k !== 'after')
+      .map(([k, v]) => ({ field: this.humanizeKey(k), before: '', after: this.formatValue(v) }));
+  }
+
+  /** Rows to actually render for a log, respecting the collapsed preview cap. */
+  historyVisibleRows(log: any): HistoryChange[] {
+    const rows = this.historyChangeRows(log);
+    if (this.isHistoryExpanded(log?.id) || rows.length <= HISTORY_PREVIEW_ROWS) {
+      return rows;
+    }
+    return rows.slice(0, HISTORY_PREVIEW_ROWS);
+  }
+
+  historyHiddenCount(log: any): number {
+    const total = this.historyChangeRows(log).length;
+    return total > HISTORY_PREVIEW_ROWS ? total - HISTORY_PREVIEW_ROWS : 0;
+  }
+
+  isHistoryExpanded(id: number): boolean {
+    return this.historyExpanded.has(id);
+  }
+
+  toggleHistoryEntry(id: number) {
+    if (this.historyExpanded.has(id)) {
+      this.historyExpanded.delete(id);
+    } else {
+      this.historyExpanded.add(id);
+    }
+  }
+
+  relativeTime(iso: string): string {
+    if (!iso) return '';
+    const then = new Date(iso).getTime();
+    if (Number.isNaN(then)) return '';
+    const s = Math.max(0, Math.round((Date.now() - then) / 1000));
+    if (s < 45) return 'just now';
+    const m = Math.round(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.round(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const d = Math.round(h / 24);
+    if (d < 30) return `${d}d ago`;
+    const mo = Math.round(d / 30);
+    if (mo < 12) return `${mo}mo ago`;
+    return `${Math.round(mo / 12)}y ago`;
+  }
+
+  absoluteTime(iso: string): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('en-AE');
+  }
+
+  private humanizeKey(k: string): string {
+    return k
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  private formatValue(v: any): string {
+    if (v === null || v === undefined || v === '') return '—';
+    if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+    if (typeof v === 'object') { try { return JSON.stringify(v); } catch { return String(v); } }
+    return String(v);
   }
 }

@@ -932,6 +932,10 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\Product\ListAdminProductsController::class)->add($perm->for('products.view'));
         $group->get('/products/{id:[0-9]+}',
             \Bayti\Api\Http\Controllers\Admin\Product\GetAdminProductController::class)->add($perm->for('products.view'));
+        // Product change history (timeline: actor, action, timestamp) from the
+        // append-only audit_log. Same products.view gate as the read above.
+        $group->get('/products/{id:[0-9]+}/history',
+            \Bayti\Api\Http\Controllers\Admin\Product\GetAdminProductHistoryController::class)->add($perm->for('products.view'));
         $group->post('/products',
             \Bayti\Api\Http\Controllers\Admin\Product\CreateAdminProductController::class)->add($perm->for('products.create'));
         $group->put('/products/{id:[0-9]+}',
