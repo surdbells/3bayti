@@ -219,10 +219,18 @@ final class GiftCardSerializer
         $data['purchase_order_reference'] = $card->getPurchaseOrderReference();
         $data['updated_at']        = $card->getUpdatedAt()->format(\DateTimeInterface::ATOM);
 
-        // Delivery status block, recipient + channel + timestamps.
+        // Delivery status block, recipient + channel + timestamps. The
+        // email/phone shown here are the EFFECTIVE contacts, the buyer-provided
+        // delivery target, or the claimed recipient account's email/phone as a
+        // fallback, so the admin sees where the card can actually be sent (and
+        // *_from_account flags whether that came from the claimed account
+        // rather than the original purchase).
         $data['delivery'] = [
-            'recipient_email'    => $card->getRecipientEmail(),
-            'recipient_phone'    => $card->getRecipientPhone(),
+            'recipient_email'    => $card->effectiveRecipientEmail(),
+            'recipient_phone'    => $card->effectiveRecipientPhone(),
+            'email_from_account' => $card->recipientEmailIsFromAccount(),
+            'phone_from_account' => $card->recipientPhoneIsFromAccount(),
+            'is_scheduled'       => $card->isScheduled(),
             'scheduled_at'       => $card->getScheduledDeliveryAt()?->format(\DateTimeInterface::ATOM),
             'email_delivered_at' => $card->getEmailDeliveredAt()?->format(\DateTimeInterface::ATOM),
             'sms_delivered_at'   => $card->getSmsDeliveredAt()?->format(\DateTimeInterface::ATOM),
@@ -232,7 +240,7 @@ final class GiftCardSerializer
             // card is spendable AND has at least one recipient contact to send
             // to. Drives the Send button's enabled state on the detail page.
             'can_send'           => $card->isSpendable()
-                && ($card->getRecipientEmail() !== null || $card->getRecipientPhone() !== null),
+                && ($card->effectiveRecipientEmail() !== null || $card->effectiveRecipientPhone() !== null),
         ];
 
         // Full ordered ledger (ASC by id, append-only, so chronological).

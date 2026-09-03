@@ -64,7 +64,7 @@ class GiftCardDeliveryService
         $changed = false;
 
         if ($card->needsEmailDelivery()) {
-            $changed = $this->deliverEmail($card) || $changed;
+            $changed = $this->deliverEmail($card);
         }
 
         if ($card->needsSmsDelivery()) {
@@ -134,7 +134,7 @@ class GiftCardDeliveryService
         $result = ['email' => 'no_recipient', 'sms' => 'no_recipient'];
         $sentAny = false;
 
-        $email = $card->getRecipientEmail();
+        $email = $card->effectiveRecipientEmail();
         if ($email !== null && $email !== '') {
             $ok = $this->deliverEmail($card);
             $result['email'] = $ok ? 'sent' : 'failed';
@@ -143,7 +143,7 @@ class GiftCardDeliveryService
             }
         }
 
-        $phone = $card->getRecipientPhone();
+        $phone = $card->effectiveRecipientPhone();
         if ($phone !== null && $phone !== '') {
             if (!$this->smsSender->isEnabled()) {
                 // Distinguish "no SMS provider wired" from a genuine failure so
@@ -176,8 +176,12 @@ class GiftCardDeliveryService
     /** @return bool true if the email was delivered + the card marked. */
     private function deliverEmail(GiftCard $card): bool
     {
-        $to = $card->getRecipientEmail();
-        if ($to === null) {
+        // Effective target: the buyer-provided delivery email, or the claimed
+        // recipient account's email as a fallback. In the automatic deliver()
+        // path this equals the stored email (that path is gated on it), so this
+        // only widens reach for the manual resend / claimed-card case.
+        $to = $card->effectiveRecipientEmail();
+        if ($to === null || $to === '') {
             return false;
         }
 
@@ -218,8 +222,10 @@ class GiftCardDeliveryService
     /** @return bool true if the SMS was delivered + the card marked. */
     private function deliverSms(GiftCard $card): bool
     {
-        $to = $card->getRecipientPhone();
-        if ($to === null) {
+        // Effective target: buyer-provided delivery phone, or the claimed
+        // recipient account's phone as a fallback (see deliverEmail()).
+        $to = $card->effectiveRecipientPhone();
+        if ($to === null || $to === '') {
             return false;
         }
 

@@ -194,7 +194,10 @@ import { apiErrorMessage } from '../../shared/http/api-error';
           <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.delivery_email' | translate }}</span>
             <div>{{ card.delivery.recipient_email || '—' }}</div>
-            <span *ngIf="card.delivery.email_delivered_at" class="ax-text-sm ax-text-secondary">{{ fmtDate(card.delivery.email_delivered_at) }}</span>
+            <span *ngIf="card.delivery.email_from_account" class="ax-text-sm ax-text-secondary">{{ 'gift_cards_admin.delivery_from_account' | translate }}</span>
+            <span *ngIf="card.delivery.email_delivered_at" class="ax-text-sm ax-text-secondary">
+              {{ 'gift_cards_admin.delivery_sent_at' | translate }}: {{ fmtDate(card.delivery.email_delivered_at) }}
+            </span>
           </div>
           <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.delivery_phone' | translate }}</span>
@@ -215,16 +218,22 @@ import { apiErrorMessage } from '../../shared/http/api-error';
                 </a>
               </ng-container>
             </div>
+            <span *ngIf="card.delivery.phone_from_account" class="ax-text-sm ax-text-secondary">{{ 'gift_cards_admin.delivery_from_account' | translate }}</span>
             <span *ngIf="card.delivery.sms_delivered_at" class="ax-text-sm ax-text-secondary">
               {{ 'gift_cards_admin.delivery_sent_at' | translate }}: {{ fmtDate(card.delivery.sms_delivered_at) }}
             </span>
           </div>
-          <div class="gc-cell" *ngIf="card.delivery.scheduled_at">
-            <span class="ax-field-label">{{ 'gift_cards_admin.delivery_scheduled' | translate }}</span>
-            <div>{{ fmtDate(card.delivery.scheduled_at) }}</div>
-            <span class="ax-badge" [class.ax-badge-warning]="scheduleInfo?.pending" [class.ax-badge-neutral]="!scheduleInfo?.pending" *ngIf="!card.delivery.delivered">
-              {{ (scheduleInfo?.pending ? 'gift_cards_admin.schedule_pending' : 'gift_cards_admin.schedule_due') | translate }}
-            </span>
+          <div class="gc-cell">
+            <span class="ax-field-label">{{ 'gift_cards_admin.delivery_timing' | translate }}</span>
+            <ng-container *ngIf="card.delivery.is_scheduled; else immediateTpl">
+              <div>{{ 'gift_cards_admin.delivery_scheduled' | translate }} {{ fmtDate(card.delivery.scheduled_at) }}</div>
+              <span class="ax-badge" [class.ax-badge-warning]="scheduleInfo?.pending" [class.ax-badge-neutral]="!scheduleInfo?.pending" *ngIf="!card.delivery.delivered">
+                {{ (scheduleInfo?.pending ? 'gift_cards_admin.schedule_pending' : 'gift_cards_admin.schedule_due') | translate }}
+              </span>
+            </ng-container>
+            <ng-template #immediateTpl>
+              <div>{{ 'gift_cards_admin.schedule_immediate' | translate }}</div>
+            </ng-template>
           </div>
         </div>
       </section>

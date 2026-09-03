@@ -85,9 +85,12 @@ final class SendGiftCardController
             );
         }
 
-        // Need somewhere to send it.
-        $hasEmail = $card->getRecipientEmail() !== null && $card->getRecipientEmail() !== '';
-        $hasPhone = $card->getRecipientPhone() !== null && $card->getRecipientPhone() !== '';
+        // Need somewhere to send it. Uses the EFFECTIVE contact (stored
+        // delivery target, or the claimed recipient account's email/phone as a
+        // fallback) so a card bought with only a phone can still be emailed to
+        // the recipient once they've claimed it.
+        $hasEmail = $card->effectiveRecipientEmail() !== null && $card->effectiveRecipientEmail() !== '';
+        $hasPhone = $card->effectiveRecipientPhone() !== null && $card->effectiveRecipientPhone() !== '';
         if (!$hasEmail && !$hasPhone) {
             throw HttpException::businessRuleViolation(
                 ErrorCodes::BUSINESS_RULE_VIOLATION,

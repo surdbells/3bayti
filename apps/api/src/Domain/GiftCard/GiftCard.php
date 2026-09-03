@@ -622,6 +622,64 @@ class GiftCard
         $this->updatedAt = $at;
     }
 
+    /**
+     * The email we can actually reach the recipient at: the buyer-provided
+     * delivery email if one was set at purchase, otherwise the linked
+     * recipient account's email (set when the recipient claims/redeems the
+     * card). Null when neither exists.
+     *
+     * Cards bought with only a phone have no delivery email, so the original
+     * auto-delivery could only SMS them. Once the recipient claims the card
+     * we DO know their account email, so the admin "Send to recipient" action
+     * and the detail page should be able to reach them there too.
+     */
+    public function effectiveRecipientEmail(): ?string
+    {
+        if ($this->recipientEmail !== null && $this->recipientEmail !== '') {
+            return $this->recipientEmail;
+        }
+        return $this->recipientUser?->getEmail();
+    }
+
+    /**
+     * The phone we can actually reach the recipient at: the buyer-provided
+     * delivery phone if set, otherwise the linked recipient account's phone.
+     * Null when neither exists. See effectiveRecipientEmail() for the rationale.
+     */
+    public function effectiveRecipientPhone(): ?string
+    {
+        if ($this->recipientPhone !== null && $this->recipientPhone !== '') {
+            return $this->recipientPhone;
+        }
+        return $this->recipientUser?->getPhone();
+    }
+
+    /** True when a delivery email is only available via the claimed account. */
+    public function recipientEmailIsFromAccount(): bool
+    {
+        if ($this->recipientEmail !== null && $this->recipientEmail !== '') {
+            return false;
+        }
+        $accountEmail = $this->recipientUser?->getEmail();
+        return $accountEmail !== null && $accountEmail !== '';
+    }
+
+    /** True when a delivery phone is only available via the claimed account. */
+    public function recipientPhoneIsFromAccount(): bool
+    {
+        if ($this->recipientPhone !== null && $this->recipientPhone !== '') {
+            return false;
+        }
+        $accountPhone = $this->recipientUser?->getPhone();
+        return $accountPhone !== null && $accountPhone !== '';
+    }
+
+    /** True when this card is queued for a specific future delivery date. */
+    public function isScheduled(): bool
+    {
+        return $this->scheduledDeliveryAt !== null;
+    }
+
     // ── Convenience queries ───────────────────────────────────────────
 
     public function isSpendable(): bool

@@ -227,6 +227,46 @@ final class GiftCardDeliveryServiceTest extends TestCase
     }
 
     #[Test]
+    public function resendFallsBackToClaimedAccountEmailWhenNoDeliveryEmail(): void
+    {
+        // Card bought with only a phone (no delivery email on file), later
+        // claimed by a recipient whose account email we now know. resend()
+        // must be able to reach that account email.
+        $card = $this->makeCard(email: null, phone: '+971501234567');
+        $recipient = new User('funoun@example.com', '+971509999999', password_hash('p', PASSWORD_BCRYPT), 'AE');
+        $recipient->setName('Funoun', 'S');
+        $card->assignRecipient($recipient);
+
+        self::assertSame('funoun@example.com', $card->effectiveRecipientEmail());
+        self::assertTrue($card->recipientEmailIsFromAccount());
+
+        $result = $this->makeService()->resend($card);
+
+        self::assertSame('sent', $result['email']);
+        self::assertSame('funoun@example.com', $this->mailer->sent()[0]['to']);
+        self::assertNotNull($card->getEmailDeliveredAt());
+    }
+
+    #[Test]
+    public function resendFallsBackToClaimedAccountPhoneWhenNoDeliveryPhone(): void
+    {
+        // Card with a delivery email but no phone, claimed by a recipient whose
+        // account carries a phone. resend() should SMS that account phone.
+        $card = $this->makeCard(email: 'sara@example.com', phone: null);
+        $recipient = new User('funoun@example.com', '+971508816837', password_hash('p', PASSWORD_BCRYPT), 'AE');
+        $recipient->setName('Funoun', 'S');
+        $card->assignRecipient($recipient);
+
+        self::assertSame('+971508816837', $card->effectiveRecipientPhone());
+        self::assertTrue($card->recipientPhoneIsFromAccount());
+
+        $result = $this->makeService()->resend($card);
+
+        self::assertSame('sent', $result['sms']);
+        self::assertSame('+971508816837', $this->sms->sent()[0]['to']);
+    }
+
+    #[Test]
     public function resendReportsNotConfiguredWhenSmsDisabled(): void
     {
         $card = $this->makeCard(email: null, phone: '+971501234567');
