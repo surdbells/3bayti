@@ -257,11 +257,13 @@ export class AddressesPage implements OnInit, OnDestroy {
       return;
     }
 
-    // E.164 normalization, identical to checkout.saveNewAddress(): prefix
-    // +971 and strip leading zeros when there's no leading "+".
-    const recipient_phone = phoneRaw.startsWith('+')
-      ? phoneRaw
-      : '+971' + phoneRaw.replace(/^0+/, '');
+    // Normalise to the E.164 the API accepts (/^\+[1-9]\d{6,18}$/): strip
+    // spaces/dashes/brackets, honour a leading "+"/"00" prefix, else UAE local.
+    const recipient_phone = this.toE164Phone(phoneRaw);
+    if (!/^\+[1-9]\d{6,18}$/.test(recipient_phone)) {
+      this.error_notification(this.i18n.t('text_invalid_phone'));
+      return;
+    }
 
     const optionalOrNull = (s: string): string | null => {
       const trimmed = s.trim();
@@ -286,15 +288,10 @@ export class AddressesPage implements OnInit, OnDestroy {
     this.ui_controls.is_saving = true;
     try {
       const isEdit = this.editingId !== 0;
-      const saved = isEdit
-        ? await this.addressService.update(this.single_user.token, this.editingId, payload)
-        : await this.addressService.create(this.single_user.token, payload);
-
-      if (!saved) {
-        this.error_notification(
-          this.i18n.t(isEdit ? 'text_unable_to_update_address' : 'text_unable_to_save_billing_address'),
-        );
-        return;
+      if (isEdit) {
+        await this.addressService.update(this.single_user.token, this.editingId, payload);
+      } else {
+        await this.addressService.create(this.single_user.token, payload);
       }
 
       this.isFormOpen = false;
@@ -303,11 +300,30 @@ export class AddressesPage implements OnInit, OnDestroy {
       );
       await this.loadAddresses();
     } catch (err: any) {
-      const msg = err?.error?.error?.message || err?.error?.message;
-      this.error_notification(msg || this.i18n.t('text_unable_to_save_billing_address'));
+      // Surface the API's real field-level reason instead of a generic toast.
+      this.error_notification(
+        apiErrorMessage(
+          err,
+          this.i18n.t(this.editingId !== 0 ? 'text_unable_to_update_address' : 'text_unable_to_save_billing_address'),
+        ),
+      );
     } finally {
       this.ui_controls.is_saving = false;
     }
+  }
+
+  /**
+   * Normalise a raw phone entry to the E.164 the API accepts: strip
+   * spaces/dashes/brackets; honour a leading "+"/"00" international prefix;
+   * else treat the digits as a UAE local number (+971, leading zeros dropped).
+   */
+  private toE164Phone(raw: string): string {
+    const trimmed = (raw || '').trim();
+    const isIntl = trimmed.startsWith('+') || trimmed.startsWith('00');
+    const digits = trimmed.replace(/\D/g, '');
+    return isIntl
+      ? '+' + digits.replace(/^0+/, '')
+      : '+971' + digits.replace(/^0+/, '');
   }
 
   // ── Set default / Delete ────────────────────────────────────────────

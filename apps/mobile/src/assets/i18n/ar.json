@@ -83,6 +83,7 @@
   "text_first_name_required": "الاسم الأول مطلوب.",
   "text_last_name_required": "الاسم الأخير مطلوب.",
   "text_phone_required": "رقم الهاتف مطلوب.",
+  "text_invalid_phone": "يُرجى إدخال رقم هاتف صحيح (مثال 0501234567).",
   "text_country_code_required": "رمز الدولة مطلوب.",
   "text_email_required": "البريد الإلكتروني مطلوب.",
   "text_password_required": "كلمة المرور مطلوبة.",

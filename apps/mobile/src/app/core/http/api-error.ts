@@ -2,7 +2,8 @@
  * Extract the best human-readable message from a failed HTTP call.
  *
  * The v3 API returns errors as:
- *   { "error": { "code": "...", "message": "...", "details"?: { field: [msg] } } }
+ *   { "error": { "code": "...", "message": "...",
+ *                "details"?: { "fields"?: { field: [msg] }, _root?: [msg] } } }
  *
  * Angular's HttpClient puts the parsed body on `HttpErrorResponse.error`, so the
  * envelope lives at `err.error.error`. This prefers the first field-level
@@ -25,13 +26,14 @@ export function apiErrorMessage(err: any, fallback: string): string {
 
   const body = err?.error?.error ?? err?.error ?? err;
 
+  // Field errors live at details.fields ({ field: [msg] }); root/business ones
+  // at details._root ([msg]); older shapes were a flat { field: [msg] } map.
+  // Dig recursively so a nested { fields: {...} } yields the actual message
+  // instead of stringifying an object to "[object Object]".
   const details = body?.details;
   if (details && typeof details === 'object') {
-    for (const key of Object.keys(details)) {
-      const v = (details as Record<string, unknown>)[key];
-      const msg = Array.isArray(v) ? v[0] : v;
-      if (msg) return String(msg);
-    }
+    const found = firstMessage(details as Record<string, unknown>);
+    if (found) return found;
   }
 
   if (typeof body === 'string' && body.trim() !== '') {
@@ -44,4 +46,25 @@ export function apiErrorMessage(err: any, fallback: string): string {
   }
 
   return fallback;
+}
+
+/**
+ * First human-readable leaf inside an error `details` object. Handles the
+ * flat `{ field: [msg] }` shape, the nested `{ fields: { field: [msg] } }`
+ * shape, and `{ _root: [msg] }`. Returns null when nothing usable is found.
+ */
+function firstMessage(obj: Record<string, unknown>): string | null {
+  for (const value of Object.values(obj)) {
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value;
+    }
+    if (Array.isArray(value)) {
+      const first = value.find((v) => typeof v === 'string' && v.trim() !== '');
+      if (first) return String(first);
+    } else if (value && typeof value === 'object') {
+      const nested = firstMessage(value as Record<string, unknown>);
+      if (nested) return nested;
+    }
+  }
+  return null;
 }

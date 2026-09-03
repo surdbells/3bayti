@@ -1286,6 +1286,20 @@ export class CheckoutPage implements OnInit, OnDestroy {
    * new address is added to the list, selected (applySavedAddress), and the
    * sheet closes. On failure the SERVER message is surfaced.
    */
+  /**
+   * Normalise a raw phone entry to the E.164 the API accepts: strip spaces,
+   * dashes and brackets; honour a leading "+"/"00" international prefix; else
+   * treat the digits as a UAE local number (+971, leading zeros dropped).
+   */
+  private toE164Phone(raw: string): string {
+    const trimmed = (raw || '').trim();
+    const isIntl = trimmed.startsWith('+') || trimmed.startsWith('00');
+    const digits = trimmed.replace(/\D/g, '');
+    return isIntl
+      ? '+' + digits.replace(/^0+/, '')
+      : '+971' + digits.replace(/^0+/, '');
+  }
+
   async saveNewAddress(): Promise<void> {
     if (!this.isOnline) {
       this.error_notification(this.i18n.t('text_offline_check_connection'));
@@ -1320,11 +1334,16 @@ export class CheckoutPage implements OnInit, OnDestroy {
       return;
     }
 
-    // E.164 normalization, identical to update_billing(): prefix +971 and
-    // strip leading zeros when there's no leading "+".
-    const recipient_phone = phoneRaw.startsWith('+')
-      ? phoneRaw
-      : '+971' + phoneRaw.replace(/^0+/, '');
+    // Normalise to the E.164 the API accepts (/^\+[1-9]\d{6,18}$/): strip
+    // spaces/dashes/brackets, honour a leading "+"/"00" international prefix,
+    // else treat it as a UAE local number. Reject client-side with a clear
+    // message so a formatted entry (e.g. "050 123 4567") no longer 422s with a
+    // swallowed error.
+    const recipient_phone = this.toE164Phone(phoneRaw);
+    if (!/^\+[1-9]\d{6,18}$/.test(recipient_phone)) {
+      this.error_notification(this.i18n.t('text_invalid_phone'));
+      return;
+    }
 
     const optionalOrNull = (s: string): string | null => {
       const trimmed = s.trim();
@@ -1350,10 +1369,6 @@ export class CheckoutPage implements OnInit, OnDestroy {
     this.isSavingAddress = true;
     try {
       const created = await this.addressService.create(this.single_user.token, payload);
-      if (!created) {
-        this.error_notification(this.i18n.t('text_unable_to_save_billing_address'));
-        return;
-      }
       // Refresh the book, then select the freshly-created address so it's the
       // delivery target. Reloading keeps default flags server-authoritative;
       // we re-select by id so the right row stays highlighted.
@@ -1363,8 +1378,10 @@ export class CheckoutPage implements OnInit, OnDestroy {
       this.isAddAddressOpen = false;
       this.success_notification(this.i18n.t('text_address_saved'));
     } catch (err: any) {
-      const msg = err?.error?.error?.message || err?.error?.message;
-      this.error_notification(msg || this.i18n.t('text_unable_to_save_billing_address'));
+      // Show the API's real field-level reason (e.g. the phone/name that
+      // failed) rather than a generic toast — the 422 never reached Sentry and
+      // the old null-return hid it entirely.
+      this.error_notification(apiErrorMessage(err, this.i18n.t('text_unable_to_save_billing_address')));
     } finally {
       this.isSavingAddress = false;
       this.cdr.markForCheck();

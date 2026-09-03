@@ -79,23 +79,23 @@ export class AddressService {
     return [];
   }
 
-  /** Create a new saved address; returns the created row (or null). */
-  async create(token: string, address: NewAddress): Promise<SavedAddress | null> {
+  /** Create a new saved address; throws on failure (see error()). */
+  async create(token: string, address: NewAddress): Promise<SavedAddress> {
     const res: any = await firstValueFrom(
       this.adapter.post_v3('POST /me/addresses', address, { authToken: token }),
     );
     if ((res?.response_code === 201 || res?.response_code === 200) && res?.status === 'success') {
       return (res.data?.address ?? res.data) as SavedAddress;
     }
-    return null;
+    throw this.error(res);
   }
 
   /**
    * Update an existing saved address (PUT /me/addresses/:id). Partial
    * payloads are accepted; only the fields present are applied server-side.
-   * Returns the updated row (or null on failure).
+   * Throws on failure (see error()).
    */
-  async update(token: string, id: number, address: Partial<NewAddress>): Promise<SavedAddress | null> {
+  async update(token: string, id: number, address: Partial<NewAddress>): Promise<SavedAddress> {
     const res: any = await firstValueFrom(
       this.adapter.put_v3('PUT /me/addresses/:id', address, {
         authToken: token,
@@ -105,7 +105,24 @@ export class AddressService {
     if (res?.response_code === 200 && res?.status === 'success') {
       return (res.data?.address ?? res.data) as SavedAddress;
     }
-    return null;
+    throw this.error(res);
+  }
+
+  /**
+   * Re-throw an API failure that the mobile adapter surfaced on its SUCCESS
+   * channel (`{ response_code, status:'error', message, error_code,
+   * error_details }`) as an HttpErrorResponse-shaped Error, so callers can show
+   * the real field-level reason via apiErrorMessage() instead of returning a
+   * silent null that collapsed to a generic "unable to save" toast.
+   */
+  private error(res: any): Error {
+    const e = new Error(res?.message || 'Request failed') as Error & {
+      status?: number;
+      error?: unknown;
+    };
+    e.status = res?.response_code ?? 0;
+    e.error = { error: { message: res?.message, code: res?.error_code, details: res?.error_details } };
+    return e;
   }
 
   /** Delete a saved address (DELETE /me/addresses/:id). */

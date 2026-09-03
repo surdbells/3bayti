@@ -83,6 +83,7 @@
   "text_first_name_required": "First name is required.",
   "text_last_name_required": "Last name is required.",
   "text_phone_required": "Phone number is required.",
+  "text_invalid_phone": "Please enter a valid phone number (e.g. 0501234567).",
   "text_country_code_required": "Country code is required.",
   "text_email_required": "Email address is required.",
   "text_password_required": "Password is required.",
