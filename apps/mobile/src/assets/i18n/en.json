@@ -1029,6 +1029,7 @@
   "ota_update_version": "Version",
   "ota_update_whats_new": "What's new",
   "ota_update_restart": "Restart now",
+  "ota_update_auto_restart": "Restarting automatically in {{seconds}}s…",
   "orders_empty_pending_payment": "No orders awaiting payment",
   "orders_empty_paid": "No paid orders yet",
   "orders_empty_fulfilling": "No orders being processed",

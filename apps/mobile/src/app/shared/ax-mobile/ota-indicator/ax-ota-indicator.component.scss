@@ -20,6 +20,15 @@
   bottom: 0;
   z-index: 15001;
   box-sizing: border-box;
+  /* Centred + width-capped so the sheet doesn't stretch edge-to-edge (and
+     distort the centred text + full-bleed banner) on tablets / wide viewports. */
+  max-width: 520px;
+  margin-inline: auto;
+  /* Bounded height + clip: a long "what's new" summary can't push the sheet
+     past the viewport, and overflow:hidden keeps the full-bleed brand banner
+     inside the rounded top corners. */
+  max-height: 90vh;
+  overflow: hidden;
   padding: 14px 20px calc(24px + env(safe-area-inset-bottom, 0px));
   background: var(--ax-color-bg-surface, #fff);
   color: var(--ax-color-text-primary, #2a2722);
@@ -92,13 +101,36 @@
   color: var(--ax-color-text-brand, #906952);
 }
 
-.ota-sheet__notes {
+/* Bounded, scrollable region so a long summary scrolls in place instead of
+   stretching the sheet or pushing the restart button off-screen. */
+.ota-sheet__notes-scroll {
+  max-height: 40vh;
+  overflow-y: auto;
   margin: 0 0 16px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.ota-sheet__notes {
+  margin: 0;
   font-size: 0.9rem;
   line-height: 1.5;
   text-align: center;
   white-space: pre-line;
   color: var(--ax-color-text-primary);
+}
+
+/* ── Ready: footer (restart button + auto-restart countdown) ─────────── */
+.ota-sheet__footer {
+  margin-top: 2px;
+}
+
+.ota-sheet__countdown {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--ax-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Download progress ─────────────────────────────── */

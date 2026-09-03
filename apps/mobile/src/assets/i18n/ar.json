@@ -1029,6 +1029,7 @@
   "ota_update_version": "الإصدار",
   "ota_update_whats_new": "الجديد في هذا التحديث",
   "ota_update_restart": "أعد التشغيل الآن",
+  "ota_update_auto_restart": "ستتم إعادة التشغيل تلقائيًا خلال {{seconds}} ثانية…",
   "orders_empty_pending_payment": "لا توجد طلبات بانتظار الدفع",
   "orders_empty_paid": "لا توجد طلبات مدفوعة بعد",
   "orders_empty_fulfilling": "لا توجد طلبات قيد التجهيز",

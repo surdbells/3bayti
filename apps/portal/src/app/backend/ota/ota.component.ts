@@ -46,6 +46,7 @@ export class OtaComponent implements OnInit {
     min_native: '0.0.0',
     session_key: '',
     checksum: '',
+    notes: '',
   };
   file: File | null = null;
 
@@ -103,6 +104,7 @@ export class OtaComponent implements OnInit {
           min_native: this.form.min_native,
           session_key: this.form.session_key || undefined,
           checksum: this.form.checksum || undefined,
+          notes: this.form.notes || undefined,
         },
         (pct) => this.uploadProgress.set(pct),
       );
@@ -114,6 +116,7 @@ export class OtaComponent implements OnInit {
       this.form.version = '';
       this.form.session_key = '';
       this.form.checksum = '';
+      this.form.notes = '';
       const fileInput = document.getElementById('ota-file') as HTMLInputElement | null;
       if (fileInput) fileInput.value = '';
       await this.load();

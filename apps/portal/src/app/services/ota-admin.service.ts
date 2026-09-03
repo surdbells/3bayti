@@ -27,6 +27,11 @@ export interface OtaUploadMeta {
   session_key?: string;
   /** Signed bundles only, the checksum from `@capgo/cli encrypt`. */
   checksum?: string;
+  /**
+   * "What's new" summary shown to customers on the mobile update sheet once
+   * this bundle is downloaded. Optional; plain text (line breaks preserved).
+   */
+  notes?: string;
 }
 
 /**
@@ -78,6 +83,7 @@ export class OtaAdminService {
     if (meta.min_native) q.set('min_native', meta.min_native.trim());
     if (meta.session_key) q.set('session_key', meta.session_key.trim());
     if (meta.checksum) q.set('checksum', meta.checksum.trim());
+    if (meta.notes) q.set('notes', meta.notes.trim());
 
     const req = new HttpRequest(
       'POST',

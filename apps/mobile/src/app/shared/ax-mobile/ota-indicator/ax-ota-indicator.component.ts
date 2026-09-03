@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnDestroy,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { TranslatePipe } from '../../../translate.pipe';
 import { OtaUpdateService } from '../../../core/services/ota-update.service';
 import { CheckoutActivityService } from '../../../core/services/checkout-activity.service';
@@ -10,8 +18,10 @@ import { CheckoutActivityService } from '../../../core/services/checkout-activit
  * approval), the customer just has to be aware it's happening and can't bypass
  * it. So this is a full-screen blocking sheet, no dismiss, no "later":
  *   - downloading → title + description + live progress bar (percent + ETA)
- *   - ready       → auto-restarts into the new bundle (reload()) after a brief
- *                   beat, with an immediate "Restart now" button too.
+ *   - ready       → a branded "what's new" panel showing the release summary,
+ *                   a "Restart now" button, and a visible 6-second countdown
+ *                   before it auto-restarts into the new bundle. The countdown
+ *                   (was a 1.2s beat) gives the customer time to read what's new.
  *
  * The scrim blocks interaction with the app behind it. Hardware-back isn't
  * trapped on purpose: backing out just exits the app, and the freshly
@@ -40,28 +50,39 @@ import { CheckoutActivityService } from '../../../core/services/checkout-activit
               <span class="ota-sheet__version">{{ 'ota_update_version' | translate }} {{ version() }}</span>
             }
           </div>
-          <h2 class="ota-sheet__title">{{ titleKey() | translate }}</h2>
-          @if (summary()) {
-            <p class="ota-sheet__notes-label">{{ 'ota_update_whats_new' | translate }}</p>
-            <p class="ota-sheet__notes">{{ summary() }}</p>
-          } @else {
-            <p class="ota-sheet__desc">{{ descKey() | translate }}</p>
-          }
-          <button type="button" class="ota-sheet__primary" (click)="restart()">
-            {{ 'ota_update_restart' | translate }}
-          </button>
+          <div class="ota-sheet__body">
+            <h2 class="ota-sheet__title">{{ titleKey() | translate }}</h2>
+            @if (summary()) {
+              <p class="ota-sheet__notes-label">{{ 'ota_update_whats_new' | translate }}</p>
+              <div class="ota-sheet__notes-scroll">
+                <p class="ota-sheet__notes">{{ summary() }}</p>
+              </div>
+            } @else {
+              <p class="ota-sheet__desc">{{ descKey() | translate }}</p>
+            }
+          </div>
+          <div class="ota-sheet__footer">
+            <button type="button" class="ota-sheet__primary" (click)="restart()">
+              {{ 'ota_update_restart' | translate }}
+            </button>
+            <p class="ota-sheet__countdown" aria-live="polite">
+              {{ 'ota_update_auto_restart' | translate: { seconds: countdown() } }}
+            </p>
+          </div>
         } @else {
-          <h2 class="ota-sheet__title">{{ titleKey() | translate }}</h2>
-          <p class="ota-sheet__desc">{{ descKey() | translate }}</p>
-          <div class="ota-sheet__progress">
-            <div class="ota-sheet__track">
-              <div class="ota-sheet__fill" [style.width.%]="percent()"></div>
-            </div>
-            <div class="ota-sheet__meta">
-              <span class="ota-sheet__pct">{{ percent() }}%</span>
-              @if (etaLabel()) {
-                <span class="ota-sheet__eta">{{ etaLabel() }}</span>
-              }
+          <div class="ota-sheet__body">
+            <h2 class="ota-sheet__title">{{ titleKey() | translate }}</h2>
+            <p class="ota-sheet__desc">{{ descKey() | translate }}</p>
+            <div class="ota-sheet__progress">
+              <div class="ota-sheet__track">
+                <div class="ota-sheet__fill" [style.width.%]="percent()"></div>
+              </div>
+              <div class="ota-sheet__meta">
+                <span class="ota-sheet__pct">{{ percent() }}%</span>
+                @if (etaLabel()) {
+                  <span class="ota-sheet__eta">{{ etaLabel() }}</span>
+                }
+              </div>
             </div>
           </div>
         }
@@ -70,7 +91,7 @@ import { CheckoutActivityService } from '../../../core/services/checkout-activit
   `,
   styleUrl: './ax-ota-indicator.component.scss',
 })
-export class AxOtaIndicatorComponent {
+export class AxOtaIndicatorComponent implements OnDestroy {
   private readonly ota = inject(OtaUpdateService);
   private readonly checkout = inject(CheckoutActivityService);
 
@@ -78,6 +99,10 @@ export class AxOtaIndicatorComponent {
   protected readonly percent = this.ota.percent;
   protected readonly summary = this.ota.summary;
   protected readonly version = this.ota.version;
+
+  /** Seconds shown, then counted down, before the ready bundle auto-applies. */
+  private readonly RESTART_SECONDS = 6;
+  protected readonly countdown = signal(this.RESTART_SECONDS);
 
   /**
    * Blocking sheet is up whenever a bundle is downloading or ready to apply —
@@ -107,26 +132,48 @@ export class AxOtaIndicatorComponent {
     return `${m}:${sec}`;
   });
 
-  private restartScheduled = false;
+  private restartTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     effect(() => {
-      const s = this.status();
+      const ready = this.status() === 'ready';
       const busy = this.checkout.isActive();
-      // Auto-apply once the bundle is downloaded, a brief beat so the customer
-      // sees it hit 100%, then reload() swaps in the new bundle. Never while a
-      // checkout is active; when the checkout window closes this effect re-runs
-      // (it reads the checkout signal) and schedules the restart then.
-      if (s === 'ready' && !busy && !this.restartScheduled) {
-        this.restartScheduled = true;
-        setTimeout(() => void this.ota.restartToApply(), 1200);
-      } else if (s !== 'ready') {
-        this.restartScheduled = false;
+      // Ready + not mid-checkout → run the visible countdown, then auto-apply.
+      // Anything else (still downloading, or a checkout opened mid-countdown)
+      // pauses + resets it; the effect re-runs when those signals change and
+      // restarts the countdown once we're ready + idle again.
+      if (ready && !busy) {
+        if (this.restartTimer === null) {
+          this.countdown.set(this.RESTART_SECONDS);
+          this.restartTimer = setInterval(() => {
+            const next = this.countdown() - 1;
+            this.countdown.set(Math.max(0, next));
+            if (next <= 0) {
+              this.clearTimer();
+              void this.ota.restartToApply();
+            }
+          }, 1000);
+        }
+      } else {
+        this.clearTimer();
+        this.countdown.set(this.RESTART_SECONDS);
       }
     });
   }
 
+  private clearTimer(): void {
+    if (this.restartTimer !== null) {
+      clearInterval(this.restartTimer);
+      this.restartTimer = null;
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.clearTimer();
+  }
+
   protected restart(): void {
+    this.clearTimer();
     void this.ota.restartToApply();
   }
 }
