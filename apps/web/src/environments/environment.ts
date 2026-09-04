@@ -31,8 +31,8 @@ export const environment = {
      APP_STORE_URL / PLAY_STORE_URL at build time; '#' renders a
      non-navigating "coming soon" badge. */
   appStores: {
-    appStore: "https://apps.apple.com/ar/app/3bayti/id6752422907",
-    playStore: "https://play.google.com/store/apps/details?id=ae.threebayti.app",
+    appStore: "https://apps.apple.com/en/app/3bayti/id6752422907",
+    playStore: "https://play.google.com/store/apps/details?id=com.threebayti.app",
   },
 
   /* Firebase Web config — Google + Apple social sign-in. When apiKey is ''
