@@ -14,7 +14,7 @@ export const environment = {
   SENTRY_DSN: "https://822503d1eda33a1e983a6aa0a8f9dce7@o4511365625872384.ingest.us.sentry.io/4511365627772928",
   GA4_MEASUREMENT_ID: "G-W2YF72TS3F",
 
-  /* Google Places API (New), powers the street-address autocomplete on the
+  /* Google Places API (New) — powers the street-address autocomplete on the
      checkout/address form (apps/web/src/app/core/places). If apiKey is empty
      the autocomplete degrades gracefully to a plain text input.
 
@@ -31,11 +31,11 @@ export const environment = {
      APP_STORE_URL / PLAY_STORE_URL at build time; '#' renders a
      non-navigating "coming soon" badge. */
   appStores: {
-    appStore: "https://apps.apple.com/en/app/3bayti/id6752422907",
-    playStore: "https://play.google.com/store/apps/details?id=com.threebayti.app",
+    appStore: "https://apps.apple.com/ar/app/3bayti/id6752422907",
+    playStore: "https://play.google.com/store/apps/details?id=ae.threebayti.app",
   },
 
-  /* Firebase Web config, Google + Apple social sign-in. When apiKey is ''
+  /* Firebase Web config — Google + Apple social sign-in. When apiKey is ''
      the firebase init is skipped (core/firebase/firebase.init.ts guards on
      it) and the social-login buttons hide. Set FIREBASE_* env vars at build
      time in Cloudflare Pages to enable it. */

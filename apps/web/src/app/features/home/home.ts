@@ -29,6 +29,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import type { Category } from '../categories/category.model';
 import { categoryIconUrl } from '../categories/category-icons';
 import { HomeDataService } from './home-data.service';
+import { AppShowcaseComponent } from './app-showcase';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
@@ -66,6 +67,7 @@ import { TranslatePipe } from '@ngx-translate/core';
     RouterLink,
     AddPhonePromptComponent,
     UpdateEmailPromptComponent,
+    AppShowcaseComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.html',

@@ -11,6 +11,22 @@
       "port": 3000
     },
     {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@3bayti/web",
+        "exec",
+        "ng",
+        "serve",
+        "--port",
+        "3200",
+        "--host",
+        "localhost"
+      ],
+      "port": 3200
+    },
+    {
       "name": "portal",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": [

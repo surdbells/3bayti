@@ -1199,7 +1199,21 @@
       "playStoreAria": "احصل على 3bayti من Google Play",
       "appStoreSoon": "3bayti لـ iPhone، قريباً على App Store",
       "playStoreSoon": "3bayti لـ Android، قريباً على Google Play",
-      "comingSoon": "قريباً"
+      "comingSoon": "قريباً",
+      "carousel": "معرض لقطات التطبيق",
+      "showcaseAria": "معرض لقطات شاشة تطبيق 3bayti",
+      "prev": "اللقطة السابقة",
+      "next": "اللقطة التالية",
+      "shots": {
+        "home": "الشاشة الرئيسية لتطبيق 3bayti — أزياء محتشمة بتنسيق أنيق",
+        "collections": "تصفّح المجموعات في تطبيق 3bayti",
+        "product": "قطعة مطرّزة يدويًا في صفحة منتج 3bayti",
+        "styleHub": "إطلالات المجتمع في ركن التنسيق بتطبيق 3bayti",
+        "filters": "التصفية حسب المقاس واللون في تطبيق 3bayti",
+        "giftCards": "اختيار تصميم بطاقة هدية 3bayti في التطبيق",
+        "checkout": "إتمام الشراء بسلاسة في تطبيق 3bayti",
+        "signin": "تسجيل الدخول إلى تطبيق 3bayti بطريقتك"
+      }
     },
     "heroTiles": {
       "newEyebrow": "وصل حديثًا",

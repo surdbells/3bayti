@@ -1199,7 +1199,21 @@
       "playStoreAria": "Get 3bayti on Google Play",
       "appStoreSoon": "3bayti for iPhone, coming soon to the App Store",
       "playStoreSoon": "3bayti for Android, coming soon to Google Play",
-      "comingSoon": "Coming soon"
+      "comingSoon": "Coming soon",
+      "carousel": "App screenshots carousel",
+      "showcaseAria": "A gallery of 3bayti app screenshots",
+      "prev": "Previous screenshot",
+      "next": "Next screenshot",
+      "shots": {
+        "home": "3bayti app home screen — modest fashion, beautifully curated",
+        "collections": "Browsing the collections in the 3bayti app",
+        "product": "A hand-embellished piece on a 3bayti product page",
+        "styleHub": "Community style looks in the 3bayti app Style Hub",
+        "filters": "Filtering by size and colour in the 3bayti app",
+        "giftCards": "Choosing a 3bayti gift card design in the app",
+        "checkout": "Seamless checkout in the 3bayti app",
+        "signin": "Signing in to the 3bayti app your way"
+      }
     },
     "heroTiles": {
       "newEyebrow": "New in",
