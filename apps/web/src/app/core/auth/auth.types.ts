@@ -41,6 +41,13 @@ export interface AuthUser {
    * email" reminder banner + the profile prompt. Mirrors UserSerializer.
    */
   needs_email_update: boolean;
+  /**
+   * Whether the account can authenticate with a password (false for social-only
+   * Google/Apple sign-ins). Drives whether account deletion asks for the
+   * current password. Mirrors UserSerializer. Optional so a token minted before
+   * the field existed still parses; treat a missing value as "has a password".
+   */
+  has_password?: boolean;
   roles: UserRole[];
   is_store_approved: boolean;
   is_store_active: boolean;

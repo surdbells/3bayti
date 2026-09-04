@@ -20,16 +20,18 @@
     </div>
 
     <form (ngSubmit)="confirmDelete()" class="da-form">
-      <label class="da-field">
-        <span class="da-label">{{ 'delete_account_password_label' | translate }}</span>
-        <input
-          class="da-input"
-          type="password"
-          name="current_password"
-          [(ngModel)]="password"
-          [placeholder]="'delete_account_password_ph' | translate"
-          autocomplete="current-password" />
-      </label>
+      @if (hasPassword) {
+        <label class="da-field">
+          <span class="da-label">{{ 'delete_account_password_label' | translate }}</span>
+          <input
+            class="da-input"
+            type="password"
+            name="current_password"
+            [(ngModel)]="password"
+            [placeholder]="'delete_account_password_ph' | translate"
+            autocomplete="current-password" />
+        </label>
+      }
 
       <button type="submit" class="da-delete" [disabled]="busy">
         @if (busy) {

@@ -77,6 +77,10 @@ final class UserSerializer
             'last_name' => $user->getLastName(),
             // Portal forces a password-change screen while this is true.
             'must_change_password' => $user->mustChangePassword(),
+            // Whether the account can authenticate with a password (false for
+            // social-only Google/Apple sign-ins). Clients use it to decide
+            // whether to require the current password on account deletion.
+            'has_password' => $user->hasPassword(),
 
             // Profile fields (M1.7.0+)
             'gender' => $user->getGender(),

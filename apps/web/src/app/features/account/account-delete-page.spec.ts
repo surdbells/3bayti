@@ -23,6 +23,9 @@ class StubProfileService {
 
 class StubAuthService {
   logoutCalled = false;
+  private _user = signal<{ has_password?: boolean } | null>(null);
+  currentUser = this._user.asReadonly();
+  setUser(u: { has_password?: boolean } | null): void { this._user.set(u); }
   async logout(): Promise<void> { this.logoutCalled = true; }
 }
 
@@ -34,7 +37,7 @@ class StubToast {
   warning(m: string): string { this.calls.push({ kind: 'warning', msg: m }); return ''; }
 }
 
-function setup(opts: { deleteThrows?: unknown } = {}): {
+function setup(opts: { deleteThrows?: unknown; hasPassword?: boolean } = {}): {
   fixture: ComponentFixture<AccountDeletePageComponent>;
   profile: StubProfileService;
   auth: StubAuthService;
@@ -44,6 +47,7 @@ function setup(opts: { deleteThrows?: unknown } = {}): {
   const profile = new StubProfileService();
   if (opts.deleteThrows !== undefined) profile.deleteThrows = opts.deleteThrows;
   const auth = new StubAuthService();
+  if (opts.hasPassword !== undefined) auth.setUser({ has_password: opts.hasPassword });
   const toast = new StubToast();
 
   TestBed.configureTestingModule({
@@ -158,6 +162,21 @@ describe('AccountDeletePageComponent', () => {
     expect(toast.calls.some(c => c.kind === 'success')).toBe(false);
     /* Modal closed so the field error is visible. */
     expect(q(fixture, 'confirm-modal')).toBeNull();
+  });
+
+  it('social-only account: no password field, deletes with an empty password', async () => {
+    const { fixture, profile, auth, navSpy } = setup({ hasPassword: false });
+    // No password field is rendered for a social-only account.
+    expect(q(fixture, 'del-password')).toBeNull();
+    // Submitting goes straight to the danger modal (no password gate).
+    (q(fixture, 'del-submit') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(q(fixture, 'confirm-modal')).not.toBeNull();
+    (q(fixture, 'confirm-modal-confirm') as HTMLButtonElement).click();
+    await flush();
+    expect(profile.deleteCalls).toEqual(['']);
+    expect(auth.logoutCalled).toBe(true);
+    expect(navSpy).toHaveBeenCalledWith('/');
   });
 
   it('toasts a network error on a connection failure', async () => {

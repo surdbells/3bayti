@@ -65,25 +65,29 @@ final class DeleteAccountController
 
         $input = $this->validator->parse($request, DeleteAccountInput::class);
 
-        // Re-authenticate BEFORE any writes. password_verify is
-        // constant-time + bcrypt-slow. Same posture as change-password:
-        // a wrong current_password is 401 AUTH_INVALID_CREDENTIALS and
-        // leaks nothing beyond "that credential is wrong".
-        // Social-only accounts (Google/Apple sign-in) have a NULL
-        // password_hash. They cannot re-authenticate by password here;
-        // a null hash must never validate (passing null to
-        // password_verify is a TypeError in PHP 8). Reject with the same
-        // 401 so no information leaks. (A dedicated social re-auth path
-        // is out of scope for this foundation.)
-        $passwordOk = $user->hasPassword() && password_verify(
-            $input->current_password,
-            (string) $user->getPasswordHash(),
-        );
-        if (!$passwordOk) {
-            throw HttpException::unauthorized(
-                ErrorCodes::AUTH_INVALID_CREDENTIALS,
-                'Current password is incorrect.',
+        // Re-authenticate BEFORE any writes, but only for PASSWORD accounts.
+        // password_verify is constant-time + bcrypt-slow; same posture as
+        // change-password: a wrong current_password is 401
+        // AUTH_INVALID_CREDENTIALS and leaks nothing beyond "that credential is
+        // wrong". A missing password on a password account fails the same way
+        // (empty string never verifies).
+        //
+        // Social-only accounts (Google/Apple sign-in) have a NULL password_hash
+        // and no password to re-enter — the valid JWT + the client's explicit
+        // strong confirmation are the gate for them, so we skip the check
+        // rather than lock them out of deleting their own account (Apple
+        // 5.1.1(v) requires in-app deletion for every account type).
+        if ($user->hasPassword()) {
+            $passwordOk = password_verify(
+                $input->current_password,
+                (string) $user->getPasswordHash(),
             );
+            if (!$passwordOk) {
+                throw HttpException::unauthorized(
+                    ErrorCodes::AUTH_INVALID_CREDENTIALS,
+                    'Current password is incorrect.',
+                );
+            }
         }
 
         // Snapshot for audit BEFORE the row is gone.

@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   inject,
   signal,
+  computed,
 } from '@angular/core';
 import { NgIf } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
@@ -65,6 +66,7 @@ const DELETE_ERROR_MAP: Record<string, ApiErrorMapping> = {
           novalidate
         >
           <ui-form-field
+            *ngIf="requiresPassword()"
             [label]="'account.delete.confirmPassword'"
             fieldId="del-password"
             [required]="true"
@@ -124,6 +126,15 @@ export class AccountDeletePageComponent {
   private readonly _showConfirm = signal<boolean>(false);
   protected readonly showConfirm = this._showConfirm.asReadonly();
 
+  /**
+   * Whether to ask for the current password: password accounts must re-auth;
+   * social-only (Google/Apple) accounts have none. Defaults to true when the
+   * flag is absent (older token) so we never skip re-auth unless we're sure.
+   */
+  protected readonly requiresPassword = computed(
+    () => this.auth.currentUser()?.has_password !== false,
+  );
+
   protected readonly form: FormGroup<{
     current_password: FormControl<string>;
   }>;
@@ -141,10 +152,10 @@ export class AccountDeletePageComponent {
     });
   }
 
-  /** Submit → validate the password field, then open the danger modal. */
+  /** Submit → validate the password field (password accounts), then open the danger modal. */
   protected onSubmit(): void {
     if (this.isSaving()) return;
-    if (this.form.invalid) {
+    if (this.requiresPassword() && this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
@@ -157,7 +168,10 @@ export class AccountDeletePageComponent {
 
   /** Confirmed in the modal, perform the deletion. */
   protected async onConfirmed(): Promise<void> {
-    const { current_password } = this.form.getRawValue();
+    // Social-only accounts send no password; the backend skips re-auth for them.
+    const current_password = this.requiresPassword()
+      ? this.form.getRawValue().current_password
+      : '';
     try {
       await this.profileService.deleteAccount(current_password);
       /* Server already revoked the session; clear local state too,

@@ -71,16 +71,39 @@ final class DeleteAccountControllerTest extends HttpTestCase
     }
 
     #[Test]
-    public function returns422WhenCurrentPasswordMissing(): void
+    public function returns401WhenPasswordAccountOmitsPassword(): void
     {
+        // A password account must still re-auth: an omitted password is an
+        // empty string, which never verifies -> 401 (no longer a 422, since
+        // current_password is optional at the DTO layer for social accounts).
         $user = $this->makeUser(id: 202, passwordPlain: 'MyPass123');
         $this->bindEm($user);
 
         $response = $this->deleteMe($user, []);
 
-        self::assertSame(422, $response->getStatusCode());
-        self::assertSame('VALIDATION_FAILED', $this->jsonBody($response)['error']['code']);
+        self::assertSame(401, $response->getStatusCode());
+        self::assertSame('AUTH_INVALID_CREDENTIALS', $this->jsonBody($response)['error']['code']);
         self::assertSame([], $this->erasedUserIds);
+    }
+
+    #[Test]
+    public function permanentlyDeletesASocialOnlyAccountWithoutPassword(): void
+    {
+        // Social-only account (Google/Apple sign-in, no password_hash): there
+        // is no password to re-enter, so a valid session + the request deletes
+        // it. No password sent.
+        $social = $this->makeUser(id: 300);
+        $hashRef = new \ReflectionProperty(User::class, 'passwordHash');
+        $hashRef->setAccessible(true);
+        $hashRef->setValue($social, null);
+        self::assertFalse($social->hasPassword(), 'precondition: social-only account');
+
+        $this->bindEm($social);
+        $response = $this->deleteMe($social, []);
+
+        self::assertSame(204, $response->getStatusCode());
+        self::assertSame([300], $this->erasedUserIds);
+        self::assertCount(1, $this->recordedAuditLogs);
     }
 
     #[Test]

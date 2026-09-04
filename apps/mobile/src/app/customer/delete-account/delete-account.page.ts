@@ -58,6 +58,12 @@ import { PushManager } from '../../core/services/push-manager.service';
 export class DeleteAccountPage implements OnInit {
   password = '';
   busy = false;
+  /**
+   * Whether this account has a password to re-enter. Social-only (Google/Apple)
+   * accounts don't, so we hide the field and skip the password on delete.
+   * Defaults to true so we never skip re-auth before the profile has loaded.
+   */
+  hasPassword = true;
 
   private token = '';
 
@@ -78,6 +84,19 @@ export class DeleteAccountPage implements OnInit {
       return;
     }
     this.token = JSON.parse(ret.value).token;
+
+    // Learn whether this account has a password: social-only sign-ins don't,
+    // so the password field is hidden and delete sends none. Fail safe (keep
+    // requiring a password) if the profile can't be read.
+    this.adapter.get_v3('GET /me/profile', { authToken: this.token }).subscribe({
+      next: (res: any) => {
+        const data = res?.data ?? res;
+        if (data && typeof data.has_password === 'boolean') {
+          this.hasPassword = data.has_password;
+        }
+      },
+      error: () => { /* keep hasPassword = true (safe default) */ },
+    });
   }
 
   goBack() {
@@ -85,7 +104,9 @@ export class DeleteAccountPage implements OnInit {
   }
 
   async confirmDelete() {
-    if (!this.password) {
+    // Password accounts must re-enter their password; social-only accounts have
+    // none, so the field is hidden and this check is skipped.
+    if (this.hasPassword && !this.password) {
       this.toast.error(this.i18n.t('delete_account_password_required'), { position: 'top-center' });
       return;
     }
@@ -107,8 +128,10 @@ export class DeleteAccountPage implements OnInit {
 
   private performDelete() {
     this.busy = true;
+    // Social-only accounts send no password; the backend skips re-auth for them.
+    const body = this.hasPassword ? { current_password: this.password } : {};
     this.adapter
-      .delete_v3('DELETE /me', { authToken: this.token, body: { current_password: this.password } })
+      .delete_v3('DELETE /me', { authToken: this.token, body })
       .subscribe({
         next: (response: any) => {
           if (response.status === 'success') {
