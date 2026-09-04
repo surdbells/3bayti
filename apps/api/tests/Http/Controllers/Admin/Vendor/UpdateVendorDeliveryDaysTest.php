@@ -121,6 +121,26 @@ final class UpdateVendorDeliveryDaysTest extends HttpTestCase
         self::assertSame(14, $vendor->getMaxDeliveryDays());
     }
 
+    #[Test]
+    public function acceptsALocalPhoneAndStoresItAsE164(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $vendor = $this->makeVendor(42);
+        $this->bindEm($admin, $vendor);
+
+        // The reported bug: editing the email while a legacy local-format phone
+        // ("0552900789") sat in the form 422'd on contact_phone. It must now be
+        // accepted and canonicalised to E.164 instead of blocking the save.
+        $response = $this->makePut($admin, '/v3/admin/vendors/42', [
+            'name' => 'abayatai',
+            'contact_email' => 'abayatai@yahoo.com',
+            'contact_phone' => '0552900789',
+        ]);
+
+        self::assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+        self::assertSame('+971552900789', $vendor->getContactPhone());
+    }
+
     // ===== Helpers =====
 
     private function makeAdminUser(int $id): User

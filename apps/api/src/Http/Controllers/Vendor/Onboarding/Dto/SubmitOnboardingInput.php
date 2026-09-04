@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Vendor\Onboarding\Dto;
 
+use Bayti\Api\Domain\Common\PhoneNumber;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -95,9 +96,12 @@ final class SubmitOnboardingInput
         $this->name = trim($name);
         $this->contact_email = trim($contact_email);
         $this->description = $description !== null ? trim($description) : null;
-        $this->contact_phone = $contact_phone !== null
-            ? (preg_replace('/[\s\-()]/', '', $contact_phone) ?? '')
-            : null;
+        // Canonicalise to E.164 so a locally-entered UAE number is accepted
+        // and stored as "+9715…" instead of failing the strict assertion.
+        $phone = $contact_phone !== null ? trim($contact_phone) : null;
+        $this->contact_phone = ($phone === null || $phone === '')
+            ? null
+            : (PhoneNumber::toE164($phone) ?? $phone);
         $this->legal_name = $legal_name !== null ? trim($legal_name) : null;
     }
 }

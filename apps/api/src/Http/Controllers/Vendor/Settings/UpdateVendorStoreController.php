@@ -6,6 +6,7 @@ namespace Bayti\Api\Http\Controllers\Vendor\Settings;
 
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorRepository;
+use Bayti\Api\Domain\Common\PhoneNumber;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
@@ -98,10 +99,10 @@ final class UpdateVendorStoreController
             $vendor->setContactEmail($body['store_email']);
         }
         if (isset($body['contact_phone'])) {
-            $vendor->setContactPhone($body['contact_phone'] !== '' ? (string) $body['contact_phone'] : null);
+            $vendor->setContactPhone($this->normalizePhone($body['contact_phone']));
         }
         if (isset($body['store_phone'])) {
-            $vendor->setContactPhone($body['store_phone'] !== '' ? (string) $body['store_phone'] : null);
+            $vendor->setContactPhone($this->normalizePhone($body['store_phone']));
         }
         if (isset($body['store_address'])) {
             $vendor->setStoreAddress($body['store_address'] !== '' ? (string) $body['store_address'] : null);
@@ -124,5 +125,18 @@ final class UpdateVendorStoreController
         return $this->ok(PaginatedEnvelope::single(
             $this->serializer->adminShape($vendor),
         ));
+    }
+
+    /**
+     * Canonicalise a raw phone to E.164 so a locally-entered UAE number is
+     * stored as "+9715…" (keeps it valid for later admin edits, which DO
+     * enforce E.164). Empty / non-string clears it.
+     */
+    private function normalizePhone(mixed $raw): ?string
+    {
+        if (!is_string($raw) || trim($raw) === '') {
+            return null;
+        }
+        return PhoneNumber::toE164(trim($raw)) ?? trim($raw);
     }
 }

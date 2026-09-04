@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Admin\Vendor\Dto;
 
+use Bayti\Api\Domain\Common\PhoneNumber;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -140,9 +141,15 @@ final class UpdateVendorInput
         $this->description = $description !== null ? trim($description) : null;
         $this->logo_url = $logo_url !== null ? trim($logo_url) : null;
         $this->cover_image_url = $cover_image_url !== null ? trim($cover_image_url) : null;
-        $this->contact_phone = $contact_phone !== null
-            ? (preg_replace('/[\s\-()]/', '', $contact_phone) ?? '')
-            : null;
+        // Canonicalise to E.164 so a locally-entered number (e.g. "0552900789"
+        // or "055 290 0789") is accepted and stored as "+971552900789" instead
+        // of failing the strict E.164 assertion below — which also blocked
+        // saving ANY other field (like the email) while a legacy local-format
+        // phone sat in the form. Blank clears it.
+        $phone = $contact_phone !== null ? trim($contact_phone) : null;
+        $this->contact_phone = ($phone === null || $phone === '')
+            ? null
+            : (PhoneNumber::toE164($phone) ?? $phone);
         $this->commission_rate = $commission_rate;
         $this->min_delivery_days = $min_delivery_days;
         $this->max_delivery_days = $max_delivery_days;
