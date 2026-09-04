@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Profile;
 
 use Bayti\Api\Domain\Audit\AuditEmitter;
-use Bayti\Api\Domain\User\RefreshToken;
-use Bayti\Api\Domain\User\RefreshTokenRepository;
+use Bayti\Api\Domain\User\HardDeleteUserService;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Controllers\Profile\Dto\DeleteAccountInput;
 use Bayti\Api\Http\Errors\ErrorCodes;
@@ -14,7 +13,6 @@ use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Validator\RequestValidator;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -22,27 +20,21 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * DELETE /v3/me, delete the authenticated user's account.
  *
- * Semantics (operator-confirmed, M3.2.Y.6)
- * ----------------------------------------
- *   - Q6.1: BOTH deactivate() (is_active = false) AND softDelete()
- *     (deleted_at stamp). Deactivation locks the account out
- *     immediately, both LoginController and AuthMiddleware already
- *     reject !isActive() users, so every existing access token stops
- *     working on its next request and re-login is impossible. The
- *     soft-delete stamp marks the row for retention/eventual purge
- *     and lets support distinguish "deactivated" from "deleted".
- *   - Q6.2: re-authentication required. The caller must supply their
- *     current_password; a mismatch is 401 AUTH_INVALID_CREDENTIALS
- *     (same code/status as login + change-password).
- *   - Order history is retained (the soft delete does not cascade to
- *     orders); this is a soft-deactivate, not a hard wipe.
+ * Semantics
+ * ---------
+ *   - PERMANENT (hard) delete: the account and ALL of its data — profile,
+ *     orders, gift cards, payments, addresses, wishlist, reviews and every
+ *     session — are erased via HardDeleteUserService (the same engine as the
+ *     admin "delete customer" action). This is irreversible; there is no
+ *     restore. The client auto-logs-out on the 204.
+ *   - Re-authentication required for password accounts: the caller must supply
+ *     their current_password; a mismatch is 401 AUTH_INVALID_CREDENTIALS (same
+ *     code/status as login + change-password). Social-only accounts have no
+ *     password to verify and are currently blocked here (a dedicated social
+ *     re-auth path is out of scope).
  *
- * On success: revoke all refresh tokens (the account is gone, so no
- * session may continue), record a 'deleted' audit event, return 204.
- *
- * No migration: the User entity already has deactivate()/softDelete()/
- * is_active/deleted_at, and RefreshTokenRepository::revokeAllForUser
- * already exists.
+ * On success: the erase cascades every refresh token (so no session can
+ * continue), a 'deleted' audit event is recorded, and 204 is returned.
  */
 final class DeleteAccountController
 {
@@ -51,8 +43,8 @@ final class DeleteAccountController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly RequestValidator $validator,
-        private readonly EntityManagerInterface $em,
         private readonly AuditEmitter $audit,
+        private readonly HardDeleteUserService $hardDelete,
     ) {
     }
 
@@ -94,29 +86,19 @@ final class DeleteAccountController
             );
         }
 
-        // Snapshot for audit BEFORE mutation.
+        // Snapshot for audit BEFORE the row is gone.
         $beforeSnapshot = $this->snapshot($user);
 
-        // All mutations in one transaction.
-        $this->em->wrapInTransaction(function () use ($user): void {
-            // Q6.1: both flags. deactivate() locks out now; softDelete()
-            // stamps deleted_at for retention/purge.
-            $user->deactivate();
-            $user->softDelete();
+        // Permanently erase the account and ALL of its data — profile,
+        // orders, gift cards, payments, addresses, wishlist and sessions
+        // (the same engine as the admin delete). Irreversible; runs in its
+        // own transaction and cascades the refresh tokens, so no session
+        // can continue.
+        $this->hardDelete->delete($user);
 
-            // Revoke every refresh token, the account is gone; no
-            // session may continue. (Access tokens already fail on
-            // their next request via the AuthMiddleware !isActive
-            // check.)
-            /** @var RefreshTokenRepository $refreshRepo */
-            $refreshRepo = $this->em->getRepository(RefreshToken::class);
-            $refreshRepo->revokeAllForUser($user, 'account_deleted');
-
-            $this->em->flush();
-        });
-
-        // Audit AFTER flush so the change is durable. recordDelete is
-        // the canonical event for subject removal.
+        // Audit AFTER the delete so the trail is durable. audit_log.user_id
+        // has no FK, so this row survives the subject's removal; recordDelete
+        // is the canonical event for subject removal.
         $this->audit->recordDelete(
             request: $request,
             actor: $user,
