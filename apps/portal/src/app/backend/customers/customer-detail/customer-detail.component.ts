@@ -69,6 +69,8 @@ export class CustomerDetailComponent implements OnInit {
   ordersLoading = true;
   orders: CustomerOrder[] = [];
 
+  deleting = false;
+
   ngOnInit(): void {
     const pm = this.route.snapshot.paramMap;
     const qp = this.route.snapshot.queryParamMap;
@@ -226,6 +228,45 @@ export class CustomerDetailComponent implements OnInit {
             }
           },
         });
+      });
+  }
+
+  /**
+   * PERMANENTLY delete the customer and all their data (orders, gift cards,
+   * payments, addresses, sessions …). Irreversible, so it's gated behind a
+   * strongly-worded danger confirm before the DELETE fires. On success we
+   * leave the (now-gone) detail page and return to the list.
+   */
+  deleteAccount(): void {
+    if (this.deleting || !this.profile) return;
+    const who = this.displayName || this.profile.email || 'this customer';
+    this.confirm
+      .confirm({
+        title: 'Permanently delete customer?',
+        message:
+          `This permanently deletes ${who} and ALL of their data — orders, gift cards, ` +
+          `payment history, addresses, wishlist and sessions. This cannot be undone. ` +
+          `To simply block access instead, deactivate the account.`,
+        confirmLabel: 'Delete permanently',
+        cancelLabel: 'Cancel',
+        variant: 'danger',
+      })
+      .then((ok) => {
+        if (!ok) return;
+        this.deleting = true;
+        this.adapter
+          .delete_v3('DELETE /admin/users/:id', { params: { id: String(this.id) } })
+          .subscribe({
+            next: () => {
+              this.deleting = false;
+              this.toast.success(`${who} was permanently deleted.`);
+              this.router.navigate(['/admin/customers']);
+            },
+            error: (err: any) => {
+              this.deleting = false;
+              this.toast.error(apiErrorMessage(err, 'Unable to delete this customer.'));
+            },
+          });
       });
   }
 

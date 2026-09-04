@@ -1810,6 +1810,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'PUT /admin/users/:id': {
     target: 'new', oldPath: '', newPath: '/v3/admin/users/:id', shape: 'raw',
   },
+  // Permanent (hard) delete of a customer account + all its data. v3-only.
+  'DELETE /admin/users/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/users/:id', shape: 'raw',
+  },
   'GET /admin/vendor-metrics': {
     target: 'new', oldPath: '/admin/common/dashboard-activity', newPath: '/v3/admin/vendor-metrics', shape: 'v3-envelope',
   },

@@ -170,6 +170,7 @@ final class PermissionCatalog
                     'users.create' => 'Create staff users',
                     'users.edit' => 'Edit staff users',
                     'users.deactivate' => 'Activate / deactivate staff',
+                    'users.delete' => 'Permanently delete a customer account',
                     'users.manage_roles' => 'Assign roles to staff',
                     'roles.view' => 'View roles',
                     'roles.create' => 'Create roles',

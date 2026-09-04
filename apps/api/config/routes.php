@@ -832,6 +832,11 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\User\ActivateUserController::class)->add($perm->for('users.deactivate'));
         $group->post('/users/{id:[0-9]+}/deactivate',
             \Bayti\Api\Http\Controllers\Admin\User\DeactivateUserController::class)->add($perm->for('users.deactivate'));
+        // Permanent (hard) delete of a CUSTOMER account + all its data.
+        // Irreversible; gated on its own users.delete permission (distinct from
+        // the reversible deactivate above).
+        $group->delete('/users/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\User\DeleteUserController::class)->add($perm->for('users.delete'));
         // M5.1, Admin-initiated staff creation + password reset.
         $group->post('/users',
             \Bayti\Api\Http\Controllers\Admin\User\CreateUserController::class)->add($perm->for('users.create'));

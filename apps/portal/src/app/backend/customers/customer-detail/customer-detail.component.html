@@ -104,6 +104,11 @@
               <app-icon [name]="isActive ? 'block' : 'check_circle'" aria-hidden="true"></app-icon>
               {{ isActive ? 'Deactivate account' : 'Activate account' }}
             </button>
+            <button *axCan="'users.delete'" type="button" class="ax-btn ax-btn-sm ax-btn-danger"
+                    [disabled]="!profile || deleting" (click)="deleteAccount()">
+              <app-icon name="delete" aria-hidden="true"></app-icon>
+              {{ deleting ? 'Deleting…' : 'Delete account' }}
+            </button>
           </ng-container>
           <ng-container *ngIf="editing">
             <button type="button" class="ax-btn ax-btn-sm ax-btn-primary"
