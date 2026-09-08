@@ -58,6 +58,19 @@ interface VendorOrderItem {
   unit_price: string;
   subtotal: string;
   item_status: string;
+  // Fulfilment detail the vendor needs to make/pack the item.
+  size?: string | null;
+  color?: string | null;
+  is_custom?: boolean;
+  measurement?: string | null;
+  extra_measurement?: string | null;
+  note?: string | null;
+}
+
+/** A readable label/value pair parsed from an item's measurement JSON. */
+interface MeasurementPair {
+  label: string;
+  value: string;
 }
 
 interface VendorOrder {
@@ -186,6 +199,29 @@ export class VendorOrderDetailPage implements OnInit {
           this.toast.error(apiErrorMessage(err, this.i18n.t('vendor_order_network_error')));
         },
       });
+  }
+
+  /**
+   * Readable body-measurement pairs for an item, parsed from its measurement +
+   * extra_measurement JSON. Skips internal plumbing keys (record id, signed
+   * token, timestamps) so the vendor sees only real measurements.
+   */
+  measurementPairs(item: VendorOrderItem): MeasurementPair[] {
+    const skip = new Set(['id', 'token', 'user_id', 'userid', 'created_at', 'updated_at', 'createdat', 'updatedat']);
+    const out: MeasurementPair[] = [];
+    for (const raw of [item?.measurement, item?.extra_measurement]) {
+      if (!raw || typeof raw !== 'string' || raw.trim() === '') continue;
+      let decoded: any;
+      try { decoded = JSON.parse(raw); } catch { continue; }
+      if (!decoded || typeof decoded !== 'object' || Array.isArray(decoded)) continue;
+      for (const [k, v] of Object.entries(decoded)) {
+        if (v === null || v === '' || typeof v === 'object') continue;
+        if (skip.has(String(k).toLowerCase())) continue;
+        const label = String(k).replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        out.push({ label, value: String(v) });
+      }
+    }
+    return out;
   }
 
   /** Sum this store's line items into a "0.00" total string. */

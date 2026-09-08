@@ -45,9 +45,39 @@
           <div class="item-info">
             <h4 class="item-name">{{ item.product_name }}</h4>
             <p class="item-meta">{{ 'label_qty' | translate }}: {{ item.quantity }}</p>
+            @if (item.size || item.color) {
+              <p class="item-meta">
+                @if (item.size) {<span>{{ 'label_size' | translate }}: {{ item.size }}</span>}
+                @if (item.size && item.color) {<span> · </span>}
+                @if (item.color) {<span>{{ 'label_color' | translate }}: {{ item.color }}</span>}
+              </p>
+            }
             <p class="item-price">{{ item.unit_price }} {{ order.currency }}</p>
           </div>
         </div>
+
+        <!-- Fulfilment detail: custom measurements + the customer's note, so the
+             vendor can actually make/pack the item from the app. -->
+        @if (measurementPairs(item).length || item.note) {
+          <div class="item-fulfil">
+            @if (measurementPairs(item).length) {
+              <div class="item-fulfil-block">
+                <span class="item-fulfil-label">{{ 'label_measurements' | translate }}</span>
+                <div class="item-fulfil-measures">
+                  @for (m of measurementPairs(item); track m.label) {
+                    <span class="item-fulfil-measure">{{ m.label }}: {{ m.value }}</span>
+                  }
+                </div>
+              </div>
+            }
+            @if (item.note) {
+              <div class="item-fulfil-note">
+                <span class="item-fulfil-note-label">{{ 'label_customer_note' | translate }}</span>
+                <p class="item-fulfil-note-text">{{ item.note }}</p>
+              </div>
+            }
+          </div>
+        }
 
         <!-- State-machine action buttons (legal transitions only) -->
         <div class="item-actions">

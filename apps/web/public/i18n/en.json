@@ -1334,6 +1334,8 @@
     "hintColor": "Select a colour to continue.",
     "measurementTitle": "Extra measurements",
     "measurementPlaceholder": "Any extra measurements the seller needs (e.g. length in inches)",
+    "noteTitle": "Note for the seller (optional)",
+    "notePlaceholder": "Any special instructions, e.g. buttons from top to bottom, longer sleeves",
     "hintMeasurement": "Add the extra measurements to continue.",
     "customSizeTitle": "Your measurements",
     "customSizeUnit": "All measurements in centimetres (cm).",

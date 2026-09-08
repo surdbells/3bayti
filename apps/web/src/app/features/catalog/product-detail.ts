@@ -367,6 +367,8 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   /** Vendor's EXTRA measurement (free text), additional measurements the
    *  seller needs beyond the account profile. Empty until the shopper types. */
   readonly extraMeasurement = signal('');
+  /** Optional free-text note / instructions for the seller, sent with the order. */
+  readonly note = signal('');
   /** Quantity to add (1–99). */
   readonly quantity = signal(1);
   /** True while an add-to-cart request is in flight. */
@@ -1158,6 +1160,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
         // (order-only, we never write back to the account default here).
         measurement: custom ? JSON.stringify(this.customMeasurementValues()) : null,
         extra_measurement: this.requiresExtraMeasurement() ? this.extraMeasurement().trim() : null,
+        note: this.note().trim() || null,
       });
       this.cartDrawer.open();
     } catch {
@@ -1170,6 +1173,11 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   /** Bind the extra-measurement textarea to its signal. */
   onExtraMeasurementInput(event: Event): void {
     this.extraMeasurement.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  /** Bind the seller-note textarea to its signal. */
+  onNoteInput(event: Event): void {
+    this.note.set((event.target as HTMLTextAreaElement).value);
   }
 
   /** Bind a custom-size measurement input to its field in the signal map. */

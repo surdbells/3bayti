@@ -164,3 +164,48 @@
   padding: 48px 16px;
   color: var(--m7-muted, #777);
 }
+
+/* Fulfilment detail: custom measurements + the customer's note. */
+.item-fulfil {
+  padding: 0 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.item-fulfil-label,
+.item-fulfil-note-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--m7-muted, #777);
+  margin-bottom: 4px;
+}
+.item-fulfil-measures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.item-fulfil-measure {
+  font-size: 12px;
+  color: var(--m7-text, #2c2c2c);
+  background: #f4efe6;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+/* The customer's instruction is what the vendor must actually make —
+   highlight it so it can't be missed. */
+.item-fulfil-note {
+  background: #fbf3e2;
+  border-inline-start: 3px solid var(--m7-accent, #B9935A);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.item-fulfil-note-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--m7-text, #2c2c2c);
+  line-height: 1.4;
+  white-space: pre-line;
+}

@@ -300,6 +300,22 @@
             }
           }
 
+          <!-- Optional note / instructions for the seller (e.g. button placement).
+               Sent to the vendor with the order. -->
+          <fieldset class="pdp-options pdp-measurement" data-testid="pdp-note">
+            <legend>{{ 'product.noteTitle' | translate }}</legend>
+            <textarea
+              class="pdp-measurement__input"
+              rows="2"
+              maxlength="500"
+              [value]="note()"
+              (input)="onNoteInput($event)"
+              [attr.placeholder]="'product.notePlaceholder' | translate"
+              [attr.aria-label]="'product.noteTitle' | translate"
+              data-testid="pdp-note-input"
+            ></textarea>
+          </fieldset>
+
           <!-- Buy box: quantity + add to cart -->
           <div class="pdp-buybox">
             @if (p.in_stock) {
