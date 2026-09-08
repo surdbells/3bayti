@@ -1176,11 +1176,11 @@ HTML,
         $cur = $order->getCurrency();
         $l = $ar
             ? ['items' => 'المنتجات', 'size' => 'المقاس', 'color' => 'اللون', 'qty' => 'الكمية',
-               'measures' => 'القياسات', 'sub' => 'المجموع الفرعي', 'del' => 'التوصيل', 'disc' => 'الخصم',
+               'measures' => 'القياسات', 'note' => 'ملاحظة العميل', 'sub' => 'المجموع الفرعي', 'del' => 'التوصيل', 'disc' => 'الخصم',
                'gc' => 'بطاقة هدية', 'total' => 'الإجمالي', 'pricing' => 'التسعير', 'ship' => 'عنوان التسليم',
                'items_total' => 'إجمالي منتجاتك']
             : ['items' => 'Items', 'size' => 'Size', 'color' => 'Color', 'qty' => 'Qty',
-               'measures' => 'Measurements', 'sub' => 'Subtotal', 'del' => 'Delivery', 'disc' => 'Discount',
+               'measures' => 'Measurements', 'note' => 'Customer note', 'sub' => 'Subtotal', 'del' => 'Delivery', 'disc' => 'Discount',
                'gc' => 'Gift card', 'total' => 'Total', 'pricing' => 'Pricing', 'ship' => 'Delivery address',
                'items_total' => 'Your items total'];
 
@@ -1231,7 +1231,15 @@ HTML,
                 }
                 $note = $item->getNote();
                 if ($note !== null && trim($note) !== '') {
-                    $measBlock .= '<div style="font-size:12px;color:#8a8378;margin-top:2px;">' . $this->esc(trim($note)) . '</div>';
+                    $noteTrimmed = trim($note);
+                    // Customer instructions (e.g. "buttons from top to bottom")
+                    // are what the vendor must actually make — render them as a
+                    // clearly-labelled, highlighted line, not a faint sub-note,
+                    // and include them in the plain-text part too.
+                    $measBlock .= '<div style="font-size:13px;color:#1c1c1e;margin-top:6px;'
+                        . 'padding:8px 10px;background:#fbf3e2;border-inline-start:3px solid #b9975b;border-radius:4px;">'
+                        . '<strong>' . $l['note'] . ':</strong> ' . $this->esc($noteTrimmed) . '</div>';
+                    $measText .= "    {$l['note']}: {$noteTrimmed}\n";
                 }
             }
 
@@ -1368,6 +1376,12 @@ HTML,
      */
     private function measurementPairs(OrderItem $item): array
     {
+        // Internal metadata carried in the measurement JSON that must NOT be
+        // shown to the vendor — the DB record id and the signed reference
+        // token are plumbing, not body measurements (they were leaking into
+        // the email as "Id: 14923 · Token: eyJ…").
+        $skip = ['id', 'token', 'user_id', 'userid', 'created_at', 'updated_at', 'createdat', 'updatedat'];
+
         $out = [];
         foreach ([$item->getMeasurement(), $item->getExtraMeasurement()] as $raw) {
             if ($raw === null) {
@@ -1381,6 +1395,9 @@ HTML,
             if (is_array($decoded)) {
                 foreach ($decoded as $k => $v) {
                     if ($v === null || $v === '' || is_array($v)) {
+                        continue;
+                    }
+                    if (in_array(strtolower((string) $k), $skip, true)) {
                         continue;
                     }
                     $out[ucwords(str_replace(['_', '-'], ' ', (string) $k))] = (string) $v;
