@@ -537,6 +537,45 @@ final class OrderEmailTemplateRendererTest extends TestCase
         }
     }
 
+    #[Test]
+    public function vendorOrderEmailShowsCustomerNoteAndMeasurementsButNotInternalTokens(): void
+    {
+        $order = new Order(user: $this->makeUser(), orderReference: 'V3-NOTE', subtotal: '265.00');
+        $this->setEntityId($order, 101);
+        $item = $this->addVendorItem($order, 7, 'ABAYA BY MAS', 'Beach Waves', '265.00', 701);
+
+        // Custom made-to-measure line: the measurement JSON carries real body
+        // measurements PLUS internal plumbing (record id + signed token), and
+        // the customer left an instruction note.
+        $this->setEntityProp($item, 'measurement', (string) json_encode([
+            'id' => 14923,
+            'token' => 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.PLUMBING',
+            'bust' => 32.5,
+            'armhole' => 8.5,
+            'shoulder' => 14.5,
+        ]));
+        $this->setEntityProp($item, 'note', 'buttons from top till the bottom');
+
+        $rendered = $this->renderer->render(
+            EmailTemplate::ORDER_PLACED_VENDOR,
+            $order,
+            ['vendor_order_items' => [$item], 'vendor_name' => 'ABAYA BY MAS'],
+        );
+
+        foreach (['text' => $rendered->textBody, 'html' => $rendered->htmlBody] as $where => $body) {
+            // The customer's instruction reaches the vendor, clearly labelled.
+            self::assertStringContainsString('buttons from top till the bottom', $body, "note missing in {$where}");
+            self::assertStringContainsString('Customer note', $body, "note label missing in {$where}");
+            // Real body measurements are shown alongside it.
+            self::assertStringContainsString('32.5', $body, "measurement missing in {$where}");
+            // Internal plumbing must NOT leak into the vendor's view.
+            self::assertStringNotContainsString('eyJ0eXAi', $body, "measurement token leaked into {$where}");
+            self::assertStringNotContainsString('14923', $body, "measurement id leaked into {$where}");
+            // Encourages the vendor to log in to the app for the full details.
+            self::assertStringContainsString('Log in to the 3bayti app', $body, "login CTA missing in {$where}");
+        }
+    }
+
     // ===== Helpers =====
 
     private function makeOrder(string $reference, string $subtotal = '99.00'): Order

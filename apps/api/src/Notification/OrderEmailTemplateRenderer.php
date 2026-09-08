@@ -912,6 +912,9 @@ ship it is below.
 
 {$detailsText}
 
+Log in to the 3bayti app to confirm the full order details — including the
+customer's measurements and any notes — and to manage this order.
+
 Mark each item 'accepted', then 'shipped', from your vendor dashboard
 once you've packed and dispatched.
 
@@ -925,6 +928,7 @@ TXT,
                     . $this->progressHtml(2, false)
                     . $this->refBadgeHtml($ref, false)
                     . $detailsHtml
+                    . '<p style="font-size:14px;color:#4a453e;line-height:1.6;"><strong>Log in to the 3bayti app</strong> to confirm the full order details — including the customer\'s measurements and any notes — and to manage this order.</p>'
                     . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">Mark each item <strong>accepted</strong>, then <strong>shipped</strong>, from your vendor dashboard once you\'ve packed and dispatched.</p>',
             ),
         );
@@ -1899,6 +1903,9 @@ HTML,
 
 {$detailsText}
 
+سجّلي الدخول إلى تطبيق 3bayti لتأكيد تفاصيل الطلب كاملةً — بما في ذلك قياسات
+العميل وأي ملاحظات — ولإدارة الطلب.
+
 يرجى تعليم كل منتج بحالة 'مقبول' ثم 'تم الشحن' من لوحة تحكم البائع بعد
 تجهيزه وشحنه.
 
@@ -1912,6 +1919,7 @@ TXT,
                     . $this->progressHtml(2, true)
                     . $this->refBadgeHtml($ref, true)
                     . $detailsHtml
+                    . '<p style="font-size:14px;color:#4a453e;line-height:1.6;"><strong>سجّلي الدخول إلى تطبيق 3bayti</strong> لتأكيد تفاصيل الطلب كاملةً — بما في ذلك قياسات العميل وأي ملاحظات — ولإدارة الطلب.</p>'
                     . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">يرجى تعليم كل منتج بحالة \'مقبول\' ثم \'تم الشحن\' من لوحة تحكم البائع بعد تجهيزه وشحنه.</p>',
                 locale: User::LOCALE_AR,
             ),
