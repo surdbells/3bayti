@@ -477,6 +477,15 @@ return function (App $app): void {
         \Bayti\Api\Http\Controllers\Checkout\NoonWebhookController::class,
     );
 
+    // OTO shipping status webhook. INTENTIONALLY UNAUTHENTICATED like the Noon
+    // webhook — verified by OtoWebhookVerifier (HMAC signature / authorization
+    // key when configured), and it only ever advances a shipment we already
+    // booked (matched by provider id). NEVER add AuthMiddleware to this route.
+    $app->post(
+        '/v3/shipping/webhook/oto',
+        \Bayti\Api\Http\Controllers\Shipping\OtoWebhookController::class,
+    );
+
     // M3.2.Y.3-A, Noon payment-return browser redirect.
     //
     // INTENTIONALLY UNAUTHENTICATED, Noon redirects the raw browser
@@ -786,6 +795,11 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderStatusController::class)->add($perm->for('orders.override_status'));
         $group->patch('/orders/{orderId:[0-9]+}/items/{itemId:[0-9]+}/status',
             \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderItemStatusController::class)->add($perm->for('orders.update_item_status'));
+        // Admin books courier (OTO) delivery for a specific store on an order.
+        $group->post('/orders/{orderId:[0-9]+}/vendors/{vendorId:[0-9]+}/ship',
+            \Bayti\Api\Http\Controllers\Admin\Order\ShipAdminOrderVendorController::class)->add($perm->for('orders.update_item_status'));
+        $group->get('/orders/{orderId:[0-9]+}/vendors/{vendorId:[0-9]+}/delivery-options',
+            \Bayti\Api\Http\Controllers\Admin\Order\ListAdminDeliveryOptionsController::class)->add($perm->for('orders.view_detail'));
 
         // M3.2.X.17-C, Order timeline (admin chronological event feed)
         $group->get('/orders/{id:[0-9]+}/timeline',
@@ -1050,6 +1064,12 @@ return function (App $app): void {
         $group->get('/orders/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderController::class);
         $group->patch('/orders/{orderId:[0-9]+}/items/{itemId:[0-9]+}/status',
             \Bayti\Api\Http\Controllers\Vendor\Order\TransitionVendorOrderItemController::class);
+        // Book courier (OTO) delivery for the vendor's ready items on an order,
+        // and list carrier options for the "choose a carrier" flow.
+        $group->post('/orders/{orderId:[0-9]+}/ship',
+            \Bayti\Api\Http\Controllers\Vendor\Order\ShipVendorOrderController::class);
+        $group->get('/orders/{orderId:[0-9]+}/delivery-options',
+            \Bayti\Api\Http\Controllers\Vendor\Order\ListVendorDeliveryOptionsController::class);
         // M3.2.X.17-D, vendor order timeline
         $group->get('/orders/{id:[0-9]+}/timeline',
             \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderTimelineController::class);

@@ -581,6 +581,34 @@ return [
         );
     },
 
+    // Booking orchestrator shared by the vendor + admin ship endpoints.
+    // Factory-bound (like the notification services) so the logger + collaborators
+    // come from the container rather than autowiring the nullable-logger default.
+    \Bayti\Api\Shipping\ShipmentBookingService::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Shipping\ShipmentBookingService {
+        return new \Bayti\Api\Shipping\ShipmentBookingService(
+            provider: $c->get(\Bayti\Api\Shipping\ShippingProviderInterface::class),
+            em: $c->get(\Doctrine\ORM\EntityManagerInterface::class),
+            audit: $c->get(\Bayti\Api\Domain\Audit\AuditEmitter::class),
+            notifications: $c->get(\Bayti\Api\Notification\OrderNotificationService::class),
+            push: $c->get(\Bayti\Api\Notification\Push\PushNotificationService::class),
+            logger: $c->get(\Psr\Log\LoggerInterface::class),
+        );
+    },
+
+    // OTO webhook verifier — signature secret / authorization key from env
+    // (both optional; when neither is set the receiver still only advances
+    // shipments we already booked).
+    \Bayti\Api\Shipping\Oto\OtoWebhookVerifier::class => static function (): \Bayti\Api\Shipping\Oto\OtoWebhookVerifier {
+        $secret = $_ENV['TRYOTO_WEBHOOK_SECRET'] ?? '';
+        $authKey = $_ENV['TRYOTO_WEBHOOK_AUTH_KEY'] ?? '';
+        return new \Bayti\Api\Shipping\Oto\OtoWebhookVerifier(
+            secret: $secret !== '' ? $secret : null,
+            authKey: $authKey !== '' ? $authKey : null,
+        );
+    },
+
     // Delivery orchestrator. Factory-bound (not autowired) because its
     // logger param has a null-coalesced default and we want an explicit
     // container logger, also keeps it consistent with the other
