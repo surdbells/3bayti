@@ -134,12 +134,24 @@ final class OrderSerializer
      * @param list<OrderReturnRequest>|null $returns
      * @return array<string, mixed>
      */
-    public function detailShape(Order $order, ?array $returns = null, ?GiftCard $giftCard = null): array
-    {
+    /**
+     * @param array<int, mixed>|null $returns
+     * @param list<array<string,mixed>>|null $shipments already-shaped per-vendor
+     *        courier shipments (tracking); the controllers pass them so this
+     *        stays free of DB access.
+     * @return array<string, mixed>
+     */
+    public function detailShape(
+        Order $order,
+        ?array $returns = null,
+        ?GiftCard $giftCard = null,
+        ?array $shipments = null,
+    ): array {
         $shape = $this->listShape($order, $returns, $giftCard);
         $shape['billing_address'] = $this->addressShape($order->getBillingAddress());
         $shape['shipping_address'] = $this->addressShape($order->getShippingAddress());
         $shape['delivery_estimate'] = $this->deliveryEstimate($order);
+        $shape['shipments'] = $shipments ?? [];
         return $shape;
     }
 

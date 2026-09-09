@@ -67,6 +67,20 @@ final class VendorSerializer
             'store_address' => $v->getStoreAddress(),
             'emirate' => $v->getEmirate(),
             'country' => $v->getCountry(),
+            // Structured pickup/sender address for courier (OTO) shipping.
+            // is_complete gates whether the store can book delivery.
+            'pickup' => [
+                'contact_name' => $v->getPickupContactName(),
+                'phone' => $v->getPickupPhone(),
+                'city' => $v->getPickupCity(),
+                'area' => $v->getPickupArea(),
+                'street' => $v->getPickupStreet(),
+                'building_no' => $v->getPickupBuildingNo(),
+                'postcode' => $v->getPickupPostcode(),
+                'lat' => $v->getPickupLat(),
+                'lon' => $v->getPickupLon(),
+                'is_complete' => $v->pickupAddressIsComplete(),
+            ],
             // Customer-facing delivery lead-time range ("X-Y days").
             'min_delivery_days' => $v->getMinDeliveryDays(),
             'max_delivery_days' => $v->getMaxDeliveryDays(),

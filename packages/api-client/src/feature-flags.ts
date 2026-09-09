@@ -1361,6 +1361,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/vendor/orders/:orderId/items/:itemId/status',
     shape: 'v3-envelope',
   },
+  // Book courier (OTO) delivery for the vendor's items + list carrier options.
+  'POST /vendor/orders/:orderId/ship': {
+    target: 'new', oldPath: '', newPath: '/v3/vendor/orders/:orderId/ship', shape: 'v3-envelope',
+  },
+  'GET /vendor/orders/:orderId/delivery-options': {
+    target: 'new', oldPath: '', newPath: '/v3/vendor/orders/:orderId/delivery-options', shape: 'v3-envelope',
+  },
   // Noon webhook receiver — server-to-server, NEVER called by mobile.
   // Listed here for routing-table completeness only; mobile clients
   // never resolve this key. Adapter would refuse to call it
@@ -1871,6 +1878,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
   'PATCH /admin/orders/:orderId/items/:itemId/status': {
     target: 'new', oldPath: '/admin/common/processing', newPath: '/v3/admin/orders/:orderId/items/:itemId/status', shape: 'v3-envelope',
+  },
+  // Admin books courier (OTO) delivery for a specific store + lists carrier options.
+  'POST /admin/orders/:orderId/vendors/:vendorId/ship': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/orders/:orderId/vendors/:vendorId/ship', shape: 'v3-envelope',
+  },
+  'GET /admin/orders/:orderId/vendors/:vendorId/delivery-options': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/orders/:orderId/vendors/:vendorId/delivery-options', shape: 'v3-envelope',
   },
   'POST /admin/collections': {
     target: 'new', oldPath: '/admin/collections/create-collection', newPath: '/v3/admin/collections', shape: 'v3-envelope',

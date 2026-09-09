@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 321 route keys.
+ * 325 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -62,6 +62,7 @@ export type V3RouteKey =
   | 'GET /admin/orders'
   | 'GET /admin/orders/:id'
   | 'GET /admin/orders/:id/timeline'
+  | 'GET /admin/orders/:orderId/vendors/:vendorId/delivery-options'
   | 'GET /admin/permission-catalog'
   | 'GET /admin/products'
   | 'GET /admin/products/:id'
@@ -169,6 +170,7 @@ export type V3RouteKey =
   | 'GET /vendor/orders'
   | 'GET /vendor/orders/:id'
   | 'GET /vendor/orders/:id/timeline'
+  | 'GET /vendor/orders/:orderId/delivery-options'
   | 'GET /vendor/products'
   | 'GET /vendor/products/:id'
   | 'GET /vendor/products/:id/sales'
@@ -230,6 +232,7 @@ export type V3RouteKey =
   | 'POST /admin/orders/:id/cancel'
   | 'POST /admin/orders/:id/refund'
   | 'POST /admin/orders/:id/resend-vendor-notification'
+  | 'POST /admin/orders/:orderId/vendors/:vendorId/ship'
   | 'POST /admin/products'
   | 'POST /admin/promo-codes'
   | 'POST /admin/roles'
@@ -307,6 +310,7 @@ export type V3RouteKey =
   | 'POST /vendor/messages/:id/read'
   | 'POST /vendor/notifications/mark-read'
   | 'POST /vendor/onboarding/submit'
+  | 'POST /vendor/orders/:orderId/ship'
   | 'POST /vendor/products'
   | 'POST /vendor/returns/:id/confirm-receipt'
   | 'POST /vendors/:vendorId/reviews'
@@ -386,6 +390,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/orders',
   'GET /admin/orders/:id',
   'GET /admin/orders/:id/timeline',
+  'GET /admin/orders/:orderId/vendors/:vendorId/delivery-options',
   'GET /admin/permission-catalog',
   'GET /admin/products',
   'GET /admin/products/:id',
@@ -493,6 +498,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /vendor/orders',
   'GET /vendor/orders/:id',
   'GET /vendor/orders/:id/timeline',
+  'GET /vendor/orders/:orderId/delivery-options',
   'GET /vendor/products',
   'GET /vendor/products/:id',
   'GET /vendor/products/:id/sales',
@@ -554,6 +560,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /admin/orders/:id/cancel',
   'POST /admin/orders/:id/refund',
   'POST /admin/orders/:id/resend-vendor-notification',
+  'POST /admin/orders/:orderId/vendors/:vendorId/ship',
   'POST /admin/products',
   'POST /admin/promo-codes',
   'POST /admin/roles',
@@ -631,6 +638,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /vendor/messages/:id/read',
   'POST /vendor/notifications/mark-read',
   'POST /vendor/onboarding/submit',
+  'POST /vendor/orders/:orderId/ship',
   'POST /vendor/products',
   'POST /vendor/returns/:id/confirm-receipt',
   'POST /vendors/:vendorId/reviews',

@@ -107,6 +107,11 @@ final class UpdateVendorStoreController
         if (isset($body['store_address'])) {
             $vendor->setStoreAddress($body['store_address'] !== '' ? (string) $body['store_address'] : null);
         }
+        // Structured pickup/sender address for courier (OTO) shipping. Sent as a
+        // `pickup` object (full replace); the setters normalise empty → null.
+        if (isset($body['pickup']) && is_array($body['pickup'])) {
+            $this->applyPickup($vendor, $body['pickup']);
+        }
         if (isset($body['logo_url'])) {
             $vendor->setLogoUrl($body['logo_url'] !== '' ? (string) $body['logo_url'] : null);
         }
@@ -138,5 +143,26 @@ final class UpdateVendorStoreController
             return null;
         }
         return PhoneNumber::toE164(trim($raw)) ?? trim($raw);
+    }
+
+    /**
+     * Apply a `pickup` object (full replace) to the vendor's structured pickup
+     * address. The phone is canonicalised to E.164 like contact_phone.
+     *
+     * @param array<string, mixed> $p
+     */
+    private function applyPickup(Vendor $vendor, array $p): void
+    {
+        $str = static fn (string $k): ?string => isset($p[$k]) && is_string($p[$k]) ? $p[$k] : null;
+
+        $vendor->setPickupContactName($str('contact_name'));
+        $vendor->setPickupPhone($this->normalizePhone($str('phone')));
+        $vendor->setPickupCity($str('city'));
+        $vendor->setPickupArea($str('area'));
+        $vendor->setPickupStreet($str('street'));
+        $vendor->setPickupBuildingNo($str('building_no'));
+        $vendor->setPickupPostcode($str('postcode'));
+        $vendor->setPickupLat($str('lat'));
+        $vendor->setPickupLon($str('lon'));
     }
 }
