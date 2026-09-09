@@ -255,6 +255,50 @@ class Vendor
     #[ORM\Column(name: 'country', type: 'string', length: 60, nullable: true)]
     private ?string $country = null;
 
+    // ---- structured pickup address (for courier / OTO shipping) ----
+    //
+    // The free-text store_address above is fine for display, but a courier
+    // aggregator (OTO) needs a STRUCTURED pickup/sender address: who to ask
+    // for, a reachable phone, and city/area/street so the driver can find the
+    // store. Kept separate from the display fields (and nullable) so existing
+    // vendors are unaffected until they fill it in. `pickupAddressIsComplete()`
+    // gates whether a store can ship via OTO.
+
+    /** Contact person the courier asks for at pickup. */
+    #[ORM\Column(name: 'pickup_contact_name', type: 'string', length: 120, nullable: true)]
+    private ?string $pickupContactName = null;
+
+    /** Pickup contact phone, canonical E.164 (courier calls this at pickup). */
+    #[ORM\Column(name: 'pickup_phone', type: 'string', length: 32, nullable: true)]
+    private ?string $pickupPhone = null;
+
+    /** City the store ships from (e.g. Dubai). */
+    #[ORM\Column(name: 'pickup_city', type: 'string', length: 100, nullable: true)]
+    private ?string $pickupCity = null;
+
+    /** Area / district within the city. */
+    #[ORM\Column(name: 'pickup_area', type: 'string', length: 120, nullable: true)]
+    private ?string $pickupArea = null;
+
+    /** Street / address line. */
+    #[ORM\Column(name: 'pickup_street', type: 'string', length: 255, nullable: true)]
+    private ?string $pickupStreet = null;
+
+    /** Building number / name. */
+    #[ORM\Column(name: 'pickup_building_no', type: 'string', length: 60, nullable: true)]
+    private ?string $pickupBuildingNo = null;
+
+    /** Postal code (optional in the UAE). */
+    #[ORM\Column(name: 'pickup_postcode', type: 'string', length: 20, nullable: true)]
+    private ?string $pickupPostcode = null;
+
+    /** Pickup geo (optional, improves courier pickup accuracy). */
+    #[ORM\Column(name: 'pickup_lat', type: 'string', length: 32, nullable: true)]
+    private ?string $pickupLat = null;
+
+    #[ORM\Column(name: 'pickup_lon', type: 'string', length: 32, nullable: true)]
+    private ?string $pickupLon = null;
+
     // ---- bank / payout ----
 
     #[ORM\Column(name: 'store_bank_name', type: 'string', length: 255, nullable: true)]
@@ -665,6 +709,47 @@ class Vendor
     {
         $country = $country !== null ? trim($country) : null;
         $this->country = ($country === '' || $country === null) ? null : $country;
+    }
+
+    // ---- structured pickup address accessors ----
+
+    public function getPickupContactName(): ?string { return $this->pickupContactName; }
+    public function getPickupPhone(): ?string { return $this->pickupPhone; }
+    public function getPickupCity(): ?string { return $this->pickupCity; }
+    public function getPickupArea(): ?string { return $this->pickupArea; }
+    public function getPickupStreet(): ?string { return $this->pickupStreet; }
+    public function getPickupBuildingNo(): ?string { return $this->pickupBuildingNo; }
+    public function getPickupPostcode(): ?string { return $this->pickupPostcode; }
+    public function getPickupLat(): ?string { return $this->pickupLat; }
+    public function getPickupLon(): ?string { return $this->pickupLon; }
+
+    private static function normOptional(?string $v): ?string
+    {
+        $v = $v !== null ? trim($v) : null;
+        return ($v === '' || $v === null) ? null : $v;
+    }
+
+    public function setPickupContactName(?string $v): void { $this->pickupContactName = self::normOptional($v); }
+    public function setPickupPhone(?string $v): void { $this->pickupPhone = self::normOptional($v); }
+    public function setPickupCity(?string $v): void { $this->pickupCity = self::normOptional($v); }
+    public function setPickupArea(?string $v): void { $this->pickupArea = self::normOptional($v); }
+    public function setPickupStreet(?string $v): void { $this->pickupStreet = self::normOptional($v); }
+    public function setPickupBuildingNo(?string $v): void { $this->pickupBuildingNo = self::normOptional($v); }
+    public function setPickupPostcode(?string $v): void { $this->pickupPostcode = self::normOptional($v); }
+    public function setPickupLat(?string $v): void { $this->pickupLat = self::normOptional($v); }
+    public function setPickupLon(?string $v): void { $this->pickupLon = self::normOptional($v); }
+
+    /**
+     * Whether this store has the minimum structured pickup detail a courier
+     * needs: a contact name + phone, a city, and a street/address line. Gates
+     * whether the store can ship via OTO (the ship action refuses otherwise).
+     */
+    public function pickupAddressIsComplete(): bool
+    {
+        return $this->pickupContactName !== null
+            && $this->pickupPhone !== null
+            && $this->pickupCity !== null
+            && $this->pickupStreet !== null;
     }
 
     public function getStoreBankName(): ?string { return $this->storeBankName; }

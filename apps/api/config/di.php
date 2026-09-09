@@ -544,6 +544,43 @@ return [
         );
     },
 
+    // Courier shipping provider (env-gated). Defaults to NullShippingProvider
+    // so the container ALWAYS boots without courier config; the real OTO
+    // provider is selected ONLY when TRYOTO_ENABLED=true AND a dashboard
+    // refresh token is present. Point TRYOTO_URL at https://staging-api.tryoto.com
+    // for the sandbox. See src/Shipping/Oto for the operator setup (refresh
+    // token + webhook registration + per-vendor pickup addresses).
+    \Bayti\Api\Shipping\ShippingProviderInterface::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Shipping\ShippingProviderInterface {
+        $logger = $c->get(\Psr\Log\LoggerInterface::class);
+
+        $enabled = filter_var($_ENV['TRYOTO_ENABLED'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
+        $refreshToken = $_ENV['TRYOTO_REFRESH_TOKEN'] ?? '';
+        if (!$enabled || $refreshToken === '') {
+            return new \Bayti\Api\Shipping\NullShippingProvider();
+        }
+
+        $http = new GuzzleClient([
+            'timeout' => 20,
+            'connect_timeout' => 6,
+        ]);
+        $client = new \Bayti\Api\Shipping\Oto\OtoClient(
+            http: $http,
+            baseUrl: rtrim($_ENV['TRYOTO_URL'] ?? 'https://api.tryoto.com', '/'),
+            refreshToken: $refreshToken,
+            logger: $logger,
+        );
+        $weight = (float) ($_ENV['TRYOTO_DEFAULT_WEIGHT_KG'] ?? 1.0);
+        $builder = new \Bayti\Api\Shipping\Oto\OtoOrderPayloadBuilder($weight > 0 ? $weight : 1.0);
+
+        return new \Bayti\Api\Shipping\Oto\OtoShippingProvider(
+            client: $client,
+            builder: $builder,
+            logger: $logger,
+        );
+    },
+
     // Delivery orchestrator. Factory-bound (not autowired) because its
     // logger param has a null-coalesced default and we want an explicit
     // container logger, also keeps it consistent with the other

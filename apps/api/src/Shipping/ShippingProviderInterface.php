@@ -1,0 +1,54 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Bayti\Api\Shipping;
+
+use Bayti\Api\Domain\Catalog\Vendor;
+use Bayti\Api\Domain\Order\Order;
+use Bayti\Api\Domain\Order\OrderItem;
+
+/**
+ * Books courier delivery for an order's items.
+ *
+ * The application (ship endpoints, webhook) depends on this interface, never on
+ * a concrete provider (OTO today). A NullShippingProvider stands in when no
+ * provider is configured, so the app boots and every caller can guard on
+ * isEnabled() — mirroring the SmsSenderInterface / NullSmsSender pattern.
+ *
+ * 3bayti is a multi-vendor marketplace, so a single order splits into one
+ * shipment PER VENDOR (pickup from that store → the customer). Every method
+ * here therefore operates on ONE vendor's slice of an order.
+ */
+interface ShippingProviderInterface
+{
+    /** True only for a real, configured provider. */
+    public function isEnabled(): bool;
+
+    /**
+     * Push one vendor's items to the courier network and (unless a specific
+     * option is requested) let it auto-assign a carrier. Returns the created
+     * shipment, or throws ShippingException.
+     *
+     * @param OrderItem[] $vendorItems the subset of the order's items for $vendor
+     * @param string|null $deliveryOptionId a specific carrier option to force;
+     *        null lets the provider auto-assign
+     * @throws ShippingException
+     */
+    public function createShipment(
+        Order $order,
+        Vendor $vendor,
+        array $vendorItems,
+        ?string $deliveryOptionId = null,
+    ): ShipmentResult;
+
+    /**
+     * Available delivery options (carrier + price) for a vendor's items, for
+     * the "choose a carrier" flow. Returns an empty list when the provider is
+     * disabled or can't quote.
+     *
+     * @param OrderItem[] $vendorItems
+     * @return list<array{id: string, name: string, price: float, currency: string}>
+     */
+    public function listDeliveryOptions(Order $order, Vendor $vendor, array $vendorItems): array;
+}
