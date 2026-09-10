@@ -252,6 +252,26 @@ interface TimelineEventView {
           </section>
 
           <section
+            *ngIf="(order()!.shipments ?? []).length"
+            class="checkout-section"
+            data-testid="order-detail-tracking"
+          >
+            <h2 class="checkout-section__title">
+              {{ 'orders.detail.trackingHeading' | translate }}
+            </h2>
+            <div *ngFor="let s of order()!.shipments ?? []" style="margin-bottom: 0.85rem;">
+              <div style="font-weight: 600;">{{ s.vendor_name || ('orders.detail.store' | translate) }}</div>
+              <div style="margin-top: 0.25rem;">
+                <span class="order-card__status order-card__status--neutral">{{ prettyShipmentStatus(s.status) }}</span>
+                <span *ngIf="s.delivery_company" style="margin-inline-start: 0.5rem; color: var(--text-secondary, #6b6154);">{{ s.delivery_company }}</span>
+              </div>
+              <div *ngIf="s.tracking_number" style="margin-top: 0.25rem; font-size: 0.875rem; color: var(--text-secondary, #6b6154);">
+                {{ 'orders.detail.trackingNumber' | translate }}: {{ s.tracking_number }}
+              </div>
+            </div>
+          </section>
+
+          <section
             *ngIf="order()!.shipping_address as addr"
             class="checkout-section"
             data-testid="order-detail-shipping"
@@ -721,6 +741,10 @@ export class AccountOrderDetailPageComponent implements OnInit {
 
   protected statusLabel(status: string): string {
     return ORDER_STATUS_LABELS[status] ?? status;
+  }
+  /** Humanise a courier shipment status (e.g. "in_transit" → "In Transit"). */
+  protected prettyShipmentStatus(status: string): string {
+    return String(status ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
   protected isPositive(status: string): boolean {
     return status === 'delivered' || status === 'paid';

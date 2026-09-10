@@ -678,6 +678,8 @@
   "order_detail_not_found_subtitle": "لم نتمكن من العثور على هذا الطلب. ربما تمت إزالته.",
   "order_reference": "رقم الطلب",
   "order_delivery_estimate": "التوصيل المتوقع",
+  "order_tracking_title": "تتبّع التوصيل",
+  "order_tracking_store": "المتجر",
   "order_items": "العناصر",
   "order_returns": "المرتجعات",
   "label_color": "اللون",

@@ -10,12 +10,15 @@ use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\Order\OrderReturnRequest;
 use Bayti\Api\Domain\Order\OrderReturnRequestRepository;
+use Bayti\Api\Domain\Order\OrderShipment;
+use Bayti\Api\Domain\Order\OrderShipmentRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\OrderSerializer;
+use Bayti\Api\Http\Serializers\ShipmentSerializer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -40,6 +43,7 @@ final class GetOrderController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly OrderSerializer $serializer,
+        private readonly ShipmentSerializer $shipmentSerializer,
     ) {
     }
 
@@ -105,8 +109,13 @@ final class GetOrderController
             $giftCard = $giftCards->findByPurchaseOrderReference($order->getOrderReference());
         }
 
+        // Per-vendor courier shipments (OTO tracking) the customer can follow.
+        /** @var OrderShipmentRepository $shipmentRepo */
+        $shipmentRepo = $this->em->getRepository(OrderShipment::class);
+        $shipments = $this->shipmentSerializer->shapeMany($shipmentRepo->findForOrder($order));
+
         return $this->ok([
-            'order' => $this->serializer->detailShape($order, $returns, $giftCard),
+            'order' => $this->serializer->detailShape($order, $returns, $giftCard, $shipments),
         ]);
     }
 }

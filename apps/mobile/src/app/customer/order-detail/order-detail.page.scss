@@ -424,3 +424,15 @@
   --background: var(--ax-color-bg-brand);
   --border-radius: 12px;
 }
+
+/* Courier delivery tracking rows */
+.track-row {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ax-color-border-subtle, #f0eee5);
+}
+.track-row:last-child { border-bottom: none; }
+.track-store { font-weight: 600; font-size: 14px; }
+.track-line { margin-top: 2px; font-size: 13px; }
+.track-status { font-weight: 600; color: var(--ax-color-bg-brand, #906952); }
+.track-carrier { color: var(--m7-muted, #777); }
+.track-num { margin-top: 2px; font-size: 12px; color: var(--m7-muted, #777); }

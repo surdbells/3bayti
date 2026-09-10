@@ -69,6 +69,25 @@
       </ion-card>
     }
 
+    <!-- Courier delivery tracking (OTO) -->
+    @if ((order.shipments ?? []).length) {
+      <ion-card class="detail-card" data-testid="order-tracking">
+        <h3 class="section-title">{{ 'order_tracking_title' | translate }}</h3>
+        @for (s of order.shipments ?? []; track s.vendor_id) {
+          <div class="track-row">
+            <div class="track-store">{{ s.vendor_name || ('order_tracking_store' | translate) }}</div>
+            <div class="track-line">
+              <span class="track-status">{{ prettyShipmentStatus(s.status) }}</span>
+              @if (s.delivery_company) { <span class="track-carrier"> · {{ s.delivery_company }}</span> }
+            </div>
+            @if (s.tracking_number) {
+              <div class="track-num">{{ 'ship_tracking' | translate }}: {{ s.tracking_number }}</div>
+            }
+          </div>
+        }
+      </ion-card>
+    }
+
     <!-- Status timeline -->
     <ion-card class="detail-card">
       <h3 class="section-title">{{ 'orders_timeline_title' | translate }}</h3>

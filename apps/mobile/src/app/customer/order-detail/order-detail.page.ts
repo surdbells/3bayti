@@ -120,6 +120,17 @@ interface OrderDetail {
   shipping_address: OrderAddress | null;
   /** Slowest-store delivery range for the whole order; null for gift cards. */
   delivery_estimate: { min_days: number; max_days: number } | null;
+  /** Per-vendor courier shipments (OTO tracking); empty until a store books delivery. */
+  shipments?: OrderShipment[];
+}
+
+/** A per-vendor courier shipment (OTO tracking) on the order. */
+interface OrderShipment {
+  vendor_id: number;
+  vendor_name: string | null;
+  status: string;
+  tracking_number: string | null;
+  delivery_company: string | null;
 }
 
 @Component({
@@ -507,7 +518,13 @@ export class OrderDetailPage implements OnInit {
               max_days: Number(o.delivery_estimate.max_days ?? 0),
             }
           : null,
+      shipments: Array.isArray(o.shipments) ? o.shipments : [],
     };
+  }
+
+  /** Humanise a courier shipment status (e.g. "in_transit" → "In Transit"). */
+  prettyShipmentStatus(s: string): string {
+    return String(s ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   /** "7 - 14" or a single "14" when the range collapses; '' when no estimate. */

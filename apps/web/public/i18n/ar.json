@@ -524,6 +524,9 @@
       "removeFailed": "تعذّرت إزالة هذا الطلب.",
       "billingHeading": "عنوان الفوترة",
       "shippingHeading": "عنوان الشحن",
+      "trackingHeading": "تتبّع التوصيل",
+      "trackingNumber": "رقم التتبّع",
+      "store": "المتجر",
       "backToList": "→ كل الطلبات"
     },
     "returns": {

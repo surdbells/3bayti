@@ -524,6 +524,9 @@
       "removeFailed": "Couldn't remove this order.",
       "billingHeading": "Billing address",
       "shippingHeading": "Shipping address",
+      "trackingHeading": "Delivery tracking",
+      "trackingNumber": "Tracking number",
+      "store": "Store",
       "backToList": "← All orders"
     },
     "returns": {

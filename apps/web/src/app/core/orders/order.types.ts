@@ -67,6 +67,15 @@ export interface AppliedPromo {
   discount_amount: string;
 }
 
+/** A per-vendor courier shipment (OTO tracking) attached to an order detail. */
+export interface OrderShipment {
+  vendor_id: number;
+  vendor_name: string | null;
+  status: string;
+  tracking_number: string | null;
+  delivery_company: string | null;
+}
+
 /** Compact return-request summary attached to orders by listShape
  *  when the controller passes a returns list. */
 export interface ReturnSummary {
@@ -93,6 +102,8 @@ export interface OrderListItem {
   applied_promo: AppliedPromo | null;
   /** Optional, only present when the API was asked for returns. */
   returns?: ReturnSummary[];
+  /** Per-vendor courier shipments (tracking), present on the detail shape. */
+  shipments?: OrderShipment[];
 }
 
 /** Detail extends list shape with billing + shipping address snapshots.
