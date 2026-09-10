@@ -22,16 +22,27 @@
     </div>
 
     <ng-container *ngIf="!loading">
+      <!-- Filters -->
+      <div class="ax-card ax-p-3 ax-mb-4 ax-flex ax-items-center ax-gap-3" style="flex-wrap:wrap;">
+        <input type="search" class="ax-input ax-input-sm" style="flex:1 1 15rem; min-width:12rem; max-width:22rem;"
+               placeholder="Search order or store…" [(ngModel)]="search" />
+        <div class="ax-flex ax-items-center ax-gap-1" style="flex-wrap:wrap;">
+          <button *ngFor="let f of urgencyFilters" type="button" class="ax-btn ax-btn-sm"
+                  [ngClass]="urgency === f.id ? 'ax-btn-primary' : 'ax-btn-outline'"
+                  (click)="urgency = f.id">{{ f.label }} ({{ urgencyCount(f.id) }})</button>
+        </div>
+      </div>
+
       <!-- Ready to book -->
       <section class="ax-card ax-p-0 ax-mb-4">
-        <header class="ax-p-4"><h3 class="ax-h6 ax-m-0">Ready to book ({{ pending.length }})</h3></header>
+        <header class="ax-p-4"><h3 class="ax-h6 ax-m-0">Ready to book ({{ filteredPending.length }})</h3></header>
         <div class="ax-table-wrapper">
           <table class="ax-table ax-table-hover">
             <thead>
               <tr><th>Order</th><th>Store</th><th>Ready items</th><th>Expected ready</th><th>Placed</th><th style="text-align:right;">Book</th></tr>
             </thead>
             <tbody>
-              <tr *ngFor="let r of pending">
+              <tr *ngFor="let r of filteredPending">
                 <td><a [routerLink]="['/admin/orders', r.order_id]">{{ r.order_reference }}</a></td>
                 <td>{{ r.vendor_name }}</td>
                 <td>{{ r.ready_count }}</td>
@@ -62,8 +73,10 @@
                   </div>
                 </td>
               </tr>
-              <tr *ngIf="!pending.length">
-                <td colspan="6" class="ax-text-center ax-text-secondary ax-py-4">Nothing waiting to be booked.</td>
+              <tr *ngIf="!filteredPending.length">
+                <td colspan="6" class="ax-text-center ax-text-secondary ax-py-4">
+                  {{ pending.length ? 'No orders match the filters.' : 'Nothing waiting to be booked.' }}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -72,14 +85,21 @@
 
       <!-- Booked shipments -->
       <section class="ax-card ax-p-0">
-        <header class="ax-p-4"><h3 class="ax-h6 ax-m-0">Booked shipments ({{ booked.length }})</h3></header>
+        <header class="ax-p-4 ax-flex ax-items-center ax-justify-between ax-gap-2" style="flex-wrap:wrap;">
+          <h3 class="ax-h6 ax-m-0">Booked shipments ({{ filteredBooked.length }})</h3>
+          <select *ngIf="bookedStatuses.length" class="ax-input ax-input-sm" style="max-width:12rem;"
+                  [(ngModel)]="bookedStatus">
+            <option value="">All statuses</option>
+            <option *ngFor="let st of bookedStatuses" [value]="st">{{ prettyStatus(st) }}</option>
+          </select>
+        </header>
         <div class="ax-table-wrapper">
           <table class="ax-table ax-table-hover">
             <thead>
               <tr><th>Order</th><th>Store</th><th>Status</th><th>Carrier</th><th>Tracking</th></tr>
             </thead>
             <tbody>
-              <tr *ngFor="let s of booked">
+              <tr *ngFor="let s of filteredBooked">
                 <td><a [routerLink]="['/admin/orders', s.order_id]">{{ s.order_reference }}</a></td>
                 <td>{{ s.vendor_name }}</td>
                 <td>
@@ -103,8 +123,10 @@
                   <div *ngIf="s.provider_order_id" class="ax-text-2xs ax-text-secondary">OTO: {{ s.provider_order_id }}</div>
                 </td>
               </tr>
-              <tr *ngIf="!booked.length">
-                <td colspan="5" class="ax-text-center ax-text-secondary ax-py-4">No shipments booked yet.</td>
+              <tr *ngIf="!filteredBooked.length">
+                <td colspan="5" class="ax-text-center ax-text-secondary ax-py-4">
+                  {{ booked.length ? 'No shipments match the filters.' : 'No shipments booked yet.' }}
+                </td>
               </tr>
             </tbody>
           </table>

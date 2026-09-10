@@ -34,6 +34,20 @@ export class AdminDeliveriesComponent implements OnInit {
   /** Carrier-picker state keyed by "orderId:vendorId". */
   carrier: Record<string, { loading: boolean; loaded: boolean; options: any[]; chosen: string }> = {};
 
+  // ── Filters (client-side over the loaded data) ──────────────────────────
+  /** Free-text filter matched against order reference + store, both tables. */
+  search = '';
+  /** Ready-to-book urgency filter. */
+  urgency: 'all' | 'overdue' | 'today' | 'upcoming' = 'all';
+  readonly urgencyFilters: { id: 'all' | 'overdue' | 'today' | 'upcoming'; label: string }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'overdue', label: 'Overdue' },
+    { id: 'today', label: 'Due today' },
+    { id: 'upcoming', label: 'Upcoming' },
+  ];
+  /** Booked-shipments status filter ('' = all). */
+  bookedStatus = '';
+
   ngOnInit(): void {
     this.load();
   }
@@ -111,6 +125,43 @@ export class AdminDeliveriesComponent implements OnInit {
 
   prettyStatus(s: string): string {
     return String(s ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  private matchesSearch(row: any): boolean {
+    const q = this.search.trim().toLowerCase();
+    if (!q) return true;
+    return String(row?.order_reference ?? '').toLowerCase().includes(q)
+        || String(row?.vendor_name ?? '').toLowerCase().includes(q);
+  }
+
+  private matchesUrgency(row: any, urgency = this.urgency): boolean {
+    switch (urgency) {
+      case 'overdue': return !!row?.is_overdue;
+      case 'today': return !!row?.due_today;
+      case 'upcoming': return !row?.is_overdue && !row?.due_today;
+      default: return true;
+    }
+  }
+
+  /** Ready-to-book rows after search + urgency filters. */
+  get filteredPending(): any[] {
+    return this.pending.filter((r) => this.matchesSearch(r) && this.matchesUrgency(r));
+  }
+
+  /** Count of search-matching pending rows in an urgency bucket (for the chips). */
+  urgencyCount(id: 'all' | 'overdue' | 'today' | 'upcoming'): number {
+    return this.pending.filter((r) => this.matchesSearch(r) && this.matchesUrgency(r, id)).length;
+  }
+
+  /** Booked rows after search + status filters. */
+  get filteredBooked(): any[] {
+    return this.booked.filter((s) =>
+      this.matchesSearch(s) && (!this.bookedStatus || s?.status === this.bookedStatus));
+  }
+
+  /** Distinct statuses present in the booked list, for the status dropdown. */
+  get bookedStatuses(): string[] {
+    return Array.from(new Set(this.booked.map((s) => String(s?.status ?? '')).filter(Boolean))).sort();
   }
 
   /** Carrier option label: "Aramex — 22.00 AED · 1-2 days". */
