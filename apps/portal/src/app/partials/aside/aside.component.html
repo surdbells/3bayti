@@ -184,6 +184,12 @@
                   [attr.aria-label]="n + ' new'">{{ n > 99 ? '99+' : n }}</span>
           </a>
         </li>
+        <li *axCan="'orders.view'">
+          <a routerLink="/admin/deliveries" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+            <app-icon name="local_shipping" aria-hidden="true"></app-icon>
+            <span class="ax-sidenav-link-label">Deliveries</span>
+          </a>
+        </li>
         <li *axCan="'returns.view'">
           <a routerLink="/admin/returns" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="assignment_return" aria-hidden="true"></app-icon>

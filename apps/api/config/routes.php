@@ -790,6 +790,8 @@ return function (App $app): void {
 
         // Admin orders surface (M3.1.7-D)
         $group->get('/orders', \Bayti\Api\Http\Controllers\Admin\Order\ListAdminOrdersController::class)->add($perm->for('orders.view'));
+        // Admin "Deliveries" queue: orders ready to push to the courier + booked shipments.
+        $group->get('/shipments', \Bayti\Api\Http\Controllers\Admin\Order\ListAdminShipmentsController::class)->add($perm->for('orders.view'));
         $group->get('/orders/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderController::class)->add($perm->for('orders.view_detail'));
         $group->patch('/orders/{id:[0-9]+}/status',
             \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderStatusController::class)->add($perm->for('orders.override_status'));

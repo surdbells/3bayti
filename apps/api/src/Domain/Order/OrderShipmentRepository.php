@@ -36,4 +36,21 @@ class OrderShipmentRepository extends EntityRepository
     {
         return $this->findOneBy(['providerOrderId' => $providerOrderId]);
     }
+
+    /**
+     * Most-recent shipments across all orders (admin deliveries queue).
+     * Fetch-joins order + vendor so shaping needs no extra queries.
+     *
+     * @return OrderShipment[]
+     */
+    public function findRecent(int $limit = 100): array
+    {
+        return $this->createQueryBuilder('s')
+            ->innerJoin('s.order', 'o')->addSelect('o')
+            ->innerJoin('s.vendor', 'v')->addSelect('v')
+            ->orderBy('s.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
 }

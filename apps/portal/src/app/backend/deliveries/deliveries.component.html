@@ -1,0 +1,86 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <span class="ax-page-header-eyebrow">Fulfilment</span>
+        <h1 class="ax-page-title">Deliveries</h1>
+      </div>
+      <div class="ax-flex ax-items-center ax-gap-2">
+        <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="load()">Refresh</button>
+      </div>
+    </header>
+
+    <div *ngIf="!loading && !enabled" class="ax-card ax-p-4 ax-mb-4">
+      <span class="ax-badge ax-badge-warning">Courier integration is off</span>
+      <p class="ax-text-sm ax-text-secondary ax-mt-2 ax-m-0">
+        Booking is disabled until OTO is configured (TRYOTO_ENABLED). You can still review the queue below.
+      </p>
+    </div>
+
+    <div *ngIf="loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg"></span>
+    </div>
+
+    <ng-container *ngIf="!loading">
+      <!-- Ready to book -->
+      <section class="ax-card ax-p-0 ax-mb-4">
+        <header class="ax-p-4"><h3 class="ax-h6 ax-m-0">Ready to book ({{ pending.length }})</h3></header>
+        <div class="ax-table-wrapper">
+          <table class="ax-table ax-table-hover">
+            <thead>
+              <tr><th>Order</th><th>Store</th><th>Ready items</th><th>Placed</th><th style="text-align:right;">Book</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of pending">
+                <td><a [routerLink]="['/admin/orders', r.order_id]">{{ r.order_reference }}</a></td>
+                <td>{{ r.vendor_name }}</td>
+                <td>{{ r.ready_count }}</td>
+                <td class="ax-text-sm ax-text-secondary">{{ r.created_at | date:'short' }}</td>
+                <td style="text-align:right; white-space:nowrap;">
+                  <select class="ax-input ax-input-sm ax-mb-1" style="min-width:12rem;"
+                          [(ngModel)]="carrierFor(r).chosen" (focus)="loadCarriers(r)">
+                    <option value="">Auto-assign (cheapest)</option>
+                    <option *ngFor="let o of carrierFor(r).options" [value]="o.id">
+                      {{ o.name }} — {{ o.price | number:'1.2-2' }} {{ o.currency }}
+                    </option>
+                  </select>
+                  <button type="button" class="ax-btn ax-btn-sm ax-btn-primary"
+                          [disabled]="!!booking" (click)="book(r)">
+                    {{ booking === key(r) ? 'Booking…' : 'Book delivery' }}
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="!pending.length">
+                <td colspan="5" class="ax-text-center ax-text-secondary ax-py-4">Nothing waiting to be booked.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Booked shipments -->
+      <section class="ax-card ax-p-0">
+        <header class="ax-p-4"><h3 class="ax-h6 ax-m-0">Booked shipments ({{ booked.length }})</h3></header>
+        <div class="ax-table-wrapper">
+          <table class="ax-table ax-table-hover">
+            <thead>
+              <tr><th>Order</th><th>Store</th><th>Status</th><th>Carrier</th><th>Tracking</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of booked">
+                <td><a [routerLink]="['/admin/orders', s.order_id]">{{ s.order_reference }}</a></td>
+                <td>{{ s.vendor_name }}</td>
+                <td><span class="ax-badge ax-badge-info">{{ prettyStatus(s.status) }}</span></td>
+                <td>{{ s.delivery_company || '—' }}</td>
+                <td class="ax-text-sm">{{ s.tracking_number || '—' }}</td>
+              </tr>
+              <tr *ngIf="!booked.length">
+                <td colspan="5" class="ax-text-center ax-text-secondary ax-py-4">No shipments booked yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+</app-admin-shell>

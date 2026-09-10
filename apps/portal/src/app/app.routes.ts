@@ -412,6 +412,12 @@ export const routes: Routes = [
     title: 'Orders & Sales'
   },
   {
+    path: 'admin/deliveries',
+    loadComponent: () => import('./backend/deliveries/deliveries.component').then(m => m.AdminDeliveriesComponent),
+    canActivate: [adminGuard, requirePermission('orders.view')],
+    title: 'Deliveries'
+  },
+  {
     path: 'admin/orders/:id',
     loadComponent: () => import('./backend/admin-view-order/admin-view-order.component').then(m => m.AdminViewOrderComponent),
     canActivate: [adminGuard, requirePermission('orders.view_detail')],

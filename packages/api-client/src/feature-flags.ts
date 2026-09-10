@@ -1764,6 +1764,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/orders': {
     target: 'new', oldPath: '/admin/common/get-store-orders', newPath: '/v3/admin/orders', shape: 'v3-envelope',
   },
+  // Admin deliveries queue (courier/OTO): pending bookings + booked shipments. v3-only.
+  'GET /admin/shipments': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/shipments', shape: 'v3-envelope',
+  },
   'GET /admin/orders/:id': {
     target: 'new', oldPath: '/admin/common/pluralById', newPath: '/v3/admin/orders/:id', shape: 'v3-envelope',
   },
