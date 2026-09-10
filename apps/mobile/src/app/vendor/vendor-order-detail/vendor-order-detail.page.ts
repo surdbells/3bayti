@@ -73,6 +73,13 @@ interface MeasurementPair {
   value: string;
 }
 
+/** A per-vendor courier shipment (OTO tracking) on the order. */
+interface Shipment {
+  status: string;
+  tracking_number: string | null;
+  delivery_company: string | null;
+}
+
 interface VendorOrder {
   id: number;
   order_reference: string;
@@ -81,6 +88,7 @@ interface VendorOrder {
   currency: string;
   date: string;
   items: VendorOrderItem[];
+  shipments: Shipment[];
 }
 
 @Component({
@@ -111,6 +119,7 @@ export class VendorOrderDetailPage implements OnInit {
   ui_controls = {
     is_loading: false,
     is_transitioning: false,
+    is_booking: false,
   };
 
   private token = '';
@@ -182,6 +191,7 @@ export class VendorOrderDetailPage implements OnInit {
                 currency: o.currency,
                 date: o.date,
                 items,
+                shipments: Array.isArray(o.shipments) ? o.shipments : [],
               };
             } else {
               this.toast.error(this.i18n.t('vendor_order_not_found'));
@@ -254,6 +264,67 @@ export class VendorOrderDetailPage implements OnInit {
   }
   canMarkDelivered(item: VendorOrderItem): boolean {
     return item.item_status === 'shipped';
+  }
+
+  // ── Courier delivery (OTO) ───────────────────────────────────────────
+  /** This store's courier shipment on the order (if booked). */
+  get shipment(): Shipment | null {
+    const s = this.order?.shipments ?? [];
+    return s.length ? s[0] : null;
+  }
+
+  /** Count of this store's items ready to ship (accepted/preparing). */
+  get readyCount(): number {
+    return (this.order?.items ?? []).filter(
+      (it) => it.item_status === 'accepted' || it.item_status === 'preparing',
+    ).length;
+  }
+
+  prettyShipmentStatus(s: string): string {
+    return String(s ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  async bookDelivery() {
+    if (this.ui_controls.is_booking || !this.readyCount) return;
+    const sheet = await this.actionSheetCtrl.create({
+      header: this.i18n.t('ship_book_delivery'),
+      subHeader: this.i18n.t('ship_book_delivery_confirm', { count: String(this.readyCount) }),
+      buttons: [
+        {
+          text: this.i18n.t('vendor_order_confirm'),
+          handler: () => { this.executeBooking(); return true; },
+        },
+        { text: this.i18n.t('cancel'), role: 'cancel' },
+      ],
+    });
+    await sheet.present();
+  }
+
+  private executeBooking() {
+    if (this.ui_controls.is_booking) return;
+    this.ui_controls.is_booking = true;
+    this.mobileAdapter
+      .post_v3('POST /vendor/orders/:orderId/ship', {}, {
+        authToken: this.token,
+        pathParams: { orderId: String(this.orderId) },
+      })
+      .subscribe({
+        next: (response: any) => {
+          this.ui_controls.is_booking = false;
+          // The mobile adapter surfaces API 4xx on the success channel, so a
+          // 422 (no items / incomplete pickup) arrives here with the message.
+          if ((response.response_code === 200 || response.response_code === 201) && response.status === 'success') {
+            this.toast.success(this.i18n.t('ship_booked'));
+            this.loadOrder();
+          } else {
+            this.toast.error(response.message || this.i18n.t('ship_book_failed'));
+          }
+        },
+        error: (err: any) => {
+          this.ui_controls.is_booking = false;
+          this.toast.error(apiErrorMessage(err, this.i18n.t('ship_book_failed')));
+        },
+      });
   }
 
   async confirmTransition(item: VendorOrderItem, newStatus: string, labelKey: string) {

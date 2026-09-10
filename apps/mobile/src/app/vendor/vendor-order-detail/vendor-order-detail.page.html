@@ -137,6 +137,31 @@
       </ion-card>
     }
 
+    <!-- Courier delivery (OTO) -->
+    @if (order.items.length) {
+      <h3 class="section-heading">{{ 'ship_delivery' | translate }}</h3>
+      <ion-card class="item-card">
+        <div class="item-fulfil">
+          @if (shipment) {
+            <span class="item-fulfil-measure" style="font-weight:600;">{{ prettyShipmentStatus(shipment.status) }}</span>
+            @if (shipment.delivery_company) {
+              <div class="item-fulfil-measure">{{ shipment.delivery_company }}</div>
+            }
+            @if (shipment.tracking_number) {
+              <div class="item-fulfil-measure">{{ 'ship_tracking' | translate }}: {{ shipment.tracking_number }}</div>
+            }
+          } @else {
+            <p class="item-fulfil-note-text" style="margin-bottom:10px;">{{ 'ship_book_hint' | translate }}</p>
+            <ion-button expand="block" size="small"
+                        [disabled]="!readyCount || ui_controls.is_booking"
+                        (click)="bookDelivery()">
+              @if (ui_controls.is_booking) { <ax-loader></ax-loader> } @else { {{ 'ship_book_delivery' | translate }} }
+            </ion-button>
+          }
+        </div>
+      </ion-card>
+    }
+
     @if (order.items.length === 0) {
       <div class="empty-state">
         <h3>{{ 'heading_no_items' | translate }}</h3>
