@@ -54,6 +54,8 @@ final class OtoPickupLocationTest extends TestCase
             'country' => 'ae',
             'type' => 'branch',
             'postcode' => '00000',
+            'lat' => 25.2048,
+            'lon' => 55.2708,
         ];
     }
 
@@ -88,6 +90,25 @@ final class OtoPickupLocationTest extends TestCase
         self::assertSame('branch', $sent['type']);
         self::assertSame('active', $sent['status']);
         self::assertSame('00000', $sent['postcode']);
+        self::assertSame(25.2048, $sent['lat']);   // geo pin from Google Places
+        self::assertSame(55.2708, $sent['lon']);
+    }
+
+    #[Test]
+    public function omitsTheGeoPinWhenCoordinatesAreMissing(): void
+    {
+        $provider = $this->provider([
+            new Response(200, [], (string) json_encode(['access_token' => 'a'])),
+            new Response(200, [], (string) json_encode(['success' => true, 'pickupLocationCode' => 'x'])),
+        ]);
+
+        $input = $this->input();
+        unset($input['lat'], $input['lon']);
+        $provider->createPickupLocation($input);
+
+        $sent = json_decode((string) $this->history[1]['request']->getBody(), true);
+        self::assertArrayNotHasKey('lat', $sent);
+        self::assertArrayNotHasKey('lon', $sent);
     }
 
     #[Test]

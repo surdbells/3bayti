@@ -156,6 +156,13 @@ final class OtoShippingProvider implements ShippingProviderInterface
         if ($postcode !== null) {
             $payload['postcode'] = $postcode;
         }
+        // Geo pin (from Google Places) improves OTO's courier auto-assignment.
+        $lat = $this->num($input['lat'] ?? null);
+        $lon = $this->num($input['lon'] ?? null);
+        if ($lat !== null && $lon !== null) {
+            $payload['lat'] = $lat;
+            $payload['lon'] = $lon;
+        }
 
         // Propagates ShippingException (auth/transport/soft-failure) to the caller,
         // which maps it to an HTTP status — the admin must know if the create failed.
@@ -211,5 +218,17 @@ final class OtoShippingProvider implements ShippingProviderInterface
             return null;
         }
         return (string) $v;
+    }
+
+    /** Numeric coercion for geo coordinates; null for empty/non-numeric input. */
+    private function num(mixed $v): ?float
+    {
+        if (is_int($v) || is_float($v)) {
+            return (float) $v;
+        }
+        if (is_string($v) && is_numeric(trim($v))) {
+            return (float) trim($v);
+        }
+        return null;
     }
 }

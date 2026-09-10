@@ -275,7 +275,14 @@
                         </label>
                         <label class="ax-form-field ax-mb-0 dr-newloc-wide">
                           <span class="ax-label ax-text-xs">Address *</span>
-                          <input class="ax-input ax-input-sm" [(ngModel)]="newPickup.address" name="np_address" />
+                          <app-ax-place-autocomplete
+                            name="np_address"
+                            [maxlength]="255"
+                            [preferFormatted]="true"
+                            placeholder="Search the pickup address"
+                            [(ngModel)]="newPickup.address"
+                            (placeSelected)="onPickupPlace($event)"></app-ax-place-autocomplete>
+                          <span class="ax-text-2xs ax-text-secondary">Start typing to pick from Google — fills city, postcode &amp; map pin.</span>
                         </label>
                         <label class="ax-form-field ax-mb-0">
                           <span class="ax-label ax-text-xs">Country</span>

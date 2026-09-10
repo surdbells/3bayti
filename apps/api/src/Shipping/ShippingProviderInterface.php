@@ -70,7 +70,8 @@ interface ShippingProviderInterface
      * @param array{
      *     code: string, name: string, contact_name: string, contact_email: string,
      *     phone: string, address: string, city: string,
-     *     country?: string, type?: string, postcode?: string|null
+     *     country?: string, type?: string, postcode?: string|null,
+     *     lat?: float|string|null, lon?: float|string|null
      * } $input
      * @return array{code: string, name: string, city: string|null}
      * @throws ShippingException

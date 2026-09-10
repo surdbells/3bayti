@@ -17,6 +17,8 @@ import { AxTabsComponent, AxTabComponent, AxConfirmService } from '../../../shar
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { AxComboboxComponent, AxComboboxOption } from '../../../shared/forms/ax-combobox.component';
+import { AxPlaceAutocompleteComponent } from '../../../shared/forms/ax-place-autocomplete.component';
+import type { PlaceDetails } from '../../../core/places/places.service';
 import { AxCanDirective } from '../../../shared/security/ax-can.directive';
 import { ImpersonationService } from '../../../services/impersonation.service';
 import { apiErrorMessage } from '../../../shared/http/api-error';
@@ -30,7 +32,7 @@ import { apiErrorMessage } from '../../../shared/http/api-error';
     AccountSetupComponent,
     AxRichEditorComponent,
     AxTabsComponent,
-    AxTabComponent, IconComponent, AxComboboxComponent, AxCanDirective],
+    AxTabComponent, IconComponent, AxComboboxComponent, AxPlaceAutocompleteComponent, AxCanDirective],
   templateUrl: './manage-store.component.html',
   styleUrl: './manage-store.component.css',
 })
@@ -177,7 +179,26 @@ export class ManageStoreComponent implements OnInit {
       code: '', name: '', contact_name: '', contact_email: '',
       phone: '', address: '', city: '', country: 'AE',
       type: 'warehouse', postcode: '',
+      lat: null as number | null, lon: null as number | null,
     };
+  }
+
+  /**
+   * Google Places selection for the pickup address: set the full formatted
+   * address and back-fill city / postcode / geo pin (as the OTO dashboard
+   * does), without clobbering values the admin already typed.
+   */
+  onPickupPlace(place: PlaceDetails): void {
+    if (!place) return;
+    if (place.formattedAddress) this.newPickup.address = place.formattedAddress;
+    if (place.city && !this.newPickup.city.trim()) this.newPickup.city = place.city;
+    if (place.postalCode && !this.newPickup.postcode.trim()) this.newPickup.postcode = place.postalCode;
+    const loc = place.location;
+    if (loc && Number.isFinite(loc.latitude) && Number.isFinite(loc.longitude)
+        && (loc.latitude !== 0 || loc.longitude !== 0)) {
+      this.newPickup.lat = loc.latitude;
+      this.newPickup.lon = loc.longitude;
+    }
   }
 
   /** Open the inline create panel, pre-filling from the store's known details. */
@@ -226,6 +247,7 @@ export class ManageStoreComponent implements OnInit {
       country: (p.country || 'AE').trim(), type: p.type || 'warehouse',
     };
     if (p.postcode?.trim()) body.postcode = p.postcode.trim();
+    if (p.lat != null && p.lon != null) { body.lat = p.lat; body.lon = p.lon; }
 
     this.adapter.post_v3('POST /admin/shipping/pickup-locations', body).subscribe({
       next: (res: any) => {

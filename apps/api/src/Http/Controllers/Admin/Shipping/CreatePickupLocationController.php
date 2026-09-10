@@ -81,6 +81,8 @@ final class CreatePickupLocationController
         $country = isset($body['country']) && is_scalar($body['country']) ? trim((string) $body['country']) : '';
         $type = isset($body['type']) && is_scalar($body['type']) ? trim((string) $body['type']) : '';
         $postcode = isset($body['postcode']) && is_scalar($body['postcode']) ? trim((string) $body['postcode']) : '';
+        $lat = isset($body['lat']) && is_numeric($body['lat']) ? (float) $body['lat'] : null;
+        $lon = isset($body['lon']) && is_numeric($body['lon']) ? (float) $body['lon'] : null;
 
         try {
             $location = $this->provider->createPickupLocation([
@@ -94,6 +96,8 @@ final class CreatePickupLocationController
                 'country' => $country !== '' ? $country : 'AE',
                 'type' => $type,
                 'postcode' => $postcode !== '' ? $postcode : null,
+                'lat' => $lat,
+                'lon' => $lon,
             ]);
         } catch (ShippingException $e) {
             throw new HttpException(
