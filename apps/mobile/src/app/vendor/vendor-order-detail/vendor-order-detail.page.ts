@@ -286,25 +286,52 @@ export class VendorOrderDetailPage implements OnInit {
 
   async bookDelivery() {
     if (this.ui_controls.is_booking || !this.readyCount) return;
+    // Fetch available carriers so the vendor can pick one (or auto-assign).
+    const options = await this.fetchDeliveryOptions();
+    const buttons: any[] = [
+      { text: this.i18n.t('ship_auto_assign'), handler: () => { this.executeBooking(''); return true; } },
+    ];
+    for (const o of options) {
+      buttons.push({
+        text: `${o.name} — ${o.price} ${o.currency}`,
+        handler: () => { this.executeBooking(String(o.id)); return true; },
+      });
+    }
+    buttons.push({ text: this.i18n.t('cancel'), role: 'cancel' });
+
     const sheet = await this.actionSheetCtrl.create({
       header: this.i18n.t('ship_book_delivery'),
       subHeader: this.i18n.t('ship_book_delivery_confirm', { count: String(this.readyCount) }),
-      buttons: [
-        {
-          text: this.i18n.t('vendor_order_confirm'),
-          handler: () => { this.executeBooking(); return true; },
-        },
-        { text: this.i18n.t('cancel'), role: 'cancel' },
-      ],
+      buttons,
     });
     await sheet.present();
   }
 
-  private executeBooking() {
+  /** Fetch this store's carrier options (name + price); [] on any failure. */
+  private fetchDeliveryOptions(): Promise<any[]> {
+    return new Promise((resolve) => {
+      this.mobileAdapter
+        .get_v3('GET /vendor/orders/:orderId/delivery-options', {
+          authToken: this.token,
+          pathParams: { orderId: String(this.orderId) },
+        })
+        .subscribe({
+          next: (res: any) => {
+            const data = res?.data ?? res ?? {};
+            const stores = Array.isArray(data.stores) ? data.stores : [];
+            resolve(stores[0]?.options ?? data.options ?? []);
+          },
+          error: () => resolve([]),
+        });
+    });
+  }
+
+  private executeBooking(optionId: string) {
     if (this.ui_controls.is_booking) return;
     this.ui_controls.is_booking = true;
+    const body = optionId ? { delivery_option_id: optionId } : {};
     this.mobileAdapter
-      .post_v3('POST /vendor/orders/:orderId/ship', {}, {
+      .post_v3('POST /vendor/orders/:orderId/ship', body, {
         authToken: this.token,
         pathParams: { orderId: String(this.orderId) },
       })

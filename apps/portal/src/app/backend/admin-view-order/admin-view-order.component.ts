@@ -1,5 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
@@ -14,7 +15,7 @@ import { apiErrorMessage } from '../../shared/http/api-error';
 @Component({
   selector: 'app-admin-view-order',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, IconComponent, RouterLink, AxCanDirective],
+  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent, RouterLink, AxCanDirective],
   templateUrl: './admin-view-order.component.html',
   styleUrl: './admin-view-order.component.css',
 })
@@ -170,10 +171,42 @@ export class AdminViewOrderComponent implements OnInit {
     return Array.from(byVendor.values());
   }
 
+  /** Per-store carrier-picker state, keyed by vendor id. */
+  carrier: Record<number, { loading: boolean; loaded: boolean; options: any[]; chosen: string }> = {};
+
+  carrierFor(vid: number): { loading: boolean; loaded: boolean; options: any[]; chosen: string } {
+    if (!this.carrier[vid]) {
+      this.carrier[vid] = { loading: false, loaded: false, options: [], chosen: '' };
+    }
+    return this.carrier[vid];
+  }
+
+  /** Fetch the available carriers (name + price) for a store's shipment. */
+  loadCarriers(vid: number): void {
+    const c = this.carrierFor(vid);
+    if (c.loaded || c.loading) return;
+    c.loading = true;
+    this.adapter
+      .get_v3('GET /admin/orders/:orderId/vendors/:vendorId/delivery-options', {
+        params: { orderId: String(this.single.order), vendorId: String(vid) },
+      })
+      .subscribe({
+        next: (res: any) => {
+          const data = res?.data ?? res ?? {};
+          c.options = Array.isArray(data.options) ? data.options : [];
+          c.loaded = true;
+          c.loading = false;
+        },
+        error: () => { c.loading = false; c.loaded = true; },
+      });
+  }
+
   /** Book courier delivery for one store's ready items on this order. */
   bookDelivery(group: any): void {
     if (this.ui_controls.booking) return;
     const orderId = this.single.order;
+    const chosen = this.carrier[group.vendor_id]?.chosen || '';
+    const body = chosen ? { delivery_option_id: chosen } : {};
     this.confirm
       .confirm({
         title: 'Book delivery',
@@ -187,7 +220,7 @@ export class AdminViewOrderComponent implements OnInit {
         if (!ok) return;
         this.ui_controls.booking = String(group.vendor_id);
         this.adapter
-          .post_v3('POST /admin/orders/:orderId/vendors/:vendorId/ship', {}, {
+          .post_v3('POST /admin/orders/:orderId/vendors/:vendorId/ship', body, {
             params: { orderId: String(orderId), vendorId: String(group.vendor_id) },
           })
           .subscribe({

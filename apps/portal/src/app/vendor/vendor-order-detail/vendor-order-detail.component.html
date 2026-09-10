@@ -96,6 +96,13 @@
           </div>
           <ng-template #bookRow>
             <p class="ax-text-sm ax-text-secondary ax-mb-2">Book a courier to collect this order from your store.</p>
+            <select *ngIf="readyCount" class="ax-input ax-input-sm ax-mb-2" style="max-width: 16rem;"
+                    [(ngModel)]="carrier.chosen" (focus)="loadCarriers()">
+              <option value="">Auto-assign (cheapest)</option>
+              <option *ngFor="let o of carrier.options" [value]="o.id">
+                {{ o.name }} — {{ o.price | number:'1.2-2' }} {{ o.currency }}
+              </option>
+            </select>
             <button type="button" class="ax-btn ax-btn-sm ax-btn-primary"
                     [disabled]="!readyCount || booking()"
                     [title]="!readyCount ? 'No items ready to ship — accept/prepare them first' : ''"

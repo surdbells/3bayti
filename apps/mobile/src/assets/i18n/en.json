@@ -964,6 +964,7 @@
   "ship_tracking": "Tracking",
   "ship_book_hint": "Book a courier to collect this order from your store.",
   "ship_book_delivery": "Book delivery",
+  "ship_auto_assign": "Auto-assign (cheapest)",
   "ship_book_delivery_confirm": "Book a courier for {{count}} ready item(s)?",
   "ship_booked": "Delivery booked.",
   "ship_book_failed": "Could not book delivery.",

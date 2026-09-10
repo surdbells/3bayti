@@ -956,6 +956,7 @@
   "ship_tracking": "التتبع",
   "ship_book_hint": "احجزي مندوب شحن لاستلام هذا الطلب من متجرك.",
   "ship_book_delivery": "حجز التوصيل",
+  "ship_auto_assign": "تعيين تلقائي (الأرخص)",
   "ship_book_delivery_confirm": "حجز مندوب شحن لعدد {{count}} من العناصر الجاهزة؟",
   "ship_booked": "تم حجز التوصيل.",
   "ship_book_failed": "تعذّر حجز التوصيل.",

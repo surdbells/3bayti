@@ -119,6 +119,10 @@ export class VendorOrderDetailComponent implements OnInit {
   readonly busy = signal(false);
   readonly order = signal<OrderDetail | null>(null);
   readonly booking = signal(false);
+  /** Carrier-picker state for this order's shipment. */
+  carrier: { loading: boolean; loaded: boolean; options: any[]; chosen: string } = {
+    loading: false, loaded: false, options: [], chosen: '',
+  };
   readonly timeline = signal<TimelineEntry[]>([]);
   /** The line item shown in the product detail modal (null = closed). */
   readonly selectedItem = signal<OrderItem | null>(null);
@@ -158,6 +162,25 @@ export class VendorOrderDetailComponent implements OnInit {
     return String(s ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
+  /** Fetch available carriers (name + price) for this store's shipment. */
+  loadCarriers(): void {
+    if (this.carrier.loaded || this.carrier.loading) return;
+    this.carrier.loading = true;
+    this.adapter
+      .get_v3('GET /vendor/orders/:orderId/delivery-options', { params: { orderId: String(this.orderId) } })
+      .subscribe({
+        next: (res: any) => {
+          const data = res?.data ?? res ?? {};
+          // Vendor endpoint returns { enabled, stores: [{ vendor_id, options }] }.
+          const stores = Array.isArray(data.stores) ? data.stores : [];
+          this.carrier.options = stores[0]?.options ?? data.options ?? [];
+          this.carrier.loaded = true;
+          this.carrier.loading = false;
+        },
+        error: () => { this.carrier.loading = false; this.carrier.loaded = true; },
+      });
+  }
+
   bookDelivery(): void {
     if (this.booking()) return;
     this.confirm
@@ -173,7 +196,11 @@ export class VendorOrderDetailComponent implements OnInit {
         if (!ok) return;
         this.booking.set(true);
         this.adapter
-          .post_v3('POST /vendor/orders/:orderId/ship', {}, { params: { orderId: String(this.orderId) } })
+          .post_v3(
+            'POST /vendor/orders/:orderId/ship',
+            this.carrier.chosen ? { delivery_option_id: this.carrier.chosen } : {},
+            { params: { orderId: String(this.orderId) } },
+          )
           .subscribe({
             next: () => {
               this.booking.set(false);

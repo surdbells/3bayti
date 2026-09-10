@@ -284,12 +284,24 @@
                   <div *ngIf="g.shipment.tracking_number" class="ax-text-2xs ax-text-secondary">Tracking: {{ g.shipment.tracking_number }}</div>
                 </ng-container>
                 <ng-template #bookBtn>
-                  <button type="button" class="ax-btn ax-btn-sm ax-btn-primary"
-                          [disabled]="!g.ready_count || !!ui_controls.booking"
-                          [title]="!g.ready_count ? 'No items ready to ship — accept/prepare them first' : ''"
-                          (click)="bookDelivery(g)">
-                    {{ ui_controls.booking === (g.vendor_id + '') ? 'Booking…' : 'Book delivery' }}
-                  </button>
+                  <ng-container *ngIf="g.ready_count; else notReady">
+                    <select class="ax-input ax-input-sm ax-mb-2" style="min-width: 13rem;"
+                            [(ngModel)]="carrierFor(g.vendor_id).chosen"
+                            (focus)="loadCarriers(g.vendor_id)">
+                      <option value="">Auto-assign (cheapest)</option>
+                      <option *ngFor="let o of carrierFor(g.vendor_id).options" [value]="o.id">
+                        {{ o.name }} — {{ o.price | number:'1.2-2' }} {{ o.currency }}
+                      </option>
+                    </select>
+                    <button type="button" class="ax-btn ax-btn-sm ax-btn-primary"
+                            [disabled]="!!ui_controls.booking"
+                            (click)="bookDelivery(g)">
+                      {{ ui_controls.booking === (g.vendor_id + '') ? 'Booking…' : 'Book delivery' }}
+                    </button>
+                  </ng-container>
+                  <ng-template #notReady>
+                    <span class="ax-text-2xs ax-text-tertiary">No items ready to ship yet</span>
+                  </ng-template>
                 </ng-template>
               </div>
             </div>
