@@ -82,9 +82,26 @@
               <tr *ngFor="let s of booked">
                 <td><a [routerLink]="['/admin/orders', s.order_id]">{{ s.order_reference }}</a></td>
                 <td>{{ s.vendor_name }}</td>
-                <td><span class="ax-badge ax-badge-info">{{ prettyStatus(s.status) }}</span></td>
+                <td>
+                  <span class="ax-badge ax-badge-info">{{ prettyStatus(s.status) }}</span>
+                  <div *ngIf="s.updated_at" class="ax-text-2xs ax-text-secondary ax-mt-1">
+                    {{ s.updated_at | date:'MMM d, h:mm a' }}
+                  </div>
+                </td>
                 <td>{{ s.delivery_company || '—' }}</td>
-                <td class="ax-text-sm">{{ s.tracking_number || '—' }}</td>
+                <td class="ax-text-sm">
+                  <ng-container *ngIf="s.tracking_number || s.dc_tracking_number; else awaiting">
+                    <div style="font-weight:600; white-space:nowrap;">
+                      {{ s.tracking_number || s.dc_tracking_number }}
+                    </div>
+                    <div *ngIf="s.dc_tracking_number && s.dc_tracking_number !== s.tracking_number"
+                         class="ax-text-2xs ax-text-secondary">DC: {{ s.dc_tracking_number }}</div>
+                  </ng-container>
+                  <ng-template #awaiting>
+                    <span class="ax-text-secondary">Awaiting tracking</span>
+                  </ng-template>
+                  <div *ngIf="s.provider_order_id" class="ax-text-2xs ax-text-secondary">OTO: {{ s.provider_order_id }}</div>
+                </td>
               </tr>
               <tr *ngIf="!booked.length">
                 <td colspan="5" class="ax-text-center ax-text-secondary ax-py-4">No shipments booked yet.</td>
