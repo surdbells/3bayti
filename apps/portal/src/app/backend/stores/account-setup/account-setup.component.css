@@ -1,6 +1,6 @@
 /* Component-scoped field card for the account-setup progress view. */
 .ax-field-card {
-  padding: var(--ax-space-3);
+  padding: var(--ax-space-2);
   border: 1px solid var(--ax-color-border-subtle);
   border-radius: var(--ax-radius-md);
   background: var(--ax-color-bg-surface);

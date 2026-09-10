@@ -80,6 +80,14 @@ export class ManageStoreComponent implements OnInit {
    *  the courier integration is live; then this store falls back to a text field). */
   pickupLocationOptions: AxComboboxOption[] = [];
 
+  /** Whether the OTO courier integration is live — gates inline location create. */
+  pickupIntegrationEnabled = false;
+
+  /** Inline "create a new OTO pickup location" panel state. */
+  showNewPickup = false;
+  creatingPickup = false;
+  newPickup = this.blankPickup();
+
   /** Vendor email-notification language options. */
   readonly localeOptions: AxComboboxOption[] = [
     { id: 'en', label: 'English' },
@@ -140,15 +148,19 @@ export class ManageStoreComponent implements OnInit {
     this.adapter.get_v3('GET /admin/shipping/pickup-locations').subscribe({
       next: (res: any) => {
         const data = res?.data ?? res ?? {};
+        this.pickupIntegrationEnabled = !!data.enabled;
         const locs = Array.isArray(data.locations) ? data.locations : [];
-        this.pickupLocationOptions = locs.map((l: any) => ({
-          id: String(l.code),
-          label: `${l.name || l.code}${l.city ? ' — ' + l.city : ''} (${l.code})`,
-        }));
+        this.pickupLocationOptions = locs.map((l: any) => this.pickupOption(l.code, l.name, l.city));
         this.ensureCurrentPickupOption();
       },
       error: () => { /* leave options empty → text-field fallback */ },
     });
+  }
+
+  /** Build a combobox option for a pickup location (code + name + city). */
+  private pickupOption(code: any, name?: any, city?: any): AxComboboxOption {
+    const c = String(code);
+    return { id: c, label: `${name || c}${city ? ' — ' + city : ''} (${c})` };
   }
 
   /** Keep the store's saved code selectable even if it isn't in the fetched list. */
@@ -157,6 +169,85 @@ export class ManageStoreComponent implements OnInit {
     if (code && !this.pickupLocationOptions.some((o) => o.id === code)) {
       this.pickupLocationOptions = [{ id: code, label: code }, ...this.pickupLocationOptions];
     }
+  }
+
+  /** A blank new-pickup-location form model. */
+  private blankPickup() {
+    return {
+      code: '', name: '', contact_name: '', contact_email: '',
+      phone: '', address: '', city: '', country: 'AE',
+      type: 'warehouse', postcode: '',
+    };
+  }
+
+  /** Open the inline create panel, pre-filling from the store's known details. */
+  openNewPickup(): void {
+    const slug = String(this.store.store_name ?? '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 24);
+    const owner = `${this.store.first_name ?? ''} ${this.store.last_name ?? ''}`.trim();
+    this.newPickup = {
+      ...this.blankPickup(),
+      code: slug ? `${slug}-${this.storeId}` : '',
+      name: this.store.store_name || '',
+      contact_name: owner,
+      contact_email: this.store.store_email || this.store.email || '',
+      phone: this.store.store_phone || '',
+      address: this.store.store_address || '',
+      city: this.store.emirate || '',
+      // OTO needs an ISO2 country code; store.country is a free-text name
+      // ("United Arab Emirates"), so keep the ISO2 default (UAE-only platform).
+      country: 'AE',
+    };
+    this.showNewPickup = true;
+  }
+
+  cancelNewPickup(): void {
+    this.showNewPickup = false;
+  }
+
+  /**
+   * Create a brand-new pickup/sender location directly in OTO (when the store's
+   * location isn't already registered) and auto-select it for this vendor. The
+   * admin then Saves changes to persist the mapping.
+   */
+  createPickupLocation(): void {
+    if (this.creatingPickup) return;
+    const p = this.newPickup;
+    const required: (keyof typeof p)[] = ['code', 'name', 'contact_name', 'contact_email', 'phone', 'address', 'city'];
+    if (required.some((f) => !String(p[f] ?? '').trim())) {
+      this.toast.error('Please fill every required location field.');
+      return;
+    }
+    this.creatingPickup = true;
+    const body: any = {
+      code: p.code.trim(), name: p.name.trim(),
+      contact_name: p.contact_name.trim(), contact_email: p.contact_email.trim(),
+      phone: p.phone.trim(), address: p.address.trim(), city: p.city.trim(),
+      country: (p.country || 'AE').trim(), type: p.type || 'warehouse',
+    };
+    if (p.postcode?.trim()) body.postcode = p.postcode.trim();
+
+    this.adapter.post_v3('POST /admin/shipping/pickup-locations', body).subscribe({
+      next: (res: any) => {
+        this.creatingPickup = false;
+        const loc = res?.data?.location ?? res?.location ?? null;
+        const code = loc?.code ? String(loc.code) : '';
+        if (!code) { this.toast.error('OTO did not return a location code.'); return; }
+        // Add to the dropdown (dedupe) and auto-select for the vendor.
+        this.pickupLocationOptions = [
+          this.pickupOption(code, loc.name, loc.city),
+          ...this.pickupLocationOptions.filter((o) => o.id !== code),
+        ];
+        this.store.pickup_location_code = code;
+        this.showNewPickup = false;
+        this.newPickup = this.blankPickup();
+        this.toast.success('Location created in OTO and selected — click “Save changes” to apply.');
+      },
+      error: (err: any) => {
+        this.creatingPickup = false;
+        this.toast.error(apiErrorMessage(err, 'Could not create the pickup location in OTO.'));
+      },
+    });
   }
 
   goBack() {

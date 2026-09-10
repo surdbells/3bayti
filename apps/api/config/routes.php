@@ -796,6 +796,8 @@ return function (App $app): void {
         $group->get('/delivery-readiness', \Bayti\Api\Http\Controllers\Admin\Order\ListDeliveryReadinessController::class)->add($perm->for('orders.view'));
         // OTO registered pickup/sender locations, for the vendor pickup-code dropdown.
         $group->get('/shipping/pickup-locations', \Bayti\Api\Http\Controllers\Admin\Shipping\ListPickupLocationsController::class)->add($perm->for('vendors.edit'));
+        // Create a new OTO pickup/sender location inline (add-and-select on Manage store).
+        $group->post('/shipping/pickup-locations', \Bayti\Api\Http\Controllers\Admin\Shipping\CreatePickupLocationController::class)->add($perm->for('vendors.edit'));
         $group->get('/orders/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderController::class)->add($perm->for('orders.view_detail'));
         $group->patch('/orders/{id:[0-9]+}/status',
             \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderStatusController::class)->add($perm->for('orders.override_status'));

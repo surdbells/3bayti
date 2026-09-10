@@ -151,6 +151,29 @@ final class VendorSerializer
             // Customer-facing delivery lead-time range ("X-Y days").
             'min_delivery_days' => $v->getMinDeliveryDays(),
             'max_delivery_days' => $v->getMaxDeliveryDays(),
+            // Commercial + visibility controls (admin-editable on this screen).
+            // Present here so the editor PRE-FILLS them on load — the same PUT
+            // /admin/vendors/{id} persists them.
+            'commission_rate' => $v->getCommissionRate(),
+            'is_featured' => $v->isFeatured(),
+            'is_verified' => $v->isVerified(),
+            'preferred_locale' => $v->getPreferredLocale(),
+            // Courier (OTO) pickup/sender mapping. location_code maps the store
+            // to its OTO sender location; is_complete gates delivery booking.
+            // Mirrors adminShape so the pickup dropdown pre-fills on refresh.
+            'pickup' => [
+                'contact_name' => $v->getPickupContactName(),
+                'phone' => $v->getPickupPhone(),
+                'city' => $v->getPickupCity(),
+                'area' => $v->getPickupArea(),
+                'street' => $v->getPickupStreet(),
+                'building_no' => $v->getPickupBuildingNo(),
+                'postcode' => $v->getPickupPostcode(),
+                'lat' => $v->getPickupLat(),
+                'lon' => $v->getPickupLon(),
+                'location_code' => $v->getPickupLocationCode(),
+                'is_complete' => $v->pickupAddressIsComplete(),
+            ],
             // Legal / tax registration.
             'store_legal_name' => $v->getLegalName(),
             'vat_status' => $v->getVatStatus(),

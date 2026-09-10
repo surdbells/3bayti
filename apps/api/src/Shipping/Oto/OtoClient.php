@@ -36,6 +36,7 @@ final class OtoClient
     private const CREATE_ORDER_PATH = '/rest/v2/createOrder';
     private const DELIVERY_FEES_PATH = '/rest/v2/checkOTODeliveryFees';
     private const PICKUP_LOCATIONS_PATH = '/rest/v2/getPickupLocationList';
+    private const CREATE_PICKUP_LOCATION_PATH = '/rest/v2/createPickupLocation';
 
     private ?string $cachedAccessToken = null;
 
@@ -94,6 +95,27 @@ final class OtoClient
     public function listPickupLocations(): array
     {
         return $this->authedGet(self::PICKUP_LOCATIONS_PATH, ['status' => 'active']);
+    }
+
+    /**
+     * Register a new pickup/sender location in the OTO portal. Returns the
+     * decoded response, e.g.
+     * { success: true, pickupLocationCode: "code-01", warhouseId: "123" }.
+     * Soft failure (success:false) is surfaced as a transport error.
+     *
+     * @param array<string, mixed> $body
+     * @return array<string, mixed>
+     */
+    public function createPickupLocation(array $body): array
+    {
+        $decoded = $this->authedPost(self::CREATE_PICKUP_LOCATION_PATH, $body);
+
+        if (($decoded['success'] ?? null) === false) {
+            $msg = (string) ($decoded['message'] ?? 'OTO createPickupLocation rejected the request.');
+            throw new ShippingException(ShippingException::KIND_TRANSPORT, "OTO: {$msg}");
+        }
+
+        return $decoded;
     }
 
     /**

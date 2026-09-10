@@ -60,4 +60,20 @@ interface ShippingProviderInterface
      * @return list<array{code: string, name: string, city: string|null}>
      */
     public function listPickupLocations(): array;
+
+    /**
+     * Register a NEW pickup/sender location with the provider (so an admin can
+     * add a store's location inline when it isn't already in the OTO portal) and
+     * return the created location for immediate selection. Throws when the
+     * provider is disabled or the create is rejected.
+     *
+     * @param array{
+     *     code: string, name: string, contact_name: string, contact_email: string,
+     *     phone: string, address: string, city: string,
+     *     country?: string, type?: string, postcode?: string|null
+     * } $input
+     * @return array{code: string, name: string, city: string|null}
+     * @throws ShippingException
+     */
+    public function createPickupLocation(array $input): array;
 }

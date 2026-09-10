@@ -38,4 +38,9 @@ final class NullShippingProvider implements ShippingProviderInterface
     {
         return [];
     }
+
+    public function createPickupLocation(array $input): array
+    {
+        throw ShippingException::notConfigured();
+    }
 }

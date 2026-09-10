@@ -132,3 +132,15 @@
   background: #fff;
   border-radius: var(--ax-radius-sm);
 }
+
+/* Inline "create OTO pickup location" form */
+.dr-newloc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 0.75rem;
+}
+.dr-newloc-grid .ax-label { margin-bottom: 2px; }
+.dr-newloc-wide { grid-column: 1 / -1; }
+@media (max-width: 560px) {
+  .dr-newloc-grid { grid-template-columns: 1fr; }
+}

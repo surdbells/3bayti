@@ -231,6 +231,79 @@
                     vendor doesn't need to fill a pickup address. The searchable dropdown lists your OTO
                     locations once the courier integration is live; until then, paste the code.
                   </small>
+
+                  <!-- Inline create: add a location straight to OTO when it isn't listed -->
+                  <ng-container *axCan="'vendors.edit'">
+                  <div *ngIf="pickupIntegrationEnabled" class="ax-mt-2">
+                    <button *ngIf="!showNewPickup" type="button"
+                            class="ax-btn ax-btn-ghost ax-btn-sm" (click)="openNewPickup()">
+                      <app-icon name="add" aria-hidden="true"></app-icon>
+                      Not listed? Add a location to OTO
+                    </button>
+
+                    <div *ngIf="showNewPickup" class="ax-card ax-p-3 ax-mt-1 dr-newloc">
+                      <div class="ax-flex ax-items-center ax-justify-between ax-mb-2">
+                        <strong class="ax-text-sm">New OTO pickup location</strong>
+                        <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="cancelNewPickup()">Cancel</button>
+                      </div>
+                      <div class="dr-newloc-grid">
+                        <label class="ax-form-field ax-mb-0">
+                          <span class="ax-label ax-text-xs">Location code *</span>
+                          <input class="ax-input ax-input-sm" [(ngModel)]="newPickup.code" name="np_code"
+                                 placeholder="unique-code" />
+                        </label>
+                        <label class="ax-form-field ax-mb-0">
+                          <span class="ax-label ax-text-xs">Location name *</span>
+                          <input class="ax-input ax-input-sm" [(ngModel)]="newPickup.name" name="np_name" />
+                        </label>
+                        <label class="ax-form-field ax-mb-0">
+                          <span class="ax-label ax-text-xs">Contact name *</span>
+                          <input class="ax-input ax-input-sm" [(ngModel)]="newPickup.contact_name" name="np_contact" />
+                        </label>
+                        <label class="ax-form-field ax-mb-0">
+                          <span class="ax-label ax-text-xs">Contact email *</span>
+                          <input class="ax-input ax-input-sm" type="email" [(ngModel)]="newPickup.contact_email" name="np_email" />
+                        </label>
+                        <label class="ax-form-field ax-mb-0">
+                          <span class="ax-label ax-text-xs">Phone *</span>
+                          <input class="ax-input ax-input-sm" [(ngModel)]="newPickup.phone" name="np_phone"
+                                 placeholder="+9715XXXXXXXX" />
+                        </label>
+                        <label class="ax-form-field ax-mb-0">
+                          <span class="ax-label ax-text-xs">City *</span>
+                          <input class="ax-input ax-input-sm" [(ngModel)]="newPickup.city" name="np_city" />
+                        </label>
+                        <label class="ax-form-field ax-mb-0 dr-newloc-wide">
+                          <span class="ax-label ax-text-xs">Address *</span>
+                          <input class="ax-input ax-input-sm" [(ngModel)]="newPickup.address" name="np_address" />
+                        </label>
+                        <label class="ax-form-field ax-mb-0">
+                          <span class="ax-label ax-text-xs">Country</span>
+                          <input class="ax-input ax-input-sm" [(ngModel)]="newPickup.country" name="np_country"
+                                 maxlength="2" placeholder="AE" />
+                        </label>
+                        <label class="ax-form-field ax-mb-0">
+                          <span class="ax-label ax-text-xs">Postcode</span>
+                          <input class="ax-input ax-input-sm" [(ngModel)]="newPickup.postcode" name="np_postcode" />
+                        </label>
+                        <label class="ax-form-field ax-mb-0">
+                          <span class="ax-label ax-text-xs">Type</span>
+                          <select class="ax-input ax-input-sm" [(ngModel)]="newPickup.type" name="np_type">
+                            <option value="warehouse">Warehouse</option>
+                            <option value="branch">Branch</option>
+                          </select>
+                        </label>
+                      </div>
+                      <div class="ax-flex ax-justify-end ax-gap-2 ax-mt-2">
+                        <button type="button" class="ax-btn ax-btn-primary ax-btn-sm"
+                                (click)="createPickupLocation()" [disabled]="creatingPickup">
+                          <span *ngIf="creatingPickup" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                          Create &amp; select
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  </ng-container>
                 </div>
                 <div class="ax-flex ax-justify-end ax-mb-3" *axCan="'vendors.edit'">
                   <button type="button" class="ax-btn ax-btn-primary ax-btn-sm"

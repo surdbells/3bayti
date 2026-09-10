@@ -131,6 +131,46 @@ final class OtoShippingProvider implements ShippingProviderInterface
         return $out;
     }
 
+    public function createPickupLocation(array $input): array
+    {
+        $city = trim($input['city']);
+        // OTO requires an ISO 3166-1 alpha-2 country code. Fall back to AE
+        // (UAE-only platform) for any non-ISO2 value, e.g. a free-text name.
+        $country = strtoupper(trim($input['country'] ?? 'AE'));
+        if (preg_match('/^[A-Z]{2}$/', $country) !== 1) {
+            $country = 'AE';
+        }
+        $payload = [
+            'name' => trim($input['name']),
+            'code' => trim($input['code']),
+            'mobile' => trim($input['phone']),
+            'address' => trim($input['address']),
+            'city' => $city,
+            'country' => $country,
+            'contactName' => trim($input['contact_name']),
+            'contactEmail' => trim($input['contact_email']),
+            'type' => in_array($input['type'] ?? '', ['branch', 'warehouse'], true) ? $input['type'] : 'warehouse',
+            'status' => 'active',
+        ];
+        $postcode = $this->str($input['postcode'] ?? null);
+        if ($postcode !== null) {
+            $payload['postcode'] = $postcode;
+        }
+
+        // Propagates ShippingException (auth/transport/soft-failure) to the caller,
+        // which maps it to an HTTP status — the admin must know if the create failed.
+        $response = $this->client->createPickupLocation($payload);
+
+        // OTO echoes back the code we sent (pickupLocationCode); fall back to ours.
+        $code = $this->str($response['pickupLocationCode'] ?? $response['code'] ?? null) ?? $payload['code'];
+
+        return [
+            'code' => $code,
+            'name' => $payload['name'],
+            'city' => $city !== '' ? $city : null,
+        ];
+    }
+
     /**
      * OTO's fee-check response shape varies by account/version, so parse
      * defensively over the common key names.

@@ -1772,6 +1772,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/shipping/pickup-locations': {
     target: 'new', oldPath: '', newPath: '/v3/admin/shipping/pickup-locations', shape: 'v3-envelope',
   },
+  // Create a new OTO pickup/sender location inline (add-and-select on Manage store). v3-only.
+  'POST /admin/shipping/pickup-locations': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/shipping/pickup-locations', shape: 'v3-envelope',
+  },
   // Ops delivery-readiness board: per-order expected-ready dates + pickup/customer blocks. v3-only.
   'GET /admin/delivery-readiness': {
     target: 'new', oldPath: '', newPath: '/v3/admin/delivery-readiness', shape: 'v3-envelope',
