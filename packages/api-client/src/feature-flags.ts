@@ -1772,6 +1772,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/shipping/pickup-locations': {
     target: 'new', oldPath: '', newPath: '/v3/admin/shipping/pickup-locations', shape: 'v3-envelope',
   },
+  // Ops delivery-readiness board: per-order expected-ready dates + pickup/customer blocks. v3-only.
+  'GET /admin/delivery-readiness': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/delivery-readiness', shape: 'v3-envelope',
+  },
   'GET /admin/orders/:id': {
     target: 'new', oldPath: '/admin/common/pluralById', newPath: '/v3/admin/orders/:id', shape: 'v3-envelope',
   },

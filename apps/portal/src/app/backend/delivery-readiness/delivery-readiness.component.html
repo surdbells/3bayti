@@ -1,0 +1,142 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <span class="ax-page-header-eyebrow">Fulfilment</span>
+        <h1 class="ax-page-title">Delivery readiness</h1>
+        <p class="ax-page-header-sub ax-text-secondary ax-m-0">
+          When each order is expected to be ready to send — rolled up from the vendor's
+          delivery time on every product.
+        </p>
+      </div>
+      <div class="ax-flex ax-items-center ax-gap-2">
+        <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="load()">Refresh</button>
+      </div>
+    </header>
+
+    <!-- Summary / bucket filters -->
+    <div class="dr-summary">
+      <button type="button" class="dr-stat" [class.dr-stat-active]="filter === 'overdue'"
+              [class.dr-stat-danger]="true" (click)="setFilter('overdue')">
+        <span class="dr-stat-num">{{ counts.overdue }}</span>
+        <span class="dr-stat-label">Overdue</span>
+      </button>
+      <button type="button" class="dr-stat" [class.dr-stat-active]="filter === 'ready'"
+              [class.dr-stat-success]="true" (click)="setFilter('ready')">
+        <span class="dr-stat-num">{{ counts.ready }}</span>
+        <span class="dr-stat-label">Ready to send</span>
+      </button>
+      <button type="button" class="dr-stat" [class.dr-stat-active]="filter === 'waiting'"
+              [class.dr-stat-info]="true" (click)="setFilter('waiting')">
+        <span class="dr-stat-num">{{ counts.waiting }}</span>
+        <span class="dr-stat-label">Waiting</span>
+      </button>
+      <button type="button" class="dr-stat" [class.dr-stat-active]="filter === 'shipped'"
+              (click)="setFilter('shipped')">
+        <span class="dr-stat-num">{{ counts.shipped }}</span>
+        <span class="dr-stat-label">All shipped</span>
+      </button>
+      <div class="dr-search">
+        <input type="search" class="ax-input ax-input-sm" placeholder="Search order, customer, store, product…"
+               [(ngModel)]="search" />
+      </div>
+    </div>
+
+    <div *ngIf="loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg"></span>
+    </div>
+
+    <ng-container *ngIf="!loading">
+      <p *ngIf="!orders.length" class="ax-card ax-p-4 ax-text-center ax-text-secondary">
+        No active orders awaiting delivery. Fully-shipped and completed orders don't appear here.
+      </p>
+
+      <p *ngIf="orders.length && !filtered.length" class="ax-card ax-p-4 ax-text-center ax-text-secondary">
+        No orders match the current filter.
+      </p>
+
+      <!-- One card per order -->
+      <article *ngFor="let o of filtered" class="dr-order" [attr.data-bucket]="o.bucket">
+        <div class="dr-order-rail"></div>
+
+        <div class="dr-order-body">
+          <!-- Header: status + reference + placed + progress -->
+          <div class="dr-order-head">
+            <div class="dr-order-head-main">
+              <span class="ax-badge" [ngClass]="bucketBadge(o.bucket)">{{ bucketLabel(o) }}</span>
+              <span *ngIf="o.is_overdue && o.bucket !== 'overdue'" class="ax-badge ax-badge-danger">Overdue</span>
+              <span *ngIf="o.awaiting_acceptance" class="ax-badge ax-badge-warning">Awaiting store</span>
+              <a class="dr-order-ref" [routerLink]="['/admin/orders', o.order_id]">{{ o.order_reference }}</a>
+              <span class="ax-text-sm ax-text-secondary">·&nbsp;{{ prettyStatus(o.status) }}</span>
+              <span *ngIf="o.channel" class="ax-badge ax-badge-neutral ax-badge-sm">{{ o.channel }}</span>
+            </div>
+            <div class="dr-order-head-meta ax-text-sm ax-text-secondary">
+              <span *ngIf="o.bottleneck_date" class="dr-when">
+                <app-icon name="calendar_today" aria-hidden="true"></app-icon>
+                <ng-container [ngSwitch]="o.bucket">
+                  <ng-container *ngSwitchCase="'overdue'">Due since {{ o.bottleneck_date | date:'MMM d' }}</ng-container>
+                  <ng-container *ngSwitchCase="'ready'">Ready {{ o.bottleneck_date | date:'MMM d' }}</ng-container>
+                  <ng-container *ngSwitchDefault>Ready by {{ o.bottleneck_date | date:'MMM d' }}</ng-container>
+                </ng-container>
+              </span>
+              <span class="dr-progress">{{ o.ready_count }}/{{ o.unshipped_count }} items ready</span>
+              <span>Placed {{ o.created_at | date:'MMM d' }}</span>
+            </div>
+          </div>
+
+          <!-- Pickup (per store) → items -->
+          <div class="dr-stores">
+            <div *ngFor="let v of o.vendors" class="dr-store">
+              <div class="dr-store-head">
+                <app-icon name="store" aria-hidden="true"></app-icon>
+                <span class="dr-store-name">{{ v.vendor_name }}</span>
+                <span *ngIf="v.pickup.location_code" class="ax-badge ax-badge-neutral ax-badge-sm"
+                      title="OTO pickup location code">{{ v.pickup.location_code }}</span>
+                <span *ngIf="v.pickup.city" class="ax-text-sm ax-text-secondary">{{ v.pickup.city }}</span>
+                <span *ngIf="v.pickup.phone" class="ax-text-sm ax-text-secondary">· {{ v.pickup.phone }}</span>
+                <span class="ax-badge ax-badge-sm"
+                      [ngClass]="v.pickup.is_complete ? 'ax-badge-success' : 'ax-badge-warning'">
+                  {{ v.pickup.is_complete ? 'Pickup ready' : 'Pickup incomplete' }}
+                </span>
+              </div>
+
+              <ul class="dr-items">
+                <li *ngFor="let i of v.items" class="dr-item">
+                  <img *ngIf="i.product_image" [src]="i.product_image" [alt]="i.product_name" class="dr-item-img" />
+                  <span *ngIf="!i.product_image" class="dr-item-img dr-item-img-ph">
+                    <app-icon name="inventory" aria-hidden="true"></app-icon>
+                  </span>
+                  <div class="dr-item-main">
+                    <span class="dr-item-name">{{ i.product_name }}</span>
+                    <span class="ax-text-sm ax-text-secondary">
+                      Qty {{ i.quantity }} ·
+                      <ng-container *ngIf="i.state !== 'shipped'">
+                        ready {{ i.expected_ready_date | date:'MMM d' }}
+                        <span class="dr-lead" [title]="i.lead_source === 'product' ? 'From the product delivery time' : 'From the store default (no product delivery time set)'">
+                          ({{ i.lead_days }}d{{ i.lead_source === 'vendor' ? ' est' : '' }})
+                        </span>
+                      </ng-container>
+                      <ng-container *ngIf="i.state === 'shipped'">dispatched</ng-container>
+                    </span>
+                  </div>
+                  <span class="ax-badge ax-badge-sm" [ngClass]="itemChip(i).cls">{{ itemChip(i).label }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Deliver to (customer) -->
+          <div class="dr-deliver">
+            <app-icon name="local_shipping" aria-hidden="true"></app-icon>
+            <span class="dr-deliver-name">{{ o.delivery?.name || o.customer.name || 'Customer' }}</span>
+            <span *ngIf="o.delivery?.phone || o.customer.phone" class="ax-text-sm ax-text-secondary">
+              {{ o.delivery?.phone || o.customer.phone }}
+            </span>
+            <span class="ax-text-sm ax-text-secondary">→ {{ destination(o) }}</span>
+            <span *ngIf="o.delivery?.street" class="ax-text-sm ax-text-muted dr-deliver-street">{{ o.delivery?.street }}</span>
+          </div>
+        </div>
+      </article>
+    </ng-container>
+  </div>
+</app-admin-shell>

@@ -190,6 +190,12 @@
             <span class="ax-sidenav-link-label">Deliveries</span>
           </a>
         </li>
+        <li *axCan="'orders.view'">
+          <a routerLink="/admin/delivery-readiness" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+            <app-icon name="calendar_today" aria-hidden="true"></app-icon>
+            <span class="ax-sidenav-link-label">Delivery readiness</span>
+          </a>
+        </li>
         <li *axCan="'returns.view'">
           <a routerLink="/admin/returns" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="assignment_return" aria-hidden="true"></app-icon>

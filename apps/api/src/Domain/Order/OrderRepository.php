@@ -535,6 +535,66 @@ class OrderRepository extends EntityRepository
     }
 
     /**
+     * Orders the operations team still has to get out the door, for the
+     * admin Delivery-Readiness page. An order qualifies when it is in a
+     * shippable state (paid / fulfilling), is not customer-deleted, and
+     * still has AT LEAST ONE line item awaiting dispatch (pending /
+     * accepted / preparing). Fully-shipped and terminal orders drop off.
+     *
+     * Two-step (ids, then hydrate) so the collection fetch-join does not
+     * corrupt the LIMIT. Eagerly loads items + product + vendor + user +
+     * addresses so the readiness calculation and the pickup/delivery
+     * blocks render N+1-free. Oldest first: the orders that have waited
+     * longest (and are most likely overdue) surface at the top.
+     *
+     * @return list<Order>
+     */
+    public function findForDeliveryReadiness(int $limit = 150): array
+    {
+        $shippable = [Order::STATUS_PAID, Order::STATUS_FULFILLING];
+        $unshipped = [
+            OrderItem::ITEM_STATUS_PENDING,
+            OrderItem::ITEM_STATUS_ACCEPTED,
+            OrderItem::ITEM_STATUS_PREPARING,
+        ];
+
+        $idRows = $this->createQueryBuilder('o')
+            ->select('o.id')
+            ->distinct()
+            ->innerJoin('o.items', 'i')
+            ->where('o.status IN (:shippable)')
+            ->andWhere('o.deletedAt IS NULL')
+            ->andWhere('i.itemStatus IN (:unshipped)')
+            ->setParameter('shippable', $shippable)
+            ->setParameter('unshipped', $unshipped)
+            ->orderBy('o.id', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getScalarResult();
+
+        $ids = array_map(static fn (array $r): int => (int) $r['id'], $idRows);
+        if ($ids === []) {
+            return [];
+        }
+
+        $orders = $this->createQueryBuilder('o')
+            ->select('o', 'i', 'p', 'v', 'u', 'a')
+            ->leftJoin('o.items', 'i')
+            ->leftJoin('i.product', 'p')
+            ->leftJoin('i.vendor', 'v')
+            ->leftJoin('o.user', 'u')
+            ->leftJoin('o.addresses', 'a')
+            ->where('o.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->orderBy('o.createdAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        /** @var list<Order> $orders */
+        return $orders;
+    }
+
+    /**
      * Paginated list of orders that have AT LEAST ONE item belonging
      * to any of the given vendor ids. Most recent first.
      *
