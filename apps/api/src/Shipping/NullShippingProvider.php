@@ -33,4 +33,9 @@ final class NullShippingProvider implements ShippingProviderInterface
     {
         return [];
     }
+
+    public function listPickupLocations(): array
+    {
+        return [];
+    }
 }

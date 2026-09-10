@@ -76,6 +76,10 @@ export class ManageStoreComponent implements OnInit {
     return this.emirates.map((e) => ({ id: e, label: e }));
   }
 
+  /** OTO registered pickup locations for the searchable dropdown (empty until
+   *  the courier integration is live; then this store falls back to a text field). */
+  pickupLocationOptions: AxComboboxOption[] = [];
+
   store = {
     id: 0, token: '',
     first_name: '', last_name: '', email: '', phone: '',
@@ -119,6 +123,31 @@ export class ManageStoreComponent implements OnInit {
     this.message.token = this.user_session.token;
 
     this.get_store();
+    this.loadPickupLocations();
+  }
+
+  /** Load the OTO pickup locations for the searchable dropdown (best-effort). */
+  loadPickupLocations(): void {
+    this.adapter.get_v3('GET /admin/shipping/pickup-locations').subscribe({
+      next: (res: any) => {
+        const data = res?.data ?? res ?? {};
+        const locs = Array.isArray(data.locations) ? data.locations : [];
+        this.pickupLocationOptions = locs.map((l: any) => ({
+          id: String(l.code),
+          label: `${l.name || l.code}${l.city ? ' — ' + l.city : ''} (${l.code})`,
+        }));
+        this.ensureCurrentPickupOption();
+      },
+      error: () => { /* leave options empty → text-field fallback */ },
+    });
+  }
+
+  /** Keep the store's saved code selectable even if it isn't in the fetched list. */
+  private ensureCurrentPickupOption(): void {
+    const code = String(this.store.pickup_location_code ?? '').trim();
+    if (code && !this.pickupLocationOptions.some((o) => o.id === code)) {
+      this.pickupLocationOptions = [{ id: code, label: code }, ...this.pickupLocationOptions];
+    }
   }
 
   goBack() {
@@ -143,6 +172,7 @@ export class ManageStoreComponent implements OnInit {
           // Lift the OTO pickup-location code out of the nested pickup block so
           // the form can bind + edit it as a flat field.
           this.store.pickup_location_code = (this.store as any)?.pickup?.location_code ?? '';
+          this.ensureCurrentPickupOption();
           this.message.name = this.store.first_name;
           this.message.email = this.store.email;
           this.applyComplianceDocUrls();

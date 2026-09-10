@@ -51,4 +51,13 @@ interface ShippingProviderInterface
      * @return list<array{id: string, name: string, price: float, currency: string}>
      */
     public function listDeliveryOptions(Order $order, Vendor $vendor, array $vendorItems): array;
+
+    /**
+     * The provider's registered pickup/sender locations (for mapping a vendor to
+     * its sender in the OTO portal via a searchable dropdown). Empty when the
+     * provider is disabled or can't list them.
+     *
+     * @return list<array{code: string, name: string, city: string|null}>
+     */
+    public function listPickupLocations(): array;
 }

@@ -1768,6 +1768,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/shipments': {
     target: 'new', oldPath: '', newPath: '/v3/admin/shipments', shape: 'v3-envelope',
   },
+  // OTO registered pickup/sender locations (for the vendor pickup-code dropdown). v3-only.
+  'GET /admin/shipping/pickup-locations': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/shipping/pickup-locations', shape: 'v3-envelope',
+  },
   'GET /admin/orders/:id': {
     target: 'new', oldPath: '/admin/common/pluralById', newPath: '/v3/admin/orders/:id', shape: 'v3-envelope',
   },

@@ -35,6 +35,7 @@ final class OtoClient
     private const AUTH_PATH         = '/rest/v2/refreshToken';
     private const CREATE_ORDER_PATH = '/rest/v2/createOrder';
     private const DELIVERY_FEES_PATH = '/rest/v2/checkOTODeliveryFees';
+    private const PICKUP_LOCATIONS_PATH = '/rest/v2/getPickupLocationList';
 
     private ?string $cachedAccessToken = null;
 
@@ -81,6 +82,58 @@ final class OtoClient
     public function checkDeliveryFees(array $body): array
     {
         return $this->authedPost(self::DELIVERY_FEES_PATH, $body);
+    }
+
+    /**
+     * The store/warehouse pickup locations registered in the OTO portal — used to
+     * offer a searchable dropdown when mapping a vendor to its OTO sender. Returns
+     * the decoded response (a list of { code, name, city, … }).
+     *
+     * @return array<string, mixed>
+     */
+    public function listPickupLocations(): array
+    {
+        return $this->authedGet(self::PICKUP_LOCATIONS_PATH, ['status' => 'active']);
+    }
+
+    /**
+     * @param array<string, string> $query
+     * @return array<string, mixed>
+     */
+    private function authedGet(string $path, array $query = []): array
+    {
+        $token = $this->accessToken();
+        $url = $this->baseUrl . $path . ($query !== [] ? '?' . http_build_query($query) : '');
+
+        try {
+            $response = $this->http->get($url, [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $token,
+                    'Accept' => 'application/json',
+                ],
+                'http_errors' => false,
+            ]);
+        } catch (ConnectException $e) {
+            throw new ShippingException(ShippingException::KIND_NETWORK, $e->getMessage(), $e);
+        } catch (GuzzleException $e) {
+            throw new ShippingException(ShippingException::KIND_TRANSPORT, $e->getMessage(), $e);
+        }
+
+        $status = $response->getStatusCode();
+        $raw = (string) $response->getBody();
+        if ($status >= 400) {
+            $this->logger->error('oto.request_failed', [
+                'path' => $path,
+                'status' => $status,
+                'body' => mb_substr($raw, 0, 500),
+            ]);
+            throw new ShippingException(
+                ShippingException::KIND_TRANSPORT,
+                "OTO {$path} returned HTTP {$status}.",
+            );
+        }
+
+        return $this->decode($raw);
     }
 
     /**

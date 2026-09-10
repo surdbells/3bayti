@@ -97,6 +97,40 @@ final class OtoShippingProvider implements ShippingProviderInterface
         return $this->parseDeliveryOptions($response, $order->getCurrency());
     }
 
+    public function listPickupLocations(): array
+    {
+        try {
+            $response = $this->client->listPickupLocations();
+        } catch (ShippingException $e) {
+            $this->logger->warning('oto.list_pickup_locations_failed', ['error' => $e->getMessage()]);
+            return [];
+        }
+
+        // Shape varies by account/version — look over the common container keys.
+        $rows = $response['pickupLocations'] ?? $response['data'] ?? $response['locations'] ?? $response['warehouses'] ?? [];
+        if (!is_array($rows)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $code = $row['code'] ?? $row['pickupLocationCode'] ?? $row['locationCode'] ?? null;
+            if ($code === null || $code === '') {
+                continue;
+            }
+            $city = $row['city'] ?? null;
+            $out[] = [
+                'code' => (string) $code,
+                'name' => (string) ($row['name'] ?? $row['locationName'] ?? $code),
+                'city' => $city !== null ? (string) $city : null,
+            ];
+        }
+        return $out;
+    }
+
     /**
      * OTO's fee-check response shape varies by account/version, so parse
      * defensively over the common key names.

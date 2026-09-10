@@ -181,16 +181,27 @@
                   stores, the whole order shows the slowest store's range.
                 </p>
                 <div class="ax-form-field ax-mb-3">
-                  <label class="ax-label">OTO pickup location code</label>
-                  <input
-                    type="text"
-                    class="ax-input"
-                    [(ngModel)]="store.pickup_location_code"
+                  <label class="ax-label">OTO pickup location</label>
+                  <app-ax-combobox
+                    *ngIf="pickupLocationOptions.length; else pickupText"
                     name="pickup_location_code"
-                    placeholder="This store's location code from the OTO portal" />
+                    [(ngModel)]="store.pickup_location_code"
+                    [options]="pickupLocationOptions"
+                    [searchable]="true"
+                    placeholder="Search OTO pickup locations"
+                    ariaLabel="OTO pickup location"></app-ax-combobox>
+                  <ng-template #pickupText>
+                    <input
+                      type="text"
+                      class="ax-input"
+                      [(ngModel)]="store.pickup_location_code"
+                      name="pickup_location_code"
+                      placeholder="This store's location code from the OTO portal" />
+                  </ng-template>
                   <small class="ax-text-xs ax-text-secondary">
-                    Maps this store to its sender location in OTO. When set, courier pickups use it and
-                    the vendor doesn't need to fill a pickup address. Leave blank to clear.
+                    Maps this store to its sender location in OTO. When set, courier pickups use it and the
+                    vendor doesn't need to fill a pickup address. The searchable dropdown lists your OTO
+                    locations once the courier integration is live; until then, paste the code.
                   </small>
                 </div>
                 <div class="ax-flex ax-justify-end ax-mb-3" *axCan="'vendors.edit'">
