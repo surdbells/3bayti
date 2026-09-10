@@ -11,6 +11,8 @@ use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\Order\OrderReturnRequest;
 use Bayti\Api\Domain\Order\OrderReturnRequestRepository;
+use Bayti\Api\Domain\Order\OrderShipment;
+use Bayti\Api\Domain\Order\OrderShipmentRepository;
 use Bayti\Api\Domain\User\Measurement;
 use Bayti\Api\Domain\User\MeasurementRepository;
 use Bayti\Api\Domain\User\User;
@@ -20,6 +22,7 @@ use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\MeasurementSerializer;
 use Bayti\Api\Http\Serializers\OrderSerializer;
+use Bayti\Api\Http\Serializers\ShipmentSerializer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -42,6 +45,7 @@ final class GetAdminOrderController
         private readonly OrderSerializer $serializer,
         private readonly AuditEmitter $audit,
         private readonly MeasurementSerializer $measurementSerializer,
+        private readonly ShipmentSerializer $shipmentSerializer,
     ) {
     }
 
@@ -108,6 +112,11 @@ final class GetAdminOrderController
         }
 
         $shape = $this->serializer->adminDetailShape($order, $returns, $giftCard);
+
+        // Per-vendor courier shipments (OTO tracking) for the order.
+        /** @var OrderShipmentRepository $shipmentRepo */
+        $shipmentRepo = $this->em->getRepository(OrderShipment::class);
+        $shape['shipments'] = $this->shipmentSerializer->shapeMany($shipmentRepo->findForOrder($order));
 
         // The customer's saved body measurements (profile) so admins see the
         // same authoritative set the vendor fulfils against, independent of the

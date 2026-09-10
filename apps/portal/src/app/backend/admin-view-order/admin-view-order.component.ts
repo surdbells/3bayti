@@ -26,6 +26,7 @@ export class AdminViewOrderComponent implements OnInit {
     updating_order: false,
     nav_open: false,
     resending: false,
+    booking: '', // vendor_id currently being booked for delivery, or ''
   };
 
   session_data: any = '';
@@ -142,6 +143,71 @@ export class AdminViewOrderComponent implements OnInit {
     if (stored > 0) { return stored; }
     return Math.max(0, this.itemsSubtotal + this.deliveryFee - this.discountAmount);
   }
+  // ── Courier delivery (OTO) ───────────────────────────────────────────
+  /**
+   * Group the order's items by store, attaching each store's courier shipment
+   * (if any) and how many items are ready to ship (accepted/preparing). Drives
+   * the per-store "Book delivery" button + tracking panel.
+   */
+  get vendorGroups(): any[] {
+    const shipments: any[] = this.data?.shipments ?? [];
+    const byVendor = new Map<number, any>();
+    for (const it of this.items) {
+      const vid = Number(it?.vendor_id) || 0;
+      if (!byVendor.has(vid)) {
+        byVendor.set(vid, {
+          vendor_id: vid,
+          vendor_name: it?.vendor_name || ('Store #' + vid),
+          items: [],
+          ready_count: 0,
+          shipment: shipments.find((s) => Number(s?.vendor_id) === vid) ?? null,
+        });
+      }
+      const g = byVendor.get(vid);
+      g.items.push(it);
+      if (it?.item_status === 'accepted' || it?.item_status === 'preparing') g.ready_count++;
+    }
+    return Array.from(byVendor.values());
+  }
+
+  /** Book courier delivery for one store's ready items on this order. */
+  bookDelivery(group: any): void {
+    if (this.ui_controls.booking) return;
+    const orderId = this.single.order;
+    this.confirm
+      .confirm({
+        title: 'Book delivery',
+        message:
+          `Book courier delivery for ${group.vendor_name}'s ${group.ready_count} ready item(s)? ` +
+          `A courier will be assigned to pick up from the store and deliver to the customer.`,
+        confirmLabel: 'Book delivery',
+        cancelLabel: 'Cancel',
+      })
+      .then((ok) => {
+        if (!ok) return;
+        this.ui_controls.booking = String(group.vendor_id);
+        this.adapter
+          .post_v3('POST /admin/orders/:orderId/vendors/:vendorId/ship', {}, {
+            params: { orderId: String(orderId), vendorId: String(group.vendor_id) },
+          })
+          .subscribe({
+            next: () => {
+              this.ui_controls.booking = '';
+              this.success_notification('Delivery booked.');
+              this.get_order_by_id();
+            },
+            error: (err: any) => {
+              this.ui_controls.booking = '';
+              this.error_notification(apiErrorMessage(err, 'Could not book delivery.'));
+            },
+          });
+      });
+  }
+
+  prettyShipmentStatus(s: string): string {
+    return String(s ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
   /** Page title, the customer/account name, never the (often absent) nav param. */
   get orderTitle(): string {
     return this.data?.customer_name

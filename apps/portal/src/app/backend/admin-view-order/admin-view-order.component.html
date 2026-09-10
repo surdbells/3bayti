@@ -268,6 +268,33 @@
             </div>
           </div>
 
+          <!-- Courier delivery (OTO), per store -->
+          <div *ngIf="vendorGroups.length" class="ax-p-4" style="border-top: 1px solid var(--ax-color-border-subtle);">
+            <h3 class="ax-h6 ax-m-0 ax-mb-3">Delivery</h3>
+            <div *ngFor="let g of vendorGroups; let last = last" class="ax-flex ax-items-center ax-justify-between ax-flex-wrap ax-gap-2"
+                 [class.ax-mb-3]="!last">
+              <div style="min-width: 0;">
+                <div class="ax-font-medium">{{ g.vendor_name }}</div>
+                <div class="ax-text-2xs ax-text-tertiary">{{ g.items.length }} item(s)</div>
+              </div>
+              <div style="text-align: right;">
+                <ng-container *ngIf="g.shipment; else bookBtn">
+                  <span class="ax-badge ax-badge-info">{{ prettyShipmentStatus(g.shipment.status) }}</span>
+                  <div *ngIf="g.shipment.delivery_company" class="ax-text-2xs ax-text-secondary ax-mt-1">{{ g.shipment.delivery_company }}</div>
+                  <div *ngIf="g.shipment.tracking_number" class="ax-text-2xs ax-text-secondary">Tracking: {{ g.shipment.tracking_number }}</div>
+                </ng-container>
+                <ng-template #bookBtn>
+                  <button type="button" class="ax-btn ax-btn-sm ax-btn-primary"
+                          [disabled]="!g.ready_count || !!ui_controls.booking"
+                          [title]="!g.ready_count ? 'No items ready to ship — accept/prepare them first' : ''"
+                          (click)="bookDelivery(g)">
+                    {{ ui_controls.booking === (g.vendor_id + '') ? 'Booking…' : 'Book delivery' }}
+                  </button>
+                </ng-template>
+              </div>
+            </div>
+          </div>
+
           <!-- Footer -->
           <div class="ax-p-4 ax-flex ax-items-center ax-justify-between ax-flex-wrap ax-gap-2">
             <div class="ax-text-2xs ax-text-tertiary">{{ data.cart_code }}</div>

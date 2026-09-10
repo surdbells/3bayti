@@ -8,6 +8,8 @@ use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
+use Bayti\Api\Domain\Order\OrderShipment;
+use Bayti\Api\Domain\Order\OrderShipmentRepository;
 use Bayti\Api\Domain\User\Measurement;
 use Bayti\Api\Domain\User\MeasurementRepository;
 use Bayti\Api\Domain\User\User;
@@ -17,6 +19,7 @@ use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\MeasurementSerializer;
 use Bayti\Api\Http\Serializers\OrderSerializer;
+use Bayti\Api\Http\Serializers\ShipmentSerializer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -57,6 +60,7 @@ final class GetVendorOrderController
         private readonly EntityManagerInterface $em,
         private readonly OrderSerializer $serializer,
         private readonly MeasurementSerializer $measurementSerializer,
+        private readonly ShipmentSerializer $shipmentSerializer,
     ) {
     }
 
@@ -101,6 +105,15 @@ final class GetVendorOrderController
         // items, and subtotal/total recomputed from those (never the whole
         // order's totals or the delivery fee, which aren't this vendor's).
         $shape = $this->serializer->scopeToVendor($shape, $vendorIdSet);
+
+        // This store's courier shipment(s) for the order (OTO tracking).
+        /** @var OrderShipmentRepository $shipmentRepo */
+        $shipmentRepo = $this->em->getRepository(OrderShipment::class);
+        $vendorShipments = array_values(array_filter(
+            $shipmentRepo->findForOrder($order),
+            static fn (OrderShipment $s): bool => isset($vendorIdSet[$s->getVendor()->getId() ?? -1]),
+        ));
+        $shape['shipments'] = $this->shipmentSerializer->shapeMany($vendorShipments);
 
         // The customer's saved body measurements (profile), so the vendor can
         // fulfil made-to-measure orders. The per-item `measurement` snapshot is
