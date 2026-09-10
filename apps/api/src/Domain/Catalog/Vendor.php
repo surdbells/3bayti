@@ -299,6 +299,15 @@ class Vendor
     #[ORM\Column(name: 'pickup_lon', type: 'string', length: 32, nullable: true)]
     private ?string $pickupLon = null;
 
+    /**
+     * OTO predefined pickup-location code (the sender/warehouse location already
+     * registered for this store in the OTO portal). When set, the courier push
+     * uses `pickupLocationCode` and OTO resolves the full sender address itself,
+     * so the structured pickup_* fields above are not required.
+     */
+    #[ORM\Column(name: 'pickup_location_code', type: 'string', length: 100, nullable: true)]
+    private ?string $pickupLocationCode = null;
+
     // ---- bank / payout ----
 
     #[ORM\Column(name: 'store_bank_name', type: 'string', length: 255, nullable: true)]
@@ -722,6 +731,7 @@ class Vendor
     public function getPickupPostcode(): ?string { return $this->pickupPostcode; }
     public function getPickupLat(): ?string { return $this->pickupLat; }
     public function getPickupLon(): ?string { return $this->pickupLon; }
+    public function getPickupLocationCode(): ?string { return $this->pickupLocationCode; }
 
     private static function normOptional(?string $v): ?string
     {
@@ -738,6 +748,7 @@ class Vendor
     public function setPickupPostcode(?string $v): void { $this->pickupPostcode = self::normOptional($v); }
     public function setPickupLat(?string $v): void { $this->pickupLat = self::normOptional($v); }
     public function setPickupLon(?string $v): void { $this->pickupLon = self::normOptional($v); }
+    public function setPickupLocationCode(?string $v): void { $this->pickupLocationCode = self::normOptional($v); }
 
     /**
      * Whether this store has the minimum structured pickup detail a courier
@@ -746,6 +757,12 @@ class Vendor
      */
     public function pickupAddressIsComplete(): bool
     {
+        // An OTO predefined pickup-location code is sufficient on its own — OTO
+        // resolves the sender address from it, so the structured fields aren't
+        // needed when a store is mapped to an OTO location.
+        if ($this->pickupLocationCode !== null && $this->pickupLocationCode !== '') {
+            return true;
+        }
         return $this->pickupContactName !== null
             && $this->pickupPhone !== null
             && $this->pickupCity !== null

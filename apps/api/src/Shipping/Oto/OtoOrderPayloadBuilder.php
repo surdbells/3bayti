@@ -93,24 +93,31 @@ final class OtoOrderPayloadBuilder
                 'postcode' => $address->getPostalCode(),
             ], static fn ($v): bool => $v !== null && $v !== ''),
 
-            // Sender (vendor pickup) — flat sender* fields per OTO createOrder.
-            'senderName' => $vendor->getName(),
-            'senderFullName' => $vendor->getPickupContactName(),
-            'senderMobile' => $vendor->getPickupPhone(),
-            'senderCity' => $vendor->getPickupCity(),
-            'senderDistrict' => $vendor->getPickupArea(),
-            'senderStreet' => $vendor->getPickupStreet(),
-            'senderBuildingNo' => $vendor->getPickupBuildingNo(),
-            'senderPostcode' => $vendor->getPickupPostcode(),
-            'senderCountry' => $vendor->getCountry() ?? $address->getCountryCode(),
-
             'items' => $items,
         ];
 
-        // Optional pickup geo, only when the vendor set it.
-        if ($vendor->getPickupLat() !== null && $vendor->getPickupLon() !== null) {
-            $payload['lat'] = $vendor->getPickupLat();
-            $payload['lon'] = $vendor->getPickupLon();
+        // Sender (vendor pickup): prefer the store's predefined OTO pickup-location
+        // code — OTO resolves the full sender address from it. Otherwise fall back
+        // to the structured sender* fields (+ optional geo).
+        $locationCode = $vendor->getPickupLocationCode();
+        if ($locationCode !== null && $locationCode !== '') {
+            $payload['pickupLocationCode'] = $locationCode;
+        } else {
+            $payload['senderName'] = $vendor->getName();
+            $payload['senderFullName'] = $vendor->getPickupContactName();
+            $payload['senderMobile'] = $vendor->getPickupPhone();
+            $payload['senderCity'] = $vendor->getPickupCity();
+            $payload['senderDistrict'] = $vendor->getPickupArea();
+            $payload['senderStreet'] = $vendor->getPickupStreet();
+            $payload['senderBuildingNo'] = $vendor->getPickupBuildingNo();
+            $payload['senderPostcode'] = $vendor->getPickupPostcode();
+            $payload['senderCountry'] = $vendor->getCountry() ?? $address->getCountryCode();
+
+            // Optional pickup geo, only when the vendor set it.
+            if ($vendor->getPickupLat() !== null && $vendor->getPickupLon() !== null) {
+                $payload['lat'] = $vendor->getPickupLat();
+                $payload['lon'] = $vendor->getPickupLon();
+            }
         }
 
         // A specific carrier option (the "choose per shipment" flow); omitted

@@ -164,5 +164,6 @@ final class UpdateVendorStoreController
         $vendor->setPickupPostcode($str('postcode'));
         $vendor->setPickupLat($str('lat'));
         $vendor->setPickupLon($str('lon'));
+        $vendor->setPickupLocationCode($str('location_code'));
     }
 }

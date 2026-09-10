@@ -65,6 +65,41 @@ final class OtoOrderPayloadBuilderTest extends TestCase
     }
 
     #[Test]
+    public function usesTheOtoPickupLocationCodeWhenSetAndOmitsTheSenderBlock(): void
+    {
+        // A store mapped to a predefined OTO pickup location: the push sends
+        // pickupLocationCode (OTO resolves the sender), and NOT the sender* fields.
+        $vendor = $this->makeVendorWithPickup(7);
+        $vendor->setPickupLocationCode('OTO-LOC-42');
+        $order = $this->makeOrderWithAddress('3B-LOC');
+        $item = $this->addItem($order, $vendor, 'Kaftan', '99.00', 1, 900);
+
+        $body = $this->builder->build($order, $vendor, [$item]);
+
+        self::assertSame('OTO-LOC-42', $body['pickupLocationCode']);
+        self::assertArrayNotHasKey('senderStreet', $body);
+        self::assertArrayNotHasKey('senderCity', $body);
+        // Recipient + items are unaffected.
+        self::assertSame('Mariam Alkaabi', $body['customer']['name']);
+        self::assertCount(1, $body['items']);
+    }
+
+    #[Test]
+    public function locationCodeAloneSatisfiesThePickupCompletenessGate(): void
+    {
+        // No structured address, only a location code → still shippable.
+        $vendor = new Vendor('store-7', 'Store 7', 'vendor@example.test');
+        (new \ReflectionProperty(Vendor::class, 'id'))->setValue($vendor, 7);
+        $vendor->setPickupLocationCode('OTO-LOC-7');
+        self::assertTrue($vendor->pickupAddressIsComplete());
+
+        $order = $this->makeOrderWithAddress('3B-LOC2');
+        $item = $this->addItem($order, $vendor, 'Kaftan', '99.00', 1, 901);
+        $body = $this->builder->build($order, $vendor, [$item]);
+        self::assertSame('OTO-LOC-7', $body['pickupLocationCode']);
+    }
+
+    #[Test]
     public function forcesTheChosenDeliveryOptionWhenGiven(): void
     {
         $vendor = $this->makeVendorWithPickup(7);

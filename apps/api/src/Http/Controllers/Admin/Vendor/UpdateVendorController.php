@@ -124,6 +124,10 @@ final class UpdateVendorController
         if ($input->country !== null) {
             $vendor->setCountry($input->country);
         }
+        // OTO pickup-location code (empty string clears it via the setter's norm).
+        if ($input->pickup_location_code !== null) {
+            $vendor->setPickupLocationCode($input->pickup_location_code);
+        }
         if ($input->preferred_locale !== null) {
             // M3.2.X.7-D: Vendor email locale preference. The entity
             // setter validates against Vendor::SUPPORTED_LOCALES;

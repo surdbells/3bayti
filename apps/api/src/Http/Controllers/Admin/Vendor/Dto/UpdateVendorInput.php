@@ -116,6 +116,14 @@ final class UpdateVendorInput
     #[Assert\Length(max: 60)]
     public readonly ?string $country;
 
+    /**
+     * OTO predefined pickup-location code for this store (the sender location
+     * already registered in the OTO portal). Null/omitted leaves it unchanged;
+     * empty string clears it. When set, courier pushes use it as the sender.
+     */
+    #[Assert\Length(max: 100)]
+    public readonly ?string $pickup_location_code;
+
     public function __construct(
         string $name = '',
         string $contact_email = '',
@@ -133,6 +141,7 @@ final class UpdateVendorInput
         ?string $preferred_locale = null,
         ?string $emirate = null,
         ?string $country = null,
+        ?string $pickup_location_code = null,
     ) {
         $this->name = trim($name);
         $this->contact_email = trim($contact_email);
@@ -161,5 +170,6 @@ final class UpdateVendorInput
         $this->emirate = ($emirate === '' || $emirate === null) ? null : $emirate;
         $country = $country !== null ? trim($country) : null;
         $this->country = ($country === '' || $country === null) ? null : $country;
+        $this->pickup_location_code = $pickup_location_code !== null ? trim($pickup_location_code) : null;
     }
 }

@@ -65,6 +65,7 @@ export class VendorStoreComponent implements OnInit {
     street: '',
     building_no: '',
     postcode: '',
+    location_code: '',
   };
   pickup_complete = false;
 
@@ -156,6 +157,7 @@ export class VendorStoreComponent implements OnInit {
             street: p.street ?? '',
             building_no: p.building_no ?? '',
             postcode: p.postcode ?? '',
+            location_code: p.location_code ?? '',
           };
           this.pickup_complete = !!p.is_complete;
         } else if (response.status === 'failed') {

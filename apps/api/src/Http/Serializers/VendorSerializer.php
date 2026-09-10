@@ -79,6 +79,7 @@ final class VendorSerializer
                 'postcode' => $v->getPickupPostcode(),
                 'lat' => $v->getPickupLat(),
                 'lon' => $v->getPickupLon(),
+                'location_code' => $v->getPickupLocationCode(),
                 'is_complete' => $v->pickupAddressIsComplete(),
             ],
             // Customer-facing delivery lead-time range ("X-Y days").

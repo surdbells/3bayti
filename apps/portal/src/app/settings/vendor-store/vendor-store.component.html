@@ -97,6 +97,14 @@
             <span *ngIf="!pickup_complete" class="ax-badge ax-badge-warning">Incomplete</span>
           </p>
           <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-4">
+            <div class="ax-form-field" style="grid-column: 1 / -1;">
+              <label class="ax-label">OTO pickup location code</label>
+              <input class="ax-input" name="pickup_location_code" [(ngModel)]="pickup.location_code"
+                     placeholder="Your store's location code from the OTO portal" />
+              <p class="ax-text-2xs ax-text-tertiary ax-mt-1">
+                If set, the courier picks up from this OTO location and the address fields below are optional.
+              </p>
+            </div>
             <div class="ax-form-field">
               <label class="ax-label">Contact name</label>
               <input class="ax-input" name="pickup_contact_name" [(ngModel)]="pickup.contact_name" />
