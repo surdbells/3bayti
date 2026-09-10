@@ -180,6 +180,34 @@
                   Shown to customers as the delivery estimate. On an order with items from several
                   stores, the whole order shows the slowest store's range.
                 </p>
+                <h4 class="ax-h6 ax-m-0 ax-mb-2 ax-mt-2">Commercial &amp; visibility</h4>
+                <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-3 ax-mb-3">
+                  <div class="ax-form-field">
+                    <label class="ax-label">Commission rate (%)</label>
+                    <input type="number" class="ax-input" min="0" max="100" step="0.5"
+                           [(ngModel)]="store.commission_rate" name="commission_rate" />
+                  </div>
+                  <div class="ax-form-field">
+                    <label class="ax-label">Email language</label>
+                    <app-ax-combobox name="preferred_locale" [(ngModel)]="store.preferred_locale"
+                      [options]="localeOptions" [searchable]="false" placeholder="Default (English)"
+                      ariaLabel="Vendor email language"></app-ax-combobox>
+                  </div>
+                  <div class="ax-form-field">
+                    <label class="ax-label">Flags</label>
+                    <div class="ax-flex ax-gap-4 ax-items-center" style="padding-top: 0.45rem;">
+                      <label class="ax-flex ax-gap-1 ax-items-center" style="cursor:pointer;">
+                        <input type="checkbox" [(ngModel)]="store.is_featured" name="is_featured" />
+                        <span class="ax-text-sm">Featured</span>
+                      </label>
+                      <label class="ax-flex ax-gap-1 ax-items-center" style="cursor:pointer;">
+                        <input type="checkbox" [(ngModel)]="store.is_verified" name="is_verified" />
+                        <span class="ax-text-sm">Verified</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="ax-form-field ax-mb-3">
                   <label class="ax-label">OTO pickup location</label>
                   <app-ax-combobox

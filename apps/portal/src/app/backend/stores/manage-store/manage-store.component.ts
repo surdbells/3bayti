@@ -80,6 +80,12 @@ export class ManageStoreComponent implements OnInit {
    *  the courier integration is live; then this store falls back to a text field). */
   pickupLocationOptions: AxComboboxOption[] = [];
 
+  /** Vendor email-notification language options. */
+  readonly localeOptions: AxComboboxOption[] = [
+    { id: 'en', label: 'English' },
+    { id: 'ar', label: 'Arabic' },
+  ];
+
   store = {
     id: 0, token: '',
     first_name: '', last_name: '', email: '', phone: '',
@@ -89,6 +95,9 @@ export class ManageStoreComponent implements OnInit {
     store_address: '', store_description: '',
     emirate: '', country: '',
     pickup_location_code: '',
+    commission_rate: null as number | null,
+    is_featured: false, is_verified: false,
+    preferred_locale: '' as string | null,
     min_delivery_days: 7, max_delivery_days: 14,
     vat_status: '', store_legal_name: '', trade_license_number: '',
     licensing_authority: '', tax_registration_number: '',
@@ -201,6 +210,7 @@ export class ManageStoreComponent implements OnInit {
     const phone = String(this.store.store_phone ?? '').trim();
     const minD = Number(this.store.min_delivery_days);
     const maxD = Number(this.store.max_delivery_days);
+    const commission = Number(this.store.commission_rate);
     const body = {
       name: this.store.store_name,
       contact_email: this.store.store_email || this.store.email,
@@ -212,6 +222,11 @@ export class ManageStoreComponent implements OnInit {
       // Delivery lead-time range (days); both required together server-side.
       min_delivery_days: Number.isFinite(minD) ? minD : null,
       max_delivery_days: Number.isFinite(maxD) ? maxD : null,
+      // Commercial + visibility controls.
+      commission_rate: Number.isFinite(commission) ? commission : null,
+      is_featured: !!this.store.is_featured,
+      is_verified: !!this.store.is_verified,
+      preferred_locale: this.store.preferred_locale || null,
     };
     this.adapter.put_v3('PUT /admin/vendors/:id', body, { params: { id: String(this.storeId) } })
       .subscribe({
