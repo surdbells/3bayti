@@ -56,6 +56,18 @@ export class VendorStoreComponent implements OnInit {
     store_cover: 'assets/img/placeholder-1.png',
   };
 
+  /** Structured pickup/sender address for courier (OTO) delivery. */
+  pickup = {
+    contact_name: '',
+    phone: '',
+    city: '',
+    area: '',
+    street: '',
+    building_no: '',
+    postcode: '',
+  };
+  pickup_complete = false;
+
   get_single = { id: 0, token: '' };
 
   update_store = {
@@ -135,6 +147,17 @@ export class VendorStoreComponent implements OnInit {
             // only an approved store may change its own visibility.
             store_approved: (d.status ?? d.store_status) === 'approved',
           };
+          const p = d.pickup ?? {};
+          this.pickup = {
+            contact_name: p.contact_name ?? '',
+            phone: p.phone ?? '',
+            city: p.city ?? '',
+            area: p.area ?? '',
+            street: p.street ?? '',
+            building_no: p.building_no ?? '',
+            postcode: p.postcode ?? '',
+          };
+          this.pickup_complete = !!p.is_complete;
         } else if (response.status === 'failed') {
           this.error_notification(response.message);
         }
@@ -166,6 +189,8 @@ export class VendorStoreComponent implements OnInit {
       store_email: this.store_single.store_email,
       store_phone: this.store_single.store_phone,
       store_address: this.store_single.store_address,
+      // Structured pickup/sender address for courier (OTO) delivery.
+      pickup: { ...this.pickup },
     };
     // Only send real uploaded image URLs, never the local placeholder path
     // (it would be stored as the logo). Omitting the field is a no-op PATCH, so

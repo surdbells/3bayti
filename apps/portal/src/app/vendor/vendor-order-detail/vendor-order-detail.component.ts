@@ -118,6 +118,7 @@ export class VendorOrderDetailComponent implements OnInit {
   readonly loadingDetail = signal(true);
   readonly busy = signal(false);
   readonly order = signal<OrderDetail | null>(null);
+  readonly booking = signal(false);
   readonly timeline = signal<TimelineEntry[]>([]);
   /** The line item shown in the product detail modal (null = closed). */
   readonly selectedItem = signal<OrderItem | null>(null);
@@ -138,6 +139,53 @@ export class VendorOrderDetailComponent implements OnInit {
       return;
     }
     this.load();
+  }
+
+  // ── Courier delivery (OTO) ───────────────────────────────────────────
+  /** This store's courier shipment on the order (if booked). */
+  get shipment(): any | null {
+    const s = (this.order() as any)?.shipments ?? [];
+    return s.length ? s[0] : null;
+  }
+
+  /** Count of this store's items ready to ship (accepted/preparing). */
+  get readyCount(): number {
+    const items = (this.order() as any)?.items ?? [];
+    return items.filter((it: any) => it?.item_status === 'accepted' || it?.item_status === 'preparing').length;
+  }
+
+  prettyShipmentStatus(s: string): string {
+    return String(s ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  bookDelivery(): void {
+    if (this.booking()) return;
+    this.confirm
+      .confirm({
+        title: 'Book delivery',
+        message:
+          `Book courier delivery for this order's ${this.readyCount} ready item(s)? ` +
+          `A courier will pick up from your store and deliver to the customer.`,
+        confirmLabel: 'Book delivery',
+        cancelLabel: 'Cancel',
+      })
+      .then((ok) => {
+        if (!ok) return;
+        this.booking.set(true);
+        this.adapter
+          .post_v3('POST /vendor/orders/:orderId/ship', {}, { params: { orderId: String(this.orderId) } })
+          .subscribe({
+            next: () => {
+              this.booking.set(false);
+              this.toast.success('Delivery booked.');
+              this.load();
+            },
+            error: (err: any) => {
+              this.booking.set(false);
+              this.toast.error(apiErrorMessage(err, 'Could not book delivery.'));
+            },
+          });
+      });
   }
 
   private load() {

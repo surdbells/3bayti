@@ -89,6 +89,44 @@
             </app-ax-rich-editor>
           </div>
 
+          <!-- Pickup address (for courier delivery) -->
+          <h3 class="ax-h6 ax-m-0 ax-mb-1">Pickup address (for delivery)</h3>
+          <p class="ax-text-2xs ax-text-tertiary ax-mb-3">
+            Where the courier collects your orders — required before delivery can be booked.
+            <span *ngIf="pickup_complete" class="ax-badge ax-badge-success">Complete</span>
+            <span *ngIf="!pickup_complete" class="ax-badge ax-badge-warning">Incomplete</span>
+          </p>
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-4">
+            <div class="ax-form-field">
+              <label class="ax-label">Contact name</label>
+              <input class="ax-input" name="pickup_contact_name" [(ngModel)]="pickup.contact_name" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">Pickup phone</label>
+              <input class="ax-input" name="pickup_phone" [(ngModel)]="pickup.phone" placeholder="05XXXXXXXX" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">City</label>
+              <input class="ax-input" name="pickup_city" [(ngModel)]="pickup.city" placeholder="Dubai" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">Area / district</label>
+              <input class="ax-input" name="pickup_area" [(ngModel)]="pickup.area" />
+            </div>
+            <div class="ax-form-field" style="grid-column: 1 / -1;">
+              <label class="ax-label">Street / address line</label>
+              <input class="ax-input" name="pickup_street" [(ngModel)]="pickup.street" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">Building no.</label>
+              <input class="ax-input" name="pickup_building_no" [(ngModel)]="pickup.building_no" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">Postcode</label>
+              <input class="ax-input" name="pickup_postcode" [(ngModel)]="pickup.postcode" />
+            </div>
+          </div>
+
           <!-- Logo + cover -->
           <h3 class="ax-h6 ax-m-0 ax-mb-3">Brand imagery</h3>
           <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-3">

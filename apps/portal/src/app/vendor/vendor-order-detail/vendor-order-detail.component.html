@@ -86,6 +86,25 @@
           </div>
         </section>
 
+        <!-- Courier delivery (OTO) -->
+        <section class="ax-card ax-p-4 ax-mb-4">
+          <h3 class="ax-h6 ax-mb-2">Delivery</h3>
+          <div *ngIf="shipment as s; else bookRow">
+            <span class="ax-badge ax-badge-info">{{ prettyShipmentStatus(s.status) }}</span>
+            <div *ngIf="s.delivery_company" class="ax-text-sm ax-text-secondary ax-mt-1">{{ s.delivery_company }}</div>
+            <div *ngIf="s.tracking_number" class="ax-text-sm ax-text-secondary">Tracking: {{ s.tracking_number }}</div>
+          </div>
+          <ng-template #bookRow>
+            <p class="ax-text-sm ax-text-secondary ax-mb-2">Book a courier to collect this order from your store.</p>
+            <button type="button" class="ax-btn ax-btn-sm ax-btn-primary"
+                    [disabled]="!readyCount || booking()"
+                    [title]="!readyCount ? 'No items ready to ship — accept/prepare them first' : ''"
+                    (click)="bookDelivery()">
+              {{ booking() ? 'Booking…' : 'Book delivery' }}
+            </button>
+          </ng-template>
+        </section>
+
         <section class="ax-card ax-p-4 voi-totals ax-mb-4">
           <div class="voi-total-row voi-total-grand">
             <span>Your items total</span><span>{{ money(vendorItemsTotal()) }}</span>
