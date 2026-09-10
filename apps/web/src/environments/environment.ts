@@ -10,7 +10,7 @@
  */
 
 export const environment = {
-  SITE_URL: "https://staging.3bayti.ae",
+  SITE_URL: "https://3bayti.ae",
   SENTRY_DSN: "https://822503d1eda33a1e983a6aa0a8f9dce7@o4511365625872384.ingest.us.sentry.io/4511365627772928",
   GA4_MEASUREMENT_ID: "G-W2YF72TS3F",
 
