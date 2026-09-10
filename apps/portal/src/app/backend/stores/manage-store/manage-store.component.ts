@@ -84,6 +84,7 @@ export class ManageStoreComponent implements OnInit {
     approved: false, store_email: '', store_phone: '',
     store_address: '', store_description: '',
     emirate: '', country: '',
+    pickup_location_code: '',
     min_delivery_days: 7, max_delivery_days: 14,
     vat_status: '', store_legal_name: '', trade_license_number: '',
     licensing_authority: '', tax_registration_number: '',
@@ -139,6 +140,9 @@ export class ManageStoreComponent implements OnInit {
       next: (response: any) => {
         if (response?.data) {
           this.store = response.data;
+          // Lift the OTO pickup-location code out of the nested pickup block so
+          // the form can bind + edit it as a flat field.
+          this.store.pickup_location_code = (this.store as any)?.pickup?.location_code ?? '';
           this.message.name = this.store.first_name;
           this.message.email = this.store.email;
           this.applyComplianceDocUrls();
@@ -173,6 +177,8 @@ export class ManageStoreComponent implements OnInit {
       contact_phone: phone || null,
       emirate: this.store.emirate || null,
       country: this.store.country || null,
+      // OTO pickup-location code (sent as a string so '' clears it server-side).
+      pickup_location_code: String(this.store.pickup_location_code ?? '').trim(),
       // Delivery lead-time range (days); both required together server-side.
       min_delivery_days: Number.isFinite(minD) ? minD : null,
       max_delivery_days: Number.isFinite(maxD) ? maxD : null,

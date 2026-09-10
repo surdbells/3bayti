@@ -180,6 +180,19 @@
                   Shown to customers as the delivery estimate. On an order with items from several
                   stores, the whole order shows the slowest store's range.
                 </p>
+                <div class="ax-form-field ax-mb-3">
+                  <label class="ax-label">OTO pickup location code</label>
+                  <input
+                    type="text"
+                    class="ax-input"
+                    [(ngModel)]="store.pickup_location_code"
+                    name="pickup_location_code"
+                    placeholder="This store's location code from the OTO portal" />
+                  <small class="ax-text-xs ax-text-secondary">
+                    Maps this store to its sender location in OTO. When set, courier pickups use it and
+                    the vendor doesn't need to fill a pickup address. Leave blank to clear.
+                  </small>
+                </div>
                 <div class="ax-flex ax-justify-end ax-mb-3" *axCan="'vendors.edit'">
                   <button type="button" class="ax-btn ax-btn-primary ax-btn-sm"
                           (click)="saveVendor()" [disabled]="ui_controls.saving">
