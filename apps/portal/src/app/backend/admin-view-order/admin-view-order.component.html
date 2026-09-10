@@ -288,9 +288,11 @@
                     <select class="ax-input ax-input-sm ax-mb-2" style="min-width: 13rem;"
                             [(ngModel)]="carrierFor(g.vendor_id).chosen"
                             (focus)="loadCarriers(g.vendor_id)">
-                      <option value="">Auto-assign (cheapest)</option>
+                      <option value="">
+                        {{ carrierFor(g.vendor_id).loading ? 'Loading carriers…' : 'Auto-assign (cheapest)' }}
+                      </option>
                       <option *ngFor="let o of carrierFor(g.vendor_id).options" [value]="o.id">
-                        {{ o.name }} — {{ o.price | number:'1.2-2' }} {{ o.currency }}
+                        {{ o.name }} — {{ o.price | number:'1.2-2' }} {{ o.currency }}{{ o.eta ? ' · ' + o.eta : '' }}
                       </option>
                     </select>
                     <button type="button" class="ax-btn ax-btn-sm ax-btn-primary"

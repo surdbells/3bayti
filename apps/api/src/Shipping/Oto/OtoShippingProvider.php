@@ -81,9 +81,10 @@ final class OtoShippingProvider implements ShippingProviderInterface
         }
 
         try {
-            $body = $this->builder->build($order, $vendor, $vendorItems, null);
-            // Quoting only — never create a shipment while listing options.
-            $body['createShipment'] = false;
+            // Quote by origin/destination city + weight — NOT the createOrder
+            // payload; the order isn't in OTO yet and a full pickup address
+            // isn't required just to list rates.
+            $body = $this->builder->buildFeeCheck($order, $vendor, $vendorItems);
             $response = $this->client->checkDeliveryFees($body);
         } catch (ShippingException $e) {
             $this->logger->warning('oto.list_options_failed', [
@@ -187,7 +188,13 @@ final class OtoShippingProvider implements ShippingProviderInterface
      */
     private function parseDeliveryOptions(array $response, string $currency): array
     {
-        $rows = $response['deliveryCompanies'] ?? $response['data'] ?? $response['options'] ?? [];
+        // OTO's checkOTODeliveryFee returns the options under `deliveryCompany`;
+        // older/other shapes use deliveryCompanies/data/options — accept any.
+        $rows = $response['deliveryCompany']
+            ?? $response['deliveryCompanies']
+            ?? $response['data']
+            ?? $response['options']
+            ?? [];
         if (!is_array($rows)) {
             return [];
         }
@@ -198,7 +205,7 @@ final class OtoShippingProvider implements ShippingProviderInterface
                 continue;
             }
             $id = $row['deliveryOptionId'] ?? $row['id'] ?? null;
-            $name = $row['deliveryCompanyName'] ?? $row['name'] ?? $row['deliveryCompany'] ?? null;
+            $name = $row['deliveryOptionName'] ?? $row['deliveryCompanyName'] ?? $row['name'] ?? $row['deliveryCompany'] ?? null;
             if ($id === null || $name === null) {
                 continue;
             }
@@ -207,6 +214,8 @@ final class OtoShippingProvider implements ShippingProviderInterface
                 'name' => (string) $name,
                 'price' => (float) ($row['price'] ?? $row['deliveryFee'] ?? $row['shippingAmount'] ?? 0),
                 'currency' => (string) ($row['currency'] ?? $currency),
+                'eta' => $this->str($row['avgDeliveryTime'] ?? null),
+                'company' => $this->str($row['deliveryCompanyName'] ?? null),
             ];
         }
         return $out;

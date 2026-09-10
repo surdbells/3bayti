@@ -119,14 +119,26 @@ export class AdminViewOrderComponent implements OnInit {
     const avOId = this.single.order ?? this.single.id;
     this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(avOId) } }).subscribe({
       next: (response: any) => {
-        const order = response?.order ?? response?.data ?? null;
-        if (order) {
-          this.data = this.mapV3Order(order);
+        // Reset the spinner in a finally so a mapping error can NEVER strand it
+        // on an endless spin (the bug this guards: an exception thrown while
+        // shaping the response used to skip the reset below).
+        try {
+          const order = response?.order ?? response?.data ?? null;
+          if (order) {
+            this.data = this.mapV3Order(order);
+          } else {
+            this.error_notification('Order not found.');
+          }
+        } catch (e) {
+          console.error('Failed to render order', e);
+          this.error_notification('Could not display this order.');
+        } finally {
+          this.ui_controls.is_loading = false;
         }
-        this.ui_controls.is_loading = false;
       },
-      error: () => {
+      error: (err: any) => {
         this.ui_controls.is_loading = false;
+        this.error_notification(apiErrorMessage(err, 'Unable to load this order.'));
       },
     });
   }
@@ -134,7 +146,7 @@ export class AdminViewOrderComponent implements OnInit {
   // ── Invoice computed values ───────────────────────────────────────────
   // Compute line/order totals from unit_price × qty rather than the stored
   // `subtotal`/`total`, which are 0 on legacy-migrated orders.
-  get items(): any[] { return this.data?.items ?? []; }
+  get items(): any[] { return Array.isArray(this.data?.items) ? this.data.items : []; }
   lineTotal(it: any): number { return (Number(it?.unit_price) || 0) * (Number(it?.quantity) || 1); }
   get itemsSubtotal(): number { return this.items.reduce((s, i) => s + this.lineTotal(i), 0); }
   get deliveryFee(): number { return Number(this.data?.delivery_fee) || 0; }
@@ -255,7 +267,7 @@ export class AdminViewOrderComponent implements OnInit {
    * template and the invoice rendered blank.
    */
   private mapV3Order(o: any): any {
-    const items = o.items ?? [];
+    const items = Array.isArray(o.items) ? o.items : [];
     const first = items[0] ?? {};
     const customer = o.customer ?? {};
     const ship = o.shipping_address ?? {};

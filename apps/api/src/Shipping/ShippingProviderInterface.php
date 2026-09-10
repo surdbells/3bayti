@@ -48,7 +48,7 @@ interface ShippingProviderInterface
      * disabled or can't quote.
      *
      * @param OrderItem[] $vendorItems
-     * @return list<array{id: string, name: string, price: float, currency: string}>
+     * @return list<array{id: string, name: string, price: float, currency: string, eta?: string|null, company?: string|null}>
      */
     public function listDeliveryOptions(Order $order, Vendor $vendor, array $vendorItems): array;
 

@@ -112,4 +112,13 @@ export class AdminDeliveriesComponent implements OnInit {
   prettyStatus(s: string): string {
     return String(s ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
+
+  /** Carrier option label: "Aramex — 22.00 AED · 1-2 days". */
+  carrierLabel(o: any): string {
+    const price = Number(o?.price);
+    const parts = [o?.name || 'Carrier'];
+    if (Number.isFinite(price)) parts.push(`— ${price.toFixed(2)} ${o?.currency || ''}`.trim());
+    if (o?.eta) parts.push(`· ${o.eta}`);
+    return parts.join(' ');
+  }
 }

@@ -137,6 +137,43 @@ final class OtoOrderPayloadBuilderTest extends TestCase
         $this->builder->build($order, $vendor, [$item]);
     }
 
+    #[Test]
+    public function buildFeeCheckQuotesByOriginDestinationCityAndWeight(): void
+    {
+        $vendor = $this->makeVendorWithPickup(7);        // pickup city = Dubai
+        $order = $this->makeOrderWithAddress('3B-FEE');   // ships to Abu Dhabi
+        $i1 = $this->addItem($order, $vendor, 'A', '100.00', 2, 1);
+        $i2 = $this->addItem($order, $vendor, 'B', '50.00', 1, 2);
+
+        $q = $this->builder->buildFeeCheck($order, $vendor, [$i1, $i2]);
+
+        self::assertSame('Dubai', $q['originCity']);
+        self::assertSame('Abu Dhabi', $q['destinationCity']);
+        self::assertSame(1.5, $q['weight']); // 0.5 * 3 qty
+        self::assertSame('AED', $q['currency']);
+        // It is a rate quote, NOT the createOrder payload.
+        self::assertArrayNotHasKey('items', $q);
+        self::assertArrayNotHasKey('customer', $q);
+        self::assertArrayNotHasKey('orderId', $q);
+    }
+
+    #[Test]
+    public function buildFeeCheckDoesNotRequireACompletePickupAddress(): void
+    {
+        // Origin city falls back to the vendor's emirate — enough for a quote,
+        // even before the store has filled its structured pickup address.
+        $vendor = new Vendor('store-9', 'No Pickup', 'v9@example.test');
+        $this->setId($vendor, 9);
+        $vendor->setEmirate('Sharjah');
+        $order = $this->makeOrderWithAddress('3B-FEE2');
+        $item = $this->addItem($order, $vendor, 'X', '10.00', 1, 3);
+
+        $q = $this->builder->buildFeeCheck($order, $vendor, [$item]);
+
+        self::assertSame('Sharjah', $q['originCity']);
+        self::assertSame('Abu Dhabi', $q['destinationCity']);
+    }
+
     // ===== Fixtures =====
 
     private function makeVendorWithPickup(int $id): Vendor

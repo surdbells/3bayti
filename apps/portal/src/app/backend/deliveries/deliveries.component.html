@@ -42,18 +42,24 @@
                   <span *ngIf="r.due_today" class="ax-badge ax-badge-warning ax-badge-sm">Today</span>
                 </td>
                 <td class="ax-text-sm ax-text-secondary">{{ r.created_at | date:'short' }}</td>
-                <td style="text-align:right; white-space:nowrap;">
-                  <select class="ax-input ax-input-sm ax-mb-1" style="min-width:12rem;"
-                          [(ngModel)]="carrierFor(r).chosen" (focus)="loadCarriers(r)">
-                    <option value="">Auto-assign (cheapest)</option>
-                    <option *ngFor="let o of carrierFor(r).options" [value]="o.id">
-                      {{ o.name }} — {{ o.price | number:'1.2-2' }} {{ o.currency }}
-                    </option>
-                  </select>
-                  <button type="button" class="ax-btn ax-btn-sm ax-btn-primary"
-                          [disabled]="!!booking" (click)="book(r)">
-                    {{ booking === key(r) ? 'Booking…' : 'Book delivery' }}
-                  </button>
+                <td style="text-align:right;">
+                  <div style="display:flex; gap:0.5rem; align-items:center; justify-content:flex-end;">
+                    <select class="ax-input ax-input-sm" style="min-width:13rem;"
+                            [(ngModel)]="carrierFor(r).chosen" (focus)="loadCarriers(r)">
+                      <option value="">
+                        {{ carrierFor(r).loading ? 'Loading carriers…' : 'Auto-assign (cheapest)' }}
+                      </option>
+                      <option *ngFor="let o of carrierFor(r).options" [value]="o.id">{{ carrierLabel(o) }}</option>
+                    </select>
+                    <button type="button" class="ax-btn ax-btn-sm ax-btn-primary" style="white-space:nowrap;"
+                            [disabled]="!!booking" (click)="book(r)">
+                      {{ booking === key(r) ? 'Booking…' : 'Book delivery' }}
+                    </button>
+                  </div>
+                  <div *ngIf="carrierFor(r).loaded && !carrierFor(r).options.length"
+                       class="ax-text-2xs ax-text-secondary ax-mt-1" style="text-align:right;">
+                    No live carrier quotes — auto-assign will pick the cheapest.
+                  </div>
                 </td>
               </tr>
               <tr *ngIf="!pending.length">

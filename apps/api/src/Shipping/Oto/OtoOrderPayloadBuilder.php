@@ -130,6 +130,53 @@ final class OtoOrderPayloadBuilder
         return array_filter($payload, static fn ($v): bool => $v !== null);
     }
 
+    /**
+     * Build the OTO `checkOTODeliveryFee` request body — a lightweight quote by
+     * origin/destination city + weight (NOT the full createOrder payload). Used
+     * to list carrier options BEFORE the order exists in OTO, so it deliberately
+     * does NOT require a complete structured pickup address: origin city falls
+     * back to the vendor's emirate, which is enough for a rate quote.
+     *
+     * @param OrderItem[] $vendorItems
+     * @return array<string, mixed>
+     * @throws ShippingException when the order has no delivery address
+     */
+    public function buildFeeCheck(Order $order, Vendor $vendor, array $vendorItems): array
+    {
+        $address = $order->getShippingAddress();
+        if ($address === null) {
+            throw ShippingException::noAddress();
+        }
+
+        $totalQty = 0;
+        foreach ($vendorItems as $item) {
+            $totalQty += $item->getQuantity();
+        }
+
+        $originCity = $this->firstNonEmpty($vendor->getPickupCity(), $vendor->getEmirate());
+        $originCountry = $this->firstNonEmpty($vendor->getCountry(), $address->getCountryCode());
+
+        return array_filter([
+            'originCity' => $originCity,
+            'destinationCity' => $address->getCity(),
+            'originCountry' => $originCountry,
+            'destinationCountry' => $address->getCountryCode(),
+            'weight' => $this->weightFor($totalQty),
+            'currency' => $order->getCurrency(),
+            'packageCount' => 1,
+        ], static fn ($v): bool => $v !== null && $v !== '');
+    }
+
+    private function firstNonEmpty(?string ...$values): ?string
+    {
+        foreach ($values as $v) {
+            if ($v !== null && trim($v) !== '') {
+                return $v;
+            }
+        }
+        return null;
+    }
+
     private function weightFor(int $totalQty): float
     {
         $qty = max(1, $totalQty);

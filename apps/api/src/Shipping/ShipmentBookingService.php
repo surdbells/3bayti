@@ -134,7 +134,7 @@ final class ShipmentBookingService
      * Carrier options (id + name + price) for a vendor's shippable items, for
      * the "choose a carrier" flow. Empty when disabled or nothing to quote.
      *
-     * @return list<array{id: string, name: string, price: float, currency: string}>
+     * @return list<array{id: string, name: string, price: float, currency: string, eta?: string|null, company?: string|null}>
      */
     public function listOptionsForVendor(Order $order, Vendor $vendor): array
     {

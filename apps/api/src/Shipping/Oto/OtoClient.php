@@ -34,7 +34,7 @@ final class OtoClient
 {
     private const AUTH_PATH         = '/rest/v2/refreshToken';
     private const CREATE_ORDER_PATH = '/rest/v2/createOrder';
-    private const DELIVERY_FEES_PATH = '/rest/v2/checkOTODeliveryFees';
+    private const DELIVERY_FEES_PATH = '/rest/v2/checkOTODeliveryFee';
     private const PICKUP_LOCATIONS_PATH = '/rest/v2/getPickupLocationList';
     private const CREATE_PICKUP_LOCATION_PATH = '/rest/v2/createPickupLocation';
 
