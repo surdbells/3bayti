@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { timeout } from 'rxjs';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
@@ -117,7 +118,11 @@ export class AdminViewOrderComponent implements OnInit {
   get_order_by_id() {
     this.ui_controls.is_loading = true;
     const avOId = this.single.order ?? this.single.id;
-    this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(avOId) } }).subscribe({
+    this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(avOId) } })
+      // Recover the UI if the request never returns — a slow/hung server-side
+      // load would otherwise leave the page spinning forever (no next/error).
+      .pipe(timeout({ first: 25000 }))
+      .subscribe({
       next: (response: any) => {
         // Reset the spinner in a finally so a mapping error can NEVER strand it
         // on an endless spin (the bug this guards: an exception thrown while
@@ -138,7 +143,10 @@ export class AdminViewOrderComponent implements OnInit {
       },
       error: (err: any) => {
         this.ui_controls.is_loading = false;
-        this.error_notification(apiErrorMessage(err, 'Unable to load this order.'));
+        const msg = err?.name === 'TimeoutError'
+          ? 'This order took too long to load — the server didn’t respond. Please retry.'
+          : apiErrorMessage(err, 'Unable to load this order.');
+        this.error_notification(msg);
       },
     });
   }
@@ -163,7 +171,7 @@ export class AdminViewOrderComponent implements OnInit {
    * the per-store "Book delivery" button + tracking panel.
    */
   get vendorGroups(): any[] {
-    const shipments: any[] = this.data?.shipments ?? [];
+    const shipments: any[] = Array.isArray(this.data?.shipments) ? this.data.shipments : [];
     const byVendor = new Map<number, any>();
     for (const it of this.items) {
       const vid = Number(it?.vendor_id) || 0;
@@ -339,7 +347,7 @@ export class AdminViewOrderComponent implements OnInit {
    * set the vendor fulfils against, independent of the per-item snapshot.
    */
   customerMeasurements(): any[] {
-    const rows = this.data?.customer_measurements ?? [];
+    const rows = Array.isArray(this.data?.customer_measurements) ? this.data.customer_measurements : [];
     return rows.filter((m: any) => this.measurementValueRows(m).length > 0);
   }
 

@@ -23,13 +23,15 @@
 
     <ng-container *ngIf="!loading">
       <!-- Filters -->
-      <div class="ax-card ax-p-3 ax-mb-4 ax-flex ax-items-center ax-gap-3" style="flex-wrap:wrap;">
-        <input type="search" class="ax-input ax-input-sm" style="flex:1 1 15rem; min-width:12rem; max-width:22rem;"
-               placeholder="Search order or store…" [(ngModel)]="search" />
-        <div class="ax-flex ax-items-center ax-gap-1" style="flex-wrap:wrap;">
-          <button *ngFor="let f of urgencyFilters" type="button" class="ax-btn ax-btn-sm"
-                  [ngClass]="urgency === f.id ? 'ax-btn-primary' : 'ax-btn-outline'"
-                  (click)="urgency = f.id">{{ f.label }} ({{ urgencyCount(f.id) }})</button>
+      <div class="ax-card ax-p-3 ax-mb-4">
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.75rem;">
+          <input type="text" class="ax-input ax-input-sm" style="width:18rem; max-width:100%;"
+                 placeholder="Search order or store…" [(ngModel)]="search" />
+          <div style="display:flex; flex-wrap:wrap; gap:0.375rem;">
+            <button *ngFor="let f of urgencyFilters" type="button" class="ax-btn ax-btn-sm"
+                    [ngClass]="urgency === f.id ? 'ax-btn-primary' : 'ax-btn-outline'"
+                    (click)="urgency = f.id">{{ f.label }} ({{ urgencyCount(f.id) }})</button>
+          </div>
         </div>
       </div>
 
