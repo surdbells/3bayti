@@ -516,14 +516,24 @@ class OrderRepository extends EntityRepository
     }
 
     /**
-     * Find any order by id without scope restrictions. Admin-only
-     * use. Eagerly loads items + addresses.
+     * Find any order by id without scope restrictions. Admin-only use.
+     *
+     * Eagerly fetch-joins items + their product & vendor + the account holder +
+     * addresses in ONE query. Without the product/vendor/user joins, the admin
+     * order-detail serializer lazy-loads each item's product and vendor (an N+1),
+     * and every legacy vendor entity drags in its large base64 logo/cover TEXT
+     * columns — which made legacy orders' detail load slow enough to look hung.
+     * Mirrors findForDeliveryReadiness, which already fetch-joins these same
+     * relations on these same legacy orders.
      */
     public function findByIdForAdmin(int $orderId): ?Order
     {
         $result = $this->createQueryBuilder('o')
-            ->select('o', 'i', 'a')
+            ->select('o', 'i', 'p', 'v', 'u', 'a')
             ->leftJoin('o.items', 'i')
+            ->leftJoin('i.product', 'p')
+            ->leftJoin('i.vendor', 'v')
+            ->leftJoin('o.user', 'u')
             ->leftJoin('o.addresses', 'a')
             ->where('o.id = :oid')
             ->setParameter('oid', $orderId)
