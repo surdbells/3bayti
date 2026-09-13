@@ -38,6 +38,15 @@ final class CreateAdminProductController
         $body     = (array) ($request->getParsedBody() ?? []);
         $vendorId = (int) ($body['vendor_id'] ?? 0);
 
+        // A new product MUST have a real, positive price. The DTO's Positive
+        // constraint rejects a supplied 0/negative, but price is nullable (shared
+        // with partial-update); an omitted price would fall through to the
+        // entity's 0.00 default, so require it here on create (same as the vendor
+        // create path).
+        if ($input->price === null || (float) $input->price <= 0.0) {
+            throw HttpException::validation(['price' => ['Price is required and must be greater than zero.']]);
+        }
+
         /** @var VendorRepository $vRepo */
         $vRepo  = $this->em->getRepository(Vendor::class);
         $vendor = $vRepo->find($vendorId);
@@ -51,7 +60,7 @@ final class CreateAdminProductController
         $slug = ($slug !== '' ? $slug : 'product') . '-' . substr(bin2hex(random_bytes(4)), 0, 8);
 
         $product = new Product(vendor: $vendor, slug: $slug, name: $input->name ?? '');
-        if ($input->price !== null)        $product->setPrice(number_format((float) $input->price, 2, '.', ''));
+        $product->setPrice(number_format((float) $input->price, 2, '.', '')); // guaranteed non-null & > 0 above
         $product->setSalePrice($input->sale_price !== null ? number_format((float) $input->sale_price, 2, '.', '') : null);
         if ($input->description !== null)  $product->setDescription($input->description);
         if ($input->status !== null)       $product->setStatus($input->status);
