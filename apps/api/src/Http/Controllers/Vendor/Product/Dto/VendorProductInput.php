@@ -20,7 +20,10 @@ final class VendorProductInput
     #[Assert\Length(max: 5000, maxMessage: 'Description must be 5000 characters or fewer.')]
     public readonly ?string $description;
 
-    #[Assert\PositiveOrZero(message: 'Price must be zero or positive.')]
+    // A product must carry a real price — zero (or negative) is never a valid
+    // sale price. Null is still allowed here so a partial UPDATE that omits price
+    // keeps the existing one; CREATE requires it (see CreateVendorProductController).
+    #[Assert\Positive(message: 'Price must be greater than zero.')]
     public readonly int|float|null $price;
 
     /**

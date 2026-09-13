@@ -67,6 +67,14 @@ final class CreateVendorProductController
 
         $input = $this->validator->parse($request, VendorProductInput::class);
 
+        // A new product MUST have a real, positive price. The DTO's Positive
+        // constraint rejects a supplied 0/negative, but the price field is
+        // nullable (shared with partial-update); an omitted price would otherwise
+        // fall through to the entity's 0.00 default, so require it here on create.
+        if ($input->price === null || (float) $input->price <= 0.0) {
+            throw HttpException::validation(['price' => ['Price is required and must be greater than zero.']]);
+        }
+
         /** @var CategoryRepository $catRepo */
         $catRepo = $this->em->getRepository(Category::class);
         $category = null;

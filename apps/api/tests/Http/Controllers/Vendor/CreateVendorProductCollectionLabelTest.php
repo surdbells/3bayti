@@ -101,4 +101,44 @@ final class CreateVendorProductCollectionLabelTest extends HttpTestCase
         self::assertSame(3, $this->saved->getLabelId());
         self::assertSame('active', $this->saved->getStatus());
     }
+
+    #[Test]
+    public function rejectsAZeroPrice(): void
+    {
+        $res = $this->createWithBody(['name' => 'Freebie', 'price' => 0, 'status' => 'active']);
+        self::assertSame(422, $res->getStatusCode(), (string) $res->getBody());
+        self::assertNull($this->saved, 'A zero-price product must not be created.');
+    }
+
+    #[Test]
+    public function rejectsANegativePrice(): void
+    {
+        $res = $this->createWithBody(['name' => 'Odd', 'price' => -10, 'status' => 'active']);
+        self::assertSame(422, $res->getStatusCode(), (string) $res->getBody());
+        self::assertNull($this->saved);
+    }
+
+    #[Test]
+    public function rejectsAMissingPrice(): void
+    {
+        // An omitted price would otherwise fall through to the entity's 0.00 default.
+        $res = $this->createWithBody(['name' => 'No price', 'status' => 'active']);
+        self::assertSame(422, $res->getStatusCode(), (string) $res->getBody());
+        self::assertNull($this->saved);
+    }
+
+    /** @param array<string, mixed> $body */
+    private function createWithBody(array $body): ResponseInterface
+    {
+        $user = $this->makeVendorUser(200);
+        $vendor = $this->makeVendor(201);
+        $this->bindDeps($user, $vendor);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        return $this->handle($this->jsonRequest('POST', '/v3/vendor/products', $body, [
+            'Authorization' => 'Bearer ' . $pair->accessToken,
+        ]));
+    }
 }
