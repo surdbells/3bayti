@@ -492,6 +492,9 @@ export class ProductFormComponent implements OnInit {
       this.toast.error('Featured image is required'); return false;
     }
     if (!this.isEdit && !this.model.delivery_time.length) { this.toast.error('Delivery time is required'); return false; }
+    // A product must carry a real price — the API rejects zero/negative (and a
+    // blank/NaN price coerces to 0), so catch it here before the round-trip.
+    if (!(Number(this.model.price) > 0)) { this.toast.error('Price must be greater than zero'); return false; }
     if (this.model.sale_price != null
         && Number(this.model.sale_price) > 0
         && Number(this.model.sale_price) >= Number(this.model.price)) {
