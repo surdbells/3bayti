@@ -304,12 +304,16 @@ export class AskAinPage implements OnInit {
   // ── Analytics + session ────────────────────────────────────────────────
 
   private recordEvent(event: string, extra: Record<string, unknown> = {}): void {
-    const body: Record<string, unknown> = { event, session_id: this.sessionId, ...extra };
-    if (this.interactionId) {
-      body['interaction_id'] = this.interactionId;
+    try {
+      const body: Record<string, unknown> = { event, session_id: this.sessionId, ...extra };
+      if (this.interactionId) {
+        body['interaction_id'] = this.interactionId;
+      }
+      const opts = this.user?.token ? { authToken: this.user.token } : {};
+      this.networkAdapter.post_v3('POST /ai/events', body, opts).subscribe({ next: () => {}, error: () => {} });
+    } catch {
+      // Analytics must never break the page.
     }
-    const opts = this.user?.token ? { authToken: this.user.token } : {};
-    this.networkAdapter.post_v3('POST /ai/events', body, opts).subscribe({ next: () => {}, error: () => {} });
   }
 
   private async ensureSession(): Promise<string> {
