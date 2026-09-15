@@ -544,6 +544,40 @@
     </ax-bottom-sheet>
   }
   }
+
+  <!-- Ain "Complete the look": real, in-stock complements -->
+  @if (completeLook.length > 0) {
+    <section class="ctl">
+      <div class="ctl-head">
+        <h2 class="ctl-title">{{ 'complete_look_title' | translate }}</h2>
+        <button type="button" class="ctl-add" [disabled]="isAddingLook" (click)="addTheLook()">
+          @if (isAddingLook) {
+            <ax-loader></ax-loader>
+          } @else {
+            {{ 'complete_look_add' | translate }}
+          }
+        </button>
+      </div>
+      <div class="ctl-scroll">
+        @for (card of completeLook; track card.id) {
+          <button type="button" class="ctl-card" (click)="open_complement(card)">
+            <div class="ctl-img-wrap">
+              <img [src]="cfImage(card.primary_image?.url || '', 'card')" alt="{{ card.name }}" />
+            </div>
+            <p class="ctl-name">{{ card.name }}</p>
+            <div class="ctl-price-row">
+              @if (card.sale_price) {
+                <span class="ctl-price">Ð{{ card.sale_price.amount }}</span>
+                <span class="ctl-price-was">Ð{{ card.price?.amount }}</span>
+              } @else {
+                <span class="ctl-price">Ð{{ card.price?.amount }}</span>
+              }
+            </div>
+          </button>
+        }
+      </div>
+    </section>
+  }
 </ion-content>
 
 <!-- Fullscreen image lightbox (cinematic filmstrip). Rendered OUTSIDE

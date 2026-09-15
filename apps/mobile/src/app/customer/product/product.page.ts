@@ -23,7 +23,7 @@ import {
   NavController
 } from '@ionic/angular/standalone';
 import { ActivatedRoute, Router } from "@angular/router";
-import { Subscription } from "rxjs";
+import { Subscription, firstValueFrom } from "rxjs";
 import { Platform } from "@ionic/angular";
 import { ConnectionService } from "../../service/connection.service";
 import { NetworkService } from "../../service/network.service";
@@ -185,10 +185,17 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
   }
 
+  /** Ain "Complete the look" complements for this product. */
+  completeLook: any[] = [];
+  ctlInteractionId: number | null = null;
+  isAddingLook = false;
+  private ctlSessionId = '';
+
   ngOnInit() {
     this.rqst_param.product = Number(this.route.snapshot.queryParamMap.get('id'));
     this.rqst_param.product_name = this.route.snapshot.queryParamMap.get('name') || '';
     this.getObject();
+    void this.ensureAinSession();
   }
 
   ngAfterViewInit() {
@@ -931,6 +938,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
             this.add_cart.product_image = this.single.image_1;
             this.add_cart.price = this.single.price;
             this.add_cart.store = this.single.store;
+            this.get_complete_look();
             this.get_store_measurement();
             this.apiSizes = {
               'NORMAL': this.single.size_normal,
@@ -1111,6 +1119,111 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
           }
         }
       });
+  }
+
+  /**
+   * Fetch complementary products for the "Complete the look" carousel. Keyed by
+   * the v3 product id; best-effort — any failure just leaves the carousel empty.
+   */
+  private get_complete_look(): void {
+    const id = this.single?.product ?? this.rqst_param.product;
+    if (!id) {
+      return;
+    }
+    this.networkAdapter.get_v3('GET /products/:id/complete-the-look', { pathParams: { id: String(id) } })
+      .subscribe({
+        next: (response: any) => {
+          if (response?.response_code === 200 && response?.status === 'success' && response?.data) {
+            this.completeLook = Array.isArray(response.data.items) ? response.data.items : [];
+            this.ctlInteractionId = response.data.interaction_id ?? null;
+            this.cdr.markForCheck();
+          }
+        },
+        error: () => {},
+      });
+  }
+
+  open_complement(card: any): void {
+    this.recordAiEvent('ai_product_clicked', { product_id: card.id });
+    this.router.navigate(['/', 'product'], { queryParams: { id: card.id, name: card.name } });
+  }
+
+  /**
+   * Add every complement to the cart in one tap. Applies the guest guard ONCE
+   * up front (rather than one toast per item), then loops POST /cart/items.
+   */
+  async addTheLook(): Promise<void> {
+    if (this.isAddingLook || this.completeLook.length === 0) {
+      return;
+    }
+    if (this.isGuest || !this.single_user.token) {
+      this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
+      return;
+    }
+    this.isAddingLook = true;
+    this.cdr.markForCheck();
+
+    let added = 0;
+    for (const card of this.completeLook) {
+      const body = {
+        product_id: card.id,
+        quantity: 1,
+        size: '',
+        color: '',
+        is_custom: false,
+        measurement: null,
+        extra_measurement: null,
+        note: null,
+      };
+      try {
+        const res: any = await firstValueFrom(
+          this.networkAdapter.post_v3('POST /cart/items', body, { authToken: this.single_user.token }),
+        );
+        const ok = res?.response_code === 200 &&
+          (res?.status === 'success' || (res?.data && res.data.success === true));
+        if (ok) {
+          added++;
+          this.recordAiEvent('complete_look_item_added', { product_id: card.id });
+        }
+      } catch {
+        // skip an item that can't be added; keep going
+      }
+    }
+
+    this.recordAiEvent('complete_look_added', { count: added });
+    this.isAddingLook = false;
+    if (added > 0) {
+      this.success_notification(this.i18n.t('text_added_to_cart'));
+      void this.cartCount.refresh();
+    }
+    this.cdr.markForCheck();
+  }
+
+  private recordAiEvent(event: string, extra: Record<string, unknown> = {}): void {
+    try {
+      const body: Record<string, unknown> = { event, session_id: this.ctlSessionId, ...extra };
+      if (this.ctlInteractionId) {
+        body['interaction_id'] = this.ctlInteractionId;
+      }
+      const opts = this.single_user?.token ? { authToken: this.single_user.token } : {};
+      this.networkAdapter.post_v3('POST /ai/events', body, opts).subscribe({ next: () => {}, error: () => {} });
+    } catch {
+      // analytics must never break the page
+    }
+  }
+
+  private async ensureAinSession(): Promise<void> {
+    const got = await Preferences.get({ key: 'ain_session' });
+    if (got.value) {
+      this.ctlSessionId = got.value;
+      return;
+    }
+    const id =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : 'm-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e9).toString(36);
+    await Preferences.set({ key: 'ain_session', value: id });
+    this.ctlSessionId = id;
   }
 
   addToCart() {
