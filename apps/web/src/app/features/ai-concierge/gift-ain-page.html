@@ -7,6 +7,7 @@
     </span>
     <h1 class="gift-ain__title font-display">{{ 'giftAin.title' | translate }}</h1>
     <p class="gift-ain__subtitle">{{ 'giftAin.subtitle' | translate }}</p>
+    <a class="gift-ain__reminders-link" [routerLink]="['/gift-reminders']">{{ 'giftReminders.myReminders' | translate }}</a>
   </header>
 
   <form class="gift-ain__form" (ngSubmit)="submit()">

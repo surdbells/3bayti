@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 
 import { ProductCardComponent } from '../catalog/product-card';
@@ -24,7 +24,7 @@ interface BudgetBand {
   selector: 'app-gift-ain',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, TranslatePipe, ProductCardComponent],
+  imports: [FormsModule, TranslatePipe, ProductCardComponent, RouterLink],
   templateUrl: './gift-ain-page.html',
   styleUrl: './gift-ain-page.scss',
 })
@@ -32,6 +32,7 @@ export class GiftAinPageComponent implements OnInit {
   private readonly concierge = inject(ConciergeService);
   private readonly analytics = inject(AnalyticsService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly recipients = ['sister', 'mother', 'friend', 'wife', 'daughter', 'colleague'];
   readonly occasions = ['eid', 'wedding', 'birthday', 'graduation', 'anniversary', 'justBecause'];
@@ -90,6 +91,46 @@ export class GiftAinPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.concierge.recordEvent('ai_opened', { feature: 'gift_concierge' });
+    this.applyPrefill();
+  }
+
+  /**
+   * A gift-reminder nudge deep-links here with ?occasion=&budget_max=&
+   * category_slug=&gift_reminder_id=. Reflect what maps onto the chips, then run
+   * the search immediately so the shopper lands on real picks.
+   */
+  private applyPrefill(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const occasion = (params.get('occasion') ?? '').trim();
+    const budgetMaxRaw = params.get('budget_max');
+    const categorySlug = params.get('category_slug') ?? undefined;
+    const reminderId = params.get('gift_reminder_id');
+    const budgetMax = budgetMaxRaw !== null && budgetMaxRaw !== '' ? Number(budgetMaxRaw) : undefined;
+
+    if (!occasion && budgetMax === undefined) {
+      return;
+    }
+    if (reminderId) {
+      this.concierge.recordEvent('gift_reminder_clicked', { gift_reminder_id: Number(reminderId) });
+    }
+
+    // Reflect a matching occasion chip + budget band for visual continuity.
+    const occKey = this.occasions.find((o) => o.toLowerCase() === occasion.toLowerCase());
+    if (occKey) {
+      this.occasion.set(occKey);
+    }
+    if (budgetMax !== undefined) {
+      const band = this.budgetBands.find((b) => (b.max ?? Infinity) >= budgetMax && (b.min ?? 0) <= budgetMax);
+      if (band) {
+        this.budget.set(band);
+      }
+    }
+
+    void this.runBrief({
+      occasion: occasion || undefined,
+      budget_max: budgetMax,
+      category_slug: categorySlug,
+    });
   }
 
   pickRecipient(r: string): void {
@@ -109,12 +150,12 @@ export class GiftAinPageComponent implements OnInit {
       .filter((s) => s.length > 0);
   }
 
-  async submit(): Promise<void> {
+  submit(): void {
     if (!this.canSubmit() || this.loading()) {
       return;
     }
     const band = this.budget();
-    const brief: GiftBriefInput = {
+    void this.runBrief({
       recipient: this.recipient() || undefined,
       occasion: this.occasion() || undefined,
       colours: this.toList(this.coloursText()),
@@ -122,8 +163,10 @@ export class GiftAinPageComponent implements OnInit {
       size: this.size().trim() || undefined,
       budget_min: band?.min,
       budget_max: band?.max,
-    };
+    });
+  }
 
+  private async runBrief(brief: GiftBriefInput): Promise<void> {
     this.loading.set(true);
     this.hasSearched.set(true);
     this.cards.set([]);

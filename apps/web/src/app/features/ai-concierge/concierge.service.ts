@@ -25,6 +25,7 @@ export interface GiftBriefInput {
   budget_min?: number;
   budget_max?: number;
   product_type?: string;
+  category_slug?: string;
 }
 
 /** The "buy a gift card instead" nudge (references no product). */

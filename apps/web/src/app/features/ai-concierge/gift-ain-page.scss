@@ -327,3 +327,13 @@
   color: var(--color-brand-700, #5a3a2c);
   font-style: italic;
 }
+
+.gift-ain__reminders-link {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-brand-600, #906952);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.gift-ain__reminders-link:hover { color: var(--color-brand-700, #5a3a2c); }

@@ -152,6 +152,14 @@ export const routes: Routes = [
     title: 'routeTitles.giftAin',
   },
   {
+    /* Gift reminders — the signed-in customer's saved gift dates + nudges. */
+    path: 'gift-reminders',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/gift-reminders/gift-reminders-page').then(m => m.GiftRemindersPageComponent),
+    title: 'routeTitles.giftReminders',
+  },
+  {
     /* Create a style, `/styles/create`. Name + product picker → POST
        /me/styles. Auth-gated (the create endpoint is Bearer-bound).
        MUST precede `styles/:slug` so the literal segment wins. */

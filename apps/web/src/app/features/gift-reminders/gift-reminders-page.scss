@@ -1,0 +1,113 @@
+.gr {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 1rem + 2vw, 3rem) var(--page-padding-x, 24px) 4rem;
+}
+.gr__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+}
+.gr__title {
+  font-size: clamp(1.6rem, 1.3rem + 1.4vw, 2.2rem);
+  color: var(--color-brand-700, #5a3a2c);
+  margin: 0 0 0.3rem;
+}
+.gr__subtitle { color: var(--color-text-secondary, #5a4a3c); margin: 0; max-width: 32rem; }
+.gr__add {
+  border: none;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-brand-700, #5a3a2c);
+  color: #fff;
+  padding: 0.65rem 1.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.gr__add:hover { background: var(--color-brand-500, #b18f1f); }
+
+.gr__form {
+  border: 1px solid var(--color-border, #e7ded2);
+  border-radius: var(--radius-lg, 20px);
+  background: var(--color-bg-surface, #fff);
+  padding: 1.25rem;
+  margin-bottom: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.gr__row { display: grid; grid-template-columns: 1fr; gap: 0.9rem; }
+@media (min-width: 560px) { .gr__row { grid-template-columns: 1fr 1fr; } }
+.gr__field { display: flex; flex-direction: column; gap: 0.35rem; }
+.gr__field > span { font-size: 0.82rem; font-weight: 600; color: var(--color-text-primary, #2e241c); }
+.gr__field input {
+  border: 1px solid var(--color-border, #e7ded2);
+  border-radius: 0.7rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--color-text-primary, #2e241c);
+  background: var(--color-bg-canvas, #faf8f5);
+  outline: none;
+}
+.gr__field input:focus { border-color: var(--color-brand-500, #b18f1f); background: #fff; }
+.gr__form-actions { display: flex; justify-content: flex-end; gap: 0.6rem; }
+
+.gr__btn {
+  border-radius: var(--radius-pill, 999px);
+  padding: 0.6rem 1.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.gr__btn--primary { background: var(--color-brand-700, #5a3a2c); color: #fff; border-color: var(--color-brand-700, #5a3a2c); }
+.gr__btn--primary:hover:not(:disabled) { background: var(--color-brand-500, #b18f1f); }
+.gr__btn--primary:disabled { opacity: 0.5; cursor: default; }
+.gr__btn--ghost { background: transparent; color: var(--color-text-secondary, #5a4a3c); border-color: var(--color-border, #e7ded2); }
+
+.gr__status { color: var(--color-text-secondary, #5a4a3c); text-align: center; padding: 2rem; }
+.gr__empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: var(--color-text-secondary, #5a4a3c);
+}
+
+.gr__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+.gr__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  border: 1px solid var(--color-border, #e7ded2);
+  border-radius: var(--radius-lg, 20px);
+  background: var(--color-bg-surface, #fff);
+  padding: 1rem 1.15rem;
+}
+.gr__item-main { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.gr__item-recipient { font-size: 1rem; font-weight: 700; color: var(--color-text-primary, #2e241c); }
+.gr__item-meta { font-size: 0.85rem; color: var(--color-text-secondary, #5a4a3c); }
+.gr__item-note { font-size: 0.82rem; color: var(--color-text-tertiary, #8a7c6d); font-style: italic; }
+.gr__item-actions { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+.gr__chip {
+  border: 1px solid var(--color-border, #e7ded2);
+  background: var(--color-bg-surface, #fff);
+  color: var(--color-text-secondary, #5a4a3c);
+  border-radius: var(--radius-pill, 999px);
+  padding: 0.45rem 0.9rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.gr__chip:hover { border-color: var(--color-brand-500, #b18f1f); }
+.gr__chip--brand { background: var(--color-brand-700, #5a3a2c); color: #fff; border-color: var(--color-brand-700, #5a3a2c); }
+.gr__chip--brand:hover { background: var(--color-brand-500, #b18f1f); border-color: var(--color-brand-500, #b18f1f); }
+.gr__chip--danger:hover { border-color: var(--color-sale, #b3402f); color: var(--color-sale, #b3402f); }

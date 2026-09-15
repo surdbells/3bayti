@@ -1,0 +1,70 @@
+<section class="gr">
+  <header class="gr__head">
+    <div>
+      <h1 class="gr__title font-display">{{ 'giftReminders.title' | translate }}</h1>
+      <p class="gr__subtitle">{{ 'giftReminders.subtitle' | translate }}</p>
+    </div>
+    <button type="button" class="gr__add" (click)="openCreate()">{{ 'giftReminders.add' | translate }}</button>
+  </header>
+
+  @if (showForm()) {
+    <form class="gr__form" (ngSubmit)="save()">
+      <div class="gr__row">
+        <label class="gr__field">
+          <span>{{ 'giftReminders.recipient' | translate }}</span>
+          <input type="text" [(ngModel)]="form.recipient_name" name="recipient_name" [placeholder]="'giftReminders.recipientPlaceholder' | translate" />
+        </label>
+        <label class="gr__field">
+          <span>{{ 'giftReminders.occasion' | translate }}</span>
+          <input type="text" [(ngModel)]="form.occasion" name="occasion" [placeholder]="'giftReminders.occasionPlaceholder' | translate" />
+        </label>
+      </div>
+      <div class="gr__row">
+        <label class="gr__field">
+          <span>{{ 'giftReminders.date' | translate }}</span>
+          <input type="date" [(ngModel)]="form.remind_date" name="remind_date" [min]="todayStr" />
+        </label>
+        <label class="gr__field">
+          <span>{{ 'giftReminders.budget' | translate }}</span>
+          <input type="number" min="0" step="1" [(ngModel)]="form.budget_max" name="budget_max" [placeholder]="'giftReminders.budgetPlaceholder' | translate" />
+        </label>
+      </div>
+      <label class="gr__field">
+        <span>{{ 'giftReminders.note' | translate }}</span>
+        <input type="text" [(ngModel)]="form.note" name="note" [placeholder]="'giftReminders.notePlaceholder' | translate" />
+      </label>
+      <div class="gr__form-actions">
+        <button type="button" class="gr__btn gr__btn--ghost" (click)="cancel()">{{ 'giftReminders.cancel' | translate }}</button>
+        <button type="submit" class="gr__btn gr__btn--primary" [disabled]="!formValid || saving()">
+          {{ (saving() ? 'giftReminders.saving' : 'giftReminders.save') | translate }}
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (loading()) {
+    <p class="gr__status">{{ 'giftReminders.loading' | translate }}</p>
+  } @else if (reminders().length === 0 && !showForm()) {
+    <div class="gr__empty">
+      <p>{{ 'giftReminders.empty' | translate }}</p>
+      <button type="button" class="gr__btn gr__btn--primary" (click)="openCreate()">{{ 'giftReminders.add' | translate }}</button>
+    </div>
+  } @else {
+    <ul class="gr__list" role="list">
+      @for (r of reminders(); track r.id) {
+        <li class="gr__item">
+          <div class="gr__item-main">
+            <span class="gr__item-recipient">{{ r.recipient_name }}</span>
+            <span class="gr__item-meta">{{ r.occasion }} · {{ r.remind_date }}@if (r.budget_max) { · {{ 'giftReminders.upTo' | translate }} AED {{ r.budget_max }} }</span>
+            @if (r.note) { <span class="gr__item-note">{{ r.note }}</span> }
+          </div>
+          <div class="gr__item-actions">
+            <button type="button" class="gr__chip gr__chip--brand" (click)="findGifts(r)">{{ 'giftReminders.findGifts' | translate }}</button>
+            <button type="button" class="gr__chip" (click)="openEdit(r)">{{ 'giftReminders.edit' | translate }}</button>
+            <button type="button" class="gr__chip gr__chip--danger" (click)="remove(r)">{{ 'giftReminders.delete' | translate }}</button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>

@@ -82,6 +82,30 @@
       "over1000": "1000+"
     }
   },
+  "giftReminders": {
+    "title": "Gift reminders",
+    "subtitle": "Save the dates that matter and Ain will remind you — and find the perfect gift — before each one.",
+    "add": "Add a reminder",
+    "recipient": "Who is it for?",
+    "recipientPlaceholder": "e.g. My sister",
+    "occasion": "Occasion",
+    "occasionPlaceholder": "e.g. Birthday, Eid, Anniversary",
+    "date": "Date",
+    "budget": "Budget (optional)",
+    "budgetPlaceholder": "e.g. 500",
+    "note": "Note (optional)",
+    "notePlaceholder": "e.g. Loves gold, size M",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "findGifts": "Find gifts",
+    "upTo": "up to",
+    "loading": "Loading your reminders…",
+    "empty": "No reminders yet. Save a date and Ain will nudge you before it.",
+    "myReminders": "My gift reminders"
+  },
   "askAin": {
     "title": "Ask Ain",
     "subtitle": "Tell Ain the occasion, style or gift you have in mind and it will pull real pieces from our stores.",
@@ -1581,6 +1605,7 @@
     "styleCreate": "Create a style · 3bayti",
     "askAin": "Ask Ain · 3bayti",
     "giftAin": "Gift Finder · 3bayti",
+    "giftReminders": "Gift Reminders · 3bayti",
     "home": "3bayti: Premium Abayas, Kaftans & Modest Wear",
     "categories": "Shop by Category · 3bayti",
     "product": "Product · 3bayti",
