@@ -119,6 +119,14 @@ export class StyleViewPage implements OnInit, OnDestroy {
     is_loading_category: false
   }
 
+  // ── Restyle with Ain ──────────────────────────────────────────────────
+  restyleInstruction = '';
+  restyleLoading = false;
+  restyleSaving = false;
+  restylePreview: { cards: any[]; rationale: string; interactionId: number | null } | null = null;
+  readonly restyleSuggestions = ['style_restyle_s1', 'style_restyle_s2', 'style_restyle_s3'];
+  private ainSessionId = '';
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -153,6 +161,124 @@ export class StyleViewPage implements OnInit, OnDestroy {
       }
     }
     this.getObject();
+    void this.ensureAinSession();
+  }
+
+  // ── Restyle with Ain ──────────────────────────────────────────────────
+
+  canRestyle(): boolean {
+    return !!this.single_user.token && (this.style?.products?.length ?? 0) > 0;
+  }
+
+  useRestyleSuggestion(key: string): void {
+    this.restyleInstruction = this.i18n.t(key);
+  }
+
+  runRestyle(): void {
+    const slug = this.style?.slug;
+    const instruction = this.restyleInstruction.trim();
+    if (!slug || instruction === '' || this.restyleLoading || !this.single_user.token) {
+      return;
+    }
+    this.restyleLoading = true;
+    this.restylePreview = null;
+    this.beacon('style_ai_used');
+    this.cdr.markForCheck();
+
+    const body = {
+      style_slug: slug,
+      instruction,
+      locale: this.i18n.lang,
+      session_id: this.ainSessionId,
+      channel: 'MOBILE',
+    };
+    this.networkAdapter.post_v3('POST /ai/styles/restyle', body, { authToken: this.single_user.token }).subscribe({
+      next: (res: any) => {
+        this.restyleLoading = false;
+        if (res?.response_code === 200 && res?.status === 'success' && res?.data) {
+          this.restylePreview = {
+            cards: Array.isArray(res.data.products) ? res.data.products : [],
+            rationale: res.data.rationale ?? '',
+            interactionId: res.data.interaction_id ?? null,
+          };
+        } else {
+          this.restylePreview = { cards: [], rationale: '', interactionId: null };
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.restyleLoading = false;
+        this.restylePreview = { cards: [], rationale: '', interactionId: null };
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  saveRestyle(): void {
+    const preview = this.restylePreview;
+    if (!preview || preview.cards.length === 0 || this.restyleSaving || !this.single_user.token || !this.style) {
+      return;
+    }
+    this.restyleSaving = true;
+    this.cdr.markForCheck();
+
+    const body = {
+      name: this.style.style_name + ' — restyled',
+      products: preview.cards.map((c) => c.id),
+      source: 'ai',
+      prompt: this.restyleInstruction.trim(),
+      rationale: preview.rationale,
+    };
+    this.networkAdapter.post_v3('POST /me/styles', body, { authToken: this.single_user.token }).subscribe({
+      next: (res: any) => {
+        this.restyleSaving = false;
+        if ((res?.response_code === 201 || res?.response_code === 200) && res?.status === 'success') {
+          this.beacon('style_saved', preview.interactionId ? { interaction_id: preview.interactionId } : {});
+          this.toast.success(this.i18n.t('style_restyle_saved'), { position: 'top-center' });
+          this.restylePreview = null;
+          const slug = res.data?.slug ?? res.data?.data?.slug;
+          if (slug) {
+            this.router.navigate(['/', 'styles', slug]);
+          }
+        } else {
+          this.toast.error(this.i18n.t('style_restyle_error'), { position: 'top-center' });
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.restyleSaving = false;
+        this.toast.error(this.i18n.t('style_restyle_error'), { position: 'top-center' });
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  openRestyled(card: any): void {
+    this.router.navigate(['/', 'product'], { queryParams: { id: card.id, name: card.name } });
+  }
+
+  private beacon(event: string, extra: Record<string, unknown> = {}): void {
+    try {
+      const body: Record<string, unknown> = { event, session_id: this.ainSessionId, ...extra };
+      const opts = this.single_user.token ? { authToken: this.single_user.token } : {};
+      this.networkAdapter.post_v3('POST /ai/events', body, opts).subscribe({ next: () => {}, error: () => {} });
+    } catch {
+      // analytics must never break the page
+    }
+  }
+
+  private async ensureAinSession(): Promise<void> {
+    const got = await Preferences.get({ key: 'ain_session' });
+    if (got.value) {
+      this.ainSessionId = got.value;
+      return;
+    }
+    const id =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : 'm-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e9).toString(36);
+    await Preferences.set({ key: 'ain_session', value: id });
+    this.ainSessionId = id;
   }
 
   /**

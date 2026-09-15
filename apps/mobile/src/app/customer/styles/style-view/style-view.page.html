@@ -134,6 +134,47 @@
     (select)="addToCloset($event)"
     (createLabel)="onCreateLabel($event)">
   </ax-wishlist-sheet>
+
+  <!-- Restyle with Ain -->
+  @if (canRestyle()) {
+    <section class="sv-restyle">
+      <h2 class="sv-restyle__heading">{{ 'style_restyle_heading' | translate }}</h2>
+      <p class="sv-restyle__intro">{{ 'style_restyle_intro' | translate }}</p>
+      <div class="sv-restyle__form">
+        <input class="sv-restyle__input" type="text" [(ngModel)]="restyleInstruction" [placeholder]="'style_restyle_ph' | translate" [disabled]="restyleLoading" />
+        <button type="button" class="sv-restyle__btn" [disabled]="!restyleInstruction.trim() || restyleLoading" (click)="runRestyle()">
+          {{ (restyleLoading ? 'style_restyle_working' : 'style_restyle_cta') | translate }}
+        </button>
+      </div>
+      <div class="sv-restyle__chips">
+        @for (s of restyleSuggestions; track s) {
+          <button type="button" class="sv-restyle__chip" (click)="useRestyleSuggestion(s)">{{ s | translate }}</button>
+        }
+      </div>
+
+      @if (restylePreview) {
+        <div class="sv-restyle__preview">
+          @if (restylePreview.rationale) { <p class="sv-restyle__rationale">{{ restylePreview.rationale }}</p> }
+          @if (restylePreview.cards.length) {
+            <div class="sv-restyle__grid">
+              @for (c of restylePreview.cards; track c.id) {
+                <button type="button" class="sv-restyle__card" (click)="openRestyled(c)">
+                  <img class="sv-restyle__img" [src]="c.primary_image?.url || ''" alt="{{ c.name }}" />
+                  <span class="sv-restyle__name">{{ c.name }}</span>
+                  <span class="sv-restyle__price">Ð{{ c.price?.amount }}</span>
+                </button>
+              }
+            </div>
+            <button type="button" class="sv-restyle__save" [disabled]="restyleSaving" (click)="saveRestyle()">
+              {{ (restyleSaving ? 'style_restyle_saving' : 'style_restyle_save') | translate }}
+            </button>
+          } @else {
+            <p class="sv-restyle__empty">{{ 'style_restyle_no_results' | translate }}</p>
+          }
+        </div>
+      }
+    </section>
+  }
 </ion-content>
 
 <app-tab-bar active="sketch"></app-tab-bar>

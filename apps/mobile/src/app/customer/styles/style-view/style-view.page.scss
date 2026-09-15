@@ -382,3 +382,72 @@ ion-content.page-bg {
   justify-content: center;
   padding: 60px;
 }
+
+/* Restyle with Ain */
+.sv-restyle {
+  margin: 1.5rem 1rem 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #ece3dc;
+}
+.sv-restyle__heading { font-size: 1.05rem; font-weight: 700; color: var(--ax-color-text-primary, #1a1a1a); margin: 0 0 0.3rem; }
+.sv-restyle__intro { font-size: 0.85rem; color: var(--ax-color-text-tertiary, #8a8a8a); margin: 0 0 0.85rem; line-height: 1.45; }
+.sv-restyle__form { display: flex; gap: 0.5rem; margin-bottom: 0.65rem; }
+.sv-restyle__input {
+  flex: 1;
+  border: 1px solid #e2e5e9;
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: #f6f7f9;
+  color: var(--ax-color-text-primary, #1a1a1a);
+  outline: none;
+}
+.sv-restyle__input:focus { border-color: #906952; background: #fff; }
+.sv-restyle__btn {
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 999px;
+  background: #906952;
+  color: #fff;
+  padding: 0.7rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.sv-restyle__btn:disabled { opacity: 0.5; }
+.sv-restyle__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+.sv-restyle__chip {
+  border: 1px solid #e2e5e9;
+  background: var(--ax-palette-neutral-0, #fff);
+  color: var(--ax-color-text-tertiary, #8a8a8a);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.78rem;
+}
+.sv-restyle__rationale { font-size: 0.9rem; font-style: italic; color: #906952; margin: 0 0 0.85rem; }
+.sv-restyle__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+.sv-restyle__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+}
+.sv-restyle__img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 0.75rem; background: #f6f7f9; }
+.sv-restyle__name { font-size: 0.76rem; color: var(--ax-color-text-primary, #1a1a1a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sv-restyle__price { font-size: 0.78rem; font-weight: 700; color: var(--ax-color-text-primary, #1a1a1a); }
+.sv-restyle__empty { font-size: 0.85rem; color: var(--ax-color-text-tertiary, #8a8a8a); }
+.sv-restyle__save {
+  margin-top: 1rem;
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  background: #906952;
+  color: #fff;
+  padding: 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.sv-restyle__save:disabled { opacity: 0.5; }
