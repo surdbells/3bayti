@@ -581,6 +581,43 @@ return [
         );
     },
 
+    // AI provider (env-gated). Defaults to NullAiProvider so the container
+    // ALWAYS boots without AI config; the real OpenAI provider is selected ONLY
+    // when AI_ENABLED=true. Fails fast if explicitly enabled but the key is
+    // missing (matches the Mailer/FCM factories). Point OPENAI_BASE_URL at an
+    // Azure/OpenAI-compatible gateway to swap hosts without code changes.
+    \Bayti\Api\Ai\AiProviderInterface::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Ai\AiProviderInterface {
+        $logger = $c->get(\Psr\Log\LoggerInterface::class);
+
+        $enabled = filter_var($_ENV['AI_ENABLED'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
+        if (!$enabled) {
+            return new \Bayti\Api\Ai\NullAiProvider();
+        }
+
+        $apiKey = $_ENV['OPENAI_API_KEY'] ?? '';
+        if ($apiKey === '') {
+            throw new \RuntimeException('AI_ENABLED=true but OPENAI_API_KEY is empty.');
+        }
+
+        $timeout = (float) ($_ENV['AI_REQUEST_TIMEOUT'] ?? 20);
+        $http = new GuzzleClient([
+            'timeout' => $timeout > 0 ? $timeout : 20,
+            'connect_timeout' => 6,
+        ]);
+        $client = new \Bayti\Api\Ai\OpenAi\OpenAiClient(
+            http: $http,
+            baseUrl: rtrim($_ENV['OPENAI_BASE_URL'] ?? 'https://api.openai.com', '/'),
+            apiKey: $apiKey,
+            chatModel: $_ENV['AI_CHAT_MODEL'] ?? 'gpt-4o-mini',
+            embedModel: $_ENV['AI_EMBED_MODEL'] ?? 'text-embedding-3-small',
+            logger: $logger,
+        );
+
+        return new \Bayti\Api\Ai\OpenAi\OpenAiProvider($client);
+    },
+
     // Booking orchestrator shared by the vendor + admin ship endpoints.
     // Factory-bound (like the notification services) so the logger + collaborators
     // come from the container rather than autowiring the nullable-logger default.
