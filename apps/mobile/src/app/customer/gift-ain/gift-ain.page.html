@@ -1,0 +1,138 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'gift_ain_title' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+  <div class="ga-intro">
+    <div class="ga-orb"><ax-icon name="gift" /></div>
+    <h1 class="ga-heading">{{ 'gift_ain_heading' | translate }}</h1>
+    <p class="ga-sub">{{ 'gift_ain_subtitle' | translate }}</p>
+  </div>
+
+  <form class="ga-form" (ngSubmit)="submit()">
+    <div class="ga-group">
+      <p class="ga-legend">{{ 'gift_ain_recipient_label' | translate }}</p>
+      <div class="ga-chips">
+        @for (r of recipients; track r) {
+          <button type="button" class="ga-chip" [class.is-active]="recipient === r" (click)="pickRecipient(r)">
+            {{ 'gift_ain_recipient_' + r | translate }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="ga-group">
+      <p class="ga-legend">{{ 'gift_ain_occasion_label' | translate }}</p>
+      <div class="ga-chips">
+        @for (o of occasions; track o) {
+          <button type="button" class="ga-chip" [class.is-active]="occasion === o" (click)="pickOccasion(o)">
+            {{ 'gift_ain_occasion_' + o | translate }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="ga-group">
+      <p class="ga-legend">{{ 'gift_ain_budget_label' | translate }}</p>
+      <div class="ga-chips">
+        @for (b of budgetBands; track b.key) {
+          <button type="button" class="ga-chip" [class.is-active]="budget?.key === b.key" (click)="pickBudget(b)">
+            {{ 'gift_ain_budget_' + b.key | translate }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="ga-group">
+      <p class="ga-legend">{{ 'gift_ain_details_label' | translate }}</p>
+      <div class="ga-fields">
+        <input class="ga-input" type="text" [(ngModel)]="coloursText" name="colours" [placeholder]="'gift_ain_colours_placeholder' | translate" />
+        <input class="ga-input" type="text" [(ngModel)]="stylesText" name="styles" [placeholder]="'gift_ain_styles_placeholder' | translate" />
+        <input class="ga-input" type="text" [(ngModel)]="size" name="size" [placeholder]="'gift_ain_size_placeholder' | translate" />
+      </div>
+    </div>
+
+    <button type="submit" class="ga-submit" [disabled]="!canSubmit || isSending">
+      @if (isSending) {
+        <ion-spinner name="crescent"></ion-spinner>
+      } @else {
+        {{ 'gift_ain_find' | translate }}
+      }
+    </button>
+  </form>
+
+  @if (hasSearched) {
+    <div class="ga-results">
+      @if (isSending) {
+        <div class="ga-thinking"><ion-spinner name="dots"></ion-spinner><span>{{ 'gift_ain_finding' | translate }}</span></div>
+      } @else {
+        @if (giftCard) {
+          <button type="button" class="ga-card-nudge" (click)="openGiftCards()">
+            <span class="ga-card-nudge__body">
+              <strong>{{ ('gift_ain_gc_' + giftCard.reason) | translate }}</strong>
+              <small>{{ 'gift_ain_gc_hint' | translate }}</small>
+            </span>
+            <span class="ga-card-nudge__cta">
+              {{ 'gift_ain_gc_cta' | translate }}
+              @if (giftCard.suggested_denomination) {
+                <span class="ga-card-nudge__amount">{{ giftCard.currency }} {{ giftCard.suggested_denomination }}</span>
+              }
+            </span>
+          </button>
+        }
+
+        @if (cards.length) {
+          <p class="ga-results-intro">{{ 'gift_ain_results_intro' | translate }}</p>
+          <ion-grid class="ga-grid">
+            <ion-row>
+              @for (card of cards; track card.id) {
+                <ion-col size="6">
+                  <article class="m6d-product-card">
+                    <div class="m6d-img-wrap">
+                      <div class="m6d-img-skeleton" [class.hidden]="imageLoaded[card.id]">
+                        <div class="skeleton-shimmer"></div>
+                      </div>
+                      <img
+                        (click)="open_product(card)"
+                        [class.loaded]="imageLoaded[card.id]"
+                        (load)="onImageLoad(card.id)"
+                        (error)="onImageError(card.id)"
+                        [src]="cfImage(card.primary_image?.url || '', 'card')"
+                        alt="{{ card.name }}" />
+                      @if (card.vendor?.name) {
+                        <button (click)="open_vendor(card); $event.stopPropagation()" class="m6d-vendor-badge vendor-badge--tappable" type="button">&#64;{{ card.vendor?.name }}</button>
+                      }
+                    </div>
+                    <div (click)="open_product(card)" class="m6d-info">
+                      <p class="m6d-name">{{ card.name }}</p>
+                      @if (card.reason) {
+                        <p class="ga-reason">{{ card.reason }}</p>
+                      }
+                      <div class="m6d-price-row">
+                        @if (card.sale_price) {
+                          <span class="m6d-price">Ð{{ card.sale_price.amount }}</span>
+                          <span class="ga-price-was">Ð{{ card.price?.amount }}</span>
+                        } @else {
+                          <span class="m6d-price">Ð{{ card.price?.amount }}</span>
+                        }
+                      </div>
+                    </div>
+                  </article>
+                </ion-col>
+              }
+            </ion-row>
+          </ion-grid>
+        } @else if (isEmpty) {
+          <div class="ga-empty"><ax-icon name="search" /><p>{{ 'gift_ain_no_results' | translate }}</p></div>
+        }
+      }
+    </div>
+  }
+</ion-content>

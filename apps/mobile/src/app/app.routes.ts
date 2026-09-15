@@ -86,6 +86,11 @@ export const routes: Routes = [
     title: 'Ask Ain'
   },
   {
+    path: 'gift-ain',
+    loadComponent: () => import('./customer/gift-ain/gift-ain.page').then(m => m.GiftAinPage),
+    title: 'Gift Finder'
+  },
+  {
     path: 'checkout',
     loadComponent: () => import('./customer/checkout/checkout.page').then(m => m.CheckoutPage)
   },

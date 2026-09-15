@@ -41,6 +41,16 @@
     <span class="ask-ain-hero__cta" aria-hidden="true"><ax-icon name="arrow-right"></ax-icon></span>
   </button>
 
+  <!-- Gift Finder: guided gift concierge -->
+  <button type="button" class="ask-ain-hero ask-ain-hero--gift" [routerLink]="['/gift-ain']">
+    <span class="ask-ain-hero__orb"><ax-icon name="gift"></ax-icon></span>
+    <span class="ask-ain-hero__body">
+      <span class="ask-ain-hero__title">{{ 'gift_ain_title' | translate }}</span>
+      <span class="ask-ain-hero__sub">{{ 'gift_ain_pill_hint' | translate }}</span>
+    </span>
+    <span class="ask-ain-hero__cta" aria-hidden="true"><ax-icon name="arrow-right"></ax-icon></span>
+  </button>
+
   <!-- Best Sellers Section -->
   @if (!ui_controls.is_loading && best_sellers.length > 0) {
     <section class="section ion-padding-horizontal">
