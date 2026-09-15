@@ -618,6 +618,8 @@ return function (App $app): void {
     // concierge works logged-out and logged-in alike.
     $app->post('/v3/ai/concierge/style', \Bayti\Api\Http\Controllers\Ai\ConciergeStyleController::class)
         ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
+    $app->post('/v3/ai/concierge/gift', \Bayti\Api\Http\Controllers\Ai\GiftConciergeController::class)
+        ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
     $app->post('/v3/ai/events', \Bayti\Api\Http\Controllers\Ai\RecordAiEventController::class)
         ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
     $app->get('/v3/ai/status', \Bayti\Api\Http\Controllers\Ai\AiStatusController::class);

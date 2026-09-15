@@ -248,6 +248,9 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'POST /ai/concierge/style': {
     target: 'new', oldPath: '', newPath: '/v3/ai/concierge/style', shape: 'v3-envelope',
   },
+  'POST /ai/concierge/gift': {
+    target: 'new', oldPath: '', newPath: '/v3/ai/concierge/gift', shape: 'v3-envelope',
+  },
   'POST /ai/events': {
     target: 'new', oldPath: '', newPath: '/v3/ai/events', shape: 'v3-envelope',
   },
