@@ -61,6 +61,10 @@ class Style
     public const TYPE_COMMUNITY = 1;
     public const TYPE_EDITORIAL = 2;
 
+    /** Provenance (dedicated column, NOT overloaded onto style_type). */
+    public const SOURCE_USER = 'user';
+    public const SOURCE_AI = 'ai';
+
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     #[ORM\Column(type: 'bigint')]
@@ -100,6 +104,18 @@ class Style
 
     #[ORM\Column(name: 'display_order', type: 'smallint', nullable: true)]
     private ?int $displayOrder = null;
+
+    /** How this look was made: 'user' (default) or 'ai' (Ain restyle). */
+    #[ORM\Column(name: 'source', type: 'string', length: 16, options: ['default' => self::SOURCE_USER])]
+    private string $source = self::SOURCE_USER;
+
+    /** The restyle instruction, for AI-sourced looks. */
+    #[ORM\Column(name: 'prompt', type: 'text', nullable: true)]
+    private ?string $prompt = null;
+
+    /** Ain's one-line rationale, for AI-sourced looks. */
+    #[ORM\Column(name: 'rationale', type: 'text', nullable: true)]
+    private ?string $rationale = null;
 
     /**
      * Products in this style. The many-to-many goes through the
@@ -261,6 +277,29 @@ class Style
     public function setDisplayOrder(?int $order): void
     {
         $this->displayOrder = $order;
+    }
+
+    public function getSource(): string
+    {
+        return $this->source;
+    }
+
+    public function getPrompt(): ?string
+    {
+        return $this->prompt;
+    }
+
+    public function getRationale(): ?string
+    {
+        return $this->rationale;
+    }
+
+    /** Set AI provenance (source='ai' + the instruction + Ain's rationale). */
+    public function setProvenance(string $source, ?string $prompt, ?string $rationale): void
+    {
+        $this->source = $source === self::SOURCE_AI ? self::SOURCE_AI : self::SOURCE_USER;
+        $this->prompt = $prompt !== null && trim($prompt) !== '' ? trim($prompt) : null;
+        $this->rationale = $rationale !== null && trim($rationale) !== '' ? trim($rationale) : null;
     }
 
     /**

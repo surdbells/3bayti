@@ -128,6 +128,12 @@ class StyleRepository extends EntityRepository
      * cleanly. The cost is the structured-return shape; the caller
      * (StyleSerializer) walks it.
      *
+     * Products from a suspended/unapproved vendor are excluded (the vendor
+     * JOIN enforces the same active + approved gate as Product::isOrderable),
+     * and each surfaced product carries an `in_stock` flag (isInStock) so the
+     * client can mark sold-out items — so a saved look (incl. an Ain restyle)
+     * can never surface an un-buyable product as if it were purchasable.
+     *
      * @param list<int> $styleIds
      * @return array<int, list<array{
      *     id: int,
@@ -136,6 +142,7 @@ class StyleRepository extends EntityRepository
      *     name: string,
      *     primary_image_url: ?string,
      *     price: string,
+     *     in_stock: bool,
      *     display_order: int
      * }>>
      */
@@ -154,11 +161,15 @@ class StyleRepository extends EntityRepository
         $sql = <<<'SQL'
             SELECT sp.style_id, sp.display_order,
                    p.id AS product_id, p.legacy_product_id, p.slug, p.name,
-                   p.primary_image_url, p.price
+                   p.primary_image_url, p.price,
+                   (p.allow_oversell = TRUE OR p.stock_status <> 'out_of_stock') AS in_stock
             FROM style_products sp
             JOIN products p ON p.id = sp.product_id
+            JOIN vendors v ON v.id = p.vendor_id
             WHERE sp.style_id IN (?)
               AND p.is_active = TRUE
+              AND v.is_active = TRUE
+              AND v.status = 'approved'
             ORDER BY sp.style_id, sp.display_order, p.id
         SQL;
 
@@ -188,6 +199,7 @@ class StyleRepository extends EntityRepository
                     ? (string) $row['primary_image_url']
                     : null,
                 'price' => (string) $row['price'],
+                'in_stock' => (bool) $row['in_stock'],
                 'display_order' => (int) $row['display_order'],
             ];
         }

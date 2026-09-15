@@ -629,6 +629,10 @@ return function (App $app): void {
         ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
     $app->post('/v3/ai/concierge/gift', \Bayti\Api\Http\Controllers\Ai\GiftConciergeController::class)
         ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
+    // Restyle an existing look with Ain — AUTH REQUIRED (produces the customer's
+    // own new look); returns a preview, the client persists via POST /me/styles.
+    $app->post('/v3/ai/styles/restyle', \Bayti\Api\Http\Controllers\Ai\StyleRestyleController::class)
+        ->add(AuthMiddleware::class);
     $app->post('/v3/ai/events', \Bayti\Api\Http\Controllers\Ai\RecordAiEventController::class)
         ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
     $app->get('/v3/ai/status', \Bayti\Api\Http\Controllers\Ai\AiStatusController::class);

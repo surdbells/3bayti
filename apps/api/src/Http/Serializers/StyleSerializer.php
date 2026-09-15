@@ -41,6 +41,7 @@ final class StyleSerializer
      *     name: string,
      *     primary_image_url: ?string,
      *     price: string,
+     *     in_stock: bool,
      *     display_order: int
      * }> $products
      * @return array<string, mixed>
@@ -54,6 +55,9 @@ final class StyleSerializer
             'description' => $s->getDescription(),
             'cover_image_url' => $s->getCoverImageUrl(),
             'style_type' => $this->styleTypeLabel($s->getStyleType()),
+            'source' => $s->getSource(),
+            'prompt' => $s->getPrompt(),
+            'rationale' => $s->getRationale(),
             'total_price' => $s->getTotalPrice(),
             'products' => $products,
         ];
@@ -75,6 +79,7 @@ final class StyleSerializer
      *     name: string,
      *     primary_image_url: ?string,
      *     price: string,
+     *     in_stock: bool,
      *     display_order: int
      * }>> $productsByStyleId
      * @return list<array<string, mixed>>
@@ -103,6 +108,7 @@ final class StyleSerializer
      *     name: string,
      *     primary_image_url: ?string,
      *     price: string,
+     *     in_stock: bool,
      *     display_order: int
      * }> $products
      * @return array<string, mixed>

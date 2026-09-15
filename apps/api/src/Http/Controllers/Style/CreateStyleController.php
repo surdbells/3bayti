@@ -70,6 +70,14 @@ final class CreateStyleController
         $style->setCreatedByUser($user);
         $style->setActive(true);
 
+        // Optional AI provenance (an Ain restyle persisted through this same path).
+        $source = strtolower(trim((string) ($body['source'] ?? Style::SOURCE_USER)));
+        if ($source === Style::SOURCE_AI) {
+            $prompt = isset($body['prompt']) && is_scalar($body['prompt']) ? (string) $body['prompt'] : null;
+            $rationale = isset($body['rationale']) && is_scalar($body['rationale']) ? (string) $body['rationale'] : null;
+            $style->setProvenance(Style::SOURCE_AI, $prompt, $rationale);
+        }
+
         $total = '0.00';
         foreach ($productIds as $pid) {
             $product = $this->em->find(Product::class, $pid);
@@ -91,6 +99,7 @@ final class CreateStyleController
             'total_price'   => $style->getTotalPrice(),
             'product_count' => $style->getProducts()->count(),
             'is_active'     => true,
+            'source'        => $style->getSource(),
         ]));
     }
 
