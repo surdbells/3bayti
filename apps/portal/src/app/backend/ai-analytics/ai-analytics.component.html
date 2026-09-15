@@ -1,0 +1,155 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <span class="ax-page-header-eyebrow">System</span>
+        <h1 class="ax-page-title">Ain concierge</h1>
+        <p class="ax-page-subtitle">How the AI style &amp; gifting concierge is used — and the orders and revenue it assists.</p>
+      </div>
+    </header>
+
+    <!-- Time range switcher (shared semantics with Platform insight) -->
+    <div class="aia-head">
+      <p class="ax-card-subtitle">{{ subtitle }}</p>
+      <div class="ax-segment aia-range" role="tablist" aria-label="Time range">
+        <button *ngFor="let r of rangeOptions" type="button" class="ax-segment-item"
+                [class.ax-segment-item-active]="rangeMode === 'days' && rangeDays === r"
+                [attr.aria-selected]="rangeMode === 'days' && rangeDays === r" (click)="setRange(r)">{{ r }} days</button>
+        <button type="button" class="ax-segment-item"
+                [class.ax-segment-item-active]="rangeMode === 'current_month'"
+                [attr.aria-selected]="rangeMode === 'current_month'" (click)="setCurrentMonth()">This month</button>
+        <button type="button" class="ax-segment-item"
+                [class.ax-segment-item-active]="rangeMode === 'custom'"
+                [attr.aria-selected]="rangeMode === 'custom'" (click)="toggleCustom()">Custom</button>
+      </div>
+    </div>
+
+    <div class="aia-range-custom" *ngIf="showCustom">
+      <label class="aia-range-custom__field">
+        <span class="aia-range-custom__label">From</span>
+        <input type="date" class="ax-input" [(ngModel)]="customFrom" [max]="customTo || todayStr" />
+      </label>
+      <label class="aia-range-custom__field">
+        <span class="aia-range-custom__label">To</span>
+        <input type="date" class="ax-input" [(ngModel)]="customTo" [min]="customFrom" [max]="todayStr" />
+      </label>
+      <button type="button" class="ax-btn ax-btn-primary ax-btn-sm"
+              [disabled]="!customFrom || !customTo" (click)="applyCustomRange()">Apply</button>
+    </div>
+
+    <!-- KPI cards -->
+    <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-4 ax-gap-5 aia-kpis" [class.aia-dim]="loading">
+      <div class="ax-stat-card ax-stat-card-brand">
+        <div class="ax-stat-card-header">
+          <span class="ax-stat-card-label">Queries</span>
+          <span class="ax-stat-card-icon"><app-icon name="chat" aria-hidden="true"></app-icon></span>
+        </div>
+        <div class="ax-stat-card-value">{{ total('queries') | number:'1.0-0' }}</div>
+        <div class="aia-spark" *ngIf="hasQueries && !loading && ai">
+          <apx-chart [series]="sparklineOptions.series || []" [chart]="sparklineOptions.chart"
+                     [stroke]="sparklineOptions.stroke" [fill]="sparklineOptions.fill"
+                     [colors]="sparklineOptions.colors" [tooltip]="sparklineOptions.tooltip"></apx-chart>
+        </div>
+        <div class="ax-stat-card-footer">
+          <span class="ax-stat-card-caption">{{ total('unique_users') | number }} people · {{ total('unique_sessions') | number }} sessions</span>
+        </div>
+      </div>
+
+      <div class="ax-stat-card">
+        <div class="ax-stat-card-header">
+          <span class="ax-stat-card-label">Product clicks</span>
+          <span class="ax-stat-card-icon"><app-icon name="ads_click" aria-hidden="true"></app-icon></span>
+        </div>
+        <div class="ax-stat-card-value">{{ total('product_clicks') | number:'1.0-0' }}</div>
+        <div class="ax-stat-card-footer">
+          <span class="ax-stat-card-caption">{{ ratePct('click_through_per_query') }}% of queries click a result</span>
+        </div>
+      </div>
+
+      <div class="ax-stat-card">
+        <div class="ax-stat-card-header">
+          <span class="ax-stat-card-label">AI-assisted orders</span>
+          <span class="ax-stat-card-icon"><app-icon name="shopping_bag" aria-hidden="true"></app-icon></span>
+        </div>
+        <div class="ax-stat-card-value">{{ total('ai_assisted_orders') | number:'1.0-0' }}</div>
+        <div class="ax-stat-card-footer">
+          <span class="ax-stat-card-caption">{{ ratePct('add_to_cart_per_query') }}% of queries add to cart</span>
+        </div>
+      </div>
+
+      <div class="ax-stat-card ax-stat-card-brand">
+        <div class="ax-stat-card-header">
+          <span class="ax-stat-card-label">AI-assisted revenue</span>
+          <span class="ax-stat-card-icon"><app-icon name="payments" aria-hidden="true"></app-icon></span>
+        </div>
+        <div class="ax-stat-card-value">AED {{ total('ai_assisted_revenue') | number:'1.0-0' }}</div>
+        <div class="ax-stat-card-footer">
+          <span class="ax-stat-card-caption" *ngIf="ai">Attributed within {{ ai.attribution_window_days }} days</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Funnel -->
+    <section class="ax-card aia-section">
+      <div class="ax-card-header">
+        <h2 class="ax-card-title">Concierge funnel</h2>
+        <span class="ax-text-2xs ax-text-tertiary">Opened → recommended → clicked → added to cart</span>
+      </div>
+      <div class="ax-card-body">
+        <div class="aia-funnel" *ngIf="hasQueries || total('opened'); else emptyFunnel">
+          <div class="aia-funnel-row" *ngFor="let f of funnel">
+            <span class="aia-funnel-label"><app-icon [name]="f.icon" aria-hidden="true"></app-icon>{{ f.label }}</span>
+            <div class="aia-funnel-track"><div class="aia-funnel-fill" [style.width.%]="funnelPct(f.key)"></div></div>
+            <span class="aia-funnel-value">{{ total(f.key) | number }}</span>
+          </div>
+        </div>
+        <ng-template #emptyFunnel><p class="aia-muted">No concierge activity in this window yet.</p></ng-template>
+      </div>
+    </section>
+
+    <!-- Intents: product-type donut + occasions/colours bars -->
+    <section class="aia-2col">
+      <div class="ax-card">
+        <div class="ax-card-header"><h2 class="ax-card-title">Top product types</h2></div>
+        <div class="ax-card-body">
+          <div class="aia-donut" *ngIf="hasIntentMix; else noIntent">
+            <apx-chart [series]="intentDonutOptions.series || []" [chart]="intentDonutOptions.chart"
+                       [labels]="intentDonutOptions.labels || []" [legend]="intentDonutOptions.legend"
+                       [colors]="intentDonutOptions.colors" [dataLabels]="intentDonutOptions.dataLabels"
+                       [plotOptions]="intentDonutOptions.plotOptions" [stroke]="intentDonutOptions.stroke"></apx-chart>
+          </div>
+          <ng-template #noIntent><p class="aia-muted">No parsed intents yet.</p></ng-template>
+        </div>
+      </div>
+
+      <div class="ax-card">
+        <div class="ax-card-header"><h2 class="ax-card-title">Occasions &amp; colours</h2></div>
+        <div class="ax-card-body">
+          <div class="aia-group" *ngIf="topOccasions.length">
+            <h3 class="aia-group-title">Occasions</h3>
+            <div class="aia-bar" *ngFor="let b of topOccasions">
+              <span class="aia-bar-label">{{ pretty(b.label) }}</span>
+              <div class="aia-bar-track"><div class="aia-bar-fill" [style.width.%]="b.pct"></div></div>
+              <span class="aia-bar-value">{{ b.count | number }}</span>
+            </div>
+          </div>
+          <div class="aia-group" *ngIf="topColours.length">
+            <h3 class="aia-group-title">Colours</h3>
+            <div class="aia-bar" *ngFor="let b of topColours">
+              <span class="aia-bar-label">{{ pretty(b.label) }}</span>
+              <div class="aia-bar-track"><div class="aia-bar-fill" [style.width.%]="b.pct"></div></div>
+              <span class="aia-bar-value">{{ b.count | number }}</span>
+            </div>
+          </div>
+          <p class="aia-muted" *ngIf="!topOccasions.length && !topColours.length">No occasion or colour signals yet.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Most-recommended products -->
+    <section class="aia-section">
+      <app-top-performers heading="Most recommended by Ain" metricUnit="times shown"
+                          subtitleLabel="product" [items]="mostRecommended" [loading]="loading"></app-top-performers>
+    </section>
+  </div>
+</app-admin-shell>

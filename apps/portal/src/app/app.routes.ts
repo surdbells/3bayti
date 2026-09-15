@@ -199,6 +199,12 @@ export const routes: Routes = [
     title: 'Audit log'
   },
   {
+    path: 'admin/ai',
+    loadComponent: () => import('./backend/ai-analytics/ai-analytics.component').then(m => m.AiAnalyticsComponent),
+    canActivate: [adminGuard, requirePermission('ai.view')],
+    title: 'Ain concierge'
+  },
+  {
     path: 'admin/collections/edit',
     loadComponent: () => import('./backend/collections/edit-collection/edit-collection.component').then(m => m.EditCollectionComponent),
     canActivate: [adminGuard, requirePermission('catalog.collections_manage')],

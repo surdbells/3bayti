@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 329 route keys.
+ * 333 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -34,6 +34,7 @@ export type V3RouteKey =
   | 'DELETE /vendor/measurements/:id'
   | 'DELETE /vendor/products/:id'
   | 'DELETE /wishlist/:productId'
+  | 'GET /admin/ai/analytics'
   | 'GET /admin/analytics'
   | 'GET /admin/audit-logs'
   | 'GET /admin/brands'
@@ -90,6 +91,7 @@ export type V3RouteKey =
   | 'GET /admin/vendors/:id/messages'
   | 'GET /admin/vendors/:id/metrics'
   | 'GET /admin/vendors/:id/products'
+  | 'GET /ai/status'
   | 'GET /auth/me'
   | 'GET /campaigns/:slug'
   | 'GET /campaigns/active'
@@ -255,6 +257,8 @@ export type V3RouteKey =
   | 'POST /admin/vendors/:id/messages'
   | 'POST /admin/vendors/:id/reactivate'
   | 'POST /admin/vendors/:id/suspend'
+  | 'POST /ai/concierge/style'
+  | 'POST /ai/events'
   | 'POST /auth/confirm'
   | 'POST /auth/login'
   | 'POST /auth/logout'
@@ -366,6 +370,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'DELETE /vendor/measurements/:id',
   'DELETE /vendor/products/:id',
   'DELETE /wishlist/:productId',
+  'GET /admin/ai/analytics',
   'GET /admin/analytics',
   'GET /admin/audit-logs',
   'GET /admin/brands',
@@ -422,6 +427,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/vendors/:id/messages',
   'GET /admin/vendors/:id/metrics',
   'GET /admin/vendors/:id/products',
+  'GET /ai/status',
   'GET /auth/me',
   'GET /campaigns/:slug',
   'GET /campaigns/active',
@@ -587,6 +593,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /admin/vendors/:id/messages',
   'POST /admin/vendors/:id/reactivate',
   'POST /admin/vendors/:id/suspend',
+  'POST /ai/concierge/style',
+  'POST /ai/events',
   'POST /auth/confirm',
   'POST /auth/login',
   'POST /auth/logout',

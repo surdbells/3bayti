@@ -225,6 +225,12 @@
         <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
       </button>
       <ul class="ax-sidenav-nav">
+        <li *axCan="'ai.view'">
+          <a routerLink="/admin/ai" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+            <app-icon name="smart_toy" aria-hidden="true"></app-icon>
+            <span class="ax-sidenav-link-label">Ain concierge</span>
+          </a>
+        </li>
         <li *axCan="'notifications.send'">
           <a routerLink="/admin/notifications" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="campaign" aria-hidden="true"></app-icon>
