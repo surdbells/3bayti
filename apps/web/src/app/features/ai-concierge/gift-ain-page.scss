@@ -51,33 +51,183 @@
 .gift-ain__legend {
   font-size: 0.85rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--color-text-primary, #2e241c);
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.85rem;
   padding: 0;
 }
-.gift-ain__chips {
+
+/* ── Recipient personas (illustrated avatar cards) ──────────────────── */
+.gift-ain__personas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+@media (min-width: 560px) {
+  .gift-ain__personas { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+.persona {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-}
-.gift-ain__chip {
-  border: 1px solid var(--color-border, #e7ded2);
-  background: var(--color-bg-surface, #fff);
-  color: var(--color-text-primary, #2e241c);
-  border-radius: var(--radius-pill, 999px);
-  padding: 0.55rem 1rem;
-  font-size: 0.9rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  background: transparent;
+  padding: 0.35rem 0.15rem;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
-.gift-ain__chip:hover {
+.persona__avatar {
+  position: relative;
+  width: 3.65rem;
+  height: 3.65rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--color-brand-700, #5a3a2c);
+  background: radial-gradient(circle at 32% 28%, #fdfaf7, #f1e7dd);
+  border: 1.5px solid var(--color-border, #e7ded2);
+  box-shadow: 0 4px 12px -6px rgba(90, 58, 44, 0.25);
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+}
+.persona__avatar svg { width: 1.7rem; height: 1.7rem; }
+.persona:hover .persona__avatar {
+  transform: translateY(-3px);
   border-color: var(--color-brand-500, #b18f1f);
+  box-shadow: 0 10px 20px -10px rgba(90, 58, 44, 0.35);
 }
-.gift-ain__chip.is-active {
-  background: var(--color-brand-700, #5a3a2c);
-  border-color: var(--color-brand-700, #5a3a2c);
+.persona__tick {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
   color: #fff;
+  background: var(--color-brand-700, #5a3a2c);
+  border: 2px solid var(--color-bg-canvas, #faf8f5);
+  transform: scale(0);
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+.persona__tick svg { width: 0.75rem; height: 0.75rem; }
+.persona__label {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary, #5a4a3c);
+  transition: color 0.18s ease, font-weight 0.18s ease;
+}
+.persona.is-active .persona__avatar {
+  color: #fff;
+  background: linear-gradient(140deg, #6f4a37, var(--color-brand-700, #5a3a2c));
+  border-color: var(--color-brand-700, #5a3a2c);
+  box-shadow: 0 12px 22px -10px rgba(90, 58, 44, 0.5);
+}
+.persona.is-active .persona__tick { transform: scale(1); }
+.persona.is-active .persona__label { color: var(--color-brand-700, #5a3a2c); font-weight: 600; }
+
+/* ── Occasion icon tiles ────────────────────────────────────────────── */
+.gift-ain__occasions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+@media (min-width: 560px) {
+  .gift-ain__occasions { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+.occasion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.9rem 0.4rem;
+  border: 1.5px solid var(--color-border, #e7ded2);
+  border-radius: var(--radius-lg, 20px);
+  background: var(--color-bg-surface, #fff);
+  color: var(--color-text-secondary, #5a4a3c);
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+.occasion__icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--color-brand-600, #906952);
+  background: var(--color-bg-canvas, #faf8f5);
+  transition: color 0.18s ease, background 0.18s ease;
+}
+.occasion__icon svg { width: 1.35rem; height: 1.35rem; }
+.occasion__label { font-size: 0.82rem; font-weight: 500; }
+.occasion:hover {
+  transform: translateY(-3px);
+  border-color: var(--color-brand-500, #b18f1f);
+  box-shadow: 0 12px 22px -14px rgba(90, 58, 44, 0.4);
+}
+.occasion.is-active {
+  border-color: var(--color-brand-700, #5a3a2c);
+  background: linear-gradient(150deg, #fbf7f3, #f2e8df);
+  color: var(--color-brand-700, #5a3a2c);
+  box-shadow: 0 12px 22px -14px rgba(90, 58, 44, 0.45);
+}
+.occasion.is-active .occasion__icon {
+  color: #fff;
+  background: linear-gradient(140deg, #6f4a37, var(--color-brand-700, #5a3a2c));
+}
+
+/* ── Budget tier cards ──────────────────────────────────────────────── */
+.gift-ain__budgets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+@media (min-width: 560px) {
+  .gift-ain__budgets { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.budget {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.85rem 0.5rem;
+  border: 1.5px solid var(--color-border, #e7ded2);
+  border-radius: var(--radius-lg, 20px);
+  background: var(--color-bg-surface, #fff);
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+.budget__coins { display: flex; gap: 0.22rem; }
+.budget__coin {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: var(--color-border, #e7ded2);
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+.budget__coin.is-lit { background: var(--color-brand-500, #b18f1f); }
+.budget__label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text-primary, #2e241c);
+  font-variant-numeric: tabular-nums;
+}
+.budget__unit {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary, #8a7c6d);
+}
+.budget:hover {
+  transform: translateY(-3px);
+  border-color: var(--color-brand-500, #b18f1f);
+  box-shadow: 0 12px 22px -14px rgba(90, 58, 44, 0.4);
+}
+.budget.is-active {
+  border-color: var(--color-brand-700, #5a3a2c);
+  background: linear-gradient(150deg, #fbf7f3, #f2e8df);
+  box-shadow: 0 12px 22px -14px rgba(90, 58, 44, 0.45);
+}
+.budget.is-active .budget__coin { transform: scale(1.12); }
+.budget.is-active .budget__coin.is-lit { background: var(--color-brand-700, #5a3a2c); }
 
 .gift-ain__fields {
   display: grid;

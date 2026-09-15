@@ -12,10 +12,18 @@
   <form class="gift-ain__form" (ngSubmit)="submit()">
     <fieldset class="gift-ain__group">
       <legend class="gift-ain__legend">{{ 'giftAin.recipientLabel' | translate }}</legend>
-      <div class="gift-ain__chips">
+      <div class="gift-ain__personas">
         @for (r of recipients; track r) {
-          <button type="button" class="gift-ain__chip" [class.is-active]="recipient() === r" (click)="pickRecipient(r)">
-            {{ 'giftAin.recipients.' + r | translate }}
+          <button type="button" class="persona" [class.is-active]="recipient() === r" (click)="pickRecipient(r)" [attr.aria-pressed]="recipient() === r">
+            <span class="persona__avatar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                @for (d of recipientIcon(r); track d) { <path [attr.d]="d"></path> }
+              </svg>
+              <span class="persona__tick" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+              </span>
+            </span>
+            <span class="persona__label">{{ 'giftAin.recipients.' + r | translate }}</span>
           </button>
         }
       </div>
@@ -23,10 +31,15 @@
 
     <fieldset class="gift-ain__group">
       <legend class="gift-ain__legend">{{ 'giftAin.occasionLabel' | translate }}</legend>
-      <div class="gift-ain__chips">
+      <div class="gift-ain__occasions">
         @for (o of occasions; track o) {
-          <button type="button" class="gift-ain__chip" [class.is-active]="occasion() === o" (click)="pickOccasion(o)">
-            {{ 'giftAin.occasions.' + o | translate }}
+          <button type="button" class="occasion" [class.is-active]="occasion() === o" (click)="pickOccasion(o)" [attr.aria-pressed]="occasion() === o">
+            <span class="occasion__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                @for (d of occasionIcon(o); track d) { <path [attr.d]="d"></path> }
+              </svg>
+            </span>
+            <span class="occasion__label">{{ 'giftAin.occasions.' + o | translate }}</span>
           </button>
         }
       </div>
@@ -34,10 +47,16 @@
 
     <fieldset class="gift-ain__group">
       <legend class="gift-ain__legend">{{ 'giftAin.budgetLabel' | translate }}</legend>
-      <div class="gift-ain__chips">
+      <div class="gift-ain__budgets">
         @for (b of budgetBands; track b.key) {
-          <button type="button" class="gift-ain__chip" [class.is-active]="budget()?.key === b.key" (click)="pickBudget(b)">
-            {{ 'giftAin.budgets.' + b.key | translate }}
+          <button type="button" class="budget" [class.is-active]="budget()?.key === b.key" (click)="pickBudget(b)" [attr.aria-pressed]="budget()?.key === b.key">
+            <span class="budget__coins" aria-hidden="true">
+              @for (dot of [1, 2, 3, 4]; track dot) {
+                <span class="budget__coin" [class.is-lit]="dot <= (budgetBands.indexOf(b) + 1)"></span>
+              }
+            </span>
+            <span class="budget__label">{{ 'giftAin.budgets.' + b.key | translate }}</span>
+            <span class="budget__unit">AED</span>
           </button>
         }
       </div>
