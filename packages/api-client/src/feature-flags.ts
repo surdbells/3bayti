@@ -100,6 +100,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/products/:slug/recommendations',
     shape: 'v3-envelope',
   },
+  // Ain — "Complete the look" complements for a PDP, keyed by the NUMERIC v3 id.
+  'GET /products/:id/complete-the-look': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/products/:id/complete-the-look',
+    shape: 'v3-envelope',
+  },
   // Per-product reviews (web + mobile PDP). Keyed by the NUMERIC v3
   // product id — the v3 routes are scoped to {productId:[0-9]+}
   // (apps/api/config/routes.php). GET is PUBLIC (approved-only,

@@ -606,6 +606,9 @@ return function (App $app): void {
     // shape means no collision with the {slug} catalog routes above.
     // Public reads expose APPROVED reviews only.
     $app->get('/v3/products/{productId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\ListProductReviewsController::class);
+    // Ain — "Complete the look": complementary in-stock products for a PDP.
+    // Numeric v3 id + literal suffix, so no collision with /v3/products/{slug}.
+    $app->get('/v3/products/{id:[0-9]+}/complete-the-look', \Bayti\Api\Http\Controllers\Catalog\GetCompleteTheLookController::class);
     $app->get('/v3/vendors/{vendorId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\ListVendorPublicReviewsController::class);
     // Slug variant (web): same controller, which resolves {vendorId}
     // flexibly (numeric -> v3 PK / legacy id, non-numeric -> slug). The
