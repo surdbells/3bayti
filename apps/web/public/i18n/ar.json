@@ -1419,7 +1419,10 @@
     "detailFabric": "القماش",
     "detailMaterials": "المواد",
     "detailCare": "العناية",
-    "relatedHeading": "قد يعجبك أيضًا"
+    "relatedHeading": "قد يعجبك أيضًا",
+    "completeTheLookHeading": "أكمل الإطلالة",
+    "addTheLook": "أضف الإطلالة",
+    "addingTheLook": "جارٍ الإضافة…"
   },
   "ui": {
     "loading": "جارٍ التحميل",

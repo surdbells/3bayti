@@ -1419,7 +1419,10 @@
     "detailFabric": "Fabric",
     "detailMaterials": "Materials",
     "detailCare": "Care",
-    "relatedHeading": "You may also like"
+    "relatedHeading": "You may also like",
+    "completeTheLookHeading": "Complete the look",
+    "addTheLook": "Add the look",
+    "addingTheLook": "Adding…"
   },
   "ui": {
     "loading": "Loading",

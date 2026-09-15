@@ -728,6 +728,26 @@
         </section>
       }
 
+      <!-- Ain "Complete the look": real, in-stock complements from other
+           categories. Silently omitted when there are none. -->
+      @if (completeTheLookItems().length > 0) {
+        <section class="pdp-ctl" [attr.aria-label]="'product.completeTheLookHeading' | translate">
+          <div class="pdp-ctl__head">
+            <h2 class="pdp-ctl__heading">{{ 'product.completeTheLookHeading' | translate }}</h2>
+            <button type="button" class="pdp-ctl__add" [disabled]="addingLook()" (click)="addTheLook()">
+              {{ (addingLook() ? 'product.addingTheLook' : 'product.addTheLook') | translate }}
+            </button>
+          </div>
+          <div class="pdp-ctl__grid">
+            @for (item of completeTheLookItems(); track item.id) {
+              <div class="pdp-ctl__cell" (click)="onComplementClick(item)">
+                <ui-product-card [product]="item" />
+              </div>
+            }
+          </div>
+        </section>
+      }
+
       <!-- End-of-content sentinel: when this scrolls into view the mobile
            sticky bar hides so it never overlaps the footer (see component). -->
       <div #ctaSentinel class="pdp-cta-sentinel" aria-hidden="true"></div>

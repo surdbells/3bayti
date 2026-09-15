@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { catchError, from, map, of, switchMap, tap } from 'rxjs';
 
 import { SeoService } from '../../core/seo/seo.service';
@@ -44,6 +44,8 @@ import type {
 } from './product.model';
 import { mapPublicReview } from './product.model';
 import { RecommendationsService } from './recommendations.service';
+import { CompleteTheLookService, type CompleteLookItem, type CompleteLookResult } from './complete-the-look.service';
+import { AnalyticsService } from '../../core/monitoring/analytics.service';
 import { StoreService } from './store.service';
 import { CartService } from '../../core/cart/cart.service';
 import { CartDrawerService } from '../../core/cart/cart-drawer.service';
@@ -113,6 +115,8 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   private routed = inject(RoutedHttpClient);
   private seo = inject(SeoService);
   private recsService = inject(RecommendationsService);
+  private ctlService = inject(CompleteTheLookService);
+  private analytics = inject(AnalyticsService);
   private stores = inject(StoreService);
   private cart = inject(CartService);
   private cartDrawer = inject(CartDrawerService);
@@ -167,6 +171,29 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     ),
     { initialValue: [] as Product[] },
   );
+
+  /**
+   * "Complete the Look" complements. Unlike recommendations (slug-keyed), this
+   * endpoint is keyed by the v3 numeric id, which is only known once the product
+   * has loaded — so the stream is driven off the product signal, not the route.
+   */
+  readonly completeTheLook = toSignal(
+    toObservable(this.product).pipe(
+      switchMap((p) => {
+        const id = p?.id;
+        if (!id) {
+          return of({ interactionId: null, items: [] } as CompleteLookResult);
+        }
+        return from(this.ctlService.forProduct(id)).pipe(
+          catchError(() => of({ interactionId: null, items: [] } as CompleteLookResult)),
+        );
+      }),
+    ),
+    { initialValue: { interactionId: null, items: [] } as CompleteLookResult },
+  );
+
+  /** The complement cards for the "Complete the look" strip. */
+  readonly completeTheLookItems = computed<CompleteLookItem[]>(() => this.completeTheLook().items);
 
   /**
    * The products to show in the "you may also like" grid: engine
@@ -1168,6 +1195,53 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     } finally {
       this.adding.set(false);
     }
+  }
+
+  /** True while "Add the look" is looping cart adds. */
+  readonly addingLook = signal(false);
+
+  /**
+   * Add every complement to the cart in one tap. Uses CartService.addItem
+   * directly (works for guests + authed) — NOT the seed-product addToCart(),
+   * which reads the seed's size/measurement state.
+   */
+  async addTheLook(): Promise<void> {
+    const result = this.completeTheLook();
+    const items = result.items;
+    if (items.length === 0 || this.addingLook()) {
+      return;
+    }
+    this.addingLook.set(true);
+    try {
+      for (const item of items) {
+        try {
+          await this.cart.addItem({ product_id: item.id, quantity: 1, size: null, color: null, is_custom: false });
+          this.ctlService.recordEvent('complete_look_item_added', {
+            ...(result.interactionId ? { interaction_id: result.interactionId } : {}),
+            product_id: item.id,
+          });
+        } catch {
+          // skip an item that can't be added; keep going
+        }
+      }
+      this.ctlService.recordEvent('complete_look_added', {
+        ...(result.interactionId ? { interaction_id: result.interactionId } : {}),
+        count: items.length,
+      });
+      this.analytics.event('complete_look_added', { count: items.length });
+      this.cartDrawer.open();
+    } finally {
+      this.addingLook.set(false);
+    }
+  }
+
+  /** Beacon a complement click (the card navigates itself). */
+  onComplementClick(item: CompleteLookItem): void {
+    const iid = this.completeTheLook().interactionId;
+    this.ctlService.recordEvent('ai_product_clicked', {
+      ...(iid ? { interaction_id: iid } : {}),
+      product_id: item.id,
+    });
   }
 
   /** Bind the extra-measurement textarea to its signal. */

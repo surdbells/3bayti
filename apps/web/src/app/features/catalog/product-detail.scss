@@ -875,6 +875,55 @@
   }
 }
 
+/* ----- Ain "Complete the look" --------------------------------------- */
+.pdp-ctl {
+  margin-top: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.pdp-ctl__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.pdp-ctl__heading {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-brand-700);
+}
+.pdp-ctl__add {
+  border: 1px solid var(--color-brand-700, #5a3a2c);
+  background: var(--color-brand-700, #5a3a2c);
+  color: #fff;
+  border-radius: var(--radius-pill, 999px);
+  padding: 0.6rem 1.3rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+.pdp-ctl__add:hover:not(:disabled) { background: var(--color-brand-500, #b18f1f); border-color: var(--color-brand-500, #b18f1f); }
+.pdp-ctl__add:disabled { opacity: 0.5; cursor: default; }
+.pdp-ctl__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 14px;
+}
+.pdp-ctl__cell { display: flex; }
+.pdp-ctl__cell > * { width: 100%; }
+@media (min-width: 600px) {
+  .pdp-ctl__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1280px) {
+  .pdp-ctl__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px 20px; }
+}
+
 /* ----- Savings badge (PDP1) ------------------------------------------ */
 .pdp-price__save {
   align-self: center;
