@@ -191,10 +191,21 @@ final class PermissionCatalog
                     'audit.view' => 'View the audit log',
                 ],
             ],
+            'ai' => [
+                'label' => 'Ain AI concierge',
+                'permissions' => [
+                    'ai.view' => 'View AI concierge analytics',
+                    'ai.manage' => 'Manage AI concierge settings',
+                ],
+            ],
         ];
     }
 
-    /** Flat list of every permission key. @return list<string> */
+    /**
+     * Flat list of every permission key.
+     *
+     * @return list<string>
+     */
     public static function allKeys(): array
     {
         $keys = [];
@@ -258,6 +269,7 @@ final class PermissionCatalog
                     'catalog.collections_view', 'catalog.collections_manage',
                     'catalog.campaigns_view', 'catalog.campaigns_manage',
                     'disputes.view', 'disputes.resolve',
+                    'ai.view',
                 ],
             ],
             'finance' => [
@@ -272,6 +284,7 @@ final class PermissionCatalog
                     'returns.view', 'returns.refund',
                     'gift_cards.view', 'gift_cards.adjust_balance',
                     'reports.view', 'reports.export',
+                    'ai.view',
                 ],
             ],
             'support' => [

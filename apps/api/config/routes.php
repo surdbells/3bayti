@@ -723,6 +723,8 @@ return function (App $app): void {
         $group->get('/top-customers', \Bayti\Api\Http\Controllers\Admin\Analytics\ListTopCustomersController::class)->add($perm->for('orders.view'));
         // Admin dashboard, period-over-period insight (KPIs, revenue series, status mix, at-risk)
         $group->get('/insights', \Bayti\Api\Http\Controllers\Admin\Analytics\GetAdminInsightsController::class)->add($perm->for('reports.view'));
+        // Ain AI concierge BI, usage funnel + AI-assisted revenue (attribution)
+        $group->get('/ai/analytics', \Bayti\Api\Http\Controllers\Admin\Analytics\GetAdminAiAnalyticsController::class)->add($perm->for('ai.view'));
 
         // Vendor admin
         $group->get('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\ListVendorsAdminController::class)->add($perm->for('vendors.view'));
