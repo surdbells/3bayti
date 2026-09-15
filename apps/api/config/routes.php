@@ -169,6 +169,12 @@ return function (App $app): void {
         // Workstream C, profile picture upload (mobile + portal).
         $group->post('/avatar', \Bayti\Api\Http\Controllers\Me\UpdateMeAvatarController::class);
 
+        // Gift Reminder Engine — customer-saved gift reminders (owner-scoped CRUD).
+        $group->get('/gift-reminders', \Bayti\Api\Http\Controllers\GiftReminder\ListGiftRemindersController::class);
+        $group->post('/gift-reminders', \Bayti\Api\Http\Controllers\GiftReminder\CreateGiftReminderController::class);
+        $group->put('/gift-reminders/{id:[0-9]+}', \Bayti\Api\Http\Controllers\GiftReminder\UpdateGiftReminderController::class);
+        $group->delete('/gift-reminders/{id:[0-9]+}', \Bayti\Api\Http\Controllers\GiftReminder\DeleteGiftReminderController::class);
+
         // M3.2.X.12-G, Personalized "for-you" recommendations
         $group->get(
             '/recommendations',

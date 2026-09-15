@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 335 route keys.
+ * 339 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -23,6 +23,7 @@ export type V3RouteKey =
   | 'DELETE /me'
   | 'DELETE /me/addresses/:id'
   | 'DELETE /me/device-tokens'
+  | 'DELETE /me/gift-reminders/:id'
   | 'DELETE /me/measurements/:id'
   | 'DELETE /me/reviews/:id'
   | 'DELETE /me/social-identities/:provider'
@@ -113,6 +114,7 @@ export type V3RouteKey =
   | 'GET /me/addresses'
   | 'GET /me/addresses/:id'
   | 'GET /me/billing-address'
+  | 'GET /me/gift-reminders'
   | 'GET /me/measurements'
   | 'GET /me/profile'
   | 'GET /me/recommendations'
@@ -295,6 +297,7 @@ export type V3RouteKey =
   | 'POST /me/device-tokens'
   | 'POST /me/email'
   | 'POST /me/email/verify'
+  | 'POST /me/gift-reminders'
   | 'POST /me/measurements'
   | 'POST /me/phone'
   | 'POST /me/phone/claim'
@@ -337,6 +340,7 @@ export type V3RouteKey =
   | 'PUT /admin/users/:id'
   | 'PUT /admin/vendors/:id'
   | 'PUT /me/addresses/:id'
+  | 'PUT /me/gift-reminders/:id'
   | 'PUT /me/measurements/:id'
   | 'PUT /me/measurements/default'
   | 'PUT /vendor/coupons/:id'
@@ -361,6 +365,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'DELETE /me',
   'DELETE /me/addresses/:id',
   'DELETE /me/device-tokens',
+  'DELETE /me/gift-reminders/:id',
   'DELETE /me/measurements/:id',
   'DELETE /me/reviews/:id',
   'DELETE /me/social-identities/:provider',
@@ -451,6 +456,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /me/addresses',
   'GET /me/addresses/:id',
   'GET /me/billing-address',
+  'GET /me/gift-reminders',
   'GET /me/measurements',
   'GET /me/profile',
   'GET /me/recommendations',
@@ -633,6 +639,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /me/device-tokens',
   'POST /me/email',
   'POST /me/email/verify',
+  'POST /me/gift-reminders',
   'POST /me/measurements',
   'POST /me/phone',
   'POST /me/phone/claim',
@@ -675,6 +682,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PUT /admin/users/:id',
   'PUT /admin/vendors/:id',
   'PUT /me/addresses/:id',
+  'PUT /me/gift-reminders/:id',
   'PUT /me/measurements/:id',
   'PUT /me/measurements/default',
   'PUT /vendor/coupons/:id',

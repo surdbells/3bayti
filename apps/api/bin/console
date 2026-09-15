@@ -207,6 +207,22 @@ try {
     ]);
 }
 
+// Gift-reminder nudge cron (14/7/2 days before a saved gift date). Resolves the
+// dispatch finder + push + mailer from the container; schedule once daily.
+try {
+    /** @var \Bayti\Api\Domain\GiftReminder\GiftReminderDispatchFinder $giftReminderFinder */
+    $giftReminderFinder = $container->get(\Bayti\Api\Domain\GiftReminder\GiftReminderDispatchFinder::class);
+    /** @var PushNotificationService $pushService */
+    $pushService = $container->get(PushNotificationService::class);
+    /** @var \Bayti\Api\Notification\GiftReminderMailer $giftReminderMailer */
+    $giftReminderMailer = $container->get(\Bayti\Api\Notification\GiftReminderMailer::class);
+    $cli->add(new \Bayti\Api\Console\SendGiftRemindersCommand($em, $giftReminderFinder, $pushService, $giftReminderMailer, $logger));
+} catch (\Throwable $e) {
+    $logger->info('gift reminders command not registered', [
+        'reason' => $e->getMessage(),
+    ]);
+}
+
 // Gift-card scheduled/retry delivery. Resolves the delivery service
 // via DI (which env-gates the SMS sender, defaulting to a no-op). No
 // payment-gateway dependency, so it registers on a fresh sandbox too.

@@ -987,6 +987,19 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     shape: 'v3-envelope',
   },
 
+  // Gift Reminder Engine — customer-saved gift reminders (owner-scoped CRUD).
+  'GET /me/gift-reminders': {
+    target: 'new', oldPath: '', newPath: '/v3/me/gift-reminders', shape: 'v3-envelope',
+  },
+  'POST /me/gift-reminders': {
+    target: 'new', oldPath: '', newPath: '/v3/me/gift-reminders', shape: 'v3-envelope',
+  },
+  'PUT /me/gift-reminders/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/me/gift-reminders/:id', shape: 'v3-envelope',
+  },
+  'DELETE /me/gift-reminders/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/me/gift-reminders/:id', shape: 'v3-envelope',
+  },
   'GET /me/addresses': {
     target: 'new',
     oldPath: '/users/addresses',

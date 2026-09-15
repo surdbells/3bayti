@@ -329,6 +329,58 @@ class PushNotificationService
     }
 
     /**
+     * Gift-reminder nudge (Gift Reminder Engine). Sent by the
+     * gift-reminders:dispatch cron at 14/7/2 days before the saved date. A
+     * user-requested reminder (like the gift-card expiry nudge), so it sends
+     * regardless of marketing opt-out. Fire-and-forget: never throws. The data
+     * payload carries only the gift brief (no product ids) so the app opens the
+     * gift concierge pre-filled and resolves real, in-stock picks at tap time.
+     */
+    public function giftReminderNudge(\Bayti\Api\Domain\GiftReminder\GiftReminder $reminder, int $stageDays): void
+    {
+        $user = $reminder->getUser();
+        $tokens = $this->activeTokensFor($user);
+        if ($tokens === []) {
+            return;
+        }
+
+        $locale = $this->localeFor($user);
+        $recipient = $reminder->getRecipientName();
+        $occasion = $reminder->getOccasion();
+
+        if ($locale === User::LOCALE_AR) {
+            $title = sprintf('%s لـ%s قريباً', $occasion, $recipient);
+            $body = sprintf('تبقّى %d يوم. دع عين تختار الهدية المثالية.', $stageDays);
+        } else {
+            $title = sprintf("%s's %s is coming up", $recipient, $occasion);
+            $body = sprintf('%d day%s to go — let Ain find the perfect gift.', $stageDays, $stageDays === 1 ? '' : 's');
+        }
+
+        $message = new PushMessage(
+            title: $title,
+            body: $body,
+            data: [
+                'type' => 'gift_reminder.nudge',
+                'gift_reminder_id' => (string) ($reminder->getId() ?? ''),
+                'occasion' => $occasion,
+                'budget_max' => (string) ($reminder->getBudgetMax() ?? ''),
+                'category_slug' => (string) ($reminder->getCategorySlug() ?? ''),
+            ],
+        );
+
+        $context = [
+            'event' => 'gift_reminder.nudge',
+            'gift_reminder_id' => $reminder->getId(),
+            'user_id' => $user->getId(),
+            'stage' => $stageDays,
+        ];
+
+        foreach ($tokens as $deviceToken) {
+            $this->sendOne($deviceToken, $message, $context);
+        }
+    }
+
+    /**
      * Push a new-chat-message ping to the recipient's devices. Never throws.
      */
     public function chatMessage(
