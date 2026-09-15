@@ -183,7 +183,13 @@ export class StyleService {
   async createStyle(input: CreateStyleInput): Promise<Style> {
     const env = await firstValueFrom(
       this.http.post<Style>('POST /me/styles', {
-        body: { name: input.name, products: input.products },
+        body: {
+          name: input.name,
+          products: input.products,
+          ...(input.source ? { source: input.source } : {}),
+          ...(input.prompt ? { prompt: input.prompt } : {}),
+          ...(input.rationale ? { rationale: input.rationale } : {}),
+        },
       }),
     );
     return env.data;

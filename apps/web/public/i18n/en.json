@@ -1697,6 +1697,19 @@
     }
   },
   "styles": {
+    "restyle": {
+      "heading": "Restyle with Ain",
+      "intro": "Tell Ain how to reimagine this look and it will rebuild it from real, in-stock pieces.",
+      "placeholder": "e.g. make it more elegant for a wedding",
+      "cta": "Restyle",
+      "working": "Restyling…",
+      "noResults": "Ain couldn't rebuild this look — try a different instruction.",
+      "save": "Save this look",
+      "saving": "Saving…",
+      "s1": "Make it more elegant",
+      "s2": "Style this for a wedding",
+      "s3": "A more traditional version"
+    },
     "create": {
       "cta": "Create a style",
       "title": "Create a style",

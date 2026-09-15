@@ -281,3 +281,77 @@
   .style-detail__name { font-size: 26px; }
   .style-detail__grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 }
+
+/* ── Restyle with Ain ─────────────────────────────────────────────── */
+.style-restyle {
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid var(--color-border, #e7ded2);
+}
+.style-restyle__intro {
+  color: var(--color-text-secondary, #5a4a3c);
+  margin: 0 0 16px;
+  max-width: 40rem;
+}
+.style-restyle__form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.style-restyle__input {
+  flex: 1 1 18rem;
+  border: 1px solid var(--color-border, #e7ded2);
+  border-radius: var(--radius-pill, 999px);
+  padding: 0.8rem 1.2rem;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--color-text-primary, #2e241c);
+  background: var(--color-bg-surface, #fff);
+  outline: none;
+}
+.style-restyle__input:focus { border-color: var(--color-brand-500, #b18f1f); box-shadow: 0 0 0 3px rgba(177, 143, 31, 0.15); }
+.style-restyle__btn {
+  border: none;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-brand-700, #5a3a2c);
+  color: #fff;
+  padding: 0.8rem 1.8rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.style-restyle__btn:hover:not(:disabled) { background: var(--color-brand-500, #b18f1f); }
+.style-restyle__btn:disabled { opacity: 0.5; cursor: default; }
+.style-restyle__chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.style-restyle__chip {
+  border: 1px solid var(--color-border, #e7ded2);
+  background: var(--color-bg-surface, #fff);
+  color: var(--color-text-secondary, #5a4a3c);
+  border-radius: var(--radius-pill, 999px);
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.style-restyle__chip:hover { border-color: var(--color-brand-500, #b18f1f); }
+.style-restyle__preview { margin-top: 20px; }
+.style-restyle__rationale {
+  font-style: italic;
+  color: var(--color-brand-700, #5a3a2c);
+  margin: 0 0 18px;
+  font-size: 1.05rem;
+}
+.style-restyle__empty { color: var(--color-text-secondary, #5a4a3c); }
+.style-restyle__save {
+  margin-top: 22px;
+  border: none;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-brand-700, #5a3a2c);
+  color: #fff;
+  padding: 0.85rem 2.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.style-restyle__save:hover:not(:disabled) { background: var(--color-brand-500, #b18f1f); }
+.style-restyle__save:disabled { opacity: 0.5; cursor: default; }

@@ -71,4 +71,8 @@ export interface StylesPage {
 export interface CreateStyleInput {
   name: string;
   products: number[];
+  /** Provenance for an Ain-restyled look. */
+  source?: 'user' | 'ai';
+  prompt?: string;
+  rationale?: string;
 }

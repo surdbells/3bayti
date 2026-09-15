@@ -6,12 +6,14 @@ import {
   OnInit,
 } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { AuthService } from '../../core/auth/auth.service';
 import { WishlistService } from '../wishlist/wishlist.service';
 import { StyleService } from './style.service';
+import { ConciergeService, type RestyleResult } from '../ai-concierge/concierge.service';
 import type { Style, StyleProduct } from './style.model';
 
 /**
@@ -36,7 +38,7 @@ import type { Style, StyleProduct } from './style.model';
 @Component({
   selector: 'app-style-detail',
   standalone: true,
-  imports: [NgIf, NgFor, RouterLink, TranslatePipe, CfImagePipe],
+  imports: [NgIf, NgFor, FormsModule, RouterLink, TranslatePipe, CfImagePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="style-detail" data-testid="style-detail-page">
@@ -132,6 +134,65 @@ import type { Style, StyleProduct } from './style.model';
                 <span class="style-detail__summary-value">{{ style()!.total_price }}</span>
               </div>
             </section>
+
+            <!-- Restyle with Ain -->
+            <section class="style-restyle" *ngIf="canRestyle()" data-testid="style-restyle">
+              <h2 class="style-detail__section-title">{{ 'styles.restyle.heading' | translate }}</h2>
+              <p class="style-restyle__intro">{{ 'styles.restyle.intro' | translate }}</p>
+              <div class="style-restyle__form">
+                <input
+                  class="style-restyle__input"
+                  type="text"
+                  [(ngModel)]="restyleInstruction"
+                  [placeholder]="'styles.restyle.placeholder' | translate"
+                  [disabled]="restyleLoading()"
+                />
+                <button
+                  type="button"
+                  class="style-restyle__btn"
+                  [disabled]="!restyleInstruction.trim() || restyleLoading()"
+                  (click)="runRestyle()"
+                >
+                  {{ (restyleLoading() ? 'styles.restyle.working' : 'styles.restyle.cta') | translate }}
+                </button>
+              </div>
+              <div class="style-restyle__chips">
+                <button type="button" class="style-restyle__chip" *ngFor="let s of restyleSuggestions" (click)="useSuggestion(s)">
+                  {{ s | translate }}
+                </button>
+              </div>
+
+              <div class="style-restyle__preview" *ngIf="restylePreview() as pv">
+                <p class="style-restyle__rationale" *ngIf="pv.rationale !== ''">{{ pv.rationale }}</p>
+                <div class="style-detail__grid" *ngIf="pv.cards.length > 0">
+                  <article class="style-product" *ngFor="let c of pv.cards; trackBy: trackById">
+                    <a [routerLink]="['/product', c.slug]" class="style-product__image-wrap">
+                      <img
+                        *ngIf="(c.primary_image?.url ?? '') !== ''"
+                        [src]="c.primary_image?.url | cfImage:'card'"
+                        [alt]="c.name"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </a>
+                    <div class="style-product__meta">
+                      <h3 class="style-product__name">{{ c.name }}</h3>
+                      <p class="style-product__price">{{ c.price.amount }}</p>
+                    </div>
+                  </article>
+                </div>
+                <p class="style-restyle__empty" *ngIf="pv.cards.length === 0">{{ 'styles.restyle.noResults' | translate }}</p>
+                <button
+                  type="button"
+                  class="style-restyle__save"
+                  *ngIf="pv.cards.length > 0"
+                  [disabled]="restyleSaving()"
+                  (click)="saveRestyle()"
+                >
+                  {{ (restyleSaving() ? 'styles.restyle.saving' : 'styles.restyle.save') | translate }}
+                </button>
+              </div>
+            </section>
           </div>
         </ng-container>
       </ng-container>
@@ -161,12 +222,77 @@ export class StyleDetailPageComponent implements OnInit {
   private readonly styleService = inject(StyleService);
   private readonly wishlist = inject(WishlistService);
   private readonly auth = inject(AuthService);
+  private readonly concierge = inject(ConciergeService);
+  private readonly i18n = inject(TranslateService);
 
   private readonly _style = signal<Style | null>(null);
   protected readonly style = this._style.asReadonly();
 
   private readonly _notFound = signal<boolean>(false);
   protected readonly notFound = this._notFound.asReadonly();
+
+  // ── Restyle with Ain ──────────────────────────────────────────────────
+  protected restyleInstruction = '';
+  protected readonly restyleLoading = signal(false);
+  protected readonly restyleSaving = signal(false);
+  protected readonly restylePreview = signal<RestyleResult | null>(null);
+  protected readonly restyleSuggestions = [
+    'styles.restyle.s1',
+    'styles.restyle.s2',
+    'styles.restyle.s3',
+  ];
+
+  /** Restyle needs a signed-in user + a seed look with products. */
+  protected canRestyle(): boolean {
+    return this.auth.isAuthenticated() && (this.style()?.products.length ?? 0) > 0;
+  }
+
+  protected useSuggestion(key: string): void {
+    this.restyleInstruction = this.i18n.instant(key);
+  }
+
+  protected async runRestyle(): Promise<void> {
+    const slug = this.style()?.slug;
+    const instruction = this.restyleInstruction.trim();
+    if (!slug || instruction === '' || this.restyleLoading()) {
+      return;
+    }
+    this.restyleLoading.set(true);
+    this.restylePreview.set(null);
+    try {
+      this.restylePreview.set(await this.concierge.restyle(slug, instruction));
+    } catch {
+      this.restylePreview.set({ interactionId: null, cards: [], rationale: '' });
+    } finally {
+      this.restyleLoading.set(false);
+    }
+  }
+
+  protected async saveRestyle(): Promise<void> {
+    const preview = this.restylePreview();
+    const seed = this.style();
+    if (!preview || preview.cards.length === 0 || !seed || this.restyleSaving()) {
+      return;
+    }
+    this.restyleSaving.set(true);
+    try {
+      const created = await this.styleService.createStyle({
+        name: seed.name + ' — restyled',
+        products: preview.cards.map((c) => c.id),
+        source: 'ai',
+        prompt: this.restyleInstruction.trim(),
+        rationale: preview.rationale,
+      });
+      this.concierge.recordEvent('style_saved', {
+        ...(preview.interactionId ? { interaction_id: preview.interactionId } : {}),
+      });
+      void this.router.navigate(['/styles', created.slug]);
+    } catch {
+      // keep the preview so the user can retry
+    } finally {
+      this.restyleSaving.set(false);
+    }
+  }
 
   async ngOnInit(): Promise<void> {
     const slugParam = this.route.snapshot.paramMap.get('slug');
