@@ -48,22 +48,141 @@
   color: var(--ax-color-text-primary, #1a1a1a);
   margin: 0 0 0.55rem;
 }
-.ga-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.ga-chip {
-  border: 1px solid #e2e5e9;
-  background: var(--ax-palette-neutral-0, #fff);
-  color: var(--ax-color-text-primary, #1a1a1a);
-  border-radius: 999px;
-  padding: 0.5rem 0.95rem;
-  font-size: 0.85rem;
+/* Recipient personas (illustrated avatar cards) */
+.ga-personas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.ga-persona {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  background: transparent;
+  padding: 0.2rem 0;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.ga-chip.is-active {
-  background: var(--ga-brand);
-  border-color: var(--ga-brand);
+.ga-persona__avatar {
+  position: relative;
+  width: 3.35rem;
+  height: 3.35rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #906952;
+  background: radial-gradient(circle at 32% 28%, #fdfaf7, #f1e7dd);
+  border: 1.5px solid #ece3dc;
+  box-shadow: 0 4px 12px -7px rgba(144, 105, 82, 0.3);
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.ga-persona__avatar svg { width: 1.55rem; height: 1.55rem; }
+.ga-persona__tick {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
   color: #fff;
+  background: var(--ga-brand);
+  border: 2px solid var(--ax-color-bg-canvas, #faf8f5);
+  transform: scale(0);
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+.ga-persona__tick svg { width: 0.7rem; height: 0.7rem; }
+.ga-persona__label { font-size: 0.78rem; color: var(--ax-color-text-tertiary, #8a8a8a); }
+.ga-persona.is-active .ga-persona__avatar {
+  color: #fff;
+  background: linear-gradient(140deg, #a27a60, #906952);
+  border-color: #906952;
+  box-shadow: 0 10px 20px -9px rgba(144, 105, 82, 0.5);
+}
+.ga-persona.is-active .ga-persona__tick { transform: scale(1); }
+.ga-persona.is-active .ga-persona__label { color: var(--ax-color-text-primary, #1a1a1a); font-weight: 600; }
+
+/* Occasion icon tiles */
+.ga-occasions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.ga-occasion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.75rem 0.35rem;
+  border: 1.5px solid #ece3dc;
+  border-radius: 1.1rem;
+  background: var(--ax-palette-neutral-0, #fff);
+  color: var(--ax-color-text-tertiary, #8a8a8a);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.ga-occasion__icon {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #906952;
+  background: #faf5f1;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+.ga-occasion__icon svg { width: 1.2rem; height: 1.2rem; }
+.ga-occasion__label { font-size: 0.76rem; font-weight: 500; }
+.ga-occasion.is-active {
+  border-color: #906952;
+  background: linear-gradient(150deg, #fbf7f3, #f2e8df);
+  color: var(--ax-color-text-primary, #1a1a1a);
+}
+.ga-occasion.is-active .ga-occasion__icon {
+  color: #fff;
+  background: linear-gradient(140deg, #a27a60, #906952);
+}
+
+/* Budget tier cards */
+.ga-budgets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.ga-budget {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.7rem 0.4rem;
+  border: 1.5px solid #ece3dc;
+  border-radius: 1.1rem;
+  background: var(--ax-palette-neutral-0, #fff);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.ga-budget__coins { display: flex; gap: 0.2rem; }
+.ga-budget__coin {
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 50%;
+  background: #e2e5e9;
+  transition: background 0.18s ease;
+}
+.ga-budget__coin.is-lit { background: #c9ae85; }
+.ga-budget__label {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ax-color-text-primary, #1a1a1a);
+}
+.ga-budget__unit { font-size: 0.64rem; letter-spacing: 0.08em; color: var(--ax-color-text-tertiary, #8a8a8a); }
+.ga-budget.is-active {
+  border-color: #906952;
+  background: linear-gradient(150deg, #fbf7f3, #f2e8df);
+}
+.ga-budget.is-active .ga-budget__coin.is-lit { background: #906952; }
 
 .ga-fields { display: flex; flex-direction: column; gap: 0.55rem; }
 .ga-input {

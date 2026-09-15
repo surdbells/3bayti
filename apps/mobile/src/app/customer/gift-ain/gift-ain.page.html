@@ -19,10 +19,18 @@
   <form class="ga-form" (ngSubmit)="submit()">
     <div class="ga-group">
       <p class="ga-legend">{{ 'gift_ain_recipient_label' | translate }}</p>
-      <div class="ga-chips">
+      <div class="ga-personas">
         @for (r of recipients; track r) {
-          <button type="button" class="ga-chip" [class.is-active]="recipient === r" (click)="pickRecipient(r)">
-            {{ 'gift_ain_recipient_' + r | translate }}
+          <button type="button" class="ga-persona" [class.is-active]="recipient === r" (click)="pickRecipient(r)" [attr.aria-pressed]="recipient === r">
+            <span class="ga-persona__avatar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                @for (d of recipientIcon(r); track d) { <path [attr.d]="d"></path> }
+              </svg>
+              <span class="ga-persona__tick" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+              </span>
+            </span>
+            <span class="ga-persona__label">{{ 'gift_ain_recipient_' + r | translate }}</span>
           </button>
         }
       </div>
@@ -30,10 +38,15 @@
 
     <div class="ga-group">
       <p class="ga-legend">{{ 'gift_ain_occasion_label' | translate }}</p>
-      <div class="ga-chips">
+      <div class="ga-occasions">
         @for (o of occasions; track o) {
-          <button type="button" class="ga-chip" [class.is-active]="occasion === o" (click)="pickOccasion(o)">
-            {{ 'gift_ain_occasion_' + o | translate }}
+          <button type="button" class="ga-occasion" [class.is-active]="occasion === o" (click)="pickOccasion(o)" [attr.aria-pressed]="occasion === o">
+            <span class="ga-occasion__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                @for (d of occasionIcon(o); track d) { <path [attr.d]="d"></path> }
+              </svg>
+            </span>
+            <span class="ga-occasion__label">{{ 'gift_ain_occasion_' + o | translate }}</span>
           </button>
         }
       </div>
@@ -41,10 +54,16 @@
 
     <div class="ga-group">
       <p class="ga-legend">{{ 'gift_ain_budget_label' | translate }}</p>
-      <div class="ga-chips">
+      <div class="ga-budgets">
         @for (b of budgetBands; track b.key) {
-          <button type="button" class="ga-chip" [class.is-active]="budget?.key === b.key" (click)="pickBudget(b)">
-            {{ 'gift_ain_budget_' + b.key | translate }}
+          <button type="button" class="ga-budget" [class.is-active]="budget?.key === b.key" (click)="pickBudget(b)" [attr.aria-pressed]="budget?.key === b.key">
+            <span class="ga-budget__coins" aria-hidden="true">
+              @for (dot of [1, 2, 3, 4]; track dot) {
+                <span class="ga-budget__coin" [class.is-lit]="dot <= budgetTier(b)"></span>
+              }
+            </span>
+            <span class="ga-budget__label">{{ 'gift_ain_budget_' + b.key | translate }}</span>
+            <span class="ga-budget__unit">AED</span>
           </button>
         }
       </div>
