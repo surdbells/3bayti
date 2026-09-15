@@ -95,6 +95,21 @@ export function resolvePushDeepLink(data: Record<string, unknown> | null | undef
     case 're_engagement.nudge': {
       return '/home';
     }
+    case 'gift_reminder.nudge': {
+      // Open the Gift Finder pre-filled from the reminder's brief. Products are
+      // resolved live there (no ids in the payload).
+      const params = new URLSearchParams();
+      const occasion = pushStr(data['occasion']);
+      const budgetMax = pushStr(data['budget_max']);
+      const categorySlug = pushStr(data['category_slug']);
+      const reminderId = pushStr(data['gift_reminder_id']);
+      if (occasion !== '') { params.set('occasion', occasion); }
+      if (budgetMax !== '') { params.set('budget_max', budgetMax); }
+      if (categorySlug !== '') { params.set('category_slug', categorySlug); }
+      if (reminderId !== '') { params.set('gift_reminder_id', reminderId); }
+      const qs = params.toString();
+      return qs === '' ? '/gift-ain' : `/gift-ain?${qs}`;
+    }
     default:
       return null;
   }

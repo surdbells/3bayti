@@ -1,0 +1,79 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'gift_reminders_title' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="openCreate()" aria-label="Add">
+        <ax-icon name="gift" />
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+  <p class="grm-sub">{{ 'gift_reminders_subtitle' | translate }}</p>
+
+  @if (showForm) {
+    <form class="grm-form" (ngSubmit)="save()">
+      <label class="grm-field">
+        <span>{{ 'gift_reminders_recipient' | translate }}</span>
+        <input type="text" [(ngModel)]="form.recipient_name" name="recipient_name" [placeholder]="'gift_reminders_recipient_ph' | translate" />
+      </label>
+      <label class="grm-field">
+        <span>{{ 'gift_reminders_occasion' | translate }}</span>
+        <input type="text" [(ngModel)]="form.occasion" name="occasion" [placeholder]="'gift_reminders_occasion_ph' | translate" />
+      </label>
+      <div class="grm-row">
+        <label class="grm-field">
+          <span>{{ 'gift_reminders_date' | translate }}</span>
+          <input type="date" [(ngModel)]="form.remind_date" name="remind_date" [min]="todayStr" />
+        </label>
+        <label class="grm-field">
+          <span>{{ 'gift_reminders_budget' | translate }}</span>
+          <input type="number" min="0" step="1" [(ngModel)]="form.budget_max" name="budget_max" [placeholder]="'gift_reminders_budget_ph' | translate" />
+        </label>
+      </div>
+      <label class="grm-field">
+        <span>{{ 'gift_reminders_note' | translate }}</span>
+        <input type="text" [(ngModel)]="form.note" name="note" [placeholder]="'gift_reminders_note_ph' | translate" />
+      </label>
+      <div class="grm-form-actions">
+        <button type="button" class="grm-btn grm-btn--ghost" (click)="cancel()">{{ 'gift_reminders_cancel' | translate }}</button>
+        <button type="submit" class="grm-btn grm-btn--primary" [disabled]="!formValid || saving">
+          @if (saving) { <ion-spinner name="crescent"></ion-spinner> } @else { {{ 'gift_reminders_save' | translate }} }
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (loading) {
+    <div class="grm-loading"><ion-spinner name="dots"></ion-spinner></div>
+  } @else if (reminders.length === 0 && !showForm) {
+    <div class="grm-empty">
+      <div class="grm-empty__orb"><ax-icon name="gift" /></div>
+      <p>{{ 'gift_reminders_empty' | translate }}</p>
+      <button type="button" class="grm-btn grm-btn--primary" (click)="openCreate()">{{ 'gift_reminders_add' | translate }}</button>
+    </div>
+  } @else {
+    <div class="grm-list">
+      @for (r of reminders; track r.id) {
+        <div class="grm-item">
+          <div class="grm-item__main">
+            <span class="grm-item__recipient">{{ r.recipient_name }}</span>
+            <span class="grm-item__meta">{{ r.occasion }} · {{ r.remind_date }}</span>
+            @if (r.note) { <span class="grm-item__note">{{ r.note }}</span> }
+          </div>
+          <div class="grm-item__actions">
+            <button type="button" class="grm-chip grm-chip--brand" (click)="findGifts(r)">{{ 'gift_reminders_find' | translate }}</button>
+            <button type="button" class="grm-chip" (click)="openEdit(r)">{{ 'gift_reminders_edit' | translate }}</button>
+            <button type="button" class="grm-chip grm-chip--danger" (click)="remove(r)"><ax-icon name="trash-2" /></button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</ion-content>

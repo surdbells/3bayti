@@ -13,7 +13,7 @@ import {
   IonCol,
   NavController,
 } from '@ionic/angular/standalone';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Preferences } from '@capacitor/preferences';
 
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
@@ -154,6 +154,7 @@ export class GiftAinPage implements OnInit {
   constructor(
     private nav: NavController,
     private router: Router,
+    private route: ActivatedRoute,
     private networkAdapter: MobileNetworkAdapter,
     private i18n: I18nService,
     private toast: AxNotificationService,
@@ -169,6 +170,7 @@ export class GiftAinPage implements OnInit {
       }
     }
     this.sessionId = await this.ensureSession();
+    this.applyPrefill();
   }
 
   goBack(): void {
@@ -201,9 +203,7 @@ export class GiftAinPage implements OnInit {
     if (!this.canSubmit || this.isSending) {
       return;
     }
-    this.recordEvent('ai_gift_started');
-
-    const body: Record<string, unknown> = {
+    this.runBrief({
       recipient: this.recipient || undefined,
       occasion: this.occasion === 'just_because' ? undefined : this.occasion || undefined,
       colours: this.toList(this.coloursText),
@@ -211,6 +211,14 @@ export class GiftAinPage implements OnInit {
       size: this.size.trim() || undefined,
       budget_min: this.budget?.min,
       budget_max: this.budget?.max,
+    });
+  }
+
+  private runBrief(brief: Record<string, unknown>): void {
+    this.recordEvent('ai_gift_started');
+
+    const body: Record<string, unknown> = {
+      ...brief,
       locale: this.i18n.lang,
       session_id: this.sessionId,
       channel: 'MOBILE',
@@ -239,6 +247,39 @@ export class GiftAinPage implements OnInit {
         this.error_notification(this.i18n.t('gift_ain_error'));
       },
     });
+  }
+
+  goReminders(): void {
+    this.router.navigate(['/', 'gift-reminders']);
+  }
+
+  private applyPrefill(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const occasion = (params.get('occasion') ?? '').trim();
+    const budgetMaxRaw = params.get('budget_max');
+    const categorySlug = params.get('category_slug') ?? undefined;
+    const reminderId = params.get('gift_reminder_id');
+    const budgetMax = budgetMaxRaw !== null && budgetMaxRaw !== '' ? Number(budgetMaxRaw) : undefined;
+
+    if (!occasion && budgetMax === undefined) {
+      return;
+    }
+    if (reminderId) {
+      this.recordEvent('gift_reminder_clicked', { gift_reminder_id: Number(reminderId) });
+    }
+
+    const occKey = this.occasions.find((o) => o.toLowerCase() === occasion.toLowerCase());
+    if (occKey) {
+      this.occasion = occKey;
+    }
+    if (budgetMax !== undefined) {
+      const band = this.budgetBands.find((b) => (b.max ?? Infinity) >= budgetMax && (b.min ?? 0) <= budgetMax);
+      if (band) {
+        this.budget = band;
+      }
+    }
+
+    this.runBrief({ occasion: occasion || undefined, budget_max: budgetMax, category_slug: categorySlug });
   }
 
   onImageLoad(id: number): void {
