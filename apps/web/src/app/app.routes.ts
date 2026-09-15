@@ -136,6 +136,14 @@ export const routes: Routes = [
     title: 'routeTitles.styles',
   },
   {
+    /* Ask Ain — AI style & gifting concierge. Public (personalises when
+       signed in); the endpoint resolves NL queries to real products. */
+    path: 'ask-ain',
+    loadComponent: () =>
+      import('./features/ai-concierge/ask-ain-page').then(m => m.AskAinPageComponent),
+    title: 'routeTitles.askAin',
+  },
+  {
     /* Create a style, `/styles/create`. Name + product picker → POST
        /me/styles. Auth-gated (the create endpoint is Bearer-bound).
        MUST precede `styles/:slug` so the literal segment wins. */

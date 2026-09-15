@@ -1,0 +1,61 @@
+<section class="ask-ain">
+  <header class="ask-ain__head">
+    <span class="ask-ain__orb" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3l1.9 4.8L18.7 9.7 13.9 11.6 12 16.4 10.1 11.6 5.3 9.7 10.1 7.8z" />
+        <path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" />
+      </svg>
+    </span>
+    <h1 class="ask-ain__title font-display">{{ 'askAin.title' | translate }}</h1>
+    <p class="ask-ain__subtitle">{{ 'askAin.subtitle' | translate }}</p>
+  </header>
+
+  <form class="ask-ain__form" (ngSubmit)="submit()">
+    <input
+      class="ask-ain__input"
+      type="text"
+      name="q"
+      autocomplete="off"
+      [ngModel]="query()"
+      (ngModelChange)="query.set($event)"
+      [placeholder]="'askAin.placeholder' | translate"
+      [disabled]="loading()" />
+    <button class="ask-ain__send" type="submit" [disabled]="!query().trim() || loading()" aria-label="Send">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+      </svg>
+    </button>
+  </form>
+
+  @if (!hasSearched()) {
+    <div class="ask-ain__chips">
+      @for (s of suggestions; track s) {
+        <button type="button" class="ask-ain__chip" (click)="useSuggestion(s)">{{ s | translate }}</button>
+      }
+    </div>
+  } @else {
+    <div class="ask-ain__thread">
+      @if (lastQuery()) {
+        <p class="ask-ain__you"><span>{{ lastQuery() }}</span></p>
+      }
+
+      @if (loading()) {
+        <p class="ask-ain__status">{{ 'askAin.thinking' | translate }}</p>
+      } @else if (isEmpty()) {
+        <p class="ask-ain__status">{{ 'askAin.noResults' | translate }}</p>
+      } @else {
+        <p class="ask-ain__intro">{{ 'askAin.resultsIntro' | translate }}</p>
+        <ul class="ask-ain__grid" role="list">
+          @for (card of cards(); track card.id) {
+            <li class="ask-ain__cell" (click)="onCardClick(card)">
+              <ui-product-card [product]="card" />
+              @if (card.reason) {
+                <p class="ask-ain__reason">{{ card.reason }}</p>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</section>

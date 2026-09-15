@@ -58,4 +58,15 @@ export class AnalyticsService {
         });
       });
   }
+
+  /**
+   * Fire a custom GA4 event (snake_case name + flat params). No-op when GA4
+   * isn't configured or gtag hasn't loaded (SSR-safe). Best-effort — never
+   * throws into the caller.
+   */
+  event(name: string, params: Record<string, unknown> = {}): void {
+    const win = this.document.defaultView as (Window & typeof globalThis) | null;
+    if (!win || typeof win.gtag !== 'function') return;
+    win.gtag('event', name, params);
+  }
 }

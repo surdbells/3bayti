@@ -35,7 +35,21 @@
     "styles": "Styles",
     "giftCards": "Gift Cards",
     "discounted": "Discounted",
+    "askAin": "Ask Ain",
     "menuToggle": "Open navigation menu"
+  },
+  "askAin": {
+    "title": "Ask Ain",
+    "subtitle": "Tell Ain the occasion, style or gift you have in mind and it will pull real pieces from our stores.",
+    "placeholder": "e.g. an elegant black abaya for a wedding",
+    "thinking": "Ain is looking through the collections…",
+    "resultsIntro": "Here's what Ain found for you",
+    "noResults": "Ain couldn't find a match. Try describing the colour, occasion or budget.",
+    "chips": {
+      "wedding": "An elegant black abaya for a wedding",
+      "eidGift": "An Eid gift for my sister under 300",
+      "casualBeige": "Something casual in beige"
+    }
   },
   "footer": {
     "brandAria": "3bayti home",
@@ -1518,6 +1532,7 @@
     "privacy": "Privacy Policy · 3bayti",
     "deleteAccount": "Delete your account · 3bayti",
     "styleCreate": "Create a style · 3bayti",
+    "askAin": "Ask Ain · 3bayti",
     "home": "3bayti: Premium Abayas, Kaftans & Modest Wear",
     "categories": "Shop by Category · 3bayti",
     "product": "Product · 3bayti",
