@@ -21,6 +21,12 @@ interface AiProviderInterface
     public function isEnabled(): bool;
 
     /**
+     * The embedding model identifier, so callers can version their stored
+     * vectors (re-embed when the model changes). Null when no provider/model.
+     */
+    public function embedModel(): ?string;
+
+    /**
      * Ask the model to return a single JSON object matching $schema (a JSON
      * Schema for the expected object). Used for intent parsing and re-ranking,
      * where we need machine-readable structure, never free prose.

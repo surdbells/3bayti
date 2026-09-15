@@ -27,10 +27,17 @@ final class FakeAiProvider implements AiProviderInterface
     public bool $enabled = true;
     /** @var list<array<string, mixed>> */
     public array $queue = [];
+    /** @var list<float> vector returned for every embed() input */
+    public array $embedVector = [];
 
     public function isEnabled(): bool
     {
         return $this->enabled;
+    }
+
+    public function embedModel(): ?string
+    {
+        return 'fake-embed';
     }
 
     public function completeJson(string $system, string $user, array $schema, string $schemaName = 'result'): array
@@ -40,7 +47,7 @@ final class FakeAiProvider implements AiProviderInterface
 
     public function embed(array $texts): array
     {
-        return array_map(static fn (): array => [], $texts);
+        return array_map(fn (): array => $this->embedVector, $texts);
     }
 }
 
@@ -134,6 +141,38 @@ final class ConciergePipelineTest extends TestCase
         self::assertSame('', $items[0]->reason);
     }
 
+    // ===== semantic retrieval (PHP-cosine fallback) =====
+
+    #[Test]
+    public function retrievalReordersTheShortlistBySemanticSimilarity(): void
+    {
+        $vendor = $this->makeVendor(9);
+        $p1 = $this->makeProduct($vendor, 1, 'A');
+        $p2 = $this->makeProduct($vendor, 2, 'B');
+        $p3 = $this->makeProduct($vendor, 3, 'C');
+
+        $ai = new FakeAiProvider();
+        $ai->embedVector = [1.0, 0.0]; // query vector
+
+        // Store over a mocked connection: embeddings exist, pgvector does not,
+        // and product 2 is closest to the query, then 1, then 3.
+        $conn = $this->createMock(\Doctrine\DBAL\Connection::class);
+        $conn->method('fetchOne')->willReturnCallback(
+            static fn (string $sql) => str_contains($sql, 'information_schema') ? false : 1,
+        );
+        $conn->method('fetchAllAssociative')->willReturn([
+            ['product_id' => 1, 'embedding' => (string) json_encode([0.5, 0.5])],
+            ['product_id' => 2, 'embedding' => (string) json_encode([0.99, 0.01])],
+            ['product_id' => 3, 'embedding' => (string) json_encode([0.1, 0.9])],
+        ]);
+        $store = new \Bayti\Api\Ai\Enrichment\ProductAiAttributesStore($conn);
+
+        $service = new ProductRetrievalService($this->emReturning([$p1, $p2, $p3]), $ai, $store);
+        $out = $service->retrieve(\Bayti\Api\Ai\Concierge\ConciergeIntent::keywordFallback('abaya'), 12);
+
+        self::assertSame([2, 1, 3], array_map(static fn ($p) => $p->getId(), $out));
+    }
+
     // ===== ConciergeService end-to-end =====
 
     #[Test]
@@ -155,7 +194,7 @@ final class ConciergePipelineTest extends TestCase
 
         $service = new ConciergeService(
             new IntentParser($ai),
-            new ProductRetrievalService($this->emReturning([$p1, $p2Draft, $p3Oos, $p4])),
+            new ProductRetrievalService($this->emReturning([$p1, $p2Draft, $p3Oos, $p4]), $ai, $this->noEmbedStore()),
             new ConciergeRanker($ai),
         );
 
@@ -207,6 +246,14 @@ final class ConciergePipelineTest extends TestCase
             static fn (string $class) => $class === Product::class ? $productRepo : null,
         );
         return $em;
+    }
+
+    /** A store over a mocked connection: hasAnyEmbedding() is false, so the semantic pass is skipped. */
+    private function noEmbedStore(): \Bayti\Api\Ai\Enrichment\ProductAiAttributesStore
+    {
+        return new \Bayti\Api\Ai\Enrichment\ProductAiAttributesStore(
+            $this->createMock(\Doctrine\DBAL\Connection::class),
+        );
     }
 
     private function setId(object $entity, int $id): void

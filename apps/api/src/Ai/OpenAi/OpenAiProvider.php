@@ -30,6 +30,11 @@ final class OpenAiProvider implements AiProviderInterface
         return true;
     }
 
+    public function embedModel(): string
+    {
+        return $this->client->embedModel();
+    }
+
     public function completeJson(string $system, string $user, array $schema, string $schemaName = 'result'): array
     {
         $response = $this->client->chat([

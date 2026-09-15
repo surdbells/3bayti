@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Ai\Concierge;
 
+use Bayti\Api\Ai\AiException;
+use Bayti\Api\Ai\AiProviderInterface;
+use Bayti\Api\Ai\Enrichment\Cosine;
+use Bayti\Api\Ai\Enrichment\ProductAiAttributesStore;
 use Bayti\Api\Domain\Catalog\Category;
 use Bayti\Api\Domain\Catalog\CategoryRepository;
 use Bayti\Api\Domain\Catalog\Product;
@@ -29,8 +33,14 @@ final class ProductRetrievalService
     /** Below this, broaden the query so a narrow request still yields options. */
     private const THIN = 8;
 
-    public function __construct(private readonly EntityManagerInterface $em)
-    {
+    /** Cap on the enriched candidate pool the semantic pass ranks in PHP. */
+    private const SEMANTIC_POOL = 200;
+
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly AiProviderInterface $ai,
+        private readonly ProductAiAttributesStore $attributes,
+    ) {
     }
 
     /**
@@ -79,7 +89,116 @@ final class ProductRetrievalService
             $this->collect($products->findActivePaginated($f3)['items'], $collected);
         }
 
+        // Semantic pass: when products are enriched with embeddings and AI is on,
+        // re-order + expand the shortlist by meaning (occasion/colour/style the
+        // exact keywords miss). No-op otherwise — keyword order stands.
+        $semantic = $this->semanticPass($intent, $search, $this->resolveCategoryId($intent->categorySlug), $collected, $limit);
+        if ($semantic !== null) {
+            return $semantic;
+        }
+
         return array_slice(array_values($collected), 0, $limit);
+    }
+
+    /**
+     * @param array<int, Product> $collected id => product from the keyword/filter passes
+     * @return list<Product>|null null = no semantic ordering available (keep keyword order)
+     */
+    private function semanticPass(ConciergeIntent $intent, string $search, ?int $categoryId, array $collected, int $limit): ?array
+    {
+        if (!$this->ai->isEnabled() || !$this->attributes->hasAnyEmbedding()) {
+            return null;
+        }
+        $queryText = $search !== '' ? $search : implode(' ', $intent->keywords);
+        if (trim($queryText) === '') {
+            return null;
+        }
+        try {
+            $queryVec = $this->ai->embed([$queryText])[0] ?? [];
+        } catch (AiException) {
+            return null;
+        }
+        if ($queryVec === []) {
+            return null;
+        }
+
+        // Fast path: pgvector kNN over the whole enriched catalogue (when enabled).
+        if ($this->attributes->hasPgvector()) {
+            $ids = $this->attributes->pgvectorRank($queryVec, $limit, $categoryId, $intent->budgetMin, $intent->budgetMax);
+            if ($ids !== []) {
+                return $this->assemble($ids, $this->loadProducts($ids), $collected, $limit);
+            }
+        }
+
+        // Fallback: PHP cosine over a bounded, budget/category-scoped enriched pool
+        // (the keyword hits + a best-seller set, so semantics can surface items the
+        // exact keywords missed).
+        /** @var array<int, Product> $pool */
+        $pool = $collected;
+        $poolFilters = $this->baseFilters($intent, min($limit * 5, self::SEMANTIC_POOL));
+        $poolFilters['sort'] = 'best_seller';
+        if ($categoryId !== null) {
+            $poolFilters['categoryId'] = $categoryId;
+        }
+        /** @var ProductRepository $products */
+        $products = $this->em->getRepository(Product::class);
+        $this->collect($products->findActivePaginated($poolFilters)['items'], $pool);
+
+        $embeddings = $this->attributes->fetchEmbeddings(array_keys($pool));
+        if ($embeddings === []) {
+            return null;
+        }
+
+        return $this->assemble(Cosine::rank($queryVec, $embeddings, $limit), $pool, $collected, $limit);
+    }
+
+    /**
+     * Order semantic ids first (mapped to real products), then append any exact
+     * keyword hits not already included (so we never lose an exact match), capped.
+     *
+     * @param list<int> $orderedIds
+     * @param array<int, Product> $map     id => product for the ordered ids
+     * @param array<int, Product> $collected keyword/filter hits
+     * @return list<Product>
+     */
+    private function assemble(array $orderedIds, array $map, array $collected, int $limit): array
+    {
+        $out = [];
+        foreach ($orderedIds as $id) {
+            if (isset($map[$id])) {
+                $out[$id] = $map[$id];
+            }
+        }
+        foreach ($collected as $id => $p) {
+            if (count($out) >= $limit) {
+                break;
+            }
+            $out[$id] ??= $p;
+        }
+        return array_slice(array_values($out), 0, $limit);
+    }
+
+    /**
+     * Load products by id, keyed + re-validated (orderable + in stock).
+     *
+     * @param list<int> $ids
+     * @return array<int, Product>
+     */
+    private function loadProducts(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+        /** @var list<Product> $found */
+        $found = $this->em->getRepository(Product::class)->findBy(['id' => $ids]);
+        $out = [];
+        foreach ($found as $p) {
+            $id = $p->getId();
+            if ($id !== null && $p->isOrderable() && $p->isInStock()) {
+                $out[$id] = $p;
+            }
+        }
+        return $out;
     }
 
     /**

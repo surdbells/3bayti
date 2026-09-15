@@ -22,6 +22,11 @@ final class NullAiProvider implements AiProviderInterface
         return false;
     }
 
+    public function embedModel(): ?string
+    {
+        return null;
+    }
+
     public function completeJson(string $system, string $user, array $schema, string $schemaName = 'result'): array
     {
         return [];

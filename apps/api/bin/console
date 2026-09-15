@@ -99,6 +99,15 @@ $cli->addCommands([
 // registers unconditionally.
 $cli->add(new \Bayti\Api\Console\PublishOtaBundleCommand($em));
 
+// Ain AI product enrichment (ai:build-product-attributes). The AI provider is a
+// no-op when AI_ENABLED is unset, so this always registers safely.
+$cli->add(new \Bayti\Api\Console\BuildProductAiAttributesCommand(
+    $container->get(\Bayti\Api\Ai\AiProviderInterface::class),
+    $em,
+    $container->get(\Bayti\Api\Ai\Enrichment\ProductAiAttributesStore::class),
+    $container->get(\Psr\Log\LoggerInterface::class),
+));
+
 // M3.1.7-B — Application commands. Pull collaborators from the
 // container at registration time. The PaymentGateway resolution
 // requires NOON_* env vars; if those are missing (fresh dev
