@@ -81,6 +81,11 @@ export const routes: Routes = [
     loadComponent: () => import('./customer/search/search.page').then( m => m.SearchPage)
   },
   {
+    path: 'ask-ain',
+    loadComponent: () => import('./customer/ask-ain/ask-ain.page').then(m => m.AskAinPage),
+    title: 'Ask Ain'
+  },
+  {
     path: 'checkout',
     loadComponent: () => import('./customer/checkout/checkout.page').then(m => m.CheckoutPage)
   },

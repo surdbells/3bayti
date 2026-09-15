@@ -15,7 +15,7 @@ import {TranslatePipe} from "../../translate.pipe";
 import {Products} from "../../class/products";
 import {Labels} from "../../class/labels";
 import {Subscription} from "rxjs";
-import {Router} from "@angular/router";
+import {Router, RouterLink} from "@angular/router";
 import {ActionSheetController, InfiniteScrollCustomEvent, Platform} from "@ionic/angular";
 import {ConnectionService} from "../../service/connection.service";
 import {BlockerService} from "../../blocker.service";
@@ -62,6 +62,7 @@ export interface Store {
     IonInfiniteScrollContent,
     CommonModule,
     FormsModule,
+    RouterLink,
     TranslatePipe,
     AxIconComponent,
     AxLoaderComponent,

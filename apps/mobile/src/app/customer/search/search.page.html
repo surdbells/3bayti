@@ -29,6 +29,16 @@
     </ax-text-field>
   </div>
 
+  <!-- Ask Ain entry: natural-language style & gifting concierge -->
+  <button type="button" class="ask-ain-pill" [routerLink]="['/ask-ain']">
+    <span class="ask-ain-pill__orb"><ax-icon name="sparkles" /></span>
+    <span class="ask-ain-pill__text">
+      <strong>{{ 'ask_ain_title' | translate }}</strong>
+      <small>{{ 'ask_ain_pill_hint' | translate }}</small>
+    </span>
+    <ax-icon name="arrow-right" class="ask-ain-pill__chevron" />
+  </button>
+
   <div class="ion-padding-horizontal results-area">
 
     @if (!ui_controls.is_loading && products && products.length > 0) {

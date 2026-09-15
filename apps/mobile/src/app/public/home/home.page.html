@@ -31,6 +31,16 @@
   <!-- Update-email nudge (non-deliverable Apple relay / placeholder email) -->
   <app-add-email-banner></app-add-email-banner>
 
+  <!-- Ask Ain: natural-language style & gifting concierge -->
+  <button type="button" class="ask-ain-hero" [routerLink]="['/ask-ain']">
+    <span class="ask-ain-hero__orb"><ax-icon name="sparkles"></ax-icon></span>
+    <span class="ask-ain-hero__body">
+      <span class="ask-ain-hero__title">{{ 'ask_ain_title' | translate }}</span>
+      <span class="ask-ain-hero__sub">{{ 'ask_ain_pill_hint' | translate }}</span>
+    </span>
+    <span class="ask-ain-hero__cta" aria-hidden="true"><ax-icon name="arrow-right"></ax-icon></span>
+  </button>
+
   <!-- Best Sellers Section -->
   @if (!ui_controls.is_loading && best_sellers.length > 0) {
     <section class="section ion-padding-horizontal">

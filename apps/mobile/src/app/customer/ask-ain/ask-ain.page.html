@@ -1,0 +1,126 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'ask_ain_title' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+  <!-- Empty / greeting state -->
+  @if (!hasSearched) {
+    <div class="aa-intro">
+      <div class="aa-orb"><ax-icon name="sparkles" /></div>
+      <h1 class="aa-greet">{{ 'ask_ain_greeting' | translate }}</h1>
+      <p class="aa-sub">{{ 'ask_ain_subtitle' | translate }}</p>
+      <div class="aa-chips">
+        @for (s of suggestions; track s) {
+          <button type="button" class="aa-chip" (click)="useSuggestion(s)">{{ s | translate }}</button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Conversation -->
+  @if (hasSearched) {
+    <div class="aa-thread">
+      @if (lastQuery) {
+        <div class="aa-you"><span class="aa-bubble">{{ lastQuery }}</span></div>
+      }
+
+      @if (isSending) {
+        <div class="aa-thinking">
+          <ion-spinner name="dots"></ion-spinner>
+          <span>{{ 'ask_ain_thinking' | translate }}</span>
+        </div>
+      } @else if (isEmpty) {
+        <div class="aa-empty">
+          <ax-icon name="search" />
+          <p>{{ 'ask_ain_no_results' | translate }}</p>
+        </div>
+      } @else {
+        <p class="aa-ain-line">{{ 'ask_ain_results_intro' | translate }}</p>
+        <ion-grid class="aa-grid">
+          <ion-row>
+            @for (card of cards; track card.id) {
+              <ion-col size="6">
+                <article class="m6d-product-card">
+                  <div class="m6d-img-wrap">
+                    <div class="m6d-img-skeleton" [class.hidden]="imageLoaded[card.id]">
+                      <div class="skeleton-shimmer"></div>
+                    </div>
+                    <img
+                      (click)="open_product(card)"
+                      [class.loaded]="imageLoaded[card.id]"
+                      (load)="onImageLoad(card.id)"
+                      (error)="onImageError(card.id)"
+                      [src]="cfImage(card.primary_image?.url || '', 'card')"
+                      alt="{{ card.name }}" />
+                    <button (click)="startAddToCloset(card); $event.stopPropagation()" class="m6d-like" type="button" aria-label="Add to closet">
+                      <ax-icon name="heart-plus" />
+                    </button>
+                    @if (card.vendor?.name) {
+                      <button (click)="open_vendor(card); $event.stopPropagation()" class="m6d-vendor-badge vendor-badge--tappable" type="button">&#64;{{ card.vendor?.name }}</button>
+                    }
+                  </div>
+                  <div (click)="open_product(card)" class="m6d-info">
+                    <p class="m6d-name">{{ card.name }}</p>
+                    @if (card.reason) {
+                      <p class="aa-reason">{{ card.reason }}</p>
+                    }
+                    <div class="m6d-price-row">
+                      @if (card.sale_price) {
+                        <span class="m6d-price">Ð{{ card.sale_price.amount }}</span>
+                        <span class="aa-price-was">Ð{{ card.price?.amount }}</span>
+                      } @else {
+                        <span class="m6d-price">Ð{{ card.price?.amount }}</span>
+                      }
+                    </div>
+                  </div>
+                </article>
+              </ion-col>
+            }
+          </ion-row>
+        </ion-grid>
+      }
+    </div>
+  }
+</ion-content>
+
+<ion-footer class="aa-footer ion-no-border">
+  <div class="aa-input-bar">
+    <textarea
+      class="aa-input"
+      [(ngModel)]="messageText"
+      (keydown)="onKeyDown($event)"
+      [placeholder]="'ask_ain_placeholder' | translate"
+      rows="1"
+      [disabled]="isSending"></textarea>
+    <button
+      type="button"
+      class="aa-send"
+      (click)="submit()"
+      [disabled]="!messageText.trim() || isSending"
+      aria-label="Send">
+      @if (isSending) {
+        <ion-spinner name="crescent"></ion-spinner>
+      } @else {
+        <ax-icon name="send"></ax-icon>
+      }
+    </button>
+  </div>
+</ion-footer>
+
+<ax-wishlist-sheet
+  [isOpen]="isWishOpen"
+  [productName]="addCloset.product_name"
+  [labels]="categories"
+  [loading]="isLoadingCategory"
+  [creating]="isCreatingLabel"
+  (dismiss)="onDismiss(); isWishOpen = false"
+  (select)="addToCloset($event)"
+  (createLabel)="onCreateLabel($event)">
+</ax-wishlist-sheet>

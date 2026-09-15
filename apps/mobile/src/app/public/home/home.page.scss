@@ -489,3 +489,35 @@ ion-header.public-header {
   font-size: 20px;
   color: var(--ax-color-text-brand, #906952);
 }
+/* Ask Ain hero entry (natural-language style & gifting concierge) */
+.ask-ain-hero {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: calc(100% - 2rem);
+  margin: 0.5rem 1rem 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #ece3dc;
+  border-radius: 1.1rem;
+  background: linear-gradient(135deg, #fbf7f4, #f2e8e1);
+  cursor: pointer;
+  text-align: left;
+}
+.ask-ain-hero:active { background: #efe4dc; }
+.ask-ain-hero__orb {
+  flex: 0 0 auto;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, #a27a60, #906952);
+  box-shadow: 0 6px 16px rgba(144, 105, 82, 0.25);
+}
+.ask-ain-hero__orb ax-icon { --ax-icon-size: 1.3rem; width: 1.3rem; height: 1.3rem; }
+.ask-ain-hero__body { flex: 1; display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.ask-ain-hero__title { font-size: 1rem; font-weight: 700; color: var(--ax-color-text-primary, #1a1a1a); }
+.ask-ain-hero__sub { font-size: 0.8rem; color: var(--ax-color-text-tertiary, #8a8a8a); }
+.ask-ain-hero__cta { flex: 0 0 auto; color: #906952; }
+.ask-ain-hero__cta ax-icon { --ax-icon-size: 1.15rem; width: 1.15rem; height: 1.15rem; }
