@@ -83,6 +83,28 @@ final class ConciergeIntent
         );
     }
 
+    /**
+     * Plain array for the API echo-back + the interaction log.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        return [
+            'product_type' => $this->productType,
+            'category_slug' => $this->categorySlug,
+            'occasions' => $this->occasions,
+            'colours' => $this->colours,
+            'styles' => $this->styles,
+            'budget_min' => $this->budgetMin,
+            'budget_max' => $this->budgetMax,
+            'keywords' => $this->keywords,
+            'vendor_hints' => $this->vendorHints,
+            'is_gift' => $this->isGift,
+            'confidence' => $this->confidence,
+        ];
+    }
+
     /** Free-text search string for the keyword pass (product type + keywords). */
     public function searchText(): string
     {

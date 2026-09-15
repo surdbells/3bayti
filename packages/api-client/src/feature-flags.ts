@@ -243,6 +243,17 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/recommendations',
     shape: 'v3-envelope',
   },
+
+  // Ain — AI style & gifting concierge (public; personalises when signed in). v3-only.
+  'POST /ai/concierge/style': {
+    target: 'new', oldPath: '', newPath: '/v3/ai/concierge/style', shape: 'v3-envelope',
+  },
+  'POST /ai/events': {
+    target: 'new', oldPath: '', newPath: '/v3/ai/events', shape: 'v3-envelope',
+  },
+  'GET /ai/status': {
+    target: 'new', oldPath: '', newPath: '/v3/ai/status', shape: 'v3-envelope',
+  },
   // M3.2.W.2 — faceted search counts for the catalog listing.
   // Same query vocabulary as GET /products plus sizes[]/colors[].
   'GET /products/facets': {

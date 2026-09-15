@@ -612,6 +612,16 @@ return function (App $app): void {
     // 3-segment shape + literal /reviews suffix means no collision with
     // the 2-segment /v3/vendors/{slug} catalog route.
     $app->get('/v3/vendors/{vendorId}/reviews', \Bayti\Api\Http\Controllers\Review\ListVendorPublicReviewsController::class);
+
+    // Ain — AI style & gifting concierge. Public; OptionalAuthMiddleware
+    // personalises (locale) when a valid token is present and never 401s, so the
+    // concierge works logged-out and logged-in alike.
+    $app->post('/v3/ai/concierge/style', \Bayti\Api\Http\Controllers\Ai\ConciergeStyleController::class)
+        ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
+    $app->post('/v3/ai/events', \Bayti\Api\Http\Controllers\Ai\RecordAiEventController::class)
+        ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
+    $app->get('/v3/ai/status', \Bayti\Api\Http\Controllers\Ai\AiStatusController::class);
+
     // Authed customer review actions.
     $app->post('/v3/products/{productId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\CreateReviewController::class)->add(AuthMiddleware::class);
     $app->post('/v3/vendors/{vendorId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\CreateVendorReviewController::class)->add(AuthMiddleware::class);
