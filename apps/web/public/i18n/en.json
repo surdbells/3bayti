@@ -36,7 +36,51 @@
     "giftCards": "Gift Cards",
     "discounted": "Discounted",
     "askAin": "Ask Ain",
+    "giftAin": "Gift Finder",
     "menuToggle": "Open navigation menu"
+  },
+  "giftAin": {
+    "title": "Find the perfect gift",
+    "subtitle": "Tell Ain who it's for and the occasion — it'll pull real gift ideas from our stores, or suggest a gift card when a size is a guess.",
+    "recipientLabel": "Who is it for?",
+    "occasionLabel": "What's the occasion?",
+    "budgetLabel": "Budget",
+    "detailsLabel": "Any details? (optional)",
+    "coloursPlaceholder": "Colours, e.g. black, gold",
+    "stylesPlaceholder": "Style, e.g. elegant, casual",
+    "sizePlaceholder": "Size, if you know it",
+    "findGifts": "Find gifts",
+    "finding": "Ain is finding gifts…",
+    "resultsIntro": "Gift ideas Ain picked for you",
+    "noResults": "Ain couldn't find a match — try widening the budget or details.",
+    "giftCardHint": "A gift card lets them choose exactly what they love.",
+    "giftCardCta": "Send a gift card",
+    "giftCardReason": {
+      "size_unknown": "Not sure about their size?",
+      "few_matches": "Want to be sure it's perfect?"
+    },
+    "recipients": {
+      "sister": "Sister",
+      "mother": "Mother",
+      "friend": "Friend",
+      "wife": "Wife",
+      "daughter": "Daughter",
+      "colleague": "Colleague"
+    },
+    "occasions": {
+      "eid": "Eid",
+      "wedding": "Wedding",
+      "birthday": "Birthday",
+      "graduation": "Graduation",
+      "anniversary": "Anniversary",
+      "justBecause": "Just because"
+    },
+    "budgets": {
+      "under200": "Under 200",
+      "200to500": "200 – 500",
+      "500to1000": "500 – 1000",
+      "over1000": "1000+"
+    }
   },
   "askAin": {
     "title": "Ask Ain",
@@ -1533,6 +1577,7 @@
     "deleteAccount": "Delete your account · 3bayti",
     "styleCreate": "Create a style · 3bayti",
     "askAin": "Ask Ain · 3bayti",
+    "giftAin": "Gift Finder · 3bayti",
     "home": "3bayti: Premium Abayas, Kaftans & Modest Wear",
     "categories": "Shop by Category · 3bayti",
     "product": "Product · 3bayti",

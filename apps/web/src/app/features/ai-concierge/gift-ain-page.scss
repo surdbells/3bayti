@@ -1,0 +1,179 @@
+.gift-ain {
+  max-width: var(--page-max-width, 1280px);
+  margin: 0 auto;
+  padding: clamp(2rem, 1.5rem + 2vw, 3.5rem) var(--page-padding-x, 24px) 4rem;
+}
+
+.gift-ain__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  margin-bottom: 1.75rem;
+}
+.gift-ain__orb {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-700, #5a3a2c), var(--color-brand-500, #b18f1f));
+  box-shadow: var(--shadow-card-resting, 0 4px 12px -2px rgba(90, 58, 44, 0.18));
+  margin-bottom: 0.5rem;
+}
+.gift-ain__title {
+  font-size: clamp(1.75rem, 1.4rem + 1.6vw, 2.5rem);
+  color: var(--color-brand-700, #5a3a2c);
+  margin: 0;
+}
+.gift-ain__subtitle {
+  color: var(--color-text-secondary, #5a4a3c);
+  max-width: 34rem;
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* ── Guided form ────────────────────────────────────────────────────── */
+.gift-ain__form {
+  max-width: 46rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.gift-ain__group {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+.gift-ain__legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin-bottom: 0.6rem;
+  padding: 0;
+}
+.gift-ain__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+.gift-ain__chip {
+  border: 1px solid var(--color-border, #e7ded2);
+  background: var(--color-bg-surface, #fff);
+  color: var(--color-text-primary, #2e241c);
+  border-radius: var(--radius-pill, 999px);
+  padding: 0.55rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.gift-ain__chip:hover {
+  border-color: var(--color-brand-500, #b18f1f);
+}
+.gift-ain__chip.is-active {
+  background: var(--color-brand-700, #5a3a2c);
+  border-color: var(--color-brand-700, #5a3a2c);
+  color: #fff;
+}
+
+.gift-ain__fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+}
+@media (min-width: 640px) {
+  .gift-ain__fields { grid-template-columns: 1fr 1fr 1fr; }
+}
+.gift-ain__input {
+  border: 1px solid var(--color-border, #e7ded2);
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--color-text-primary, #2e241c);
+  background: var(--color-bg-surface, #fff);
+  outline: none;
+}
+.gift-ain__input:focus {
+  border-color: var(--color-brand-500, #b18f1f);
+  box-shadow: 0 0 0 3px rgba(177, 143, 31, 0.15);
+}
+
+.gift-ain__submit {
+  align-self: center;
+  border: none;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-brand-700, #5a3a2c);
+  color: #fff;
+  padding: 0.85rem 2.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+.gift-ain__submit:hover:not(:disabled) { background: var(--color-brand-500, #b18f1f); }
+.gift-ain__submit:disabled { opacity: 0.45; cursor: default; }
+
+/* ── Results ────────────────────────────────────────────────────────── */
+.gift-ain__results { margin-top: 2.5rem; }
+.gift-ain__status,
+.gift-ain__intro {
+  text-align: center;
+  color: var(--color-text-secondary, #5a4a3c);
+  margin: 0 0 1.5rem;
+}
+
+.gift-ain__card-nudge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  border: 1px solid #ece3dc;
+  background: linear-gradient(135deg, #fbf7f4, #f4ece6);
+  border-radius: var(--radius-lg, 20px);
+  padding: 1.1rem 1.35rem;
+  margin-bottom: 2rem;
+}
+.gift-ain__card-nudge-body { display: flex; flex-direction: column; gap: 0.2rem; }
+.gift-ain__card-nudge-body strong { color: var(--color-brand-700, #5a3a2c); font-size: 1rem; }
+.gift-ain__card-nudge-body span { color: var(--color-text-secondary, #5a4a3c); font-size: 0.875rem; }
+.gift-ain__card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-brand-700, #5a3a2c);
+  color: #fff;
+  padding: 0.7rem 1.3rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.gift-ain__card-cta:hover { background: var(--color-brand-500, #b18f1f); }
+.gift-ain__card-amount { font-weight: 700; opacity: 0.9; }
+
+.gift-ain__grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: clamp(1rem, 0.8rem + 1vw, 1.75rem);
+}
+@media (min-width: 768px) {
+  .gift-ain__grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+}
+.gift-ain__cell { display: flex; flex-direction: column; }
+.gift-ain__reason {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--color-brand-700, #5a3a2c);
+  font-style: italic;
+}

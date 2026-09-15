@@ -36,7 +36,51 @@
     "giftCards": "بطاقات الهدايا",
     "discounted": "التخفيضات",
     "askAin": "اسأل عين",
+    "giftAin": "دليل الهدايا",
     "menuToggle": "فتح قائمة التنقل"
+  },
+  "giftAin": {
+    "title": "اعثر على الهدية المثالية",
+    "subtitle": "أخبر عين لمن الهدية وما المناسبة — وستختار لك أفكار هدايا حقيقية من متاجرنا، أو تقترح بطاقة هدية عندما يكون المقاس غير مؤكد.",
+    "recipientLabel": "لمن الهدية؟",
+    "occasionLabel": "ما المناسبة؟",
+    "budgetLabel": "الميزانية",
+    "detailsLabel": "أي تفاصيل؟ (اختياري)",
+    "coloursPlaceholder": "الألوان، مثل أسود، ذهبي",
+    "stylesPlaceholder": "النمط، مثل أنيق، كاجوال",
+    "sizePlaceholder": "المقاس، إن كنت تعرفه",
+    "findGifts": "اعثر على الهدايا",
+    "finding": "عين تبحث عن الهدايا…",
+    "resultsIntro": "أفكار هدايا اختارتها لك عين",
+    "noResults": "لم تجد عين ما يناسب — جرّب توسيع الميزانية أو التفاصيل.",
+    "giftCardHint": "بطاقة الهدية تتيح له اختيار ما يحب تماماً.",
+    "giftCardCta": "أرسل بطاقة هدية",
+    "giftCardReason": {
+      "size_unknown": "لست متأكداً من مقاسه؟",
+      "few_matches": "تريد أن تكون الهدية مثالية؟"
+    },
+    "recipients": {
+      "sister": "أخت",
+      "mother": "أم",
+      "friend": "صديق",
+      "wife": "زوجة",
+      "daughter": "ابنة",
+      "colleague": "زميل"
+    },
+    "occasions": {
+      "eid": "العيد",
+      "wedding": "زفاف",
+      "birthday": "عيد ميلاد",
+      "graduation": "تخرّج",
+      "anniversary": "ذكرى سنوية",
+      "justBecause": "بلا مناسبة"
+    },
+    "budgets": {
+      "under200": "أقل من ٢٠٠",
+      "200to500": "٢٠٠ – ٥٠٠",
+      "500to1000": "٥٠٠ – ١٠٠٠",
+      "over1000": "١٠٠٠+"
+    }
   },
   "askAin": {
     "title": "اسأل عين",
@@ -1533,6 +1577,7 @@
     "deleteAccount": "حذف حسابك · 3bayti",
     "styleCreate": "أنشئ إطلالة · ٣بيتي",
     "askAin": "اسأل عين · ٣بيتي",
+    "giftAin": "دليل الهدايا · ٣بيتي",
     "home": "3bayti: عبايات وقفاطين وأزياء محتشمة فاخرة",
     "categories": "التسوق حسب الفئة · 3bayti",
     "product": "المنتج · 3bayti",

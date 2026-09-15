@@ -1,0 +1,98 @@
+<section class="gift-ain">
+  <header class="gift-ain__head">
+    <span class="gift-ain__orb" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z" />
+      </svg>
+    </span>
+    <h1 class="gift-ain__title font-display">{{ 'giftAin.title' | translate }}</h1>
+    <p class="gift-ain__subtitle">{{ 'giftAin.subtitle' | translate }}</p>
+  </header>
+
+  <form class="gift-ain__form" (ngSubmit)="submit()">
+    <fieldset class="gift-ain__group">
+      <legend class="gift-ain__legend">{{ 'giftAin.recipientLabel' | translate }}</legend>
+      <div class="gift-ain__chips">
+        @for (r of recipients; track r) {
+          <button type="button" class="gift-ain__chip" [class.is-active]="recipient() === r" (click)="pickRecipient(r)">
+            {{ 'giftAin.recipients.' + r | translate }}
+          </button>
+        }
+      </div>
+    </fieldset>
+
+    <fieldset class="gift-ain__group">
+      <legend class="gift-ain__legend">{{ 'giftAin.occasionLabel' | translate }}</legend>
+      <div class="gift-ain__chips">
+        @for (o of occasions; track o) {
+          <button type="button" class="gift-ain__chip" [class.is-active]="occasion() === o" (click)="pickOccasion(o)">
+            {{ 'giftAin.occasions.' + o | translate }}
+          </button>
+        }
+      </div>
+    </fieldset>
+
+    <fieldset class="gift-ain__group">
+      <legend class="gift-ain__legend">{{ 'giftAin.budgetLabel' | translate }}</legend>
+      <div class="gift-ain__chips">
+        @for (b of budgetBands; track b.key) {
+          <button type="button" class="gift-ain__chip" [class.is-active]="budget()?.key === b.key" (click)="pickBudget(b)">
+            {{ 'giftAin.budgets.' + b.key | translate }}
+          </button>
+        }
+      </div>
+    </fieldset>
+
+    <fieldset class="gift-ain__group gift-ain__group--details">
+      <legend class="gift-ain__legend">{{ 'giftAin.detailsLabel' | translate }}</legend>
+      <div class="gift-ain__fields">
+        <input class="gift-ain__input" type="text" [ngModel]="coloursText()" (ngModelChange)="coloursText.set($event)" name="colours" [placeholder]="'giftAin.coloursPlaceholder' | translate" />
+        <input class="gift-ain__input" type="text" [ngModel]="stylesText()" (ngModelChange)="stylesText.set($event)" name="styles" [placeholder]="'giftAin.stylesPlaceholder' | translate" />
+        <input class="gift-ain__input" type="text" [ngModel]="size()" (ngModelChange)="size.set($event)" name="size" [placeholder]="'giftAin.sizePlaceholder' | translate" />
+      </div>
+    </fieldset>
+
+    <button class="gift-ain__submit" type="submit" [disabled]="!canSubmit() || loading()">
+      {{ (loading() ? 'giftAin.finding' : 'giftAin.findGifts') | translate }}
+    </button>
+  </form>
+
+  @if (hasSearched()) {
+    <div class="gift-ain__results">
+      @if (loading()) {
+        <p class="gift-ain__status">{{ 'giftAin.finding' | translate }}</p>
+      } @else {
+        @if (giftCard(); as gc) {
+          <aside class="gift-ain__card-nudge">
+            <div class="gift-ain__card-nudge-body">
+              <strong>{{ ('giftAin.giftCardReason.' + gc.reason) | translate }}</strong>
+              <span>{{ 'giftAin.giftCardHint' | translate }}</span>
+            </div>
+            <button type="button" class="gift-ain__card-cta" (click)="openGiftCards()">
+              {{ 'giftAin.giftCardCta' | translate }}
+              @if (gc.suggested_denomination) {
+                <span class="gift-ain__card-amount">{{ gc.currency }} {{ gc.suggested_denomination }}</span>
+              }
+            </button>
+          </aside>
+        }
+
+        @if (cards().length) {
+          <p class="gift-ain__intro">{{ 'giftAin.resultsIntro' | translate }}</p>
+          <ul class="gift-ain__grid" role="list">
+            @for (card of cards(); track card.id) {
+              <li class="gift-ain__cell" (click)="onCardClick(card)">
+                <ui-product-card [product]="card" />
+                @if (card.reason) {
+                  <p class="gift-ain__reason">{{ card.reason }}</p>
+                }
+              </li>
+            }
+          </ul>
+        } @else if (isEmpty()) {
+          <p class="gift-ain__status">{{ 'giftAin.noResults' | translate }}</p>
+        }
+      }
+    </div>
+  }
+</section>

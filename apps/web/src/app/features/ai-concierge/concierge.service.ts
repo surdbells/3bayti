@@ -15,11 +15,43 @@ export interface ConciergeResult {
   cards: ConciergeCard[];
 }
 
+/** The guided gift-brief inputs. */
+export interface GiftBriefInput {
+  recipient?: string;
+  occasion?: string;
+  colours?: string[];
+  styles?: string[];
+  size?: string;
+  budget_min?: number;
+  budget_max?: number;
+  product_type?: string;
+}
+
+/** The "buy a gift card instead" nudge (references no product). */
+export interface GiftCardSuggestion {
+  reason: string;
+  suggested_denomination: string | null;
+  presets: string[];
+  currency: string;
+  min_denomination: string;
+  max_denomination: string;
+}
+
+export interface GiftResult {
+  interactionId: number | null;
+  cards: ConciergeCard[];
+  giftCard: GiftCardSuggestion | null;
+}
+
 /** Raw concierge response body (Responder::ok returns it un-enveloped). */
 interface ConciergeResponse {
   interaction_id: number | null;
   intent?: unknown;
   products: ConciergeCard[];
+}
+
+interface GiftResponse extends ConciergeResponse {
+  gift_card_suggestion?: GiftCardSuggestion;
 }
 
 /**
@@ -57,6 +89,30 @@ export class ConciergeService {
     this.analytics.event('ai_concierge_results', { count: cards.length });
 
     return { interactionId: data.interaction_id ?? null, cards };
+  }
+
+  /** Guided gift flow: a structured brief → real gift ideas + optional gift-card nudge. */
+  async askGift(brief: GiftBriefInput): Promise<GiftResult> {
+    this.analytics.event('ai_gift_started', { occasion: brief.occasion ?? '', has_budget: brief.budget_max != null });
+    this.recordEvent('ai_gift_started');
+
+    const env = await firstValueFrom(
+      this.http.post<GiftResponse>('POST /ai/concierge/gift', {
+        body: {
+          ...brief,
+          locale: this.locale.current(),
+          session_id: this.sessionId(),
+          channel: 'WEB',
+        },
+      }),
+    );
+
+    const data = (env.data ?? {}) as GiftResponse;
+    const cards = Array.isArray(data.products) ? data.products : [];
+    const giftCard = data.gift_card_suggestion ?? null;
+    this.analytics.event('ai_gift_results', { count: cards.length, gift_card: !!giftCard });
+
+    return { interactionId: data.interaction_id ?? null, cards, giftCard };
   }
 
   /** Best-effort server-side analytics beacon; never blocks or throws. */
