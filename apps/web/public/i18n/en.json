@@ -106,6 +106,17 @@
     "empty": "No reminders yet. Save a date and Ain will nudge you before it.",
     "myReminders": "My gift reminders"
   },
+  "giftCardNudge": {
+    "cta": "Send a gift card",
+    "pdp": {
+      "title": "Not sure about their size?",
+      "sub": "A gift card lets them pick exactly what they love."
+    },
+    "cart": {
+      "title": "Shopping for someone else?",
+      "sub": "Add a gift card so they can choose their own piece."
+    }
+  },
   "askAin": {
     "title": "Ask Ain",
     "subtitle": "Tell Ain the occasion, style or gift you have in mind and it will pull real pieces from our stores.",

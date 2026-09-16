@@ -32,6 +32,7 @@ import {
   ShareButtonsComponent,
 } from '../../shared/ui';
 import { ProductCardComponent } from './product-card';
+import { GiftCardNudgeComponent } from '../gift-cards/gift-card-nudge';
 import type {
   Money,
   Product,
@@ -95,13 +96,14 @@ const SIZE_OPTIONAL_CATEGORIES = ['bags', 'accessories', 'kaftans', 'mukhawars']
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CfImagePipe, 
+  imports: [CfImagePipe,
     ButtonComponent,
     ContainerComponent,
     HeadingComponent,
     TextComponent,
     StackComponent,
     ProductCardComponent,
+    GiftCardNudgeComponent,
     ShareButtonsComponent,
     TranslatePipe,
     RouterLink,

@@ -15,6 +15,7 @@ import type { Cart, CartItem, CartQuoteResponse } from '../../core/cart';
 import { ToastService } from '../../shared/forms';
 import { AuthService } from '../../core/auth/auth.service';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
+import { GiftCardNudgeComponent } from '../gift-cards/gift-card-nudge';
 
 /**
  * Cart page, `/cart`.
@@ -59,7 +60,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 @Component({
   selector: 'app-cart-page',
   standalone: true,
-  imports: [CfImagePipe, NgIf, NgFor, ReactiveFormsModule, RouterLink, TranslatePipe],
+  imports: [CfImagePipe, NgIf, NgFor, ReactiveFormsModule, RouterLink, TranslatePipe, GiftCardNudgeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="cart-page" data-testid="cart-page">
@@ -172,6 +173,9 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
                   </div>
                 </li>
               </ul>
+
+              <!-- Gift-card nudge: shopping for someone else? -->
+              <app-gift-card-nudge context="cart" class="cart-page__gift-nudge" />
             </section>
 
             <aside class="cart-page__sidebar" aria-labelledby="cart-summary-heading">
