@@ -66,9 +66,26 @@
     <fieldset class="gift-ain__group gift-ain__group--details">
       <legend class="gift-ain__legend">{{ 'giftAin.detailsLabel' | translate }}</legend>
       <div class="gift-ain__fields">
-        <input class="gift-ain__input" type="text" [ngModel]="coloursText()" (ngModelChange)="coloursText.set($event)" name="colours" [placeholder]="'giftAin.coloursPlaceholder' | translate" />
-        <input class="gift-ain__input" type="text" [ngModel]="stylesText()" (ngModelChange)="stylesText.set($event)" name="styles" [placeholder]="'giftAin.stylesPlaceholder' | translate" />
-        <input class="gift-ain__input" type="text" [ngModel]="size()" (ngModelChange)="size.set($event)" name="size" [placeholder]="'giftAin.sizePlaceholder' | translate" />
+        <app-searchable-select
+          [options]="colourOptions"
+          [multiple]="true"
+          [selected]="selectedColours()"
+          (selectedChange)="selectedColours.set($event)"
+          [placeholder]="'giftAin.coloursPlaceholder' | translate"
+        />
+        <app-searchable-select
+          [options]="styleOptions"
+          [multiple]="true"
+          [selected]="selectedStyles()"
+          (selectedChange)="selectedStyles.set($event)"
+          [placeholder]="'giftAin.stylesPlaceholder' | translate"
+        />
+        <app-searchable-select
+          [options]="sizeOptions"
+          [selected]="size() ? [size()] : []"
+          (selectedChange)="setSize($event)"
+          [placeholder]="'giftAin.sizePlaceholder' | translate"
+        />
       </div>
     </fieldset>
 

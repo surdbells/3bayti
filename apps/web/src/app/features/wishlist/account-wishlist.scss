@@ -7,9 +7,9 @@
 }
 
 .account-wishlist__container {
-  max-width: 1280px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 var(--page-padding-x);
 }
 
 .account-wishlist__breadcrumb {

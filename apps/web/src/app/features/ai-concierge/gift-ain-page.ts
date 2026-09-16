@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 
 import { ProductCardComponent } from '../catalog/product-card';
+import { SearchableSelectComponent, type SelectOption } from '../../shared/ui/searchable-select';
 import { AnalyticsService } from '../../core/monitoring/analytics.service';
 import { ConciergeService, type ConciergeCard, type GiftBriefInput, type GiftCardSuggestion } from './concierge.service';
 
@@ -24,7 +24,7 @@ interface BudgetBand {
   selector: 'app-gift-ain',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, TranslatePipe, ProductCardComponent, RouterLink],
+  imports: [TranslatePipe, ProductCardComponent, RouterLink, SearchableSelectComponent],
   templateUrl: './gift-ain-page.html',
   styleUrl: './gift-ain-page.scss',
 })
@@ -70,11 +70,19 @@ export class GiftAinPageComponent implements OnInit {
     return this.occasionIcons[key] ?? [];
   }
 
+  /** Searchable-dropdown options (labels reuse the outfit vocab; sizes are local). */
+  readonly colourOptions: SelectOption[] = ['black', 'beige', 'rose', 'gold', 'navy', 'white', 'green', 'grey']
+    .map((v) => ({ value: v, labelKey: `outfit.colours.${v}` }));
+  readonly styleOptions: SelectOption[] = ['elegant', 'casual', 'traditional', 'modern', 'minimal', 'embellished']
+    .map((v) => ({ value: v, labelKey: `outfit.styles.${v}` }));
+  readonly sizeOptions: SelectOption[] = ['xs', 's', 'm', 'l', 'xl', 'xxl']
+    .map((v) => ({ value: v, labelKey: `giftAin.sizeOptions.${v}` }));
+
   readonly recipient = signal('');
   readonly occasion = signal('');
   readonly budget = signal<BudgetBand | null>(null);
-  readonly coloursText = signal('');
-  readonly stylesText = signal('');
+  readonly selectedColours = signal<string[]>([]);
+  readonly selectedStyles = signal<string[]>([]);
   readonly size = signal('');
 
   readonly cards = signal<ConciergeCard[]>([]);
@@ -85,8 +93,13 @@ export class GiftAinPageComponent implements OnInit {
   private interactionId: number | null = null;
 
   readonly canSubmit = computed(
-    () => !!this.occasion() || !!this.budget() || !!this.coloursText().trim() || !!this.stylesText().trim(),
+    () => !!this.occasion() || !!this.budget() || this.selectedColours().length > 0 || this.selectedStyles().length > 0,
   );
+
+  /** Single-select emits a 0..1 array; keep the size signal as a scalar. */
+  setSize(values: string[]): void {
+    this.size.set(values[0] ?? '');
+  }
   readonly isEmpty = computed(() => this.hasSearched() && !this.loading() && this.cards().length === 0 && !this.giftCard());
 
   ngOnInit(): void {
@@ -143,13 +156,6 @@ export class GiftAinPageComponent implements OnInit {
     this.budget.set(this.budget()?.key === b.key ? null : b);
   }
 
-  private toList(text: string): string[] {
-    return text
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-  }
-
   submit(): void {
     if (!this.canSubmit() || this.loading()) {
       return;
@@ -158,8 +164,8 @@ export class GiftAinPageComponent implements OnInit {
     void this.runBrief({
       recipient: this.recipient() || undefined,
       occasion: this.occasion() || undefined,
-      colours: this.toList(this.coloursText()),
-      styles: this.toList(this.stylesText()),
+      colours: this.selectedColours(),
+      styles: this.selectedStyles(),
       size: this.size().trim() || undefined,
       budget_min: band?.min,
       budget_max: band?.max,

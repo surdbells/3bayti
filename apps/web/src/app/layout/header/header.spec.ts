@@ -154,17 +154,22 @@ describe('HeaderComponent (auth-aware)', () => {
   });
 
   describe('global search', () => {
-    it('renders the search trigger', () => {
+    it('renders a persistent search bar under the nav (input always visible, no click trigger)', () => {
       const { fixture } = setup({ user: null });
-      expect(fixture.nativeElement.querySelector('[data-testid="header-search"]')).not.toBeNull();
+      const root: HTMLElement = fixture.nativeElement;
+      // The bar lives in its own row, always rendered.
+      expect(root.querySelector('.header-search [data-testid="search-input"]')).not.toBeNull();
+      // The old icon-only trigger is gone.
+      expect(root.querySelector('[data-testid="header-search"]')).toBeNull();
     });
 
-    it('opens the search overlay on trigger click (closed by default)', () => {
+    it('opens the results panel on focus, not on a trigger click', () => {
       const { fixture } = setup({ user: null });
       const root: HTMLElement = fixture.nativeElement;
       expect(root.querySelector('[data-testid="search-overlay"]')).toBeNull();
 
-      (root.querySelector('[data-testid="header-search"]') as HTMLButtonElement).click();
+      (root.querySelector('[data-testid="search-input"]') as HTMLInputElement)
+        .dispatchEvent(new Event('focus'));
       fixture.detectChanges();
 
       expect(root.querySelector('[data-testid="search-overlay"]')).not.toBeNull();
@@ -236,10 +241,10 @@ describe('HeaderComponent (auth-aware)', () => {
       expect(root.querySelector('[data-testid="drawer-nav-discounted"]')).not.toBeNull();
     });
 
-    it('renders a visual divider between the primary links and Discounted', () => {
+    it('has no orphaned divider now the browse links are gone (AI cluster self-separates)', () => {
       const { fixture } = setup({ user: null });
       const nav = fixture.nativeElement.querySelector('.primary-nav') as HTMLElement;
-      expect(nav.querySelector('.nav-divider')).not.toBeNull();
+      expect(nav.querySelector('.nav-divider')).toBeNull();
     });
 
     it('lifts Gift Cards out of the top bar but keeps it reachable in the drawer Explore group', () => {

@@ -13,10 +13,15 @@
   <section class="outfit__form" aria-label="Outfit brief">
     <div class="outfit__group">
       <p class="outfit__label">{{ 'outfit.occasionLabel' | translate }}</p>
-      <div class="outfit__chips">
+      <div class="outfit__tiles">
         @for (o of occasions; track o) {
-          <button type="button" class="chip" [class.is-on]="occasion() === o" (click)="pickOccasion(o)">
-            {{ ('outfit.occasions.' + o) | translate }}
+          <button type="button" class="opt-tile" [class.is-on]="occasion() === o" (click)="pickOccasion(o)" [attr.aria-pressed]="occasion() === o">
+            <span class="opt-tile__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                @for (d of occasionIcon(o); track d) { <path [attr.d]="d"></path> }
+              </svg>
+            </span>
+            <span class="opt-tile__label">{{ ('outfit.occasions.' + o) | translate }}</span>
           </button>
         }
       </div>
@@ -24,10 +29,10 @@
 
     <div class="outfit__group">
       <p class="outfit__label">{{ 'outfit.heroLabel' | translate }}</p>
-      <div class="outfit__chips">
+      <div class="outfit__tiles outfit__tiles--wide">
         @for (h of heroTypes; track h) {
-          <button type="button" class="chip" [class.is-on]="heroType() === h" (click)="pickHero(h)">
-            {{ ('outfit.heroTypes.' + h) | translate }}
+          <button type="button" class="opt-tile opt-tile--text" [class.is-on]="heroType() === h" (click)="pickHero(h)" [attr.aria-pressed]="heroType() === h">
+            <span class="opt-tile__label">{{ ('outfit.heroTypes.' + h) | translate }}</span>
           </button>
         }
       </div>
@@ -35,10 +40,10 @@
 
     <div class="outfit__group">
       <p class="outfit__label">{{ 'outfit.styleLabel' | translate }}</p>
-      <div class="outfit__chips">
+      <div class="outfit__tiles">
         @for (s of styleOptions; track s) {
-          <button type="button" class="chip" [class.is-on]="isStyleOn(s)" (click)="toggleStyle(s)">
-            {{ ('outfit.styles.' + s) | translate }}
+          <button type="button" class="opt-tile opt-tile--text" [class.is-on]="isStyleOn(s)" (click)="toggleStyle(s)" [attr.aria-pressed]="isStyleOn(s)">
+            <span class="opt-tile__label">{{ ('outfit.styles.' + s) | translate }}</span>
           </button>
         }
       </div>
@@ -46,11 +51,11 @@
 
     <div class="outfit__group">
       <p class="outfit__label">{{ 'outfit.colourLabel' | translate }}</p>
-      <div class="outfit__chips">
+      <div class="outfit__tiles">
         @for (c of colourOptions; track c) {
-          <button type="button" class="chip chip--colour" [class.is-on]="isColourOn(c)" (click)="toggleColour(c)">
-            <span class="chip__swatch" [style.background]="colourHex(c)" aria-hidden="true"></span>
-            {{ ('outfit.colours.' + c) | translate }}
+          <button type="button" class="opt-tile opt-tile--colour" [class.is-on]="isColourOn(c)" (click)="toggleColour(c)" [attr.aria-pressed]="isColourOn(c)">
+            <span class="opt-tile__swatch" [style.background]="colourHex(c)" aria-hidden="true"></span>
+            <span class="opt-tile__label">{{ ('outfit.colours.' + c) | translate }}</span>
           </button>
         }
       </div>
@@ -58,10 +63,16 @@
 
     <div class="outfit__group">
       <p class="outfit__label">{{ 'outfit.budgetLabel' | translate }}</p>
-      <div class="outfit__chips">
+      <div class="outfit__tiles outfit__tiles--wide">
         @for (b of budgetBands; track b.key) {
-          <button type="button" class="chip chip--budget" [class.is-on]="budget()?.key === b.key" (click)="pickBudget(b)">
-            {{ ('outfit.budgets.' + b.key) | translate }}
+          <button type="button" class="budget-tile" [class.is-on]="budget()?.key === b.key" (click)="pickBudget(b)" [attr.aria-pressed]="budget()?.key === b.key">
+            <span class="budget-tile__coins" aria-hidden="true">
+              @for (dot of [1, 2, 3, 4]; track dot) {
+                <span class="budget-tile__coin" [class.is-lit]="dot <= (budgetBands.indexOf(b) + 1)"></span>
+              }
+            </span>
+            <span class="budget-tile__label">{{ ('outfit.budgets.' + b.key) | translate }}</span>
+            <span class="budget-tile__unit">AED</span>
           </button>
         }
       </div>

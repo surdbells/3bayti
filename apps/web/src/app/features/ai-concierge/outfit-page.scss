@@ -1,7 +1,7 @@
 .outfit {
-  max-width: 1120px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
-  padding: 2rem 1rem 4rem;
+  padding: 2rem var(--page-padding-x) 4rem;
 }
 
 .outfit__head {
@@ -47,31 +47,129 @@
   color: var(--color-brand-600, #9a5613);
   font-weight: 600;
 }
-.outfit__chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+/* Engaging selectable card tiles (same visual language as the Gift Finder):
+   bordered cards with a hover lift + a gradient selected state, replacing the
+   flat pill chips. Occasion tiles carry an icon; hero/vibe are text tiles;
+   colours show a swatch; budgets show a coin/dot scale. */
+.outfit__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+  gap: 0.6rem;
+}
+.outfit__tiles--wide {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
 
-.chip {
-  border: 1px solid var(--color-border, #e4d0b1);
-  background: #fff;
-  color: var(--color-text-primary, #2e241c);
-  border-radius: 999px;
-  padding: 0.5rem 1rem;
-  font-size: 0.9rem;
+.opt-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 0.5rem;
+  border: 1.5px solid var(--color-border, #e7ded2);
+  border-radius: var(--radius-lg, 18px);
+  background: var(--color-bg-surface, #fff);
+  color: var(--color-text-secondary, #5a4a3c);
   cursor: pointer;
-  transition: border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
-.chip:hover { border-color: var(--color-brand-400, #c69d63); }
-.chip.is-on {
-  background: var(--color-brand-700, #5a3a2c);
+.opt-tile__icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--color-brand-600, #906952);
+  background: var(--color-bg-canvas, #faf8f5);
+  transition: color 0.18s ease, background 0.18s ease;
+}
+.opt-tile__icon svg { width: 1.35rem; height: 1.35rem; }
+.opt-tile__label { font-size: 0.85rem; font-weight: 500; text-align: center; line-height: 1.2; }
+.opt-tile:hover {
+  transform: translateY(-3px);
+  border-color: var(--color-brand-500, #b18f1f);
+  box-shadow: 0 12px 22px -14px rgba(90, 58, 44, 0.4);
+}
+.opt-tile.is-on {
   border-color: var(--color-brand-700, #5a3a2c);
-  color: #fff;
-  box-shadow: 0 6px 16px -10px rgba(90, 58, 44, .8);
+  background: linear-gradient(150deg, #fbf7f3, #f2e8df);
+  color: var(--color-brand-700, #5a3a2c);
+  box-shadow: 0 12px 22px -14px rgba(90, 58, 44, 0.45);
 }
-.chip--colour { display: inline-flex; align-items: center; gap: 0.5rem; }
-.chip__swatch {
-  width: 1rem; height: 1rem; border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, .12);
+.opt-tile.is-on .opt-tile__icon {
+  color: #fff;
+  background: linear-gradient(140deg, #6f4a37, var(--color-brand-700, #5a3a2c));
+}
+
+/* Text-only tiles (hero garment + vibe) read as a comfortable row of cards. */
+.opt-tile--text {
+  flex-direction: row;
+  justify-content: center;
+  padding: 0.85rem 0.9rem;
+}
+.opt-tile--text .opt-tile__label { font-size: 0.92rem; font-weight: 600; }
+
+/* Colour tiles: a swatch dot + label. */
+.opt-tile--colour {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem 0.85rem;
+}
+.opt-tile__swatch {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.14);
   flex: 0 0 auto;
 }
+.opt-tile--colour .opt-tile__label { font-weight: 600; }
+
+/* Budget tiles: gift-finder-style coin scale. */
+.budget-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.9rem 0.5rem;
+  border: 1.5px solid var(--color-border, #e7ded2);
+  border-radius: var(--radius-lg, 18px);
+  background: var(--color-bg-surface, #fff);
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+.budget-tile__coins { display: flex; gap: 0.22rem; }
+.budget-tile__coin {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: var(--color-border, #e7ded2);
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+.budget-tile__coin.is-lit { background: var(--color-brand-500, #b18f1f); }
+.budget-tile__label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text-primary, #2e241c);
+  font-variant-numeric: tabular-nums;
+}
+.budget-tile__unit {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary, #8a7c6d);
+}
+.budget-tile:hover {
+  transform: translateY(-3px);
+  border-color: var(--color-brand-500, #b18f1f);
+  box-shadow: 0 12px 22px -14px rgba(90, 58, 44, 0.4);
+}
+.budget-tile.is-on {
+  border-color: var(--color-brand-700, #5a3a2c);
+  background: linear-gradient(150deg, #fbf7f3, #f2e8df);
+  box-shadow: 0 12px 22px -14px rgba(90, 58, 44, 0.45);
+}
+.budget-tile.is-on .budget-tile__coin { transform: scale(1.12); }
+.budget-tile.is-on .budget-tile__coin.is-lit { background: var(--color-brand-700, #5a3a2c); }
 
 .outfit__cta {
   align-self: flex-start;

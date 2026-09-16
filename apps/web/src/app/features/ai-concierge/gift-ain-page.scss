@@ -37,8 +37,8 @@
 
 /* ── Guided form ────────────────────────────────────────────────────── */
 .gift-ain__form {
-  max-width: 46rem;
-  margin: 0 auto;
+  max-width: var(--page-max-width);
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -60,11 +60,8 @@
 /* ── Recipient personas (illustrated avatar cards) ──────────────────── */
 .gift-ain__personas {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   gap: 0.7rem;
-}
-@media (min-width: 560px) {
-  .gift-ain__personas { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
 .persona {
   display: flex;
@@ -128,11 +125,8 @@
 /* ── Occasion icon tiles ────────────────────────────────────────────── */
 .gift-ain__occasions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 0.7rem;
-}
-@media (min-width: 560px) {
-  .gift-ain__occasions { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
 .occasion {
   display: flex;
@@ -178,11 +172,8 @@
 /* ── Budget tier cards ──────────────────────────────────────────────── */
 .gift-ain__budgets {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.7rem;
-}
-@media (min-width: 560px) {
-  .gift-ain__budgets { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 .budget {
   display: flex;
@@ -231,11 +222,9 @@
 
 .gift-ain__fields {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.6rem;
-}
-@media (min-width: 640px) {
-  .gift-ain__fields { grid-template-columns: 1fr 1fr 1fr; }
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.7rem;
+  align-items: start;
 }
 .gift-ain__input {
   border: 1px solid var(--color-border, #e7ded2);

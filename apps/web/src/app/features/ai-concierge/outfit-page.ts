@@ -63,6 +63,20 @@ export class OutfitPageComponent implements OnInit {
     navy: '#2b3a55', white: '#f4efe7', green: '#4a6350', grey: '#9a938a',
   };
 
+  /** Stroke-only SVG path data (24×24, currentColor) for each occasion icon. */
+  private readonly occasionIcons: Record<string, string[]> = {
+    eid: ['M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'],
+    wedding: ['M14 9a5 5 0 1 1-10 0 5 5 0 0 1 10 0', 'M20 15a5 5 0 1 1-10 0 5 5 0 0 1 10 0'],
+    party: ['M12 3l1.9 4.8L18.7 9.7 13.9 11.6 12 16.4 10.1 11.6 5.3 9.7 10.1 7.8z', 'M19 15l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6z'],
+    graduation: ['M22 10 12 5 2 10l10 5 10-5z', 'M6 12v5c0 1 2.5 3 6 3s6-2 6-3v-5', 'M22 10v6'],
+    ramadan: ['M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z', 'M17 4l.6 1.6L19 6l-1.4.4L17 8l-.6-1.6L15 6l1.4-.4z'],
+    everyday: ['M12 3v2M12 19v2M5 12H3M21 12h-2M6.3 6.3 4.9 4.9M19.1 19.1l-1.4-1.4M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4', 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'],
+  };
+
+  occasionIcon(key: string): string[] {
+    return this.occasionIcons[key] ?? [];
+  }
+
   readonly occasion = signal('');
   readonly heroType = signal('');
   readonly budget = signal<BudgetBand | null>(null);

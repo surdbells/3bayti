@@ -105,17 +105,6 @@
   justify-content: center;
 }
 
-/* Vertical rule separating the primary browse links from the Discounted
-   (promotional) entry. Logical height so it stays centered; subtle border
-   colour keeps it quiet. RTL-safe (it's a symmetric vertical line). */
-.nav-divider {
-  width: 1px;
-  align-self: center;
-  height: 20px;
-  background: var(--color-border-default);
-  flex: 0 0 auto;
-}
-
 .header-actions {
   display: flex;
   align-items: center;
@@ -123,26 +112,17 @@
   flex-shrink: 0;
 }
 
-.header-search-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  color: var(--color-text-primary, #2e241c);
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+/* Persistent search row, sits directly under the primary nav (full-width,
+   aligned to the page gutter). Holds the always-visible search bar. */
+.header-search {
+  max-width: var(--page-max-width);
+  margin-inline: auto;
+  padding: 8px var(--page-padding-x) 0;
+}
 
-  &:hover,
-  &:focus-visible {
-    background: var(--color-brand-50, #f9f4ea);
-    color: var(--color-brand-700, #5a3a2c);
-    outline: none;
-  }
+/* Condensed a touch once the page scrolls, matching the nav row. */
+.site-header.is-scrolled .header-search {
+  padding-top: 5px;
 }
 
 .nav-link {

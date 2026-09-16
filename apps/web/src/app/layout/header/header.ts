@@ -160,9 +160,6 @@ export class HeaderComponent {
   /** Mobile drawer open state. */
   protected readonly drawerOpen = signal(false);
 
-  /** Global search overlay open state (driven by the header search trigger). */
-  protected readonly searchOpen = signal(false);
-
   /** True once the page has scrolled past the top, drives the condensed,
    *  elevated header + the slightly smaller logo. */
   protected readonly scrolled = signal(false);
@@ -280,16 +277,6 @@ export class HeaderComponent {
     if (!this.drawerOpen()) return;
     this.drawerOpen.set(false);
     this.doc.body.style.overflow = '';
-  }
-
-  /** Open the global search overlay. */
-  protected openSearch(): void {
-    this.searchOpen.set(true);
-  }
-
-  /** Close the global search overlay. */
-  protected closeSearch(): void {
-    this.searchOpen.set(false);
   }
 
   /** Escape closes the drawer + mega panel when open. */

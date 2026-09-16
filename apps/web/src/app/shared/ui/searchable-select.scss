@@ -1,0 +1,142 @@
+/* Searchable dropdown selector (combobox). Soft, rounded, on-brand; matches the
+   concierge form language. Uses logical properties for RTL. */
+
+:host {
+  display: block;
+  position: relative;
+}
+
+.ss__control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.9rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-border, #e4d8c4);
+  border-radius: 0.85rem;
+  background: var(--color-bg-surface, #fffdf8);
+  cursor: text;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ss--open .ss__control,
+.ss__control:focus-within {
+  border-color: var(--color-brand-400, #c69d63);
+  box-shadow: 0 0 0 3px rgba(214, 185, 136, 0.22);
+}
+
+.ss__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.3rem 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: linear-gradient(150deg, #fbf3e4, #f2e6d2);
+  border: 1px solid var(--color-brand-300, #e0cba6);
+  color: var(--color-brand-700, #5a3a2c);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.ss__chip-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-brand-700, #5a3a2c);
+  cursor: pointer;
+  transition: background-color 0.14s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(90, 58, 44, 0.14);
+    outline: none;
+  }
+}
+
+.ss__input {
+  flex: 1 1 6rem;
+  min-width: 4rem;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--color-text-primary, #2e241c);
+  padding: 0.25rem;
+
+  &::placeholder { color: var(--color-text-tertiary, #9a8b79); }
+}
+
+.ss__chev {
+  flex: 0 0 auto;
+  color: var(--color-brand-500, #b18f1f);
+  transition: transform 0.2s ease;
+}
+.ss--open .ss__chev { transform: rotate(180deg); }
+
+.ss__menu {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: 16rem;
+  overflow-y: auto;
+  background: var(--color-bg-surface, #fffdf8);
+  border: 1px solid var(--color-border-subtle, #eee3d2);
+  border-radius: 0.9rem;
+  box-shadow:
+    0 2px 6px rgba(46, 36, 28, 0.05),
+    0 22px 48px -28px rgba(46, 36, 28, 0.34);
+  animation: ss-menu-in 0.16s var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+@keyframes ss-menu-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ss__menu { animation: none; }
+}
+
+.ss__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: none;
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--color-text-primary, #2e241c);
+  font: inherit;
+  font-size: 0.95rem;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--color-bg-muted, #f4ece0);
+    outline: none;
+  }
+}
+.ss__option.is-selected {
+  color: var(--color-brand-700, #5a3a2c);
+  font-weight: 600;
+}
+.ss__option.is-selected svg { color: var(--color-brand-500, #b18f1f); flex: 0 0 auto; }
+
+.ss__empty {
+  padding: 0.75rem 0.7rem;
+  color: var(--color-text-tertiary, #9a8b79);
+  font-size: 0.9rem;
+}
