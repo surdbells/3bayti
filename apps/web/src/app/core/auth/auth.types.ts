@@ -26,6 +26,12 @@ export interface AuthUser {
   email: string;
   phone: string;
   country_code: string;
+  /**
+   * WhatsApp number linked for the WhatsApp Commerce channel, or null.
+   * Optional so tokens minted before the field existed still parse; a missing
+   * value is treated as "not linked".
+   */
+  whatsapp_phone?: string | null;
   first_name: string | null;
   last_name: string | null;
   gender: string | null;

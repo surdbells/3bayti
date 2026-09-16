@@ -72,6 +72,9 @@ final class UserSerializer
             'id' => $user->getId(),
             'email' => $user->getEmail(),
             'phone' => $user->getPhone(),
+            // The WhatsApp number linked for the WhatsApp Commerce channel, or
+            // null. Account settings show/manage the link from this.
+            'whatsapp_phone' => $user->getWhatsappPhone(),
             'country_code' => $user->getCountryCode(),
             'first_name' => $user->getFirstName(),
             'last_name' => $user->getLastName(),

@@ -145,6 +145,14 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
           <circle cx="12" cy="13" r="4" />
         </svg>
       }
+      @case ('whatsapp') {
+        <!-- WhatsApp-style chat bubble with a small handset. -->
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20.5 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.6A8 8 0 1 1 20.5 11.5z" />
+          <path d="M9.2 9.3c-.2.5-.1 1.2.5 2a6 6 0 0 0 2.9 2.4c.8.3 1.4.1 1.8-.4" />
+        </svg>
+      }
     }
   `,
   styles: [

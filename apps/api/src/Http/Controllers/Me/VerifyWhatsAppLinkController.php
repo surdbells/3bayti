@@ -91,12 +91,8 @@ final class VerifyWhatsAppLinkController
         $user->setWhatsappPhone($phone);
         $this->em->flush();
 
-        return $this->ok(['whatsapp_phone' => $this->mask($phone)]);
-    }
-
-    private function mask(string $phone): string
-    {
-        $len = strlen($phone);
-        return $len <= 4 ? '***' : substr($phone, 0, 4) . str_repeat('*', max(0, $len - 6)) . substr($phone, -2);
+        // Echo the linked number back (the user just entered it), matching the
+        // raw value the profile serializer returns.
+        return $this->ok(['whatsapp_phone' => $phone]);
     }
 }

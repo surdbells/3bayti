@@ -316,3 +316,31 @@
   gap: 8px;
   margin-top: 4px;
 }
+
+/* ── WhatsApp linking ─────────────────────────────────────────────────── */
+.wa-linked {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #e2e5e9;
+  border-radius: 0.7rem;
+  background: var(--ax-palette-neutral-0, #fff);
+}
+.wa-linked-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: #128c7e; flex: none; }
+.wa-linked-number { font-weight: 600; color: var(--ax-color-text-primary, #1a1a1a); font-size: 0.9rem; }
+.wa-unlink-btn {
+  margin-inline-start: auto; padding: 0.35rem 0.75rem; border: 1px solid rgba(179, 38, 30, 0.3);
+  border-radius: 999px; background: transparent; color: #b3261e; font-size: 0.8rem; font-weight: 600;
+}
+.wa-actions { display: flex; gap: 0.6rem; margin-top: 0.7rem; }
+.wa-primary-btn {
+  padding: 0.6rem 1.2rem; border: none; border-radius: 999px;
+  background: var(--ax-color-bg-brand, #906952); color: #fff; font-size: 0.88rem; font-weight: 600;
+}
+.wa-primary-btn:disabled { opacity: 0.5; }
+.wa-ghost-btn {
+  padding: 0.6rem 1.2rem; border: 1px solid #e2e5e9; border-radius: 999px;
+  background: transparent; color: var(--ax-color-text-primary, #1a1a1a); font-size: 0.88rem; font-weight: 600;
+}
+.wa-sent { margin: 0 0 0.5rem; color: var(--ax-color-text-secondary, #6b7280); font-size: 0.82rem; }

@@ -255,6 +255,7 @@ return function (App $app): void {
         // merge / phone-change flows.
         $group->post('/whatsapp/link', \Bayti\Api\Http\Controllers\Me\LinkWhatsAppController::class);
         $group->post('/whatsapp/link/verify', \Bayti\Api\Http\Controllers\Me\VerifyWhatsAppLinkController::class);
+        $group->delete('/whatsapp/link', \Bayti\Api\Http\Controllers\Me\UnlinkWhatsAppController::class);
 
         // Email-change, set/verify a deliverable email on the current account.
         //   POST /email        send OTP to the new email (stores it pending)

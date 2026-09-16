@@ -109,7 +109,20 @@ export class ProfilePage implements OnInit, OnDestroy {
     is_vendor: false,
     is_customer: false,
     is_email_verified: false,
-    needs_email_update: false
+    needs_email_update: false,
+    whatsapp_phone: null as string | null
+  }
+
+  // ── WhatsApp linking (OTP) flow ────────────────────────────────────────
+  //   step 1: enter number -> POST /me/whatsapp/link        -> verification_id
+  //   step 2: enter OTP     -> POST /me/whatsapp/link/verify -> { whatsapp_phone }
+  whatsappFlow = {
+    isOpen: false,
+    step: 1 as 1 | 2,
+    phone: '',
+    code: '',
+    verificationId: '',
+    loading: false,
   }
   update = {
     id: 0,
@@ -650,12 +663,125 @@ export class ProfilePage implements OnInit, OnDestroy {
               if (u.avatar_url) {
                 this.single_user.avatar = u.avatar_url;
               }
+              this.single_user.whatsapp_phone = u.whatsapp_phone ?? null;
             }
             this.ui_controls.is_loading = false;
           }
         }
       }))
   }
+  // ── WhatsApp linking (OTP) flow ────────────────────────────────────────
+  openWhatsappLink() {
+    this.whatsappFlow = { isOpen: true, step: 1, phone: '', code: '', verificationId: '', loading: false };
+  }
+
+  closeWhatsappLink() {
+    this.whatsappFlow.isOpen = false;
+  }
+
+  private normaliseWhatsapp(raw: string): string {
+    let p = (raw || '').trim().replace(/[\s-]/g, '');
+    if (p && p[0] !== '+') {
+      p = '+' + p;
+    }
+    return p;
+  }
+
+  /** Step 1: request an OTP to the WhatsApp number. */
+  sendWhatsappCode() {
+    if (!this.isOnline) {
+      this.error_notification(this.i18n.t('text_offline_check_connection'));
+      return;
+    }
+    const phone = this.normaliseWhatsapp(this.whatsappFlow.phone);
+    if (!/^\+[1-9]\d{6,14}$/.test(phone)) {
+      this.error_notification(this.i18n.t('whatsapp_link_invalid_number'));
+      return;
+    }
+    this.whatsappFlow.loading = true;
+    this.networkAdapter
+      .post_v3('POST /me/whatsapp/link', { phone }, { authToken: this.single_user.token })
+      .subscribe({
+        next: (response: any) => {
+          this.whatsappFlow.loading = false;
+          const vid = response?.data?.verification_id;
+          if ((response.response_code === 200 || response.response_code === 201) && typeof vid === 'string' && vid.length > 0) {
+            this.whatsappFlow.verificationId = vid;
+            this.whatsappFlow.code = '';
+            this.whatsappFlow.step = 2;
+            this.success_notification(this.i18n.t('text_otp_sent'));
+          } else {
+            this.error_notification(apiErrorMessage(response, this.i18n.t('text_request_failed')));
+          }
+        },
+        error: (err: any) => {
+          this.whatsappFlow.loading = false;
+          this.error_notification(apiErrorMessage(err, this.i18n.t('text_request_failed')));
+        },
+      });
+  }
+
+  /** Step 2: verify the OTP and persist the linked number. */
+  verifyWhatsappCode() {
+    const code = (this.whatsappFlow.code ?? '').trim();
+    if (!/^\d{6}$/.test(code)) {
+      this.error_notification(this.i18n.t('text_otp_required'));
+      return;
+    }
+    if (!this.whatsappFlow.verificationId) {
+      this.error_notification(this.i18n.t('text_request_failed'));
+      return;
+    }
+    this.whatsappFlow.loading = true;
+    this.networkAdapter
+      .post_v3(
+        'POST /me/whatsapp/link/verify',
+        { verification_id: this.whatsappFlow.verificationId, code },
+        { authToken: this.single_user.token },
+      )
+      .subscribe({
+        next: async (response: any) => {
+          this.whatsappFlow.loading = false;
+          if (response.response_code === 200 && (response.status === 'success' || response?.data)) {
+            this.single_user.whatsapp_phone =
+              response.data?.whatsapp_phone ?? this.normaliseWhatsapp(this.whatsappFlow.phone);
+            try {
+              await Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+            } catch { /* non-fatal */ }
+            this.whatsappFlow.isOpen = false;
+            this.success_notification(this.i18n.t('whatsapp_link_success'));
+          } else {
+            this.error_notification(apiErrorMessage(response, this.i18n.t('whatsapp_link_verify_failed')));
+          }
+        },
+        error: (err: any) => {
+          this.whatsappFlow.loading = false;
+          this.error_notification(apiErrorMessage(err, this.i18n.t('whatsapp_link_verify_failed')));
+        },
+      });
+  }
+
+  /** Remove the linked WhatsApp number. */
+  unlinkWhatsapp() {
+    this.whatsappFlow.loading = true;
+    this.networkAdapter
+      .delete_v3('DELETE /me/whatsapp/link', { authToken: this.single_user.token })
+      .subscribe({
+        next: async () => {
+          this.whatsappFlow.loading = false;
+          this.single_user.whatsapp_phone = null;
+          try {
+            await Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+          } catch { /* non-fatal */ }
+          this.success_notification(this.i18n.t('whatsapp_unlink_success'));
+        },
+        error: (err: any) => {
+          this.whatsappFlow.loading = false;
+          this.error_notification(apiErrorMessage(err, this.i18n.t('text_request_failed')));
+        },
+      });
+  }
+
   update_profile() {
     if(this.isOnline){
       this.update.id = this.single_user.id;

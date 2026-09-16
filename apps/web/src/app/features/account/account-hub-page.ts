@@ -131,6 +131,13 @@ import { SUPPORT_WHATSAPP_URL } from '../../core/config/support.constants';
               <span class="account-tile__desc">{{ 'account.hub.measurements.desc' | translate }}</span>
             </span>
           </a>
+          <a routerLink="/account/whatsapp" class="account-tile" data-testid="account-tile-whatsapp">
+            <span class="account-tile__icon" aria-hidden="true"><app-nav-icon icon="whatsapp" /></span>
+            <span class="account-tile__body">
+              <span class="account-tile__title">{{ 'account.hub.whatsappLink.title' | translate }}</span>
+              <span class="account-tile__desc">{{ 'account.hub.whatsappLink.desc' | translate }}</span>
+            </span>
+          </a>
           <a routerLink="/account/wishlist" class="account-tile" data-testid="account-tile-wishlist">
             <span class="account-tile__icon" aria-hidden="true"><app-nav-icon icon="heart" /></span>
             <span class="account-tile__body">

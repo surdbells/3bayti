@@ -828,6 +828,10 @@
         "title": "Measurements",
         "desc": "Save your sizes for a better fit."
       },
+      "whatsappLink": {
+        "title": "WhatsApp",
+        "desc": "Link your number to chat with Ain on WhatsApp."
+      },
       "wishlist": {
         "title": "Wishlist",
         "desc": "Products you’ve saved"
@@ -863,6 +867,30 @@
       "title": "Update your email address",
       "desc": "Your current email can’t receive our order updates and receipts. Add a working email so you don’t miss anything.",
       "cta": "Update email"
+    },
+    "whatsapp": {
+      "back": "Account",
+      "title": "WhatsApp",
+      "intro": "Link your WhatsApp number to chat with Ain — our style concierge — on WhatsApp. We’ll text a code to confirm the number is yours.",
+      "numberLabel": "WhatsApp number",
+      "sendCode": "Send code",
+      "cancel": "Cancel",
+      "codeSent": "We’ve sent a 6-digit code to that number.",
+      "codeLabel": "Verification code",
+      "verify": "Verify & link",
+      "linkNumber": "Link your WhatsApp number",
+      "linkedTo": "Linked number",
+      "changeNumber": "Use a different number",
+      "unlink": "Unlink",
+      "errors": {
+        "invalidNumber": "Enter a valid number in international format, e.g. +971501234567.",
+        "invalidCode": "That code is incorrect or has expired.",
+        "taken": "That WhatsApp number is already linked to another account.",
+        "rateLimited": "Too many attempts. Please try again in a little while.",
+        "sendFailed": "We couldn’t send the code. Please try again.",
+        "verifyFailed": "We couldn’t verify that code. Please try again.",
+        "generic": "Something went wrong. Please try again."
+      }
     },
     "profile": {
       "title": "Profile",
@@ -1761,6 +1789,7 @@
     "accountProfile": "Profile · 3bayti",
     "accountPassword": "Change password · 3bayti",
     "accountMeasurements": "My measurements · 3bayti",
+    "accountWhatsapp": "WhatsApp · 3bayti",
     "accountDelete": "Delete account · 3bayti",
     "accountMessages": "Messages · 3bayti",
     "accountMessagesThread": "Conversation · 3bayti",

@@ -795,6 +795,12 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/whatsapp/link/verify',
     shape: 'v3-envelope',
   },
+  'DELETE /me/whatsapp/link': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/whatsapp/link',
+    shape: 'v3-envelope',
+  },
   // Email-change (set a deliverable email + verify by OTP), for Apple
   // private-relay / placeholder accounts. v3-only.
   'POST /me/email': {

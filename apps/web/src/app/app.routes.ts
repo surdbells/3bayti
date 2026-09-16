@@ -366,6 +366,14 @@ export const routes: Routes = [
     title: 'routeTitles.accountMeasurements',
   },
   {
+    /* Link a WhatsApp number for the WhatsApp Commerce channel. */
+    path: 'account/whatsapp',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/account/account-whatsapp-page').then(m => m.AccountWhatsAppPageComponent),
+    title: 'routeTitles.accountWhatsapp',
+  },
+  {
     /* Connected accounts, Google/Apple link management (social sign-in). */
     path: 'account/connected',
     canActivate: [authActivateGuard],

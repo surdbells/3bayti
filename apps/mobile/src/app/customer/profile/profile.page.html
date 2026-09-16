@@ -125,6 +125,66 @@
               </button>
             </ion-col>
           </ion-row>
+
+          <!-- WhatsApp linking — chat with Ain on WhatsApp -->
+          <ion-row class="profile-row">
+            <ion-col class="ion-no-padding">
+              <label class="profile-field-label">{{ 'whatsapp_link_label' | translate }}</label>
+              @if (whatsappFlow.isOpen) {
+                @if (whatsappFlow.step === 1) {
+                  <ax-text-field
+                    [label]="'whatsapp_link_number' | translate"
+                    type="tel"
+                    inputmode="tel"
+                    autocomplete="tel"
+                    placeholder="+971 50 123 4567"
+                    [(ngModel)]="whatsappFlow.phone"
+                    name="waPhone">
+                  </ax-text-field>
+                  <div class="wa-actions">
+                    <button type="button" class="wa-primary-btn" [disabled]="whatsappFlow.loading" (click)="sendWhatsappCode()">
+                      {{ 'whatsapp_send_code' | translate }}
+                    </button>
+                    <button type="button" class="wa-ghost-btn" [disabled]="whatsappFlow.loading" (click)="closeWhatsappLink()">
+                      {{ 'cancel' | translate }}
+                    </button>
+                  </div>
+                } @else {
+                  <p class="wa-sent">{{ 'whatsapp_code_sent' | translate }}</p>
+                  <ax-text-field
+                    [label]="'whatsapp_code_label' | translate"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    [maxlength]="6"
+                    placeholder="000000"
+                    [(ngModel)]="whatsappFlow.code"
+                    name="waCode">
+                  </ax-text-field>
+                  <div class="wa-actions">
+                    <button type="button" class="wa-primary-btn" [disabled]="whatsappFlow.loading" (click)="verifyWhatsappCode()">
+                      {{ 'whatsapp_verify' | translate }}
+                    </button>
+                    <button type="button" class="wa-ghost-btn" [disabled]="whatsappFlow.loading" (click)="closeWhatsappLink()">
+                      {{ 'cancel' | translate }}
+                    </button>
+                  </div>
+                }
+              } @else if (single_user.whatsapp_phone) {
+                <div class="wa-linked">
+                  <span class="wa-linked-dot" aria-hidden="true"></span>
+                  <span class="wa-linked-number" dir="ltr">{{ single_user.whatsapp_phone }}</span>
+                  <button type="button" class="wa-unlink-btn" [disabled]="whatsappFlow.loading" (click)="unlinkWhatsapp()">
+                    {{ 'whatsapp_unlink' | translate }}
+                  </button>
+                </div>
+              } @else {
+                <button type="button" class="profile-change-phone-btn" (click)="openWhatsappLink()">
+                  {{ 'whatsapp_link_cta' | translate }}
+                </button>
+              }
+            </ion-col>
+          </ion-row>
         }
         @if (!ui_controls.is_loading || !ui_controls.is_updating) {
           <ion-row class="profile-row">
