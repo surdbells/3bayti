@@ -1557,3 +1557,42 @@ swiper-slide,
 .ctl-price-row { display: flex; align-items: baseline; gap: 0.35rem; }
 .ctl-price { font-size: 0.82rem; font-weight: 700; color: var(--ax-color-text-primary, #1a1a1a); }
 .ctl-price-was { font-size: 0.72rem; color: #8a8a8a; text-decoration: line-through; }
+
+/* Ain gift-card nudge (PDP): tasteful "gift card instead" prompt */
+.gc-nudge {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  text-align: start;
+  border: 1px solid #ece3dc;
+  background: linear-gradient(135deg, #fbf7f4, #f4ece6);
+  border-radius: 1.1rem;
+  padding: 0.85rem 1rem;
+  margin: 0.75rem 0 1.25rem;
+  cursor: pointer;
+}
+.gc-nudge__icon {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, #a27a60, var(--ax-color-bg-brand, #906952));
+}
+.gc-nudge__icon ax-icon { --ax-icon-size: 1.2rem; }
+.gc-nudge__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 0.12rem; }
+.gc-nudge__title { font-size: 0.9rem; font-weight: 700; color: var(--ax-color-bg-brand, #906952); }
+.gc-nudge__sub { font-size: 0.78rem; color: #6a5648; }
+.gc-nudge__cta {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--ax-color-bg-brand, #906952);
+  color: #fff;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}

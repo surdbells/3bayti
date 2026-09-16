@@ -1212,6 +1212,12 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  /** Contextual "send a gift card instead" nudge → the gift-card journey. */
+  openGiftCardNudge(): void {
+    this.recordAiEvent('ai_gift_card_recommended', { context: 'pdp', surface: 'mobile' });
+    this.router.navigate(['/', 'gift-cards']);
+  }
+
   private async ensureAinSession(): Promise<void> {
     const got = await Preferences.get({ key: 'ain_session' });
     if (got.value) {

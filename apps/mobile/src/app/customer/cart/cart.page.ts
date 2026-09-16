@@ -558,6 +558,44 @@ export class CartPage implements OnInit, OnDestroy {
   check_out() {
     this.router.navigate(['/', 'checkout']);
   }
+
+  /** Contextual "gift card instead" nudge → the gift-card journey. */
+  async openGiftCardNudge(): Promise<void> {
+    try {
+      const session = await this.ensureAinSession();
+      const body: Record<string, unknown> = {
+        event: 'ai_gift_card_recommended',
+        session_id: session,
+        context: 'cart',
+        surface: 'mobile',
+      };
+      const opts = this.single_user?.token ? { authToken: this.single_user.token } : {};
+      this.networkAdapter.post_v3('POST /ai/events', body, opts).subscribe({ next: () => {}, error: () => {} });
+    } catch {
+      // analytics must never break the page
+    }
+    this.router.navigate(['/', 'gift-cards']);
+  }
+
+  /** Read or lazily mint the shared Ain analytics session id. */
+  private ainSessionId = '';
+  private async ensureAinSession(): Promise<string> {
+    if (this.ainSessionId) {
+      return this.ainSessionId;
+    }
+    const got = await Preferences.get({ key: 'ain_session' });
+    if (got.value) {
+      this.ainSessionId = got.value;
+      return got.value;
+    }
+    const id =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : 'm-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e9).toString(36);
+    await Preferences.set({ key: 'ain_session', value: id });
+    this.ainSessionId = id;
+    return id;
+  }
   triggerBack() {
     this.nav.back();
   }

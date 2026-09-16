@@ -578,6 +578,18 @@
       </div>
     </section>
   }
+
+  <!-- Ain gift-card nudge: not sure about their size? -->
+  @if (single.id > 0) {
+    <button type="button" class="gc-nudge" (click)="openGiftCardNudge()">
+      <span class="gc-nudge__icon"><ax-icon name="gift"></ax-icon></span>
+      <span class="gc-nudge__body">
+        <span class="gc-nudge__title">{{ 'gift_card_nudge_pdp_title' | translate }}</span>
+        <span class="gc-nudge__sub">{{ 'gift_card_nudge_pdp_sub' | translate }}</span>
+      </span>
+      <span class="gc-nudge__cta">{{ 'gift_card_nudge_cta' | translate }}</span>
+    </button>
+  }
 </ion-content>
 
 <!-- Fullscreen image lightbox (cinematic filmstrip). Rendered OUTSIDE
