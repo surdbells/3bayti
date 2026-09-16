@@ -38,6 +38,7 @@
     "askAin": "Ask Ain",
     "giftAin": "Gift Finder",
     "outfit": "Style me",
+    "visualSearch": "Search by photo",
     "menuToggle": "Open navigation menu"
   },
   "giftAin": {
@@ -252,6 +253,20 @@
     "arabic": "العربية"
   },
   "header": {
+    "ai": {
+      "group": "Ain — your style concierge",
+      "askAinHint": "Describe an occasion, get real pieces",
+      "giftAinHint": "Guided gift ideas, plus gift cards",
+      "outfitHint": "A full look, styled for you",
+      "visualSearchHint": "Find pieces from a photo"
+    },
+    "mega": {
+      "shopByCategory": "Shop by category",
+      "viewAll": "View all categories",
+      "discover": "Discover",
+      "conciergeEyebrow": "With Ain",
+      "conciergeTitle": "Your style concierge"
+    },
     "currencyAria": "Display currency: {{currency}}",
     "chooseCurrency": "Choose display currency",
     "signIn": "Sign in",

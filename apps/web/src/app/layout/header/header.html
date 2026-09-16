@@ -3,6 +3,8 @@
   [class.is-scrolled]="scrolled()"
   [class.is-home]="transparentOverHero()"
   [class.is-transparent]="transparentOverHero() && !scrolled()"
+  [class.mega-is-open]="megaOpen()"
+  [class.drawer-is-open]="drawerOpen()"
 >
   <div class="container">
     <button
@@ -25,15 +27,52 @@
     </a>
 
     <nav [attr.aria-label]="'nav.primary' | translate" class="primary-nav">
-      @for (item of navItems; track item.path) {
-        <a
-          [routerLink]="item.path"
-          routerLinkActive="is-active"
-          class="nav-link"
-          [attr.data-testid]="'nav-' + item.key"
-        >
-          <span>{{ item.labelKey | translate }}</span>
-        </a>
+      @for (item of browseItems; track item.path) {
+        @if (item.key === 'categories') {
+          <a
+            [routerLink]="item.path"
+            routerLinkActive="is-active"
+            class="nav-link nav-link--mega"
+            [attr.data-testid]="'nav-' + item.key"
+            [attr.aria-expanded]="megaOpen()"
+            (mouseenter)="openMega()"
+            (mouseleave)="closeMegaSoon()"
+            (focusin)="openMega()"
+          >
+            <span>{{ item.labelKey | translate }}</span>
+            <svg class="nav-link__chev" viewBox="0 0 24 24" width="14" height="14" fill="none"
+                 stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </a>
+        } @else {
+          <a
+            [routerLink]="item.path"
+            routerLinkActive="is-active"
+            class="nav-link"
+            [attr.data-testid]="'nav-' + item.key"
+          >
+            <span>{{ item.labelKey | translate }}</span>
+          </a>
+        }
+
+        <!-- The distinct Ain AI cluster sits right after Styles. -->
+        @if (item.key === 'styles') {
+          <span class="nav-ai" role="group" [attr.aria-label]="'header.ai.group' | translate">
+            @for (ai of aiItems; track ai.path) {
+              <a
+                [routerLink]="ai.path"
+                routerLinkActive="is-active"
+                class="nav-ai__pill"
+                [class.nav-ai__pill--primary]="ai.key === 'askAin'"
+                [attr.data-testid]="'nav-' + ai.key"
+              >
+                <app-nav-icon [icon]="ai.icon" class="nav-ai__icon" />
+                <span>{{ ai.labelKey | translate }}</span>
+              </a>
+            }
+          </span>
+        }
       }
 
       <!-- Divider separating the primary browse links from the
@@ -109,6 +148,78 @@
     </div>
   </div>
 
+  <!-- Categories mega panel (Atelier): editorial multi-column dropdown. -->
+  @if (megaOpen()) {
+    <div
+      class="mega-panel"
+      (mouseenter)="openMega()"
+      (mouseleave)="closeMegaSoon()"
+      role="region"
+      [attr.aria-label]="'nav.categories' | translate"
+      data-testid="mega-panel"
+    >
+      <div class="mega-panel__inner">
+        <div class="mega-col mega-col--cats">
+          <p class="mega-col__title">{{ 'header.mega.shopByCategory' | translate }}</p>
+          @if (categories().length > 0) {
+            <ul class="mega-cats" role="list">
+              @for (cat of categories(); track cat.id) {
+                <li>
+                  <a class="mega-cat" [routerLink]="categoryPath(cat.slug)" (click)="closeMega()">
+                    <span class="mega-cat__name">{{ cat.name }}</span>
+                    <span class="mega-cat__count">{{ cat.product_count }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+          <a class="mega-viewall" routerLink="/category" (click)="closeMega()">
+            {{ 'header.mega.viewAll' | translate }}
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                 stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14M13 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+
+        <div class="mega-col mega-col--discover">
+          <p class="mega-col__title">{{ 'header.mega.discover' | translate }}</p>
+          <ul class="mega-links" role="list">
+            @for (d of discoverItems; track d.key) {
+              <li>
+                <a class="mega-link" [routerLink]="d.path" (click)="closeMega()">
+                  <span>{{ d.labelKey | translate }}</span>
+                  <svg class="mega-link__arrow" viewBox="0 0 24 24" width="14" height="14" fill="none"
+                       stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14M13 5l7 7-7 7" />
+                  </svg>
+                </a>
+              </li>
+            }
+          </ul>
+        </div>
+
+        <div class="mega-col mega-col--feature">
+          <span class="mega-feature__eyebrow">{{ 'header.mega.conciergeEyebrow' | translate }}</span>
+          <p class="mega-feature__title">{{ 'header.mega.conciergeTitle' | translate }}</p>
+          <ul class="mega-concierge" role="list">
+            @for (c of conciergeItems; track c.key) {
+              <li>
+                <a class="mega-concierge__item" [routerLink]="c.path" (click)="closeMega()">
+                  <span class="mega-concierge__icon"><app-nav-icon [icon]="c.icon" /></span>
+                  <span class="mega-concierge__text">
+                    <strong>{{ c.labelKey | translate }}</strong>
+                    <small>{{ c.hintKey | translate }}</small>
+                  </span>
+                </a>
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+  }
+
   <!-- Mobile navigation drawer (hamburger) -->
   @if (drawerOpen()) {
     <div
@@ -148,17 +259,67 @@
       </button>
     </div>
 
+    <!-- Ain concierge block, pinned at the top of the drawer. -->
+    <div class="drawer-ai">
+      <p class="drawer-ai__title">{{ 'header.mega.conciergeTitle' | translate }}</p>
+      <div class="drawer-ai__grid">
+        @for (c of conciergeItems; track c.path) {
+          <a
+            [routerLink]="c.path"
+            (click)="closeDrawer()"
+            class="drawer-ai__item"
+            [class.drawer-ai__item--primary]="c.key === 'askAin'"
+            [attr.data-testid]="'drawer-nav-' + c.key"
+          >
+            <app-nav-icon [icon]="c.icon" />
+            <span>{{ c.labelKey | translate }}</span>
+          </a>
+        }
+      </div>
+    </div>
+
     <nav class="nav-drawer__nav" [attr.aria-label]="'nav.primary' | translate">
-      @for (item of navItems; track item.path) {
-        <a
-          [routerLink]="item.path"
-          routerLinkActive="is-active"
-          (click)="closeDrawer()"
-          class="nav-drawer__link"
-          [attr.data-testid]="'drawer-nav-' + item.key"
-        >
-          <span>{{ item.labelKey | translate }}</span>
-        </a>
+      @for (item of browseItems; track item.path) {
+        @if (item.key === 'categories') {
+          <button
+            type="button"
+            class="nav-drawer__link nav-drawer__accordion"
+            [class.is-open]="drawerCategoriesOpen()"
+            (click)="toggleDrawerCategories()"
+            [attr.aria-expanded]="drawerCategoriesOpen()"
+            [attr.data-testid]="'drawer-nav-' + item.key"
+          >
+            <span>{{ item.labelKey | translate }}</span>
+            <svg class="nav-drawer__chev" viewBox="0 0 24 24" width="16" height="16" fill="none"
+                 stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          @if (drawerCategoriesOpen()) {
+            <div class="nav-drawer__sub">
+              @for (cat of categories(); track cat.id) {
+                <a
+                  class="nav-drawer__sublink"
+                  [routerLink]="categoryPath(cat.slug)"
+                  (click)="closeDrawer()"
+                >{{ cat.name }}</a>
+              }
+              <a class="nav-drawer__sublink nav-drawer__sublink--all" routerLink="/category" (click)="closeDrawer()">
+                {{ 'header.mega.viewAll' | translate }}
+              </a>
+            </div>
+          }
+        } @else {
+          <a
+            [routerLink]="item.path"
+            routerLinkActive="is-active"
+            (click)="closeDrawer()"
+            class="nav-drawer__link"
+            [attr.data-testid]="'drawer-nav-' + item.key"
+          >
+            <span>{{ item.labelKey | translate }}</span>
+          </a>
+        }
       }
 
       <span class="nav-drawer__divider" aria-hidden="true"></span>

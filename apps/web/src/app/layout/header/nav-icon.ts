@@ -124,6 +124,27 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
           <path d="M9.6 9.6 6 6M14.4 9.6 18 6M14.4 14.4 18 18M9.6 14.4 6 18" />
         </svg>
       }
+      @case ('sparkles') {
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3l1.9 4.8L18.7 9.7 13.9 11.6 12 16.4 10.1 11.6 5.3 9.7 10.1 7.8z" />
+          <path d="M19 15l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6z" />
+        </svg>
+      }
+      @case ('hanger') {
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 6.5a2 2 0 1 1 2 2c-1.2 0-2 .8-2 1.8" />
+          <path d="M12 10.3 3.8 15.4a1 1 0 0 0 .5 1.85h15.4a1 1 0 0 0 .5-1.85L12 10.3z" />
+        </svg>
+      }
+      @case ('camera') {
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+      }
     }
   `,
   styles: [

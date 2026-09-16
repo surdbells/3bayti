@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   inject,
   computed,
+  effect,
   signal,
   viewChild,
   ElementRef,
@@ -16,16 +17,19 @@ import {
   RouterLink,
   RouterLinkActive,
 } from '@angular/router';
-import { filter, map, startWith } from 'rxjs/operators';
+import { catchError, filter, map, of, startWith } from 'rxjs';
 import { DOCUMENT, NgIf } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { LocaleSwitcherComponent } from './locale-switcher';
 import { UserMenuComponent } from './user-menu';
 import { CartIconComponent } from './cart-icon';
 import { CurrencySwitcherComponent } from './currency-switcher';
+import { NavIconComponent } from './nav-icon';
 import { SearchOverlayComponent } from '../../features/search/search-overlay';
 import { AuthService } from '../../core/auth/auth.service';
 import { SaleCountService } from '../../core/catalog/sale-count.service';
+import { RoutedHttpClient } from '../../core/http/routed-http-client';
+import type { Category } from '../../features/categories/category.model';
 
 /** A single primary-navigation entry (shared by desktop nav + drawer). */
 interface NavItem {
@@ -35,6 +39,14 @@ interface NavItem {
   labelKey: string;
   /** Stable slug used for the item's `data-testid` (e.g. 'categories'). */
   key: string;
+}
+
+/** An Ain concierge entry: a nav item plus its icon + one-line hint. */
+interface AiNavItem extends NavItem {
+  /** app-nav-icon key for the leading glyph. */
+  icon: string;
+  /** i18n key for the one-line description (mega panel + drawer). */
+  hintKey: string;
 }
 
 /**
@@ -69,6 +81,7 @@ interface NavItem {
     UserMenuComponent,
     CartIconComponent,
     CurrencySwitcherComponent,
+    NavIconComponent,
     SearchOverlayComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -79,30 +92,66 @@ export class HeaderComponent {
   private readonly auth = inject(AuthService);
   private readonly doc = inject(DOCUMENT);
   private readonly router = inject(Router);
+  private readonly routed = inject(RoutedHttpClient);
   /** On-sale product count for the Discounted nav badge (shared, loaded once). */
   protected readonly saleCount = inject(SaleCountService);
 
   /**
-   * Primary navigation entries (H1.3). Order: Categories, Styles, Stores,
-   * New In, Best Sellers, Gift Cards. Categories leads (browse-by-department
-   * is the top of the IA); New In precedes Best Sellers so the freshest
-   * catalogue reads first. Gift Cards links to the gift-card storefront.
-   *
-   * Text-only in the tidied nav (icons removed), `key` survives purely as
-   * the stable `data-testid` slug. The "Discounted" entry is rendered
-   * separately (after a divider) so it reads as a distinct, accented item.
+   * Primary browse spine (the "Atelier" editorial nav): Categories (opens the
+   * mega panel), Styles, Stores, New In, Best Sellers, Gift Cards. Text-only,
+   * `key` survives as the stable `data-testid` slug. The Ain concierge entries
+   * live in a distinct AI cluster (see {@link aiItems}) and the "Discounted"
+   * entry after a divider, so each reads as its own thing.
    */
-  protected readonly navItems: readonly NavItem[] = [
+  protected readonly browseItems: readonly NavItem[] = [
     { path: '/category', labelKey: 'nav.categories', key: 'categories' },
     { path: '/styles', labelKey: 'nav.styles', key: 'styles' },
-    { path: '/ask-ain', labelKey: 'nav.askAin', key: 'askAin' },
-    { path: '/gift-ain', labelKey: 'nav.giftAin', key: 'giftAin' },
-    { path: '/outfit', labelKey: 'nav.outfit', key: 'outfit' },
     { path: '/stores', labelKey: 'nav.stores', key: 'stores' },
     { path: '/new-arrivals', labelKey: 'nav.newArrivals', key: 'newArrivals' },
     { path: '/best-sellers', labelKey: 'nav.bestSellers', key: 'bestSellers' },
     { path: '/gift-cards', labelKey: 'nav.giftCards', key: 'gift' },
   ];
+
+  /** The distinct Ain AI cluster — Ask Ain (the headline), Gift Finder, Style me. */
+  protected readonly aiItems: readonly AiNavItem[] = [
+    { path: '/ask-ain', labelKey: 'nav.askAin', key: 'askAin', icon: 'sparkles', hintKey: 'header.ai.askAinHint' },
+    { path: '/gift-ain', labelKey: 'nav.giftAin', key: 'giftAin', icon: 'gift', hintKey: 'header.ai.giftAinHint' },
+    { path: '/outfit', labelKey: 'nav.outfit', key: 'outfit', icon: 'hanger', hintKey: 'header.ai.outfitHint' },
+  ];
+
+  /** Full concierge set surfaced inside the mega panel (adds Search by photo). */
+  protected readonly conciergeItems: readonly AiNavItem[] = [
+    ...this.aiItems,
+    { path: '/visual-search', labelKey: 'nav.visualSearch', key: 'visualSearch', icon: 'camera', hintKey: 'header.ai.visualSearchHint' },
+  ];
+
+  /** Quick "Discover" links shown in the mega panel's middle column. */
+  protected readonly discoverItems: readonly NavItem[] = [
+    { path: '/new-arrivals', labelKey: 'nav.newArrivals', key: 'newArrivals' },
+    { path: '/best-sellers', labelKey: 'nav.bestSellers', key: 'bestSellers' },
+    { path: '/stores', labelKey: 'nav.stores', key: 'stores' },
+    { path: '/discounted', labelKey: 'nav.discounted', key: 'discounted' },
+  ];
+
+  /** Categories mega panel open state (desktop). */
+  protected readonly megaOpen = signal(false);
+  private megaTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Which drawer sections are expanded (mobile accordion). */
+  protected readonly drawerCategoriesOpen = signal(false);
+
+  /**
+   * Live categories for the mega panel, sorted by product count (most-stocked
+   * first) and capped. Degrades to [] on error so the panel still renders its
+   * Discover + concierge columns.
+   */
+  protected readonly categories = toSignal(
+    this.routed.get<Category[]>('GET /categories').pipe(
+      map((env) => [...(env.data ?? [])].sort((a, b) => b.product_count - a.product_count).slice(0, 12)),
+      catchError(() => of([] as Category[])),
+    ),
+    { initialValue: [] as Category[] },
+  );
 
   /** Mobile drawer open state. */
   protected readonly drawerOpen = signal(false);
@@ -166,6 +215,49 @@ export class HeaderComponent {
       this.currentUser()?.is_phone_verified === false,
   );
 
+  /** Open the Categories mega panel (hover/focus). Cancels any pending close. */
+  protected openMega(): void {
+    if (this.megaTimer) {
+      clearTimeout(this.megaTimer);
+      this.megaTimer = null;
+    }
+    this.megaOpen.set(true);
+  }
+
+  /**
+   * Close the mega panel after a short grace period so moving the pointer from
+   * the "Categories" trigger onto the panel (a brief gap) doesn't flicker it shut.
+   */
+  protected closeMegaSoon(): void {
+    if (this.megaTimer) {
+      clearTimeout(this.megaTimer);
+    }
+    const win = this.doc.defaultView;
+    this.megaTimer = setTimeout(() => this.megaOpen.set(false), 140) as unknown as ReturnType<typeof setTimeout>;
+    if (!win) {
+      this.megaOpen.set(false);
+    }
+  }
+
+  /** Close the mega panel immediately (navigation, Escape). */
+  protected closeMega(): void {
+    if (this.megaTimer) {
+      clearTimeout(this.megaTimer);
+      this.megaTimer = null;
+    }
+    this.megaOpen.set(false);
+  }
+
+  /** Toggle the Categories accordion inside the mobile drawer. */
+  protected toggleDrawerCategories(): void {
+    this.drawerCategoriesOpen.update((v) => !v);
+  }
+
+  /** Build a category link path from its slug (slug-based nav, no legacy ids). */
+  protected categoryPath(slug: string): string {
+    return `/category/${slug}`;
+  }
+
   /** Toggle the mobile drawer. */
   protected toggleDrawer(): void {
     this.drawerOpen() ? this.closeDrawer() : this.openDrawer();
@@ -196,10 +288,11 @@ export class HeaderComponent {
     this.searchOpen.set(false);
   }
 
-  /** Escape closes the drawer when open. */
+  /** Escape closes the drawer + mega panel when open. */
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
     this.closeDrawer();
+    this.closeMega();
   }
 
   constructor() {
@@ -211,6 +304,12 @@ export class HeaderComponent {
     // Load the on-sale count for the Discounted nav badge (idempotent; the
     // shared service fetches at most once across all consumers).
     this.saleCount.load();
+
+    // Close the mega panel whenever the route changes (a nav link was followed).
+    effect(() => {
+      this.currentUrl();
+      this.closeMega();
+    });
 
     const win = this.doc.defaultView;
     if (!win) return;

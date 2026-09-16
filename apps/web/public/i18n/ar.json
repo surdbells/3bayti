@@ -38,6 +38,7 @@
     "askAin": "اسأل عين",
     "giftAin": "دليل الهدايا",
     "outfit": "نسّقي إطلالتي",
+    "visualSearch": "ابحثي بصورة",
     "menuToggle": "فتح قائمة التنقل"
   },
   "giftAin": {
@@ -252,6 +253,20 @@
     "arabic": "العربية"
   },
   "header": {
+    "ai": {
+      "group": "عين — خبيرة أناقتكِ",
+      "askAinHint": "صِفي المناسبة واحصلي على قطع حقيقية",
+      "giftAinHint": "أفكار هدايا موجّهة، مع بطاقات الهدايا",
+      "outfitHint": "إطلالة كاملة منسّقة لكِ",
+      "visualSearchHint": "اعثري على قطع من صورة"
+    },
+    "mega": {
+      "shopByCategory": "تسوّقي حسب الفئة",
+      "viewAll": "كل الفئات",
+      "discover": "اكتشفي",
+      "conciergeEyebrow": "مع عين",
+      "conciergeTitle": "خبيرة أناقتكِ"
+    },
     "currencyAria": "عرض العملة: {{currency}}",
     "chooseCurrency": "اختاري عملة العرض",
     "signIn": "تسجيل الدخول",
