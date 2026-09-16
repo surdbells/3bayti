@@ -5,6 +5,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { ProductCardComponent } from '../catalog/product-card';
 import { ConciergeService, type ConciergeCard } from './concierge.service';
+import { AIN_WHATSAPP_NUMBER, ainWhatsappUrl } from '../../core/config/support.constants';
 
 /**
  * "Ask Ain" — 3bayti's AI style & gifting concierge (web).
@@ -39,6 +40,14 @@ export class AskAinPageComponent implements OnInit {
   readonly suggestions = ['askAin.chips.wedding', 'askAin.chips.eidGift', 'askAin.chips.casualBeige'];
 
   readonly isEmpty = computed(() => this.hasSearched() && !this.loading() && this.cards().length === 0);
+
+  /** Whether the "Chat with Ain on WhatsApp" entry point is configured. */
+  protected readonly ainWhatsappEnabled = AIN_WHATSAPP_NUMBER !== '';
+
+  /** wa.me link to Ain with a localized pre-filled greeting. */
+  protected ainWhatsappHref(): string {
+    return ainWhatsappUrl(this.translate.instant('askAin.whatsappGreeting'));
+  }
 
   ngOnInit(): void {
     this.concierge.recordEvent('ai_opened');

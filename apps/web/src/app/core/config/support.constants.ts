@@ -23,3 +23,20 @@ export const SUPPORT_WHATSAPP_DISPLAY = '+971 50 796 7776';
  * A greeting can be appended via ?text=<encoded> by the caller.
  */
 export const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}`;
+
+/**
+ * WhatsApp Business number that reaches Ain (the concierge over WhatsApp,
+ * Phase 4). Defaults to the shared support number; point this at a dedicated
+ * Meta Cloud API number once one is provisioned + the webhook is wired. An
+ * empty string hides the "Chat with Ain on WhatsApp" entry point.
+ */
+export const AIN_WHATSAPP_NUMBER: string = SUPPORT_WHATSAPP_NUMBER;
+
+/** wa.me deep link to Ain with an optional pre-filled greeting; '' when unset. */
+export function ainWhatsappUrl(greeting?: string): string {
+  if (!AIN_WHATSAPP_NUMBER) {
+    return '';
+  }
+  const base = `https://wa.me/${AIN_WHATSAPP_NUMBER}`;
+  return greeting ? `${base}?text=${encodeURIComponent(greeting)}` : base;
+}

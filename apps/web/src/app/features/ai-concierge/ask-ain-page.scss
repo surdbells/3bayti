@@ -148,3 +148,23 @@
   color: var(--color-brand-700, #5a3a2c);
   font-style: italic;
 }
+
+/* ── Chat with Ain on WhatsApp (entry point) ────────────────────────── */
+.ask-ain__whatsapp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0 auto;
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-pill, 999px);
+  color: #128c7e;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+.ask-ain__whatsapp:hover,
+.ask-ain__whatsapp:focus-visible {
+  background: rgba(18, 140, 126, 0.1);
+}

@@ -21,3 +21,20 @@ export function supportWhatsappLink(greeting?: string): string {
   const base = `https://wa.me/${SUPPORT_WHATSAPP}`;
   return greeting ? `${base}?text=${encodeURIComponent(greeting)}` : base;
 }
+
+/**
+ * WhatsApp Business number that reaches Ain (the concierge over WhatsApp,
+ * Phase 4). Defaults to the shared support number; point this at a dedicated
+ * Meta Cloud API number once one is provisioned + the webhook is wired. An
+ * empty string hides the "Chat with Ain on WhatsApp" entry point.
+ */
+export const AIN_WHATSAPP: string = SUPPORT_WHATSAPP;
+
+/** wa.me deep link to Ain with an optional pre-filled greeting; '' when unset. */
+export function ainWhatsappLink(greeting?: string): string {
+  if (!AIN_WHATSAPP) {
+    return '';
+  }
+  const base = `https://wa.me/${AIN_WHATSAPP}`;
+  return greeting ? `${base}?text=${encodeURIComponent(greeting)}` : base;
+}

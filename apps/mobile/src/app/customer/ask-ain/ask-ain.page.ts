@@ -26,6 +26,7 @@ import { WishlistService } from '../../core/services/wishlist.service';
 import { I18nService } from '../../i18n.service';
 import { Labels } from '../../class/labels';
 import { cfImage } from '../../shared/cf-image';
+import { AIN_WHATSAPP, ainWhatsappLink } from '../../core/constants/support.constants';
 
 /** Money block from ProductSerializer (AED amounts). */
 interface AinPrice {
@@ -106,6 +107,17 @@ export class AskAinPage implements OnInit {
   isSending = false;
   hasSearched = false;
   isEmpty = false;
+
+  /** Whether the "Chat with Ain on WhatsApp" entry point is configured. */
+  readonly ainWhatsappEnabled = AIN_WHATSAPP !== '';
+
+  /** Open WhatsApp to chat with Ain, with a localized pre-filled greeting. */
+  openAinWhatsapp(): void {
+    const url = ainWhatsappLink(this.i18n.t('ask_ain_whatsapp_greeting'));
+    if (url) {
+      window.open(url, '_system');
+    }
+  }
 
   /** Interaction id of the latest concierge reply (threads the analytics events). */
   private interactionId: number | null = null;
