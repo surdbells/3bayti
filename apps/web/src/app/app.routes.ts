@@ -160,6 +160,14 @@ export const routes: Routes = [
     title: 'routeTitles.outfit',
   },
   {
+    /* Visual Search — snap or upload a photo → visually similar real products.
+       Public; env-gated (VISION_ENABLED) so it returns empty until enabled. */
+    path: 'visual-search',
+    loadComponent: () =>
+      import('./features/ai-concierge/visual-search-page').then(m => m.VisualSearchPageComponent),
+    title: 'routeTitles.visualSearch',
+  },
+  {
     /* Gift reminders — the signed-in customer's saved gift dates + nudges. */
     path: 'gift-reminders',
     canActivate: [authActivateGuard],

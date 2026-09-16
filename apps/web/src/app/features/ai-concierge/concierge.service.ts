@@ -87,6 +87,18 @@ interface OutfitResponse {
   gift_card_suggestion?: GiftCardSuggestion;
 }
 
+export interface VisualSearchResult {
+  interactionId: number | null;
+  description: string | null;
+  cards: ConciergeCard[];
+}
+
+interface VisualSearchResponse {
+  interaction_id: number | null;
+  description?: string | null;
+  products?: ConciergeCard[];
+}
+
 interface RestyleResponse {
   interaction_id: number | null;
   products: ConciergeCard[];
@@ -222,6 +234,34 @@ export class ConciergeService {
       pieces,
       totalPrice: data.total_price ?? null,
       giftCard: data.gift_card_suggestion ?? null,
+    };
+  }
+
+  /** Visual search: a query image (data URL) → visually similar real products. */
+  async visualSearch(imageDataUrl: string): Promise<VisualSearchResult> {
+    this.analytics.event('ai_visual_search_started', {});
+    this.recordEvent('ai_visual_search_started');
+
+    const env = await firstValueFrom(
+      this.http.post<VisualSearchResponse>('POST /ai/visual-search', {
+        body: {
+          image: imageDataUrl,
+          locale: this.locale.current(),
+          session_id: this.sessionId(),
+          channel: 'WEB',
+        },
+      }),
+    );
+
+    const data = (env.data ?? {}) as VisualSearchResponse;
+    const cards = Array.isArray(data.products) ? data.products : [];
+    this.analytics.event('ai_visual_search_results', { count: cards.length });
+    this.recordEvent('ai_visual_search_results', { count: cards.length });
+
+    return {
+      interactionId: data.interaction_id ?? null,
+      description: data.description ?? null,
+      cards,
     };
   }
 

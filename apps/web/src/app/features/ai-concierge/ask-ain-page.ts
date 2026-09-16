@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { ProductCardComponent } from '../catalog/product-card';
@@ -18,7 +19,7 @@ import { ConciergeService, type ConciergeCard } from './concierge.service';
   selector: 'app-ask-ain',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, TranslatePipe, ProductCardComponent],
+  imports: [FormsModule, TranslatePipe, ProductCardComponent, RouterLink],
   templateUrl: './ask-ain-page.html',
   styleUrl: './ask-ain-page.scss',
 })

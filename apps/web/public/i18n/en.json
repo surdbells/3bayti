@@ -191,11 +191,22 @@
     "thinking": "Ain is looking through the collections…",
     "resultsIntro": "Here's what Ain found for you",
     "noResults": "Ain couldn't find a match. Try describing the colour, occasion or budget.",
+    "searchByPhoto": "Search by a photo",
     "chips": {
       "wedding": "An elegant black abaya for a wedding",
       "eidGift": "An Eid gift for my sister under 300",
       "casualBeige": "Something casual in beige"
     }
+  },
+  "visualSearch": {
+    "title": "Search by photo",
+    "subtitle": "Snap or upload a photo and Ain finds visually similar pieces from our stores.",
+    "dropTitle": "Add a photo",
+    "dropSub": "Take a photo or drop an image here",
+    "sees": "Ain sees",
+    "tryAnother": "Try another photo",
+    "empty": "Ain couldn't find a close match — try a clearer photo of a single piece.",
+    "error": "That photo couldn't be searched. Please try another."
   },
   "footer": {
     "brandAria": "3bayti home",
@@ -1691,6 +1702,7 @@
     "askAin": "Ask Ain · 3bayti",
     "giftAin": "Gift Finder · 3bayti",
     "outfit": "Style me with Ain · 3bayti",
+    "visualSearch": "Search by photo · 3bayti",
     "giftReminders": "Gift Reminders · 3bayti",
     "home": "3bayti: Premium Abayas, Kaftans & Modest Wear",
     "categories": "Shop by Category · 3bayti",
