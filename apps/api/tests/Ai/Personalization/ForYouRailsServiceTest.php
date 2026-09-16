@@ -49,23 +49,25 @@ final class ForYouRailsServiceTest extends TestCase
 
         $seed = $this->product(50);
         $profile = new CustomerStyleProfile(
-            colours: [['tag' => 'black', 'weight' => 9.0]],
+            colours: [['tag' => 'Black', 'weight' => 9.0]],
             categories: [['id' => 10, 'weight' => 9.0]],
             vendors: [['id' => 1, 'weight' => 6.0]],
             seedProductIds: [50],
         );
 
+        $styleFilters = [];
         $service = $this->service(
             profile: $profile,
             owned: [100],
             wishlisted: [101],
-            findActivePaginated: static function (array $filters) use ($yourStylePool, $storesPool, $newPool): array {
+            findActivePaginated: static function (array $filters) use ($yourStylePool, $storesPool, $newPool, &$styleFilters): array {
                 if (isset($filters['vendorId'])) {
                     return ['items' => $storesPool, 'total' => count($storesPool)];
                 }
                 if (isset($filters['isNew'])) {
                     return ['items' => $newPool, 'total' => count($newPool)];
                 }
+                $styleFilters = $filters;
                 return ['items' => $yourStylePool, 'total' => count($yourStylePool)];
             },
             seed: $seed,
@@ -74,6 +76,11 @@ final class ForYouRailsServiceTest extends TestCase
         );
 
         $set = $service->build($this->user(7), 3);
+
+        // your_style forwards the profile's real-cased colours + top category to the filter.
+        self::assertSame(['Black'], $styleFilters['colors'] ?? null);
+        self::assertSame(10, $styleFilters['categoryId'] ?? null);
+        self::assertTrue(($styleFilters['inStock'] ?? null) === true);
 
         self::assertTrue($set->profileReady);
         self::assertSame(

@@ -72,8 +72,10 @@ final class CustomerStyleProfileBuilder
         // (things they wishlisted or actually bought), not passing views.
         $strongIds = array_values(array_unique([...$purchased, ...$wishlist]));
 
-        /** @var array<string, float> $colourW */
+        /** @var array<string, float> $colourW keyed by lowercased colour */
         $colourW = [];
+        /** @var array<string, array<string, int>> $colourVariants lc key => (original spelling => count) */
+        $colourVariants = [];
         /** @var array<string, float> $styleW */
         $styleW = [];
         /** @var array<string, float> $occasionW */
@@ -91,10 +93,17 @@ final class CustomerStyleProfileBuilder
             $w = $weightOf[$id] ?? 0.0;
 
             foreach ($product->getAvailableColors() as $colour) {
-                $key = $this->normalise($colour);
-                if ($key !== '') {
-                    $colourW[$key] = ($colourW[$key] ?? 0.0) + $w;
+                $trimmed = trim($colour);
+                if ($trimmed === '') {
+                    continue;
                 }
+                // Group case-insensitively so "Black"/"black" combine, but keep
+                // the catalogue's ACTUAL spellings — the colours filter
+                // (jsonb_exists_any) is case-sensitive, so the emitted tag must
+                // match how vendors stored the colour or the rail matches nothing.
+                $key = mb_strtolower($trimmed);
+                $colourW[$key] = ($colourW[$key] ?? 0.0) + $w;
+                $colourVariants[$key][$trimmed] = ($colourVariants[$key][$trimmed] ?? 0) + 1;
             }
             foreach ($product->getAvailableSizes() as $size) {
                 $key = $this->normalise($size);
@@ -151,7 +160,7 @@ final class CustomerStyleProfileBuilder
         }
 
         $profile = new CustomerStyleProfile(
-            colours: $this->rankTags($colourW, self::MAX_COLOURS),
+            colours: $this->rankColours($colourW, $colourVariants, self::MAX_COLOURS),
             styles: $this->rankTags($styleW, self::MAX_STYLES),
             categories: $this->rankIds($categoryW, self::MAX_CATEGORIES),
             vendors: $this->rankIds($vendorW, self::MAX_VENDORS),
@@ -250,6 +259,42 @@ final class CustomerStyleProfileBuilder
             $out[] = ['tag' => (string) $tag, 'weight' => round($weight, 2)];
         }
         return $out;
+    }
+
+    /**
+     * Like rankTags, but emits the catalogue's real (case-preserved) spelling
+     * for each lowercased colour key so the case-sensitive colours filter matches.
+     *
+     * @param array<string, float> $weights lowercased key => weight
+     * @param array<string, array<string, int>> $variants lowercased key => (spelling => count)
+     * @return list<array{tag: string, weight: float}>
+     */
+    private function rankColours(array $weights, array $variants, int $limit): array
+    {
+        arsort($weights);
+        $out = [];
+        foreach (array_slice($weights, 0, $limit, true) as $key => $weight) {
+            $out[] = [
+                'tag' => $this->representativeSpelling($variants[$key] ?? [], (string) $key),
+                'weight' => round($weight, 2),
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * The most common original spelling among a colour's variants (majority
+     * casing maximises catalogue matches); falls back to the lowercased key.
+     *
+     * @param array<string, int> $counts spelling => occurrences
+     */
+    private function representativeSpelling(array $counts, string $fallback): string
+    {
+        if ($counts === []) {
+            return $fallback;
+        }
+        arsort($counts);
+        return (string) array_key_first($counts);
     }
 
     /**

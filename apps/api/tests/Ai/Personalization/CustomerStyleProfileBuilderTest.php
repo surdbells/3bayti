@@ -31,10 +31,13 @@ final class CustomerStyleProfileBuilderTest extends TestCase
         $cat20 = $this->makeCategory(20, 'kaftans');
         $cat30 = $this->makeCategory(30, 'bags');
 
-        $p1 = $this->makeProduct($vendor50, 1, $cat10, ['black'], '200.00');           // wishlist w=3
-        $p2 = $this->makeProduct($vendor50, 2, $cat10, ['black', 'beige'], '300.00');  // wishlist w=3
+        // Mixed casing on purpose: the catalogue stores colours verbatim
+        // ("Black"/"black"), and the emitted tag must preserve the real spelling
+        // (majority casing) so the case-sensitive colours filter can match.
+        $p1 = $this->makeProduct($vendor50, 1, $cat10, ['Black'], '200.00');           // wishlist w=3
+        $p2 = $this->makeProduct($vendor50, 2, $cat10, ['Black', 'Beige'], '300.00');  // wishlist w=3
         $p3 = $this->makeProduct($vendor60, 3, $cat20, ['black'], '500.00');           // purchased w=4
-        $p4 = $this->makeProduct($vendor70, 4, $cat30, ['rose'], '150.00');            // viewed w=1
+        $p4 = $this->makeProduct($vendor70, 4, $cat30, ['Rose'], '150.00');            // viewed w=1
 
         $signals = $this->signals(
             wishlist: [1, 2],
@@ -51,8 +54,9 @@ final class CustomerStyleProfileBuilderTest extends TestCase
         $builder = new CustomerStyleProfileBuilder($signals, $tags, $em, new NullLogger());
         $profile = $builder->build(userId: 7);
 
-        // black = 3+3+4 = 10 (top), beige = 3, rose = 1
-        self::assertSame(['black', 'beige', 'rose'], $profile->topColours(5));
+        // black = 3+3+4 = 10 (top, grouped case-insensitively), beige = 3, rose = 1.
+        // Emitted spelling preserves the catalogue casing (majority: "Black" 2 vs "black" 1).
+        self::assertSame(['Black', 'Beige', 'Rose'], $profile->topColours(5));
         // cat10 = 6, cat20 = 4, cat30 = 1
         self::assertSame([10, 20, 30], $profile->topCategoryIds(5));
         // vendor50 = 6, follow99 = 5, vendor60 = 4, vendor70 = 1

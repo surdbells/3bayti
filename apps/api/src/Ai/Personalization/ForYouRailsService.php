@@ -39,6 +39,8 @@ class ForYouRailsService
     private const MIN_PER_RAIL = 3;
     private const MAX_PER_RAIL = 24;
     private const RETRIEVE_MULTIPLIER = 3;
+    /** High cap for the owned/wishlisted exclusion set so heavy users are still fully covered. */
+    private const EXCLUDE_CAP = 2000;
 
     public function __construct(
         private readonly CustomerStyleProfileStore $profiles,
@@ -56,10 +58,14 @@ class ForYouRailsService
             return new ForYouRailSet(false, []);
         }
 
-        // Never recommend what they already own or saved.
+        // Never recommend what they already own or saved (high cap so even
+        // power users with huge histories are fully excluded).
         /** @var array<int, bool> $shown */
         $shown = [];
-        foreach ([...$this->signals->purchasedProductIds($userId), ...$this->signals->wishlistProductIds($userId)] as $ownedId) {
+        foreach ([
+            ...$this->signals->purchasedProductIds($userId, self::EXCLUDE_CAP),
+            ...$this->signals->wishlistProductIds($userId, self::EXCLUDE_CAP),
+        ] as $ownedId) {
             $shown[$ownedId] = true;
         }
 
