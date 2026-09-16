@@ -22,13 +22,13 @@ import { AddPhonePromptComponent } from '../../shared/ui/add-phone-prompt';
 import { UpdateEmailPromptComponent } from '../../shared/ui/update-email-prompt';
 import type { ActiveCampaigns } from '../campaigns/campaign.model';
 import { StoreCardComponent } from '../catalog/store-card';
-import { RecommendationsService } from '../catalog/recommendations.service';
 import { SaleCountService } from '../../core/catalog/sale-count.service';
 import type { Product } from '../catalog/product.model';
 import { AuthService } from '../../core/auth/auth.service';
 import type { Category } from '../categories/category.model';
 import { categoryIconUrl } from '../categories/category-icons';
 import { HomeDataService } from './home-data.service';
+import { ForYouService, type ForYouRails } from './for-you.service';
 import { AppShowcaseComponent } from './app-showcase';
 import { TranslatePipe } from '@ngx-translate/core';
 
@@ -78,7 +78,7 @@ export class HomeComponent {
   private seo = inject(SeoService);
   private homeData = inject(HomeDataService);
   private auth = inject(AuthService);
-  private recsService = inject(RecommendationsService);
+  private forYouService = inject(ForYouService);
   private saleCount = inject(SaleCountService);
 
   /* ----- Categories (one extra fetch beyond the 4 home-page endpoints)
@@ -116,25 +116,26 @@ export class HomeComponent {
   readonly flash       = computed(() => this.campaigns()?.flash ?? null);
   readonly serverNow   = computed(() => this.campaigns()?.server_now ?? new Date().toISOString());
 
-  /* ----- "For you" strip, personalized (signed-in) OR a guest fallback.
-     Signed-in users get the auth-gated recommendation engine (X.12 / W.1).
-     Anonymous visitors can't, so rather than leave the slot empty (the page
-     would go sparse below the fold for every signed-out visitor), guests get
-     a "Trending now" strip sourced from the editorial `featured` ranking
-     (HomeDataService.trending$, deliberately distinct from Top Sellers'
-     `popular` and New Arrivals' `newest`). Both paths resolve to a Product[]
-     (possibly empty) and degrade to [] on error; the template still hides
-     the strip when the resolved list is empty. ----- */
+  /* ----- "For you" discovery below the fold.
+     GUESTS (no style profile) get a single "Trending now" strip sourced from
+     the editorial `featured` ranking (HomeDataService.trending$, deliberately
+     distinct from Top Sellers' `popular` and New Arrivals' `newest`).
+     SIGNED-IN shoppers get the Ain Personal Style Profile rails (Your Style /
+     From Stores You Love / Because You Liked… / New Arrivals For You), each
+     built from real, in-stock products; a brand-new account with no profile
+     yet gets a single "Popular right now" cold-start rail. Both paths degrade
+     to empty on error and the template hides anything empty. ----- */
   readonly isGuestForYou = !this.auth.isAuthenticated();
 
-  readonly forYou = toSignal(
+  readonly forYou = toSignal(this.homeData.trending$(), { initialValue: [] as Product[] });
+
+  readonly styleRails = toSignal(
     this.isGuestForYou
-      ? this.homeData.trending$()
-      : from(this.recsService.forMe()).pipe(
-          map((recs) => recs.map((r) => r.product)),
-          catchError(() => of([] as Product[])),
+      ? of({ profileReady: false, rails: [] } as ForYouRails)
+      : from(this.forYouService.rails()).pipe(
+          catchError(() => of({ profileReady: false, rails: [] } as ForYouRails)),
         ),
-    { initialValue: [] as Product[] },
+    { initialValue: { profileReady: false, rails: [] } as ForYouRails },
   );
 
   constructor() {

@@ -238,16 +238,30 @@
   </section>
 
   <!-- ===========================================================
-       FOR YOU / TRENDING STRIP (personalized, signed-in only)
+       FOR YOU (signed-in: Ain style rails) / TRENDING (guests)
        =========================================================== -->
-  @if (forYou().length > 0) {
-    <ui-product-strip
-      [heading]="(isGuestForYou ? 'home.forYou.trendingHeading' : 'home.forYou.heading') | translate"
-      [eyebrow]="(isGuestForYou ? 'home.forYou.trendingEyebrow' : 'home.forYou.eyebrow') | translate"
-      [products]="forYou()"
-      [loading]="false"
-      [compact]="true"
-    />
+  @if (isGuestForYou) {
+    @if (forYou().length > 0) {
+      <ui-product-strip
+        [heading]="'home.forYou.trendingHeading' | translate"
+        [eyebrow]="'home.forYou.trendingEyebrow' | translate"
+        [products]="forYou()"
+        [loading]="false"
+        [compact]="true"
+      />
+    }
+  } @else {
+    @for (rail of styleRails().rails; track rail.key) {
+      @if (rail.products.length > 0) {
+        <ui-product-strip
+          [heading]="('home.forYou.rails.' + rail.key + '.heading') | translate: { name: rail.seedName || '' }"
+          [eyebrow]="('home.forYou.rails.' + rail.key + '.eyebrow') | translate"
+          [products]="rail.products"
+          [loading]="false"
+          [compact]="true"
+        />
+      }
+    }
   }
 
   <!-- ===========================================================

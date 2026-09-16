@@ -1258,7 +1258,14 @@
       "heading": "For you",
       "eyebrow": "Picked for you",
       "trendingHeading": "Trending now",
-      "trendingEyebrow": "Popular this week"
+      "trendingEyebrow": "Popular this week",
+      "rails": {
+        "your_style": { "heading": "Your style", "eyebrow": "Curated to your taste" },
+        "stores_you_love": { "heading": "From stores you love", "eyebrow": "Your favourite designers" },
+        "because_you_liked": { "heading": "Because you liked {{name}}", "eyebrow": "More pieces like it" },
+        "new_for_you": { "heading": "New arrivals for you", "eyebrow": "Fresh in your colours" },
+        "popular": { "heading": "Popular right now", "eyebrow": "Loved across 3bayti" }
+      }
     },
     "stores": {
       "eyebrow": "Meet the Stores",

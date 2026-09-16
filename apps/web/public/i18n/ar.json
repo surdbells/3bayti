@@ -1258,7 +1258,14 @@
       "heading": "لكِ",
       "eyebrow": "اخترناها لكِ",
       "trendingHeading": "الأكثر رواجًا الآن",
-      "trendingEyebrow": "الأكثر شعبية هذا الأسبوع"
+      "trendingEyebrow": "الأكثر شعبية هذا الأسبوع",
+      "rails": {
+        "your_style": { "heading": "أسلوبكِ", "eyebrow": "مختارة حسب ذوقكِ" },
+        "stores_you_love": { "heading": "من متاجر تحبّينها", "eyebrow": "مصمّموكِ المفضّلون" },
+        "because_you_liked": { "heading": "لأنكِ أحببتِ {{name}}", "eyebrow": "قطع مشابهة أكثر" },
+        "new_for_you": { "heading": "وصل حديثًا لكِ", "eyebrow": "جديد بألوانكِ المفضّلة" },
+        "popular": { "heading": "الأكثر رواجًا الآن", "eyebrow": "محبوبة في ٣bayti" }
+      }
     },
     "stores": {
       "eyebrow": "تعرّفي على المتاجر",

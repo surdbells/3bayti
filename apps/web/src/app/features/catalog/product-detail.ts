@@ -54,6 +54,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { MeasurementService, MEASUREMENT_FIELDS } from '../account/measurement.service';
+import { ConciergeService } from '../ai-concierge/concierge.service';
 
 /** Categories where size selection is optional, a size (incl. CUSTOM) is
  *  never required before add-to-cart, and CUSTOM doesn't force measurements. */
@@ -125,8 +126,12 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   private i18n = inject(TranslateService);
   private auth = inject(AuthService);
   private measurements = inject(MeasurementService);
+  private concierge = inject(ConciergeService);
   /** Signed-in state, gates the custom-size measurement form. */
   protected readonly isAuthenticated = this.auth.isAuthenticated;
+
+  /** Last product id we beaconed a `product_viewed` for (de-dupes effect re-runs). */
+  private lastViewedId: number | null = null;
 
   /** True if the API returned 404 for this slug. */
   readonly notFound = signal(false);
@@ -974,6 +979,19 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       this.reviewSubmitting.set(false);
       this.reviewSubmitted.set(false);
       this.reviewFormError.set(null);
+    });
+
+    /* Product-view signal for the Ain Personal Style Profile: beacon a
+       `product_viewed` event once per loaded product (v3 id). Best-effort and
+       de-duped per id so it never fires twice for the same product or blocks
+       the page. Feeds the "For You" rails' personalisation. */
+    effect(() => {
+      const p = this.product();
+      const id = p?.id;
+      if (typeof id === 'number' && id > 0 && id !== this.lastViewedId) {
+        this.lastViewedId = id;
+        this.concierge.recordEvent('product_viewed', { product_id: id, surface: 'web' });
+      }
     });
 
     /* Prefill the custom-size form from the saved account default the first
