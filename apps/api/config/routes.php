@@ -644,6 +644,11 @@ return function (App $app): void {
     // own new look); returns a preview, the client persists via POST /me/styles.
     $app->post('/v3/ai/styles/restyle', \Bayti\Api\Http\Controllers\Ai\StyleRestyleController::class)
         ->add(AuthMiddleware::class);
+    // Visual search — a query image → visually similar real, in-stock products.
+    // Public; per-IP + per-user throttled; env-gated (VISION_ENABLED) so it
+    // returns empty until image search is turned on.
+    $app->post('/v3/ai/visual-search', \Bayti\Api\Http\Controllers\Ai\VisualSearchController::class)
+        ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
     $app->post('/v3/ai/events', \Bayti\Api\Http\Controllers\Ai\RecordAiEventController::class)
         ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
     $app->get('/v3/ai/status', \Bayti\Api\Http\Controllers\Ai\AiStatusController::class);

@@ -618,6 +618,46 @@ return [
         return new \Bayti\Api\Ai\OpenAi\OpenAiProvider($client);
     },
 
+    // Visual search embedder (env-gated, independent of the text concierge so
+    // image search can be enabled separately for cost control). Defaults to the
+    // NullVisionEmbedder so the container ALWAYS boots and the feature is dormant
+    // until VISION_ENABLED=true (and AI is configured). The v1 real embedder
+    // describes the query image with a multimodal model and text-embeds it into
+    // the same space as the product enrichment — reusing the existing OpenAI key.
+    \Bayti\Api\Ai\Vision\VisionEmbedderInterface::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Ai\Vision\VisionEmbedderInterface {
+        $logger = $c->get(\Psr\Log\LoggerInterface::class);
+
+        $visionEnabled = filter_var($_ENV['VISION_ENABLED'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
+        $aiEnabled = filter_var($_ENV['AI_ENABLED'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
+        if (!$visionEnabled || !$aiEnabled) {
+            return new \Bayti\Api\Ai\Vision\NullVisionEmbedder();
+        }
+
+        $apiKey = $_ENV['OPENAI_API_KEY'] ?? '';
+        if ($apiKey === '') {
+            throw new \RuntimeException('VISION_ENABLED=true but OPENAI_API_KEY is empty.');
+        }
+
+        $visionModel = $_ENV['AI_VISION_MODEL'] ?? 'gpt-4o-mini';
+        $timeout = (float) ($_ENV['AI_REQUEST_TIMEOUT'] ?? 20);
+        $http = new GuzzleClient([
+            'timeout' => $timeout > 0 ? $timeout : 20,
+            'connect_timeout' => 6,
+        ]);
+        $client = new \Bayti\Api\Ai\OpenAi\OpenAiClient(
+            http: $http,
+            baseUrl: rtrim($_ENV['OPENAI_BASE_URL'] ?? 'https://api.openai.com', '/'),
+            apiKey: $apiKey,
+            chatModel: $visionModel,
+            embedModel: $_ENV['AI_EMBED_MODEL'] ?? 'text-embedding-3-small',
+            logger: $logger,
+        );
+
+        return new \Bayti\Api\Ai\Vision\OpenAiVisionEmbedder($client, $visionModel, $logger);
+    },
+
     // Booking orchestrator shared by the vendor + admin ship endpoints.
     // Factory-bound (like the notification services) so the logger + collaborators
     // come from the container rather than autowiring the nullable-logger default.

@@ -52,6 +52,10 @@ final class RecordAiEventController
         'ai_outfit_item_added',
         'ai_outfit_added',
         'ai_outfit_saved',
+        // Visual Search: the photo-search funnel + result click.
+        'ai_visual_search_started',
+        'ai_visual_search_results',
+        'ai_visual_search_product_clicked',
     ];
 
     public function __construct(

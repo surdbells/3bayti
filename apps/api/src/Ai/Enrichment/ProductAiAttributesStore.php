@@ -195,6 +195,44 @@ final class ProductAiAttributesStore
     }
 
     /**
+     * A bounded pool of {product_id => embedding} for SELLABLE, enriched products
+     * (same active/approved/in-stock gate as pgvectorRank). Powers the PHP-cosine
+     * fallback for whole-catalogue searches (e.g. visual search) when pgvector is
+     * not enabled — bounded so it never scans the full catalogue in PHP.
+     *
+     * @return array<int, list<float>>
+     */
+    public function fetchSellableEmbeddings(int $limit): array
+    {
+        try {
+            $rows = $this->connection->fetchAllAssociative(
+                "SELECT a.product_id, a.embedding
+                 FROM product_ai_attributes a
+                 JOIN products p ON p.id = a.product_id
+                 JOIN vendors v ON v.id = p.vendor_id
+                 WHERE a.embedding IS NOT NULL
+                   AND p.is_active = TRUE AND v.is_active = TRUE AND v.status = 'approved'
+                   AND (p.allow_oversell = TRUE OR p.stock_status <> 'out_of_stock')
+                 ORDER BY a.updated_at DESC
+                 LIMIT :lim",
+                ['lim' => max(1, $limit)],
+                ['lim' => ParameterType::INTEGER],
+            );
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($rows as $r) {
+            $vec = json_decode((string) $r['embedding'], true);
+            if (is_array($vec) && $vec !== []) {
+                $out[(int) $r['product_id']] = array_map(static fn ($v): float => (float) $v, array_values($vec));
+            }
+        }
+        return $out;
+    }
+
+    /**
      * Whether the pgvector extension + a `vector` column are available, so the
      * retrieval service can switch from PHP-cosine to database kNN. Cached per
      * request. See docs/ai-pgvector.md for enabling it.
