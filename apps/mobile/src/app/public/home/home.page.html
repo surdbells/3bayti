@@ -51,6 +51,16 @@
     <span class="ask-ain-hero__cta" aria-hidden="true"><ax-icon name="arrow-right"></ax-icon></span>
   </button>
 
+  <!-- Style me: guided outfit generator -->
+  <button type="button" class="ask-ain-hero ask-ain-hero--outfit" [routerLink]="['/outfit']">
+    <span class="ask-ain-hero__orb"><ax-icon name="shirt"></ax-icon></span>
+    <span class="ask-ain-hero__body">
+      <span class="ask-ain-hero__title">{{ 'outfit_title' | translate }}</span>
+      <span class="ask-ain-hero__sub">{{ 'outfit_pill_hint' | translate }}</span>
+    </span>
+    <span class="ask-ain-hero__cta" aria-hidden="true"><ax-icon name="arrow-right"></ax-icon></span>
+  </button>
+
   <!-- Best Sellers Section -->
   @if (!ui_controls.is_loading && best_sellers.length > 0) {
     <section class="section ion-padding-horizontal">

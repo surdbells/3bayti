@@ -91,6 +91,11 @@ export const routes: Routes = [
     title: 'Gift Finder'
   },
   {
+    path: 'outfit',
+    loadComponent: () => import('./customer/outfit/outfit.page').then(m => m.OutfitPage),
+    title: 'Style me'
+  },
+  {
     path: 'gift-reminders',
     loadComponent: () => import('./customer/gift-reminders/gift-reminders.page').then(m => m.GiftRemindersPage),
     title: 'Gift Reminders'

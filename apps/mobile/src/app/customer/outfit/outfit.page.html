@@ -1,0 +1,153 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'outfit_title' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="page-bg ion-padding-horizontal">
+  <header class="ou-intro">
+    <span class="ou-spark" aria-hidden="true"><ax-icon name="sparkles" /></span>
+    <p class="ou-sub">{{ 'outfit_subtitle' | translate }}</p>
+  </header>
+
+  <section class="ou-form">
+    <div class="ou-group">
+      <p class="ou-label">{{ 'outfit_occasion_label' | translate }}</p>
+      <div class="ou-chips">
+        @for (o of occasions; track o) {
+          <button type="button" class="ou-chip" [class.is-on]="occasion === o" (click)="pickOccasion(o)">
+            {{ ('outfit_occasion_' + o) | translate }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="ou-group">
+      <p class="ou-label">{{ 'outfit_hero_label' | translate }}</p>
+      <div class="ou-chips">
+        @for (h of heroTypes; track h) {
+          <button type="button" class="ou-chip" [class.is-on]="heroType === h" (click)="pickHero(h)">
+            {{ ('outfit_hero_' + h) | translate }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="ou-group">
+      <p class="ou-label">{{ 'outfit_style_label' | translate }}</p>
+      <div class="ou-chips">
+        @for (s of styleOptions; track s) {
+          <button type="button" class="ou-chip" [class.is-on]="isStyleOn(s)" (click)="toggleStyle(s)">
+            {{ ('outfit_style_' + s) | translate }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="ou-group">
+      <p class="ou-label">{{ 'outfit_colour_label' | translate }}</p>
+      <div class="ou-chips">
+        @for (c of colourOptions; track c) {
+          <button type="button" class="ou-chip ou-chip--colour" [class.is-on]="isColourOn(c)" (click)="toggleColour(c)">
+            <span class="ou-swatch" [style.background]="colourHex(c)" aria-hidden="true"></span>
+            {{ ('outfit_colour_' + c) | translate }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="ou-group">
+      <p class="ou-label">{{ 'outfit_budget_label' | translate }}</p>
+      <div class="ou-chips">
+        @for (b of budgetBands; track b.key) {
+          <button type="button" class="ou-chip" [class.is-on]="budget?.key === b.key" (click)="pickBudget(b)">
+            {{ ('outfit_budget_' + b.key) | translate }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <button type="button" class="ou-cta" [disabled]="!canSubmit || isSending" (click)="generate()">
+      @if (isSending) {
+        <ion-spinner name="crescent"></ion-spinner>
+        <span>{{ 'outfit_generating' | translate }}</span>
+      } @else {
+        <ax-icon name="sparkles" />
+        <span>{{ 'outfit_generate' | translate }}</span>
+      }
+    </button>
+  </section>
+
+  @if (!isSending && pieces.length > 0) {
+    <section class="ou-result">
+      <div class="ou-banner">
+        <p class="ou-rationale">{{ rationale || ('outfit_rationale_fallback' | translate) }}</p>
+        @if (totalPrice) {
+          <p class="ou-total">{{ 'outfit_total_label' | translate }} <strong>{{ totalPrice.currency }} {{ totalPrice.amount }}</strong></p>
+        }
+        <div class="ou-actions">
+          <button type="button" class="ou-btn ou-btn--solid" [disabled]="isAdding" (click)="addLook()">
+            @if (isAdding) { {{ 'outfit_adding_look' | translate }} } @else { {{ 'outfit_add_look' | translate }} }
+          </button>
+          @if (saved) {
+            <span class="ou-saved"><ax-icon name="check" /> {{ 'outfit_saved_look' | translate }}</span>
+          } @else {
+            <button type="button" class="ou-btn ou-btn--ghost" [disabled]="isSaving" (click)="saveLook()">
+              @if (isSaving) { {{ 'outfit_saving_look' | translate }} }
+              @else if (!isSignedIn) { {{ 'outfit_sign_in_to_save' | translate }} }
+              @else { {{ 'outfit_save_look' | translate }} }
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="ou-board">
+        @for (piece of pieces; track piece.product.id) {
+          <article class="ou-piece" [class.is-hero]="piece.role === 'hero'" (click)="open_product(piece)">
+            <span class="ou-piece__role">{{ (piece.role === 'hero' ? 'outfit_role_hero' : 'outfit_role_complement') | translate }}</span>
+            <div class="ou-piece__img">
+              <div class="ou-img-skeleton" [class.hidden]="imageLoaded[piece.product.id]"><div class="skeleton-shimmer"></div></div>
+              <img
+                [class.loaded]="imageLoaded[piece.product.id]"
+                (load)="onImageLoad(piece.product.id)"
+                (error)="onImageError(piece.product.id)"
+                [src]="cfImage(piece.product.primary_image?.url || '', 'card')"
+                alt="{{ piece.product.name }}" />
+            </div>
+            <p class="ou-piece__name">{{ piece.product.name }}</p>
+            @if (piece.product.vendor?.name) { <p class="ou-piece__vendor">{{ piece.product.vendor?.name }}</p> }
+            <div class="ou-piece__price">
+              @if (piece.product.sale_price) {
+                <span class="ou-price ou-price--sale">Ð{{ piece.product.sale_price.amount }}</span>
+                <span class="ou-price-was">Ð{{ piece.product.price?.amount }}</span>
+              } @else {
+                <span class="ou-price">Ð{{ piece.product.price?.amount }}</span>
+              }
+            </div>
+            @if (piece.reason) { <p class="ou-piece__reason">{{ piece.reason }}</p> }
+          </article>
+        }
+      </div>
+    </section>
+  }
+
+  @if (giftCard) {
+    <aside class="ou-giftcard" (click)="openGiftCards()">
+      <span class="ou-giftcard__icon" aria-hidden="true"><ax-icon name="gift" /></span>
+      <span class="ou-giftcard__body">
+        <span class="ou-giftcard__title">{{ 'outfit_giftcard_title' | translate }}</span>
+        <span class="ou-giftcard__sub">{{ 'outfit_giftcard_sub' | translate }}</span>
+      </span>
+      <span class="ou-giftcard__cta">{{ 'outfit_giftcard_cta' | translate }}</span>
+    </aside>
+  }
+
+  @if (isEmpty) {
+    <p class="ou-empty">{{ 'outfit_empty' | translate }}</p>
+  }
+</ion-content>
