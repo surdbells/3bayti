@@ -191,6 +191,24 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   isAddingLook = false;
   private ctlSessionId = '';
 
+  /* ----- Virtual try-on (Ain) ------------------------------------------
+   * A "Try it on" CTA on try_on_active products opens a bottom sheet where
+   * the shopper uploads a photo + consents, and gets an AI image of them
+   * wearing the piece. Enqueues POST /ai/try-on then polls
+   * GET /ai/try-on/:reference. Auth-only; env-gated on the API. */
+  private static readonly TRYON_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  private static readonly TRYON_MAX_BYTES = 8_000_000;
+  private static readonly TRYON_POLL_MS = 2500;
+  private static readonly TRYON_MAX_POLLS = 48;
+  isTryOnOpen = false;
+  tryOnLoading = false;
+  tryOnImageUrl = '';
+  tryOnError = '';
+  tryOnConsent = false;
+  tryOnPhotoName = '';
+  private tryOnPhoto: { dataUrl: string; mime: string } | null = null;
+  private tryOnPollHandle: any = null;
+
   ngOnInit() {
     this.rqst_param.product = Number(this.route.snapshot.queryParamMap.get('id'));
     this.rqst_param.product_name = this.route.snapshot.queryParamMap.get('name') || '';
@@ -208,6 +226,10 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy() {
     this.sub?.unsubscribe();
+    if (this.tryOnPollHandle) {
+      clearTimeout(this.tryOnPollHandle);
+      this.tryOnPollHandle = null;
+    }
   }
 
   private initSwiper() {
@@ -1211,6 +1233,157 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     } catch {
       // analytics must never break the page
     }
+  }
+
+  /** Open the try-on sheet (auth-only). */
+  openTryOn(): void {
+    if (!this.single?.try_on_active) {
+      return;
+    }
+    if (this.isGuest || !this.single_user.token) {
+      this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
+      return;
+    }
+    this.tryOnError = '';
+    this.tryOnImageUrl = '';
+    this.tryOnPhoto = null;
+    this.tryOnPhotoName = '';
+    this.tryOnLoading = false;
+    this.isTryOnOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeTryOn(): void {
+    this.isTryOnOpen = false;
+    this.tryOnLoading = false;
+    if (this.tryOnPollHandle) {
+      clearTimeout(this.tryOnPollHandle);
+      this.tryOnPollHandle = null;
+    }
+    this.cdr.markForCheck();
+  }
+
+  onTryOnFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+    this.tryOnError = '';
+    this.tryOnImageUrl = '';
+    if (!ProductPage.TRYON_ALLOWED_TYPES.includes(file.type)) {
+      this.tryOnError = this.i18n.t('tryon_error_type');
+      this.cdr.markForCheck();
+      return;
+    }
+    if (file.size > ProductPage.TRYON_MAX_BYTES) {
+      this.tryOnError = this.i18n.t('tryon_error_size');
+      this.cdr.markForCheck();
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+      if (!dataUrl) {
+        this.tryOnError = this.i18n.t('tryon_error_read');
+        this.cdr.markForCheck();
+        return;
+      }
+      this.tryOnPhoto = { dataUrl, mime: file.type };
+      this.tryOnPhotoName = file.name;
+      this.cdr.markForCheck();
+    };
+    reader.onerror = () => {
+      this.tryOnError = this.i18n.t('tryon_error_read');
+      this.cdr.markForCheck();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  get canGenerateTryOn(): boolean {
+    return !!this.tryOnPhoto && this.tryOnConsent && !this.tryOnLoading;
+  }
+
+  async startTryOn(): Promise<void> {
+    if (!this.canGenerateTryOn || !this.single?.product || !this.tryOnPhoto) {
+      return;
+    }
+    if (this.isGuest || !this.single_user.token) {
+      this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
+      return;
+    }
+    const photo = this.tryOnPhoto;
+    this.tryOnLoading = true;
+    this.tryOnError = '';
+    this.tryOnImageUrl = '';
+    this.cdr.markForCheck();
+
+    const body = {
+      image: photo.dataUrl,
+      mime_type: photo.mime,
+      product_id: this.single.product,
+      consent: true,
+    };
+    try {
+      const res: any = await firstValueFrom(
+        this.networkAdapter.post_v3('POST /ai/try-on', body, { authToken: this.single_user.token }),
+      );
+      const ref = res?.data?.job_reference;
+      if (!ref) {
+        this.failTryOn();
+        return;
+      }
+      this.pollTryOn(String(ref), 0);
+    } catch {
+      this.failTryOn();
+    }
+  }
+
+  private pollTryOn(reference: string, attempt: number): void {
+    if (!this.isTryOnOpen) {
+      return;
+    }
+    if (attempt >= ProductPage.TRYON_MAX_POLLS) {
+      this.failTryOn();
+      return;
+    }
+    this.networkAdapter
+      .get_v3('GET /ai/try-on/:reference', { pathParams: { reference }, authToken: this.single_user.token })
+      .subscribe({
+        next: (res: any) => {
+          const d = res?.data;
+          if (!d) {
+            this.failTryOn();
+            return;
+          }
+          if (d.status === 'succeeded' && d.result_image_url) {
+            this.tryOnImageUrl = d.result_image_url;
+            this.tryOnLoading = false;
+            this.cdr.markForCheck();
+            return;
+          }
+          if (d.status === 'failed') {
+            this.failTryOn();
+            return;
+          }
+          this.tryOnPollHandle = setTimeout(
+            () => this.pollTryOn(reference, attempt + 1),
+            ProductPage.TRYON_POLL_MS,
+          );
+        },
+        error: () => {
+          this.tryOnPollHandle = setTimeout(
+            () => this.pollTryOn(reference, attempt + 1),
+            ProductPage.TRYON_POLL_MS,
+          );
+        },
+      });
+  }
+
+  private failTryOn(): void {
+    this.tryOnLoading = false;
+    this.tryOnError = this.i18n.t('tryon_error_generate');
+    this.cdr.markForCheck();
   }
 
   /** Contextual "send a gift card instead" nudge → the gift-card journey. */

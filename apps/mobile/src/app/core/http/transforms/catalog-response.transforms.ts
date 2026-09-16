@@ -432,6 +432,9 @@ export function transformProductDetailResponse(data: unknown): unknown {
     extra_msmt: asString(data['measurement_instructions']),
     require_extra_msmt: data['requires_measurement'] === true,
 
+    // AI virtual try-on availability (drives the "Try it on" CTA).
+    try_on_active: data['try_on_enabled'] === true,
+
     // Size flags, 22 booleans synthesized from v3's sizes array:
     ...sizeFlags,
 

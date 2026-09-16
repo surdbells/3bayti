@@ -1596,3 +1596,126 @@ swiper-slide,
   font-weight: 600;
   white-space: nowrap;
 }
+
+/* ===== Virtual try-on (Ain) ============================================= */
+
+.tryon-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.8rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--ax-color-bg-brand, #906952);
+  background: var(--brand-cream, #f9f4ea);
+  color: var(--brand-dark, #5a3a2c);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tryon-cta svg { color: var(--ax-color-bg-brand, #906952); flex: none; }
+
+.tryon-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0.25rem 0.25rem 1rem;
+}
+
+.tryon-intro {
+  margin: 0;
+  color: var(--text-primary, #2e241c);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.tryon-upload {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border: 1px dashed var(--ax-color-bg-brand, #906952);
+  border-radius: 0.75rem;
+  background: var(--brand-cream, #f9f4ea);
+  color: var(--brand-dark, #5a3a2c);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.tryon-upload input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.tryon-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  color: var(--text-primary, #2e241c);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.tryon-consent input { margin-top: 0.15rem; flex: none; }
+
+.tryon-error {
+  margin: 0;
+  color: #b3261e;
+  font-size: 0.78rem;
+}
+
+.tryon-generate {
+  padding: 0.85rem 1rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--ax-color-bg-brand, #906952);
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tryon-generate:disabled { opacity: 0.5; }
+
+.tryon-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 2rem 0;
+  color: var(--text-primary, #2e241c);
+  font-size: 0.85rem;
+}
+
+.tryon-result {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(90, 58, 44, 0.14);
+}
+
+.tryon-disclaimer {
+  margin: 0;
+  text-align: center;
+  color: var(--text-primary, #2e241c);
+  font-size: 0.72rem;
+  opacity: 0.7;
+}
+
+.tryon-again {
+  align-self: center;
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--ax-color-bg-brand, #906952);
+  background: transparent;
+  color: var(--brand-dark, #5a3a2c);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
