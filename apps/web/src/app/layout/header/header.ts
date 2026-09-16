@@ -97,19 +97,17 @@ export class HeaderComponent {
   protected readonly saleCount = inject(SaleCountService);
 
   /**
-   * Primary browse spine (the "Atelier" editorial nav): Categories (opens the
-   * mega panel), Styles, Stores, New In, Best Sellers, Gift Cards. Text-only,
-   * `key` survives as the stable `data-testid` slug. The Ain concierge entries
-   * live in a distinct AI cluster (see {@link aiItems}) and the "Discounted"
-   * entry after a divider, so each reads as its own thing.
+   * Primary browse spine (the "Atelier" editorial nav), deliberately spare:
+   * just Categories (which opens the mega panel). Styles, Stores, New In, Best
+   * Sellers and Gift Cards were lifted out of the top bar — they now live as
+   * homepage action cards + hero tiles, in the mega panel's "Discover" column
+   * (desktop, see {@link discoverItems}) and the drawer's "Explore" group
+   * (mobile), so the bar reads clean while every destination stays one click
+   * away. The Ain concierge entries render in a distinct AI cluster (see
+   * {@link aiItems}) and "Discounted" after a divider.
    */
   protected readonly browseItems: readonly NavItem[] = [
     { path: '/category', labelKey: 'nav.categories', key: 'categories' },
-    { path: '/styles', labelKey: 'nav.styles', key: 'styles' },
-    { path: '/stores', labelKey: 'nav.stores', key: 'stores' },
-    { path: '/new-arrivals', labelKey: 'nav.newArrivals', key: 'newArrivals' },
-    { path: '/best-sellers', labelKey: 'nav.bestSellers', key: 'bestSellers' },
-    { path: '/gift-cards', labelKey: 'nav.giftCards', key: 'gift' },
   ];
 
   /** The distinct Ain AI cluster — Ask Ain (the headline), Gift Finder, Style me. */
@@ -125,12 +123,18 @@ export class HeaderComponent {
     { path: '/visual-search', labelKey: 'nav.visualSearch', key: 'visualSearch', icon: 'camera', hintKey: 'header.ai.visualSearchHint' },
   ];
 
-  /** Quick "Discover" links shown in the mega panel's middle column. */
+  /**
+   * "Discover" links shown in the mega panel's middle column (desktop) and the
+   * drawer's "Explore" group (mobile). This is the home for the browse links
+   * lifted out of the top bar, so Styles / Stores / New In / Best Sellers /
+   * Gift Cards all stay reachable from the menu.
+   */
   protected readonly discoverItems: readonly NavItem[] = [
+    { path: '/styles', labelKey: 'nav.styles', key: 'styles' },
+    { path: '/stores', labelKey: 'nav.stores', key: 'stores' },
     { path: '/new-arrivals', labelKey: 'nav.newArrivals', key: 'newArrivals' },
     { path: '/best-sellers', labelKey: 'nav.bestSellers', key: 'bestSellers' },
-    { path: '/stores', labelKey: 'nav.stores', key: 'stores' },
-    { path: '/discounted', labelKey: 'nav.discounted', key: 'discounted' },
+    { path: '/gift-cards', labelKey: 'nav.giftCards', key: 'gift' },
   ];
 
   /** Categories mega panel open state (desktop). */

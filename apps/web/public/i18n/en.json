@@ -1367,6 +1367,15 @@
       "trustSecure": "Secure checkout",
       "trustReturns": "Easy returns"
     },
+    "actions": {
+      "aria": "Quick links",
+      "storesTitle": "Stores",
+      "storesSub": "Browse UAE ateliers",
+      "giftTitle": "Gift Cards",
+      "giftSub": "The always-right gift",
+      "stylesTitle": "Styles",
+      "stylesSub": "Shop curated looks"
+    },
     "categories": {
       "eyebrow": "Browse",
       "title": "Shop by category",

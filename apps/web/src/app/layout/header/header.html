@@ -56,8 +56,8 @@
           </a>
         }
 
-        <!-- The distinct Ain AI cluster sits right after Styles. -->
-        @if (item.key === 'styles') {
+        <!-- The distinct Ain AI cluster sits right after Categories. -->
+        @if (item.key === 'categories') {
           <span class="nav-ai" role="group" [attr.aria-label]="'header.ai.group' | translate">
             @for (ai of aiItems; track ai.path) {
               <a
@@ -320,6 +320,21 @@
             <span>{{ item.labelKey | translate }}</span>
           </a>
         }
+      }
+
+      <!-- Explore: the browse links lifted out of the top bar, kept reachable
+           on mobile (mirrors the desktop mega "Discover" column). -->
+      <p class="nav-drawer__group-title">{{ 'header.mega.discover' | translate }}</p>
+      @for (d of discoverItems; track d.key) {
+        <a
+          [routerLink]="d.path"
+          routerLinkActive="is-active"
+          (click)="closeDrawer()"
+          class="nav-drawer__link"
+          [attr.data-testid]="'drawer-nav-' + d.key"
+        >
+          <span>{{ d.labelKey | translate }}</span>
+        </a>
       }
 
       <span class="nav-drawer__divider" aria-hidden="true"></span>

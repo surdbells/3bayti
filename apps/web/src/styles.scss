@@ -49,8 +49,12 @@
      Internal layouts can still use their own narrower max-width
      (e.g. hero text column at 720px) but their outer wrapper aligns
      to these tokens. */
-  --page-max-width: 1280px;
-  --page-padding-x: 24px;
+  /* Content spans full width with an ~5% gutter on each side (no fixed cap),
+     so the storefront fills large screens instead of stopping at a centred
+     column. A mobile floor keeps the gutter usable on small phones. Bands
+     that still want a centred column set their own inner max-width. */
+  --page-max-width: none;
+  --page-padding-x: max(20px, 5vw);
 
   /* Approximate resting height of the site header (padding-block 16px ×2 +
      ~40px logo/action row). Used by the FLOATING-header overlap rule
@@ -141,10 +145,9 @@
 
 @media (min-width: 1280px) {
   :root {
-    /* On desktop the gutter widens for visual breathing room. The
-       768-1024 tablet range stays at 24px for design simplicity -
-       jumping to 32px there created an awkward middle state. */
-    --page-padding-x: 48px;
+    /* On desktop the ~5% gutter keeps growing with the viewport so the
+       content stays full-width with symmetric side margins. */
+    --page-padding-x: 5vw;
   }
 }
 

@@ -204,26 +204,22 @@ describe('HeaderComponent (auth-aware)', () => {
   });
 
   describe('primary navigation + mobile drawer', () => {
-    const NAV = [
-      { id: 'nav-categories', re: /category/ },
-      { id: 'nav-styles', re: /styles/ },
-      { id: 'nav-stores', re: /stores/ },
-      { id: 'nav-bestSellers', re: /best-sellers/ },
-      { id: 'nav-newArrivals', re: /new-arrivals/ },
-      { id: 'nav-gift', re: /gift-cards/ },
-    ];
-
-    it('renders all primary nav items in the desktop nav with correct routerLinks', () => {
+    it('renders only Categories in the desktop primary nav; the rest moved to Discover/Explore', () => {
       const { fixture } = setup({ user: null });
       const nav = fixture.nativeElement.querySelector('.primary-nav') as HTMLElement;
       expect(nav).not.toBeNull();
-      for (const { id, re } of NAV) {
-        const a = nav.querySelector(`[data-testid="${id}"]`) as HTMLAnchorElement | null;
-        expect(a, id).not.toBeNull();
-        const href = a!.getAttribute('href') ?? a!.getAttribute('ng-reflect-router-link') ?? '';
-        expect(href, id).toMatch(re);
-        // Tidied nav is text-only, no icon glyph should be rendered.
-        expect(a!.querySelector('app-nav-icon'), `${id} icon removed`).toBeNull();
+
+      // Categories stays as the mega trigger, text-only (no icon glyph).
+      const cats = nav.querySelector('[data-testid="nav-categories"]') as HTMLAnchorElement | null;
+      expect(cats).not.toBeNull();
+      const href = cats!.getAttribute('href') ?? cats!.getAttribute('ng-reflect-router-link') ?? '';
+      expect(href).toMatch(/category/);
+      expect(cats!.querySelector('app-nav-icon')).toBeNull();
+
+      // Styles / Stores / New In / Best Sellers / Gift Cards were lifted out of
+      // the top bar (now homepage action cards + mega Discover + drawer Explore).
+      for (const id of ['nav-styles', 'nav-stores', 'nav-bestSellers', 'nav-newArrivals', 'nav-gift']) {
+        expect(nav.querySelector(`[data-testid="${id}"]`), id).toBeNull();
       }
     });
 
@@ -246,14 +242,16 @@ describe('HeaderComponent (auth-aware)', () => {
       expect(nav.querySelector('.nav-divider')).not.toBeNull();
     });
 
-    it('renders the Gift Cards nav item (Phase E) in the desktop nav and the drawer', () => {
+    it('lifts Gift Cards out of the top bar but keeps it reachable in the drawer Explore group', () => {
       const { fixture } = setup({ user: null });
       const root: HTMLElement = fixture.nativeElement;
-      const desktop = root.querySelector('[data-testid="nav-gift"]') as HTMLAnchorElement | null;
-      expect(desktop).not.toBeNull();
-      const href = desktop!.getAttribute('href') ?? desktop!.getAttribute('ng-reflect-router-link') ?? '';
+      // No longer a desktop primary-nav item…
+      expect(root.querySelector('.primary-nav [data-testid="nav-gift"]')).toBeNull();
+      // …but still present in the drawer, linking to /gift-cards.
+      const drawer = root.querySelector('[data-testid="drawer-nav-gift"]') as HTMLAnchorElement | null;
+      expect(drawer).not.toBeNull();
+      const href = drawer!.getAttribute('href') ?? drawer!.getAttribute('ng-reflect-router-link') ?? '';
       expect(href).toMatch(/gift-cards/);
-      expect(root.querySelector('[data-testid="drawer-nav-gift"]')).not.toBeNull();
     });
 
     it('drawer is closed initially (toggle collapsed; drawer inert + aria-hidden; no backdrop)', () => {

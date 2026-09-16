@@ -1367,6 +1367,15 @@
       "trustSecure": "دفع آمن",
       "trustReturns": "إرجاع سهل"
     },
+    "actions": {
+      "aria": "روابط سريعة",
+      "storesTitle": "المتاجر",
+      "storesSub": "تصفّحي دور الأزياء الإماراتية",
+      "giftTitle": "بطاقات الهدايا",
+      "giftSub": "الهدية المثالية دائمًا",
+      "stylesTitle": "التنسيقات",
+      "stylesSub": "تسوّقي الإطلالات المنسّقة"
+    },
     "categories": {
       "eyebrow": "تصفّحي",
       "title": "تسوّقي حسب الفئة",
