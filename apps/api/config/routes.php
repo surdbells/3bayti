@@ -636,6 +636,10 @@ return function (App $app): void {
         ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
     $app->post('/v3/ai/concierge/gift', \Bayti\Api\Http\Controllers\Ai\GiftConciergeController::class)
         ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
+    // Generate a coordinated outfit with Ain (hero garment + complements). Public;
+    // the client persists a chosen look via the auth'd POST /me/styles.
+    $app->post('/v3/ai/outfit', \Bayti\Api\Http\Controllers\Ai\OutfitController::class)
+        ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
     // Restyle an existing look with Ain — AUTH REQUIRED (produces the customer's
     // own new look); returns a preview, the client persists via POST /me/styles.
     $app->post('/v3/ai/styles/restyle', \Bayti\Api\Http\Controllers\Ai\StyleRestyleController::class)

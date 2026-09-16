@@ -46,6 +46,12 @@ final class RecordAiEventController
         'product_viewed',
         'for_you_shown',
         'for_you_product_clicked',
+        // Outfit Generator: the guided-look funnel + add-to-cart / save events.
+        'ai_outfit_started',
+        'ai_outfit_generated',
+        'ai_outfit_item_added',
+        'ai_outfit_added',
+        'ai_outfit_saved',
     ];
 
     public function __construct(
