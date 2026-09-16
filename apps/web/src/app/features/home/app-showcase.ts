@@ -242,14 +242,14 @@ export class AppShowcaseComponent {
    * public/app-screenshots/ and are served from the site root at /app-screenshots/*.
    */
   readonly shots: readonly Shot[] = [
-    { img: '/app-screenshots/home.png',        altKey: 'home.getApp.shots.home' },
-    { img: '/app-screenshots/collections.png', altKey: 'home.getApp.shots.collections' },
-    { img: '/app-screenshots/product.png',     altKey: 'home.getApp.shots.product' },
-    { img: '/app-screenshots/style-hub.png',   altKey: 'home.getApp.shots.styleHub' },
-    { img: '/app-screenshots/filters.png',     altKey: 'home.getApp.shots.filters' },
-    { img: '/app-screenshots/gift-cards.png',  altKey: 'home.getApp.shots.giftCards' },
-    { img: '/app-screenshots/checkout.png',    altKey: 'home.getApp.shots.checkout' },
-    { img: '/app-screenshots/signin.png',      altKey: 'home.getApp.shots.signin' },
+    { img: '/app-screenshots/home.jpg',        altKey: 'home.getApp.shots.home' },
+    { img: '/app-screenshots/collections.jpg', altKey: 'home.getApp.shots.collections' },
+    { img: '/app-screenshots/product.jpg',     altKey: 'home.getApp.shots.product' },
+    { img: '/app-screenshots/style-hub.jpg',   altKey: 'home.getApp.shots.styleHub' },
+    { img: '/app-screenshots/filters.jpg',     altKey: 'home.getApp.shots.filters' },
+    { img: '/app-screenshots/gift-cards.jpg',  altKey: 'home.getApp.shots.giftCards' },
+    { img: '/app-screenshots/checkout.jpg',    altKey: 'home.getApp.shots.checkout' },
+    { img: '/app-screenshots/signin.jpg',      altKey: 'home.getApp.shots.signin' },
   ];
 
   private reduceMotion = false;

@@ -152,6 +152,13 @@
               @for (cat of categories(); track cat.id) {
                 <li>
                   <a class="mega-cat" [routerLink]="categoryPath(cat.slug)" (click)="closeMega()">
+                    <span class="mega-cat__icon" aria-hidden="true">
+                      @if (categoryIcon(cat.slug); as iconUrl) {
+                        <img [src]="iconUrl" alt="" loading="lazy" decoding="async" />
+                      } @else {
+                        <span class="mega-cat__initial">{{ categoryInitial(cat.name) }}</span>
+                      }
+                    </span>
                     <span class="mega-cat__name">{{ cat.name }}</span>
                     <span class="mega-cat__count">{{ cat.product_count }}</span>
                   </a>

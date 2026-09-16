@@ -675,10 +675,9 @@
 }
 .mega-cat {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 9px 12px;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 12px;
   margin-inline: -12px;
   border-radius: 12px;
   color: var(--color-text-primary, #2e241c);
@@ -687,6 +686,32 @@
   transition: background-color 0.16s ease, color 0.16s ease;
 }
 .mega-cat:hover { background: var(--color-bg-muted, #f4ece0); color: var(--color-brand-700, #5a3a2c); }
+/* Round, tinted icon chip leading each category (bundled slug icon, else an
+   initial). Gives the list a tactile, browseable feel. */
+.mega-cat__icon {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(150deg, #fbf3e4, #f1e6d2);
+  border: 1px solid var(--color-border-subtle, #eee3d2);
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+.mega-cat__icon img { width: 1.25rem; height: 1.25rem; object-fit: contain; }
+.mega-cat__initial {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-brand-500, #b18f1f);
+}
+.mega-cat:hover .mega-cat__icon {
+  border-color: var(--color-brand-300, #e0cba6);
+  background: linear-gradient(150deg, #f8ebd6, #efdfc6);
+}
+.mega-cat__name { flex: 1 1 auto; min-width: 0; }
 .mega-cat__count { font-size: 12px; color: var(--color-text-tertiary, #9a938a); flex: 0 0 auto; }
 .mega-viewall {
   display: inline-flex;

@@ -30,6 +30,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { SaleCountService } from '../../core/catalog/sale-count.service';
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import type { Category } from '../../features/categories/category.model';
+import { categoryIconUrl } from '../../features/categories/category-icons';
 
 /** A single primary-navigation entry (shared by desktop nav + drawer). */
 interface NavItem {
@@ -257,6 +258,16 @@ export class HeaderComponent {
   /** Build a category link path from its slug (slug-based nav, no legacy ids). */
   protected categoryPath(slug: string): string {
     return `/category/${slug}`;
+  }
+
+  /** Bundled icon URL for a category (by slug), or null when none is mapped. */
+  protected categoryIcon(slug: string): string | null {
+    return categoryIconUrl(slug);
+  }
+
+  /** Uppercase first letter of a category name, for the icon fallback. */
+  protected categoryInitial(name: string): string {
+    return (name?.trim()?.[0] ?? '·').toUpperCase();
   }
 
   /** Toggle the mobile drawer. */
