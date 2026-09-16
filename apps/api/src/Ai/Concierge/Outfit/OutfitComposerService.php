@@ -73,6 +73,8 @@ final class OutfitComposerService
         $spent = (float) $hero->effectivePrice();
 
         // 2) COMPLEMENTS — cross-category, colour/occasion-aware, within remaining budget.
+        // Drop the hero's product-type from the keywords so the pool isn't biased
+        // back toward the same garment (e.g. "abaya") — we want coordinating pieces.
         $remaining = $budgetMax !== null ? max(0.0, $budgetMax - $spent) : null;
         $complementIntent = new ConciergeIntent(
             productType: null,
@@ -82,7 +84,7 @@ final class OutfitComposerService
             styles: $intent->styles,
             budgetMin: null,
             budgetMax: $remaining !== null && $remaining > 0 ? $remaining : null,
-            keywords: $intent->keywords,
+            keywords: $this->complementKeywords($intent),
             vendorHints: [],
             isGift: false,
             confidence: $intent->confidence,
@@ -155,6 +157,25 @@ final class OutfitComposerService
     private function slugOf(Product $product): string
     {
         return $product->getCategory()?->getSlug() ?? '';
+    }
+
+    /**
+     * The hero intent's keywords minus its own product-type, so the complement
+     * pool coordinates (bags, accessories, scarves) rather than surfacing more of
+     * the same garment.
+     *
+     * @return list<string>
+     */
+    private function complementKeywords(ConciergeIntent $intent): array
+    {
+        if ($intent->productType === null) {
+            return $intent->keywords;
+        }
+        $hero = mb_strtolower($intent->productType);
+        return array_values(array_filter(
+            $intent->keywords,
+            static fn (string $k): bool => mb_strtolower($k) !== $hero,
+        ));
     }
 
     /**
