@@ -89,6 +89,8 @@ export class AccountPage implements OnInit, OnDestroy {
   best_sellers: Products[] = [];
   new_arrivals: Products[] = [];
   vendor_featured: Store[] = [];
+  /** Ain Personal Style Profile — personalised "For You" rails (signed-in). */
+  forYouRails: Array<{ key: string; title: string; products: Products[] }> = [];
   /** Total on-sale products, shown as a badge on the Discounted category chip. */
   discountedCount = 0;
   // GET /v3/vendors (the PAGINATED public store directory) honours
@@ -301,6 +303,8 @@ export class AccountPage implements OnInit, OnDestroy {
       this.get_featured_products();
       this.get_discounted_count();
       this.load_cart();
+      void this.ensureAinSession();
+      this.get_for_you();
     }
   }
 
@@ -358,6 +362,7 @@ export class AccountPage implements OnInit, OnDestroy {
     this.get_featured_products();
     this.get_discounted_count();
     this.load_cart();
+    this.get_for_you();
     void this.cartCount.refresh();
     void this.pendingOrders.refresh();
     this.refreshUnreadMessages();
@@ -602,6 +607,105 @@ export class AccountPage implements OnInit, OnDestroy {
           }else{ this.ui_controls.is_loading = false; }
         }
       }))
+  }
+
+  /**
+   * Ain Personal Style Profile — personalised "For You" rails (Your Style /
+   * From Stores You Love / Because You Liked… / New Arrivals For You, or a
+   * "Popular right now" cold-start rail). Authed (GET /v3/me/ai/for-you); every
+   * product is already server-validated as orderable + in stock. Best-effort:
+   * any failure just leaves the rails hidden.
+   */
+  get_for_you() {
+    if (!this.single_user?.token) {
+      return;
+    }
+    this.networkAdapter.get_v3('GET /me/ai/for-you', { authToken: this.single_user.token, queryParams: { limit: 10 } })
+      .subscribe({
+        next: (response: any) => {
+          const rails = response?.data?.rails;
+          if (response?.response_code === 200 && Array.isArray(rails)) {
+            this.forYouRails = rails
+              .map((r: any) => ({
+                key: String(r?.key ?? ''),
+                title: this.forYouTitle(String(r?.key ?? ''), typeof r?.seed_name === 'string' ? r.seed_name : ''),
+                products: Array.isArray(r?.products) ? r.products.map((p: any) => this.forYouCard(p)) : [],
+              }))
+              .filter((r: { key: string; products: Products[] }) => r.key !== '' && r.products.length > 0);
+            if (this.forYouRails.length > 0) {
+              this.recordAiEvent('for_you_shown', { rails: this.forYouRails.length });
+            }
+          }
+        },
+        error: () => { /* best-effort; leave the rails hidden */ },
+      });
+  }
+
+  /** Open a For-You card and beacon the click. Navigates by v3 id (no legacy). */
+  open_for_you(product_id: number) {
+    this.recordAiEvent('for_you_product_clicked', { product_id });
+    this.open_product(product_id);
+  }
+
+  /** Map a v3 listShape product to the legacy card shape the rails render. */
+  private forYouCard(p: any): Products {
+    return {
+      id: p?.id ?? 0,
+      token: '',
+      product_id: p?.id ?? 0,
+      store_id: p?.vendor?.id ?? 0,
+      store_name: p?.vendor?.name ?? '',
+      product_name: p?.name ?? '',
+      description: '',
+      image_1: p?.primary_image?.url ?? '',
+      images: [],
+      products: [],
+      price: p?.price?.amount != null ? String(p.price.amount) : '',
+      collection: 0,
+      sale_price: p?.sale_price?.amount != null ? String(p.sale_price.amount) : '',
+      vendor_slug: p?.vendor?.slug ?? '',
+    } as Products;
+  }
+
+  private forYouTitle(key: string, seedName: string): string {
+    switch (key) {
+      case 'your_style': return this.i18n.t('for_you_your_style');
+      case 'stores_you_love': return this.i18n.t('for_you_stores_you_love');
+      case 'because_you_liked':
+        return seedName ? this.i18n.t('for_you_because_liked', { name: seedName }) : this.i18n.t('for_you_more_like_this');
+      case 'new_for_you': return this.i18n.t('for_you_new_arrivals');
+      case 'popular': return this.i18n.t('for_you_popular');
+      default: return this.i18n.t('for_you_title');
+    }
+  }
+
+  private ainSessionId = '';
+
+  private async ensureAinSession(): Promise<void> {
+    if (this.ainSessionId) {
+      return;
+    }
+    const got = await Preferences.get({ key: 'ain_session' });
+    if (got.value) {
+      this.ainSessionId = got.value;
+      return;
+    }
+    const id =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : 'm-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e9).toString(36);
+    await Preferences.set({ key: 'ain_session', value: id });
+    this.ainSessionId = id;
+  }
+
+  private recordAiEvent(event: string, extra: Record<string, unknown> = {}): void {
+    try {
+      const body: Record<string, unknown> = { event, session_id: this.ainSessionId, ...extra };
+      const opts = this.single_user?.token ? { authToken: this.single_user.token } : {};
+      this.networkAdapter.post_v3('POST /ai/events', body, opts).subscribe({ next: () => {}, error: () => {} });
+    } catch {
+      // analytics must never break the page
+    }
   }
 
   get_featured_products() {

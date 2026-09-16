@@ -939,6 +939,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
             this.add_cart.price = this.single.price;
             this.add_cart.store = this.single.store;
             this.get_complete_look();
+            this.beaconProductViewed();
             this.get_store_measurement();
             this.apiSizes = {
               'NORMAL': this.single.size_normal,
@@ -1216,6 +1217,22 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   openGiftCardNudge(): void {
     this.recordAiEvent('ai_gift_card_recommended', { context: 'pdp', surface: 'mobile' });
     this.router.navigate(['/', 'gift-cards']);
+  }
+
+  /** De-dupe guard so a re-entry doesn't re-beacon the same product view. */
+  private viewedBeaconId = 0;
+
+  /**
+   * Net-new product-view signal feeding the Ain Personal Style Profile.
+   * Beacons `product_viewed` with the v3 id once per loaded product. Best-effort.
+   */
+  private beaconProductViewed(): void {
+    const id = Number(this.single?.product) || 0;
+    if (id <= 0 || id === this.viewedBeaconId) {
+      return;
+    }
+    this.viewedBeaconId = id;
+    this.recordAiEvent('product_viewed', { product_id: id, surface: 'mobile' });
   }
 
   private async ensureAinSession(): Promise<void> {

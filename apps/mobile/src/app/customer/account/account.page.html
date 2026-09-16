@@ -197,6 +197,58 @@
     </article>
   </section>
 
+  <!-- Ain "For You" personalised rails (signed-in only) -->
+  @if (single_user.token && forYouRails.length > 0) {
+    @for (rail of forYouRails; track rail.key) {
+      <section class="section ion-padding-horizontal">
+        <div class="m6d-section-head">
+          <h2 class="m6d-section-title">{{ rail.title }}</h2>
+        </div>
+        <div class="h-scroll">
+          @for (card of rail.products; track card.product_id) {
+            <article class="m6d-product-card">
+              <div class="m6d-img-wrap">
+                <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['fy-' + rail.key + '-' + card.product_id]">
+                  <div class="skeleton-shimmer"></div>
+                </div>
+                <img
+                  (click)="open_for_you(card.product_id)"
+                  [class.loaded]="imageLoaded['fy-' + rail.key + '-' + card.product_id]"
+                  (load)="onImageLoad('fy-' + rail.key + '-' + card.product_id)"
+                  (error)="onImageError('fy-' + rail.key + '-' + card.product_id)"
+                  [src]="cfImage(card.image_1, 'card')"
+                  alt="{{card.product_name}}" />
+                @if(card.sale_price && +card.sale_price > 0 && +card.sale_price < +card.price){
+                  <span class="m6d-flag-badge m6d-flag-badge--sale">{{ 'badge_sale' | translate }}</span>
+                }
+                <button (click)="startAddToCloset(card.product_id, card.product_name, card.image_1)" class="m6d-like" type="button" [attr.aria-label]="'account_add_to_closet' | translate">
+                  <ax-icon name="heart-plus" />
+                </button>
+                <span class="m6d-vendor-badge">{{card.store_name}}</span>
+              </div>
+              <div (click)="open_for_you(card.product_id)" class="m6d-info">
+                <p class="m6d-name">{{card.product_name}}</p>
+                <div class="m6d-price-row">
+                  @if(card.sale_price && +card.sale_price > 0 && +card.sale_price < +card.price){
+                    <span class="m6d-price-sale-group">
+                      <span class="m6d-price m6d-price--sale">Ð{{card.sale_price}}</span>
+                      <span class="m6d-price-original">Ð{{card.price}}</span>
+                    </span>
+                  } @else {
+                    <span class="m6d-price">Ð{{card.price}}</span>
+                  }
+                  <button (click)="open_for_you(card.product_id); $event.stopPropagation()" class="m6d-add-to-cart" type="button" [attr.aria-label]="'account_add_to_cart' | translate">
+                    <ax-icon name="plus" />
+                  </button>
+                </div>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    }
+  }
+
   <!-- Best Sellers Section -->
   @if (!ui_controls.is_loading){
     <section class="section ion-padding-horizontal">
