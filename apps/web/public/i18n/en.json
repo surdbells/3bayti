@@ -209,6 +209,23 @@
     "empty": "Ain couldn't find a close match — try a clearer photo of a single piece.",
     "error": "That photo couldn't be searched. Please try another."
   },
+  "tryOn": {
+    "cta": "Try it on with Ain",
+    "title": "Virtual try-on",
+    "close": "Close try-on",
+    "intro": "Upload a clear, full-length photo of yourself and Ain will show you wearing this piece.",
+    "choosePhoto": "Choose a photo",
+    "consent": "I agree to my photo being processed by AI to create a virtual try-on. It is deleted right after and never shared.",
+    "generate": "Create my look",
+    "generating": "Creating your look… this can take up to a minute.",
+    "resultAlt": "AI virtual try-on of you wearing this piece",
+    "disclaimer": "AI-generated preview — the real fit and colour may vary.",
+    "again": "Try another photo",
+    "errorType": "Please use a JPEG, PNG or WebP photo.",
+    "errorSize": "That photo is too large (max 8 MB).",
+    "errorRead": "That photo couldn't be read. Please try another.",
+    "errorGenerate": "Your try-on couldn't be created. Please try again."
+  },
   "footer": {
     "brandAria": "3bayti home",
     "tagline": "Premium modest fashion, curated from independent designers across the UAE.",

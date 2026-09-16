@@ -390,6 +390,10 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
 
   ngOnDestroy(): void {
     this.ctaObserver?.disconnect();
+    if (this.tryOnPollHandle !== null) {
+      clearTimeout(this.tryOnPollHandle);
+      this.tryOnPollHandle = null;
+    }
   }
 
   /* ----- Buy box: variant selection + quantity + add-to-cart -------- */
@@ -457,6 +461,40 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   @ViewChild('sizeGuideDialog') private sizeGuideDialogEl?: ElementRef<HTMLElement>;
   @ViewChild('sizeGuideClose') private sizeGuideCloseBtn?: ElementRef<HTMLButtonElement>;
 
+  /* ----- Virtual try-on (Ain) -------------------------------------------
+   * A "Try it on" CTA on eligible products (try_on_enabled) opens a modal
+   * where the shopper uploads a photo, consents to AI photo processing, and
+   * gets an AI image of themselves wearing the garment. Enqueues
+   * POST /ai/try-on then polls GET /ai/try-on/:reference. Env-gated on the
+   * API (TRYON_ENABLED) — a disabled deployment returns a friendly error. */
+  private static readonly TRYON_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  private static readonly TRYON_MAX_BYTES = 8_000_000;
+  private static readonly TRYON_POLL_MS = 2500;
+  private static readonly TRYON_MAX_POLLS = 48; // ~2 minutes
+  private static readonly TRYON_CONSENT_KEY = 'bayti_tryon_consent_v1';
+
+  /** Whether this product offers AI virtual try-on. */
+  readonly tryOnEnabled = computed(() => this.product()?.try_on_enabled === true);
+  /** Modal open/close. */
+  readonly tryOnOpen = signal(false);
+  /** The selected photo as a data URL + mime, or null before one is chosen. */
+  readonly tryOnPhoto = signal<{ dataUrl: string; mime: string; name: string } | null>(null);
+  /** Explicit consent to AI photo processing (required to generate). */
+  readonly tryOnConsent = signal(false);
+  /** True while a generation is in flight (request + polling). */
+  readonly tryOnLoading = signal(false);
+  /** The generated try-on image URL once ready. */
+  readonly tryOnImageUrl = signal<string | null>(null);
+  /** A friendly error message when generation fails. */
+  readonly tryOnError = signal<string | null>(null);
+  /** Pending poll timer, cleared on close. */
+  private tryOnPollHandle: ReturnType<typeof setTimeout> | null = null;
+  /** Restores focus to the trigger when the modal closes. */
+  private tryOnTrigger: HTMLElement | null = null;
+
+  @ViewChild('tryOnDialog') private tryOnDialogEl?: ElementRef<HTMLElement>;
+  @ViewChild('tryOnClose') private tryOnCloseBtn?: ElementRef<HTMLButtonElement>;
+
   /**
    * Dimension columns to render, the fixed order above, filtered to those
    * with at least one numeric value across the loaded rows. Keeps the table
@@ -496,6 +534,192 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   }
 
   /** Open the size-guide modal, lazily fetching the chart on first open. */
+  /** Open the try-on modal; pre-check consent from a prior acknowledgement. */
+  openTryOn(): void {
+    if (!this.tryOnEnabled()) return;
+    this.tryOnTrigger =
+      typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null;
+    this.tryOnConsent.set(this.readConsentAck());
+    this.tryOnOpen.set(true);
+    setTimeout(() => this.tryOnCloseBtn?.nativeElement.focus(), 0);
+  }
+
+  /** Close the modal, abort any polling, and restore focus. */
+  closeTryOn(): void {
+    if (!this.tryOnOpen()) return;
+    this.tryOnOpen.set(false);
+    this.tryOnLoading.set(false);
+    if (this.tryOnPollHandle !== null) {
+      clearTimeout(this.tryOnPollHandle);
+      this.tryOnPollHandle = null;
+    }
+    this.tryOnTrigger?.focus();
+    this.tryOnTrigger = null;
+  }
+
+  onTryOnBackdrop(event: MouseEvent): void {
+    if (event.target === event.currentTarget) this.closeTryOn();
+  }
+
+  onTryOnKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeTryOn();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const root = this.tryOnDialogEl?.nativeElement;
+    if (!root) return;
+    const focusables = Array.from(
+      root.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    if (focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  /** Read the chosen photo file into a data URL (client-side validated). */
+  onTryOnFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.tryOnError.set(null);
+    this.tryOnImageUrl.set(null);
+
+    if (!ProductDetailComponent.TRYON_ALLOWED_TYPES.includes(file.type)) {
+      this.tryOnError.set(this.i18n.instant('tryOn.errorType'));
+      return;
+    }
+    if (file.size > ProductDetailComponent.TRYON_MAX_BYTES) {
+      this.tryOnError.set(this.i18n.instant('tryOn.errorSize'));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+      if (dataUrl === '') {
+        this.tryOnError.set(this.i18n.instant('tryOn.errorRead'));
+        return;
+      }
+      this.tryOnPhoto.set({ dataUrl, mime: file.type, name: file.name });
+    };
+    reader.onerror = () => this.tryOnError.set(this.i18n.instant('tryOn.errorRead'));
+    reader.readAsDataURL(file);
+  }
+
+  /** Whether the Generate button is enabled. */
+  readonly canGenerateTryOn = computed(
+    () => this.tryOnPhoto() !== null && this.tryOnConsent() && !this.tryOnLoading(),
+  );
+
+  /** Kick off generation: POST the job, then poll for the result. */
+  startTryOn(): void {
+    const p = this.product();
+    const photo = this.tryOnPhoto();
+    if (!p || !photo || !this.tryOnConsent() || this.tryOnLoading()) return;
+
+    this.writeConsentAck();
+    this.tryOnLoading.set(true);
+    this.tryOnError.set(null);
+    this.tryOnImageUrl.set(null);
+
+    this.routed
+      .post<{ job_reference: string; status: string }>('POST /ai/try-on', {
+        body: {
+          image: photo.dataUrl,
+          mime_type: photo.mime,
+          product_id: p.id,
+          consent: true,
+        },
+      })
+      .subscribe({
+        next: (res) => {
+          const ref = res.data?.job_reference;
+          if (!ref) {
+            this.failTryOn();
+            return;
+          }
+          this.pollTryOn(ref, 0);
+        },
+        error: () => this.failTryOn(),
+      });
+  }
+
+  private pollTryOn(reference: string, attempt: number): void {
+    if (!this.tryOnOpen()) return; // modal closed → abort
+    if (attempt >= ProductDetailComponent.TRYON_MAX_POLLS) {
+      this.failTryOn();
+      return;
+    }
+
+    this.routed
+      .get<{ status: string; result_image_url: string | null; error: string | null }>(
+        'GET /ai/try-on/:reference',
+        { params: { reference } },
+      )
+      .subscribe({
+        next: (res) => {
+          const d = res.data;
+          if (!d) {
+            this.failTryOn();
+            return;
+          }
+          if (d.status === 'succeeded' && d.result_image_url) {
+            this.tryOnImageUrl.set(d.result_image_url);
+            this.tryOnLoading.set(false);
+            return;
+          }
+          if (d.status === 'failed') {
+            this.failTryOn();
+            return;
+          }
+          this.tryOnPollHandle = setTimeout(
+            () => this.pollTryOn(reference, attempt + 1),
+            ProductDetailComponent.TRYON_POLL_MS,
+          );
+        },
+        error: () => {
+          /* Transient poll error — retry within the attempt budget. */
+          this.tryOnPollHandle = setTimeout(
+            () => this.pollTryOn(reference, attempt + 1),
+            ProductDetailComponent.TRYON_POLL_MS,
+          );
+        },
+      });
+  }
+
+  private failTryOn(): void {
+    this.tryOnLoading.set(false);
+    this.tryOnError.set(this.i18n.instant('tryOn.errorGenerate'));
+  }
+
+  private readConsentAck(): boolean {
+    try {
+      return localStorage.getItem(ProductDetailComponent.TRYON_CONSENT_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  private writeConsentAck(): void {
+    try {
+      localStorage.setItem(ProductDetailComponent.TRYON_CONSENT_KEY, '1');
+    } catch {
+      /* storage unavailable — consent still enforced server-side per request */
+    }
+  }
+
   openSizeGuide(): void {
     const slug = this.product()?.vendor?.slug;
     if (!slug) return;
@@ -963,6 +1187,17 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       this.sizeGuideRows.set([]);
       this.sizeGuideError.set(false);
       this.sizeGuideLoadedFor = null;
+      /* Reset the try-on modal so a previous product's photo / generated
+         image / error never leaks into the next product. */
+      if (this.tryOnPollHandle !== null) {
+        clearTimeout(this.tryOnPollHandle);
+        this.tryOnPollHandle = null;
+      }
+      this.tryOnOpen.set(false);
+      this.tryOnPhoto.set(null);
+      this.tryOnLoading.set(false);
+      this.tryOnImageUrl.set(null);
+      this.tryOnError.set(null);
       /* Reset the reviews read + write state so a previous product's
          loaded pages, pagination cursor, or in-flight submission never
          leak into the next product. */

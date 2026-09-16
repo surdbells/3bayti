@@ -346,6 +346,21 @@
               {{ adding() ? ('product.adding' | translate) : (p.in_stock ? ('product.addToCart' | translate) : ('product.outOfStock' | translate)) }}
             </ui-button>
           </div>
+          @if (tryOnEnabled()) {
+            <button
+              type="button"
+              class="pdp-tryon-cta"
+              (click)="openTryOn()"
+              data-testid="pdp-tryon-trigger"
+            >
+              <svg class="pdp-tryon-cta__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path d="M12 3l1.6 3.9L17.5 8l-3.9 1.6L12 13.5 10.4 9.6 6.5 8l3.9-1.1L12 3z" fill="currentColor"></path>
+                <circle cx="18" cy="17" r="1.4" fill="currentColor"></circle>
+                <circle cx="6" cy="16" r="1" fill="currentColor"></circle>
+              </svg>
+              <span>{{ 'tryOn.cta' | translate }}</span>
+            </button>
+          }
           @if (p.in_stock && hasSizes() && !selectedSize() && !isSizeOptional()) {
             <p class="pdp-buybox__hint" data-testid="pdp-hint-size">
               <svg class="pdp-buybox__hint-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
@@ -913,6 +928,88 @@
                     </tbody>
                   </table>
                 </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Virtual try-on modal (Ain). Uploads a photo + consent, then shows the
+           AI-generated look. Esc closes, Tab is trapped, backdrop click closes. -->
+      @if (tryOnOpen()) {
+        <div class="pdp-tryon" (click)="onTryOnBackdrop($event)">
+          <div
+            #tryOnDialog
+            class="pdp-tryon__dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tryon-title"
+            (keydown)="onTryOnKeydown($event)"
+          >
+            <header class="pdp-tryon__head">
+              <h2 id="tryon-title" class="pdp-tryon__title">{{ 'tryOn.title' | translate }}</h2>
+              <button
+                #tryOnClose
+                type="button"
+                class="pdp-tryon__close"
+                (click)="closeTryOn()"
+                [attr.aria-label]="'tryOn.close' | translate"
+              >
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+                  <path d="M6 6l12 12M18 6L6 18"/>
+                </svg>
+              </button>
+            </header>
+
+            <div class="pdp-tryon__body">
+              @if (tryOnImageUrl(); as url) {
+                <img
+                  class="pdp-tryon__result"
+                  [src]="url"
+                  [alt]="'tryOn.resultAlt' | translate"
+                  data-testid="tryon-result"
+                />
+                <p class="pdp-tryon__disclaimer">{{ 'tryOn.disclaimer' | translate }}</p>
+                <button type="button" class="pdp-tryon__again" (click)="tryOnImageUrl.set(null)">
+                  {{ 'tryOn.again' | translate }}
+                </button>
+              } @else if (tryOnLoading()) {
+                <div class="pdp-tryon__loading" data-testid="tryon-loading">
+                  <span class="pdp-tryon__spinner" aria-hidden="true"></span>
+                  <p>{{ 'tryOn.generating' | translate }}</p>
+                </div>
+              } @else {
+                <p class="pdp-tryon__intro">{{ 'tryOn.intro' | translate }}</p>
+                <label class="pdp-tryon__upload">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    (change)="onTryOnFileSelected($event)"
+                    data-testid="tryon-file"
+                  />
+                  <span>{{ tryOnPhoto()?.name ?? ('tryOn.choosePhoto' | translate) }}</span>
+                </label>
+                <label class="pdp-tryon__consent">
+                  <input
+                    type="checkbox"
+                    [checked]="tryOnConsent()"
+                    (change)="tryOnConsent.set($any($event.target).checked)"
+                    data-testid="tryon-consent"
+                  />
+                  <span>{{ 'tryOn.consent' | translate }}</span>
+                </label>
+                @if (tryOnError()) {
+                  <p class="pdp-tryon__error" role="alert" data-testid="tryon-error">{{ tryOnError() }}</p>
+                }
+                <button
+                  type="button"
+                  class="pdp-tryon__generate"
+                  [disabled]="!canGenerateTryOn()"
+                  (click)="startTryOn()"
+                  data-testid="tryon-generate"
+                >
+                  {{ 'tryOn.generate' | translate }}
+                </button>
               }
             </div>
           </div>

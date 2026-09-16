@@ -178,4 +178,6 @@ export interface ProductDetail extends Product {
   requires_measurement?: boolean;
   /** Optional guidance shown alongside the measurement field. */
   measurement_instructions?: string | null;
+  /** AI virtual try-on available for this product (drives the "Try it on" CTA). */
+  try_on_enabled?: boolean;
 }
