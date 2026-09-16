@@ -46,7 +46,6 @@ function makeCart(items: CartItem[] = []): Cart {
 
 function makeQuote(opts: { code: string; valid: boolean; discount?: string; total?: string } = { code: 'SAVE10', valid: true }): CartQuoteResponse {
   return {
-    cart: makeCart([makeItem()]),
     promo_code: opts.code,
     promo_valid: opts.valid,
     promo_message: null,

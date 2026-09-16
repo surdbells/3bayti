@@ -626,7 +626,7 @@ describe('CartService', () => {
       await drainMicrotasks();
       /* A populated cart is loaded on construction. */
       controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse());
-      await Promise.resolve();
+      await drainMicrotasks();
       expect(service.cart().items).toHaveLength(1);
 
       const promise = service.quoteWithPromo('SAVE10');
@@ -691,8 +691,7 @@ describe('CartService', () => {
       await drainMicrotasks();
       controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse({ items: [], item_count: 0 }));
       /* Drain the construction-refresh's finally microtask. */
-      await Promise.resolve();
-      await Promise.resolve();
+      await drainMicrotasks();
 
       expect(service.isLoading()).toBe(false);
       const promise = service.addItem({ product_id: 100, quantity: 1 });
@@ -760,7 +759,7 @@ describe('CartService', () => {
       const refresh = controller.expectOne(`${V3_BASE}/v3/cart`);
       refresh.flush(serverCartResponse({ item_count: 1, subtotal: '129.00' }));
 
-      await Promise.resolve();
+      await drainMicrotasks();
       expect(service.itemCount()).toBe(1);
     });
 
@@ -825,7 +824,7 @@ describe('CartService', () => {
       TestBed.tick();
       await drainMicrotasks();
       controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse({ item_count: 3, subtotal: '387.00' }));
-      await Promise.resolve();
+      await drainMicrotasks();
       expect(service.itemCount()).toBe(3);
 
       /* Sign out → should reset to empty (no localStorage to read). */

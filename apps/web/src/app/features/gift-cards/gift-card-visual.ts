@@ -1,13 +1,13 @@
 import { Component, Input, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { NgIf } from '@angular/common';
-import {
+import type {
   GiftCard,
   GiftCardStatus,
   GiftCardTheme,
   GiftCardThemeMeta,
-  GIFT_CARD_THEMES,
 } from './gift-card.model';
+import { GIFT_CARD_THEMES } from './gift-card.model';
 
 /**
  * `ui-gift-card`, the themed gift-card visual.

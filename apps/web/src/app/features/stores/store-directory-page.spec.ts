@@ -129,7 +129,7 @@ describe('StoreDirectoryPageComponent', () => {
       const { fixture } = setup({ directory: [makeStore({ slug: 'acme-couture' })] });
       await flush();
       fixture.detectChanges();
-      const link = fixture.nativeElement.querySelector('.store-card__name-link') as HTMLAnchorElement;
+      const link = fixture.nativeElement.querySelector('.store-card__cover') as HTMLAnchorElement;
       expect(link).not.toBeNull();
       expect(link.getAttribute('href')).toContain('acme-couture');
     });

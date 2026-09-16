@@ -48,7 +48,6 @@ function makeAddress(o: Partial<Address> = {}): Address {
 function makeQuote(opts: { code?: string | null; valid?: boolean; discount?: string; total?: string; shipping?: string; tax?: string } = {}): CartQuoteResponse {
   const valid = opts.valid !== false;
   return {
-    cart: makeCart(),
     promo_code: opts.code ?? null,
     promo_valid: valid,
     promo_message: null,
@@ -183,8 +182,9 @@ function makeAuthUser(o: Partial<AuthUser> = {}): AuthUser {
     country_code: 'AE', first_name: 'Jane', last_name: 'Doe',
     gender: null, dob: null, locale: null, timezone: null,
     is_phone_verified: true, is_email_verified: false,
+    needs_email_update: false,
     roles: ['customer'], is_store_approved: false, is_store_active: false,
-    last_login_at: null, ...o,
+    last_login_at: null, avatar_url: null, ...o,
   };
 }
 

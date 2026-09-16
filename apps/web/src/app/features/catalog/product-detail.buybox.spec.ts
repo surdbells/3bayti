@@ -185,6 +185,7 @@ describe('ProductDetail buy box', () => {
         is_custom: false,
         measurement: null,
         extra_measurement: null,
+        note: null,
       });
       expect(openDrawerMock).toHaveBeenCalledOnce();
       expect(c.adding()).toBe(false);
@@ -202,6 +203,7 @@ describe('ProductDetail buy box', () => {
         is_custom: false,
         measurement: null,
         extra_measurement: null,
+        note: null,
       });
     });
 
@@ -267,6 +269,7 @@ describe('ProductDetail buy box', () => {
         is_custom: false,
         measurement: null,
         extra_measurement: 'Length 56 inches',
+        note: null,
       });
     });
   });

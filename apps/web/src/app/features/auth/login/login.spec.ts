@@ -36,6 +36,7 @@ const USER: AuthUser = {
   timezone: null,
   is_phone_verified: true,
   is_email_verified: false,
+  needs_email_update: false,
   roles: ['customer'],
   is_store_approved: false,
   is_store_active: false,
