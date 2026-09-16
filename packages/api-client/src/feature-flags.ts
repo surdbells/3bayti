@@ -264,6 +264,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'POST /ai/visual-search': {
     target: 'new', oldPath: '', newPath: '/v3/ai/visual-search', shape: 'v3-envelope',
   },
+  // Virtual try-on — enqueue a generation job, then poll by job reference.
+  'POST /ai/try-on': {
+    target: 'new', oldPath: '', newPath: '/v3/ai/try-on', shape: 'v3-envelope',
+  },
+  'GET /ai/try-on/:reference': {
+    target: 'new', oldPath: '', newPath: '/v3/ai/try-on/:reference', shape: 'v3-envelope',
+  },
   'POST /ai/styles/restyle': {
     target: 'new', oldPath: '', newPath: '/v3/ai/styles/restyle', shape: 'v3-envelope',
   },

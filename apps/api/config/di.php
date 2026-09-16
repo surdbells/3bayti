@@ -658,6 +658,49 @@ return [
         return new \Bayti\Api\Ai\Vision\OpenAiVisionEmbedder($client, $visionModel, $logger);
     },
 
+    // Virtual try-on provider (env-gated, independent of the text concierge and
+    // visual search so the heavy image-generation feature can be enabled — and
+    // cost-capped — on its own). Defaults to NullVirtualTryOnProvider so the
+    // container ALWAYS boots and the feature is dormant until TRYON_ENABLED=true
+    // (and AI is configured). The v1 real provider composes the customer photo
+    // with the garment image via an OpenAI image-editing model, reusing the
+    // existing OpenAI key.
+    \Bayti\Api\Ai\TryOn\VirtualTryOnProviderInterface::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Ai\TryOn\VirtualTryOnProviderInterface {
+        $logger = $c->get(\Psr\Log\LoggerInterface::class);
+
+        $tryOnEnabled = filter_var($_ENV['TRYON_ENABLED'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
+        $aiEnabled = filter_var($_ENV['AI_ENABLED'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
+        if (!$tryOnEnabled || !$aiEnabled) {
+            return new \Bayti\Api\Ai\TryOn\NullVirtualTryOnProvider();
+        }
+
+        $apiKey = $_ENV['OPENAI_API_KEY'] ?? '';
+        if ($apiKey === '') {
+            throw new \RuntimeException('TRYON_ENABLED=true but OPENAI_API_KEY is empty.');
+        }
+
+        $tryOnModel = $_ENV['AI_TRYON_MODEL'] ?? 'gpt-image-1';
+        $imageSize = $_ENV['AI_TRYON_IMAGE_SIZE'] ?? '1024x1024';
+        // Image generation is slower than chat; allow a longer per-request budget.
+        $timeout = (float) ($_ENV['AI_TRYON_TIMEOUT'] ?? 120);
+        $http = new GuzzleClient([
+            'timeout' => $timeout > 0 ? $timeout : 120,
+            'connect_timeout' => 6,
+        ]);
+        $client = new \Bayti\Api\Ai\OpenAi\OpenAiClient(
+            http: $http,
+            baseUrl: rtrim($_ENV['OPENAI_BASE_URL'] ?? 'https://api.openai.com', '/'),
+            apiKey: $apiKey,
+            chatModel: $_ENV['AI_CHAT_MODEL'] ?? 'gpt-4o-mini',
+            embedModel: $_ENV['AI_EMBED_MODEL'] ?? 'text-embedding-3-small',
+            logger: $logger,
+        );
+
+        return new \Bayti\Api\Ai\TryOn\OpenAiVirtualTryOnProvider($client, $tryOnModel, $imageSize, $logger);
+    },
+
     // Booking orchestrator shared by the vendor + admin ship endpoints.
     // Factory-bound (like the notification services) so the logger + collaborators
     // come from the container rather than autowiring the nullable-logger default.
@@ -1118,6 +1161,25 @@ return [
     // validation. Swap to R2: change the FilesystemOperator binding above
     // (AwsS3V3Adapter); this binding needs no change.
     \Bayti\Api\Domain\Media\ImageStorageService::class => \DI\autowire(),
+
+    // Virtual-try-on RAW-photo storage. Its own Flysystem operator rooted at
+    // var/private — OUTSIDE the Apache /uploads alias — so a person's uploaded
+    // photo is never HTTP-reachable (stronger than the alias-served uploads
+    // root's "private visibility", which is only a chmod). The worker reads the
+    // photo once to generate the try-on, then deletes it.
+    \Bayti\Api\Domain\TryOn\TryOnPhotoStorage::class => static function (): \Bayti\Api\Domain\TryOn\TryOnPhotoStorage {
+        $privateRoot = dirname(__DIR__) . '/var/private';
+        $visibility = new \League\Flysystem\UnixVisibility\PortableVisibilityConverter(
+            0644,
+            0600,
+            0755,
+            0700,
+            \League\Flysystem\Visibility::PRIVATE,
+        );
+        $adapter = new \League\Flysystem\Local\LocalFilesystemAdapter($privateRoot, $visibility);
+        return new \Bayti\Api\Domain\TryOn\TryOnPhotoStorage(new \League\Flysystem\Filesystem($adapter));
+    },
+
     \Bayti\Api\Domain\Compliance\ComplianceDocumentService::class => \DI\autowire(),
     \Bayti\Api\Domain\Compliance\ComplianceDocumentSigner::class => static function (ContainerInterface $c): \Bayti\Api\Domain\Compliance\ComplianceDocumentSigner {
         return new \Bayti\Api\Domain\Compliance\ComplianceDocumentSigner((string) ($_ENV['JWT_SECRET'] ?? ''));

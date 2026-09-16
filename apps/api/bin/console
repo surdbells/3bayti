@@ -112,6 +112,16 @@ $cli->add(new \Bayti\Api\Console\BuildProductAiAttributesCommand(
 // — profiles derive from catalogue + behaviour, so this always registers safely.
 $cli->add($container->get(\Bayti\Api\Console\BuildStyleProfilesCommand::class));
 
+// Ain Virtual Try-On worker (ai:process-tryon-jobs). Always registers safely
+// (the provider is the null object until TRYON_ENABLED); each job just fails
+// fast as "unavailable" when the feature is off. Schedule every minute.
+$cli->add($container->get(\Bayti\Api\Console\ProcessTryOnJobsCommand::class));
+
+// Virtual Try-On retention sweep (ai:cleanup-tryon-images). Deletes generated
+// try-on images past the retention window (a person's likeness is not kept
+// forever). Independent of TRYON_ENABLED. Schedule daily.
+$cli->add($container->get(\Bayti\Api\Console\CleanupTryOnImagesCommand::class));
+
 // M3.1.7-B — Application commands. Pull collaborators from the
 // container at registration time. The PaymentGateway resolution
 // requires NOON_* env vars; if those are missing (fresh dev

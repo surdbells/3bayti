@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 343 route keys.
+ * 345 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -93,6 +93,7 @@ export type V3RouteKey =
   | 'GET /admin/vendors/:id/metrics'
   | 'GET /admin/vendors/:id/products'
   | 'GET /ai/status'
+  | 'GET /ai/try-on/:reference'
   | 'GET /auth/me'
   | 'GET /campaigns/:slug'
   | 'GET /campaigns/active'
@@ -266,6 +267,7 @@ export type V3RouteKey =
   | 'POST /ai/events'
   | 'POST /ai/outfit'
   | 'POST /ai/styles/restyle'
+  | 'POST /ai/try-on'
   | 'POST /ai/visual-search'
   | 'POST /auth/confirm'
   | 'POST /auth/login'
@@ -439,6 +441,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/vendors/:id/metrics',
   'GET /admin/vendors/:id/products',
   'GET /ai/status',
+  'GET /ai/try-on/:reference',
   'GET /auth/me',
   'GET /campaigns/:slug',
   'GET /campaigns/active',
@@ -612,6 +615,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /ai/events',
   'POST /ai/outfit',
   'POST /ai/styles/restyle',
+  'POST /ai/try-on',
   'POST /ai/visual-search',
   'POST /auth/confirm',
   'POST /auth/login',

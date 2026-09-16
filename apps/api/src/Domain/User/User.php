@@ -309,6 +309,39 @@ class User
     #[ORM\Column(name: 'marketing_push_opt_out', type: 'boolean', options: ['default' => false])]
     private bool $marketingPushOptOut = false;
 
+    /**
+     * When the customer consented to AI virtual try-on photo processing, or
+     * NULL if they never have (or revoked it). NULL = not consented — the
+     * try-on start endpoint refuses until consent is granted. This is the
+     * durable consent record (a person's photo is processed by a third-party
+     * image model), set on first try-on and clearable on request. Mirrors the
+     * nullable-timestamp "when did X happen" convention (deleted_at, etc.).
+     */
+    #[ORM\Column(name: 'tryon_consent_granted_at', type: 'datetimetz_immutable', nullable: true)]
+    private ?\DateTimeImmutable $tryOnConsentGrantedAt = null;
+
+    public function hasTryOnConsent(): bool
+    {
+        return $this->tryOnConsentGrantedAt !== null;
+    }
+
+    public function getTryOnConsentGrantedAt(): ?\DateTimeImmutable
+    {
+        return $this->tryOnConsentGrantedAt;
+    }
+
+    public function grantTryOnConsent(): void
+    {
+        if ($this->tryOnConsentGrantedAt === null) {
+            $this->tryOnConsentGrantedAt = new \DateTimeImmutable();
+        }
+    }
+
+    public function revokeTryOnConsent(): void
+    {
+        $this->tryOnConsentGrantedAt = null;
+    }
+
     // -------------------------------------------------------------------
     // Vendor lifecycle (only meaningful when is_vendor = true)
     // -------------------------------------------------------------------

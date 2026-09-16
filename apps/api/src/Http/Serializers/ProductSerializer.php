@@ -351,6 +351,10 @@ final class ProductSerializer
             // and at checkout).
             'requires_measurement' => $p->requiresExtraMsmt(),
             'measurement_instructions' => $p->getExtraMsmt(),
+            // AI virtual try-on: when true (and the deployment has TRYON_ENABLED)
+            // the PDP shows a "Try it on" CTA (POST /v3/ai/try-on). The API
+            // still gates every start on the live flag + orderability.
+            'try_on_enabled' => $p->isTryOnEnabled(),
             'fabric' => null,
             'care_instructions' => null,
             'materials' => [],

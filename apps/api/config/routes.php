@@ -649,6 +649,13 @@ return function (App $app): void {
     // returns empty until image search is turned on.
     $app->post('/v3/ai/visual-search', \Bayti\Api\Http\Controllers\Ai\VisualSearchController::class)
         ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
+    // Virtual try-on — AUTH REQUIRED (a person's photo is processed). POST
+    // enqueues a job (env-gated TRYON_ENABLED; refuses when off), the client
+    // polls GET /v3/ai/try-on/{reference} for the generated image.
+    $app->post('/v3/ai/try-on', \Bayti\Api\Http\Controllers\Ai\StartTryOnController::class)
+        ->add(AuthMiddleware::class);
+    $app->get('/v3/ai/try-on/{reference}', \Bayti\Api\Http\Controllers\Ai\GetTryOnController::class)
+        ->add(AuthMiddleware::class);
     $app->post('/v3/ai/events', \Bayti\Api\Http\Controllers\Ai\RecordAiEventController::class)
         ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
     $app->get('/v3/ai/status', \Bayti\Api\Http\Controllers\Ai\AiStatusController::class);

@@ -143,6 +143,12 @@ final class ErrorCodes
     /** Business rule violated, e.g. cart empty at checkout; HTTP 422. */
     public const BUSINESS_RULE_VIOLATION = 'BUSINESS_RULE_VIOLATION';
 
+    /** Virtual try-on is not enabled on this deployment; HTTP 422. */
+    public const TRYON_DISABLED = 'TRYON_DISABLED';
+
+    /** The user must consent to virtual try-on photo processing first; HTTP 422. */
+    public const TRYON_CONSENT_REQUIRED = 'TRYON_CONSENT_REQUIRED';
+
     // -------------------------------------------------------------------
     // PROMO, promotional code redemption (M3.2.X.8)
     //

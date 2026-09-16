@@ -12,7 +12,8 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Thin HTTP client for the OpenAI REST API (chat completions + embeddings).
+ * Thin HTTP client for the OpenAI REST API (chat completions + embeddings +
+ * image edits).
  *
  * Auth is a static bearer key (`OPENAI_API_KEY`), sent on every call and never
  * logged. Errors mirror the OtoClient posture: connect failures → AiException
@@ -25,8 +26,9 @@ use Psr\Log\NullLogger;
  */
 final class OpenAiClient
 {
-    private const CHAT_PATH  = '/v1/chat/completions';
-    private const EMBED_PATH = '/v1/embeddings';
+    private const CHAT_PATH       = '/v1/chat/completions';
+    private const EMBED_PATH      = '/v1/embeddings';
+    private const IMAGE_EDIT_PATH = '/v1/images/edits';
 
     private LoggerInterface $logger;
 
@@ -57,7 +59,7 @@ final class OpenAiClient
      */
     public function chat(array $body): array
     {
-        return $this->post(self::CHAT_PATH, $body);
+        return $this->send(self::CHAT_PATH, ['json' => $body]);
     }
 
     /**
@@ -66,24 +68,40 @@ final class OpenAiClient
      */
     public function embeddings(array $body): array
     {
-        return $this->post(self::EMBED_PATH, $body);
+        return $this->send(self::EMBED_PATH, ['json' => $body]);
     }
 
     /**
-     * @param array<string, mixed> $body
+     * Edit/compose images (multipart form-data), e.g. gpt-image-1 virtual
+     * try-on. Each part is a Guzzle multipart entry
+     * (['name' => ..., 'contents' => ..., 'filename' => ..., 'headers' => ...]).
+     *
+     * @param list<array<string, mixed>> $multipart
      * @return array<string, mixed>
      */
-    private function post(string $path, array $body): array
+    public function imageEdit(array $multipart): array
+    {
+        return $this->send(self::IMAGE_EDIT_PATH, ['multipart' => $multipart]);
+    }
+
+    /**
+     * Send a POST and map the response to a decoded array or a typed
+     * AiException. $options carries exactly one body option ('json' or
+     * 'multipart'); the auth header + http_errors handling are shared.
+     *
+     * @param array<string, mixed> $options
+     * @return array<string, mixed>
+     */
+    private function send(string $path, array $options): array
     {
         try {
-            $response = $this->http->post($this->baseUrl . $path, [
+            $response = $this->http->post($this->baseUrl . $path, array_merge([
                 'headers' => [
                     'Authorization' => 'Bearer ' . $this->apiKey,
                     'Accept' => 'application/json',
                 ],
-                'json' => $body,
                 'http_errors' => false,
-            ]);
+            ], $options));
         } catch (ConnectException $e) {
             throw new AiException(AiException::KIND_NETWORK, $e->getMessage(), $e);
         } catch (GuzzleException $e) {
