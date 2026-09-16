@@ -50,6 +50,43 @@ export interface RestyleResult {
   rationale: string;
 }
 
+/** The guided outfit-brief inputs. */
+export interface OutfitBriefInput {
+  occasion?: string;
+  styles?: string[];
+  colours?: string[];
+  budget_min?: number;
+  budget_max?: number;
+  product_type?: string;
+  category_slug?: string;
+}
+
+/** One piece of a composed outfit: the product + its role + a reason. */
+export interface OutfitPieceCard {
+  role: string;
+  category_slug: string;
+  reason: string;
+  product: ConciergeCard;
+}
+
+export interface OutfitResult {
+  interactionId: number | null;
+  rationale: string;
+  occasion: string | null;
+  pieces: OutfitPieceCard[];
+  totalPrice: { amount: number; currency: string } | null;
+  giftCard: GiftCardSuggestion | null;
+}
+
+interface OutfitResponse {
+  interaction_id: number | null;
+  rationale?: string;
+  occasion?: string | null;
+  items?: Array<{ role?: string; category_slug?: string; reason?: string; product?: ConciergeCard }>;
+  total_price?: { amount: number; currency: string };
+  gift_card_suggestion?: GiftCardSuggestion;
+}
+
 interface RestyleResponse {
   interaction_id: number | null;
   products: ConciergeCard[];
@@ -144,6 +181,47 @@ export class ConciergeService {
       interactionId: data.interaction_id ?? null,
       cards: Array.isArray(data.products) ? data.products : [],
       rationale: typeof data.rationale === 'string' ? data.rationale : '',
+    };
+  }
+
+  /** Guided outfit flow: a structured brief → a coordinated multi-piece look. */
+  async generateOutfit(brief: OutfitBriefInput): Promise<OutfitResult> {
+    this.analytics.event('ai_outfit_started', { occasion: brief.occasion ?? '', has_budget: brief.budget_max != null });
+    this.recordEvent('ai_outfit_started');
+
+    const env = await firstValueFrom(
+      this.http.post<OutfitResponse>('POST /ai/outfit', {
+        body: {
+          ...brief,
+          locale: this.locale.current(),
+          session_id: this.sessionId(),
+          channel: 'WEB',
+        },
+      }),
+    );
+
+    const data = (env.data ?? {}) as OutfitResponse;
+    const pieces: OutfitPieceCard[] = Array.isArray(data.items)
+      ? data.items
+          .map((i) => ({
+            role: typeof i.role === 'string' ? i.role : 'complement',
+            category_slug: typeof i.category_slug === 'string' ? i.category_slug : '',
+            reason: typeof i.reason === 'string' ? i.reason : '',
+            product: (i.product ?? {}) as ConciergeCard,
+          }))
+          .filter((p) => p.product && typeof p.product.id === 'number')
+      : [];
+
+    this.analytics.event('ai_outfit_results', { count: pieces.length });
+    this.recordEvent('ai_outfit_generated', { count: pieces.length });
+
+    return {
+      interactionId: data.interaction_id ?? null,
+      rationale: typeof data.rationale === 'string' ? data.rationale : '',
+      occasion: data.occasion ?? null,
+      pieces,
+      totalPrice: data.total_price ?? null,
+      giftCard: data.gift_card_suggestion ?? null,
     };
   }
 

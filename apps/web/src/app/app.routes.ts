@@ -152,6 +152,14 @@ export const routes: Routes = [
     title: 'routeTitles.giftAin',
   },
   {
+    /* Style me with Ain — guided outfit generator (occasion/style/colour/budget →
+       a coordinated multi-piece look). Public; saving a look requires sign-in. */
+    path: 'outfit',
+    loadComponent: () =>
+      import('./features/ai-concierge/outfit-page').then(m => m.OutfitPageComponent),
+    title: 'routeTitles.outfit',
+  },
+  {
     /* Gift reminders — the signed-in customer's saved gift dates + nudges. */
     path: 'gift-reminders',
     canActivate: [authActivateGuard],

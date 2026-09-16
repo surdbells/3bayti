@@ -97,6 +97,7 @@ export class HeaderComponent {
     { path: '/styles', labelKey: 'nav.styles', key: 'styles' },
     { path: '/ask-ain', labelKey: 'nav.askAin', key: 'askAin' },
     { path: '/gift-ain', labelKey: 'nav.giftAin', key: 'giftAin' },
+    { path: '/outfit', labelKey: 'nav.outfit', key: 'outfit' },
     { path: '/stores', labelKey: 'nav.stores', key: 'stores' },
     { path: '/new-arrivals', labelKey: 'nav.newArrivals', key: 'newArrivals' },
     { path: '/best-sellers', labelKey: 'nav.bestSellers', key: 'bestSellers' },

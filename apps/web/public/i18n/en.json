@@ -37,6 +37,7 @@
     "discounted": "Discounted",
     "askAin": "Ask Ain",
     "giftAin": "Gift Finder",
+    "outfit": "Style me",
     "menuToggle": "Open navigation menu"
   },
   "giftAin": {
@@ -80,6 +81,72 @@
       "200to500": "200 – 500",
       "500to1000": "500 – 1000",
       "over1000": "1000+"
+    }
+  },
+  "outfit": {
+    "title": "Style me with Ain",
+    "subtitle": "Tell Ain the occasion and vibe — it puts together a full look from real, in-stock pieces you can add to your bag or save.",
+    "occasionLabel": "What's the occasion?",
+    "heroLabel": "Build it around (optional)",
+    "styleLabel": "Your vibe",
+    "colourLabel": "Colours",
+    "budgetLabel": "Budget for the whole look",
+    "generate": "Style me",
+    "generating": "Ain is styling your look…",
+    "rationaleFallback": "A look Ain put together from real, in-stock pieces.",
+    "totalLabel": "The look",
+    "addLook": "Add the look to bag",
+    "addingLook": "Adding…",
+    "saveLook": "Save this look",
+    "savingLook": "Saving…",
+    "savedLook": "Saved to your styles",
+    "signInToSave": "Sign in to save",
+    "roleHero": "The piece",
+    "roleComplement": "Styled with",
+    "empty": "Ain couldn't build a look from that — try a different occasion, colour or budget.",
+    "giftCardTitle": "Not sure it's quite right?",
+    "giftCardSub": "A gift card lets them choose exactly what they love.",
+    "giftCardCta": "Send a gift card",
+    "addedToast": "Added {{count}} pieces to your bag",
+    "addFailedToast": "Those pieces couldn't be added — they may have sold out.",
+    "savedToast": "Your look is saved to your styles.",
+    "saveFailedToast": "Couldn't save the look just now. Please try again.",
+    "occasions": {
+      "eid": "Eid",
+      "wedding": "Wedding",
+      "party": "Party",
+      "graduation": "Graduation",
+      "ramadan": "Ramadan",
+      "everyday": "Everyday"
+    },
+    "heroTypes": {
+      "abaya": "Abaya",
+      "kaftan": "Kaftan",
+      "dress": "Dress"
+    },
+    "styles": {
+      "elegant": "Elegant",
+      "casual": "Casual",
+      "traditional": "Traditional",
+      "modern": "Modern",
+      "minimal": "Minimal",
+      "embellished": "Embellished"
+    },
+    "colours": {
+      "black": "Black",
+      "beige": "Beige",
+      "rose": "Rose",
+      "gold": "Gold",
+      "navy": "Navy",
+      "white": "White",
+      "green": "Green",
+      "grey": "Grey"
+    },
+    "budgets": {
+      "under300": "Under 300",
+      "300to700": "300 – 700",
+      "700to1500": "700 – 1500",
+      "over1500": "1500+"
     }
   },
   "giftReminders": {
@@ -1623,6 +1690,7 @@
     "styleCreate": "Create a style · 3bayti",
     "askAin": "Ask Ain · 3bayti",
     "giftAin": "Gift Finder · 3bayti",
+    "outfit": "Style me with Ain · 3bayti",
     "giftReminders": "Gift Reminders · 3bayti",
     "home": "3bayti: Premium Abayas, Kaftans & Modest Wear",
     "categories": "Shop by Category · 3bayti",

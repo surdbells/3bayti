@@ -1,0 +1,138 @@
+<main class="outfit" data-testid="outfit-page">
+  <header class="outfit__head">
+    <span class="outfit__spark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3l1.9 4.8L18.7 9.7 13.9 11.6 12 16.4 10.1 11.6 5.3 9.7 10.1 7.8z" />
+        <path d="M19 15l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6z" />
+      </svg>
+    </span>
+    <h1 class="outfit__title">{{ 'outfit.title' | translate }}</h1>
+    <p class="outfit__sub">{{ 'outfit.subtitle' | translate }}</p>
+  </header>
+
+  <section class="outfit__form" aria-label="Outfit brief">
+    <div class="outfit__group">
+      <p class="outfit__label">{{ 'outfit.occasionLabel' | translate }}</p>
+      <div class="outfit__chips">
+        @for (o of occasions; track o) {
+          <button type="button" class="chip" [class.is-on]="occasion() === o" (click)="pickOccasion(o)">
+            {{ ('outfit.occasions.' + o) | translate }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="outfit__group">
+      <p class="outfit__label">{{ 'outfit.heroLabel' | translate }}</p>
+      <div class="outfit__chips">
+        @for (h of heroTypes; track h) {
+          <button type="button" class="chip" [class.is-on]="heroType() === h" (click)="pickHero(h)">
+            {{ ('outfit.heroTypes.' + h) | translate }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="outfit__group">
+      <p class="outfit__label">{{ 'outfit.styleLabel' | translate }}</p>
+      <div class="outfit__chips">
+        @for (s of styleOptions; track s) {
+          <button type="button" class="chip" [class.is-on]="isStyleOn(s)" (click)="toggleStyle(s)">
+            {{ ('outfit.styles.' + s) | translate }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="outfit__group">
+      <p class="outfit__label">{{ 'outfit.colourLabel' | translate }}</p>
+      <div class="outfit__chips">
+        @for (c of colourOptions; track c) {
+          <button type="button" class="chip chip--colour" [class.is-on]="isColourOn(c)" (click)="toggleColour(c)">
+            <span class="chip__swatch" [style.background]="colourHex(c)" aria-hidden="true"></span>
+            {{ ('outfit.colours.' + c) | translate }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="outfit__group">
+      <p class="outfit__label">{{ 'outfit.budgetLabel' | translate }}</p>
+      <div class="outfit__chips">
+        @for (b of budgetBands; track b.key) {
+          <button type="button" class="chip chip--budget" [class.is-on]="budget()?.key === b.key" (click)="pickBudget(b)">
+            {{ ('outfit.budgets.' + b.key) | translate }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <button type="button" class="outfit__cta" [disabled]="!canSubmit() || loading()" (click)="generate()">
+      @if (loading()) { {{ 'outfit.generating' | translate }} } @else { {{ 'outfit.generate' | translate }} }
+    </button>
+  </section>
+
+  @if (loading()) {
+    <div class="outfit__grid" aria-hidden="true">
+      @for (i of [0,1,2,3]; track i) { <div class="outfit__skeleton"></div> }
+    </div>
+  }
+
+  @if (!loading() && pieces().length > 0) {
+    <section class="outfit__result">
+      <div class="outfit__banner">
+        <p class="outfit__rationale">{{ rationale() || ('outfit.rationaleFallback' | translate) }}</p>
+        @if (totalPrice(); as tp) {
+          <p class="outfit__total">{{ 'outfit.totalLabel' | translate }} <strong>{{ tp.currency }} {{ tp.amount }}</strong></p>
+        }
+        <div class="outfit__actions">
+          <button type="button" class="btn btn--solid" [disabled]="adding()" (click)="addLook()">
+            @if (adding()) { {{ 'outfit.addingLook' | translate }} } @else { {{ 'outfit.addLook' | translate }} }
+          </button>
+          @if (saved()) {
+            <span class="outfit__saved">{{ 'outfit.savedLook' | translate }}</span>
+          } @else {
+            <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="saveLook()">
+              @if (saving()) { {{ 'outfit.savingLook' | translate }} }
+              @else if (!isAuthenticated()) { {{ 'outfit.signInToSave' | translate }} }
+              @else { {{ 'outfit.saveLook' | translate }} }
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="outfit__grid">
+        @for (piece of pieces(); track piece.product.id) {
+          <div class="outfit-piece" [class.is-hero]="piece.role === 'hero'">
+            <div class="outfit-piece__tag">
+              <span class="outfit-piece__role">{{ (piece.role === 'hero' ? 'outfit.roleHero' : 'outfit.roleComplement') | translate }}</span>
+              @if (piece.reason) { <span class="outfit-piece__reason">{{ piece.reason }}</span> }
+            </div>
+            <div (click)="onPieceClick(piece)">
+              <ui-product-card [product]="piece.product" />
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  @if (giftCard(); as gc) {
+    <aside class="outfit__giftcard">
+      <span class="outfit__giftcard-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+        </svg>
+      </span>
+      <div class="outfit__giftcard-body">
+        <strong>{{ 'outfit.giftCardTitle' | translate }}</strong>
+        <span>{{ 'outfit.giftCardSub' | translate }}</span>
+      </div>
+      <button type="button" class="btn btn--solid" (click)="openGiftCards()">{{ 'outfit.giftCardCta' | translate }}</button>
+    </aside>
+  }
+
+  @if (isEmpty()) {
+    <p class="outfit__empty">{{ 'outfit.empty' | translate }}</p>
+  }
+</main>
