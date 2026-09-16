@@ -108,6 +108,10 @@ $cli->add(new \Bayti\Api\Console\BuildProductAiAttributesCommand(
     $container->get(\Psr\Log\LoggerInterface::class),
 ));
 
+// Ain Personal Style Profile (ai:build-style-profiles). Independent of AI_ENABLED
+// — profiles derive from catalogue + behaviour, so this always registers safely.
+$cli->add($container->get(\Bayti\Api\Console\BuildStyleProfilesCommand::class));
+
 // M3.1.7-B — Application commands. Pull collaborators from the
 // container at registration time. The PaymentGateway resolution
 // requires NOON_* env vars; if those are missing (fresh dev

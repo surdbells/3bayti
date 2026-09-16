@@ -267,6 +267,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /ai/status': {
     target: 'new', oldPath: '', newPath: '/v3/ai/status', shape: 'v3-envelope',
   },
+  // Ain Personal Style Profile — personalised "For You / Your Style" rails.
+  'GET /me/ai/for-you': {
+    target: 'new', oldPath: '', newPath: '/v3/me/ai/for-you', shape: 'v3-envelope',
+  },
   // M3.2.W.2 — faceted search counts for the catalog listing.
   // Same query vocabulary as GET /products plus sizes[]/colors[].
   'GET /products/facets': {

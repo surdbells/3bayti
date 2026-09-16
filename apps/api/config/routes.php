@@ -181,6 +181,13 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Me\GetMeRecommendationsController::class,
         );
 
+        // Ain Personal Style Profile — personalised "For You / Your Style" rails
+        // (order/wishlist/follow/view-driven; inherits AuthMiddleware from the group).
+        $group->get(
+            '/ai/for-you',
+            \Bayti\Api\Http\Controllers\Me\Ai\GetForYouRailsController::class,
+        );
+
         // M1.7.2 phase A, address read + create
         $group->get('/addresses', ListAddressesController::class);
         $group->post('/addresses', CreateAddressController::class);

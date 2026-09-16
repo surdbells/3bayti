@@ -41,6 +41,11 @@ final class RecordAiEventController
         'style_shared',
         'gift_reminder_created',
         'gift_reminder_clicked',
+        // Personal Style Profile: the net-new product-view signal that feeds the
+        // profile builder, plus the For-You rail impression/click events.
+        'product_viewed',
+        'for_you_shown',
+        'for_you_product_clicked',
     ];
 
     public function __construct(

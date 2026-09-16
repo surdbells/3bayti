@@ -836,6 +836,15 @@ return [
     \Bayti\Api\Http\Controllers\Catalog\GetProductRecommendationsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Me\GetMeRecommendationsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Catalog\GetAdminRecommendationsExplainController::class => \DI\autowire(),
+
+    // Ain Personal Style Profile — per-customer affinity + For-You rails.
+    \Bayti\Api\Ai\Personalization\CustomerStyleSignals::class => \DI\autowire(),
+    \Bayti\Api\Ai\Personalization\CustomerStyleProfileStore::class => \DI\autowire(),
+    \Bayti\Api\Ai\Personalization\CustomerStyleProfileBuilder::class => \DI\autowire(),
+    \Bayti\Api\Ai\Personalization\ForYouRailsService::class => \DI\autowire(),
+    \Bayti\Api\Console\BuildStyleProfilesCommand::class => \DI\autowire(),
+    \Bayti\Api\Http\Serializers\ForYouSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Me\Ai\GetForYouRailsController::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\VendorMetricsSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorMetricsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\ListAdminVendorMetricsController::class => \DI\autowire(),

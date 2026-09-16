@@ -96,6 +96,60 @@ final class ProductAiAttributesStore
         return $out;
     }
 
+    /**
+     * Occasion / colour / style tag arrays for a set of products (for the
+     * Personal Style Profile aggregation). Missing rows are simply absent.
+     *
+     * @param list<int> $productIds
+     * @return array<int, array{occasions: list<string>, colours: list<string>, styles: list<string>}>
+     */
+    public function fetchTags(array $productIds): array
+    {
+        if ($productIds === []) {
+            return [];
+        }
+        try {
+            $rows = $this->connection->fetchAllAssociative(
+                'SELECT product_id, occasions, colours, styles FROM product_ai_attributes WHERE product_id IN (?)',
+                [$productIds],
+                [\Doctrine\DBAL\ArrayParameterType::INTEGER],
+            );
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($rows as $r) {
+            $out[(int) $r['product_id']] = [
+                'occasions' => $this->decodeStringList($r['occasions'] ?? null),
+                'colours' => $this->decodeStringList($r['colours'] ?? null),
+                'styles' => $this->decodeStringList($r['styles'] ?? null),
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function decodeStringList(mixed $raw): array
+    {
+        if (!is_string($raw) || $raw === '') {
+            return [];
+        }
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+        $out = [];
+        foreach ($decoded as $v) {
+            if (is_string($v) && trim($v) !== '') {
+                $out[] = trim($v);
+            }
+        }
+        return $out;
+    }
+
     /** Cheap "is there any embedding at all" gate for the semantic pass. */
     public function hasAnyEmbedding(): bool
     {
