@@ -56,6 +56,23 @@ final class VisualSearchServiceTest extends TestCase
     }
 
     #[Test]
+    public function fallsBackToCosineWhenPgvectorYieldsNothing(): void
+    {
+        // pgvector column exists (hasPgvector true) but pgvectorRank returns [] —
+        // e.g. embedding_vec not backfilled yet. Must fall back to cosine, not
+        // silently return nothing.
+        $vendor = $this->makeVendor(9);
+        $service = new VisualSearchService(
+            new FakeVisionEmbedder(true, new VisionEmbedding([1.0, 0.0], 'black abaya')),
+            $this->pgvectorStore(pgIds: [], embeddings: [1 => [0.99, 0.01], 2 => [0.1, 0.9]]),
+            $this->emReturning([$this->makeProduct($vendor, 1, 'Near'), $this->makeProduct($vendor, 2, 'Far')]),
+        );
+
+        $result = $service->search('bytes', 'image/jpeg');
+        self::assertSame([1, 2], $result->productIds());
+    }
+
+    #[Test]
     public function keepsDescriptionButNoProductsWhenTheEmbeddingIsEmpty(): void
     {
         $service = new VisualSearchService(
@@ -77,15 +94,40 @@ final class VisualSearchServiceTest extends TestCase
         $conn = $this->createMock(Connection::class);
         $conn->method('fetchOne')->willReturn(false); // hasPgvector() → false
         $conn->method('fetchAllAssociative')->willReturnCallback(
-            static function () use ($embeddings): array {
-                $rows = [];
-                foreach ($embeddings as $id => $vec) {
-                    $rows[] = ['product_id' => $id, 'embedding' => (string) json_encode($vec)];
-                }
-                return $rows;
-            },
+            static fn (): array => self::embeddingRows($embeddings),
         );
         return new ProductAiAttributesStore($conn);
+    }
+
+    /**
+     * A store where the pgvector column exists (hasPgvector true) but pgvectorRank
+     * returns $pgIds; fetchSellableEmbeddings returns $embeddings for the fallback.
+     *
+     * @param list<int> $pgIds
+     * @param array<int, list<float>> $embeddings
+     */
+    private function pgvectorStore(array $pgIds, array $embeddings): ProductAiAttributesStore
+    {
+        $conn = $this->createMock(Connection::class);
+        $conn->method('fetchOne')->willReturn(1); // hasPgvector() → true
+        $conn->method('fetchFirstColumn')->willReturn($pgIds); // pgvectorRank()
+        $conn->method('fetchAllAssociative')->willReturnCallback(
+            static fn (): array => self::embeddingRows($embeddings),
+        );
+        return new ProductAiAttributesStore($conn);
+    }
+
+    /**
+     * @param array<int, list<float>> $embeddings
+     * @return list<array{product_id: int, embedding: string}>
+     */
+    private static function embeddingRows(array $embeddings): array
+    {
+        $rows = [];
+        foreach ($embeddings as $id => $vec) {
+            $rows[] = ['product_id' => $id, 'embedding' => (string) json_encode($vec)];
+        }
+        return $rows;
     }
 
     /** @param list<Product> $items */

@@ -48,9 +48,18 @@ final class VisualSearchService
 
         // Over-fetch so the orderable/in-stock gate still leaves a full page.
         $rankLimit = $limit * 2;
-        $ids = $this->attributes->hasPgvector()
-            ? $this->attributes->pgvectorRank($embedding->vector, $rankLimit, null, null, null)
-            : Cosine::rank($embedding->vector, $this->attributes->fetchSellableEmbeddings(self::POOL), $rankLimit);
+
+        // Prefer pgvector kNN, but FALL BACK to PHP-cosine when it yields nothing
+        // (e.g. the vector column exists but isn't backfilled yet, or a transient
+        // kNN error) — mirroring the concierge's ProductRetrievalService so a
+        // half-rolled-out pgvector never silently zeroes out visual search.
+        $ids = [];
+        if ($this->attributes->hasPgvector()) {
+            $ids = $this->attributes->pgvectorRank($embedding->vector, $rankLimit, null, null, null);
+        }
+        if ($ids === []) {
+            $ids = Cosine::rank($embedding->vector, $this->attributes->fetchSellableEmbeddings(self::POOL), $rankLimit);
+        }
 
         $products = $this->loadProducts($ids, $limit);
 
