@@ -39,6 +39,16 @@
     <ax-icon name="arrow-right" class="ask-ain-pill__chevron" />
   </button>
 
+  <!-- Visual search entry: find pieces from a photo -->
+  <button type="button" class="ask-ain-pill" [routerLink]="['/visual-search']">
+    <span class="ask-ain-pill__orb"><ax-icon name="camera" /></span>
+    <span class="ask-ain-pill__text">
+      <strong>{{ 'visual_search_title' | translate }}</strong>
+      <small>{{ 'visual_search_pill_hint' | translate }}</small>
+    </span>
+    <ax-icon name="arrow-right" class="ask-ain-pill__chevron" />
+  </button>
+
   <div class="ion-padding-horizontal results-area">
 
     @if (!ui_controls.is_loading && products && products.length > 0) {

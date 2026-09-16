@@ -96,6 +96,11 @@ export const routes: Routes = [
     title: 'Style me'
   },
   {
+    path: 'visual-search',
+    loadComponent: () => import('./customer/visual-search/visual-search.page').then(m => m.VisualSearchPage),
+    title: 'Search by photo'
+  },
+  {
     path: 'gift-reminders',
     loadComponent: () => import('./customer/gift-reminders/gift-reminders.page').then(m => m.GiftRemindersPage),
     title: 'Gift Reminders'

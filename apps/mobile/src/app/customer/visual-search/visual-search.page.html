@@ -1,0 +1,74 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'visual_search_title' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="page-bg ion-padding-horizontal">
+  <header class="vs-intro">
+    <span class="vs-spark" aria-hidden="true"><ax-icon name="camera" /></span>
+    <p class="vs-sub">{{ 'visual_search_subtitle' | translate }}</p>
+  </header>
+
+  @if (!preview) {
+    <label class="vs-drop">
+      <input type="file" accept="image/*" capture="environment" (change)="onFile($event)" hidden />
+      <span class="vs-drop__icon"><ax-icon name="image" /></span>
+      <span class="vs-drop__title">{{ 'visual_search_drop_title' | translate }}</span>
+      <span class="vs-drop__sub">{{ 'visual_search_drop_sub' | translate }}</span>
+    </label>
+  } @else {
+    <div class="vs-query">
+      <img class="vs-preview" [src]="preview" alt="" />
+      <div class="vs-query__body">
+        @if (description) {
+          <p class="vs-sees"><span>{{ 'visual_search_sees' | translate }}</span> {{ description }}</p>
+        }
+        <button type="button" class="vs-again" (click)="clear()">{{ 'visual_search_try_another' | translate }}</button>
+      </div>
+    </div>
+  }
+
+  @if (isSending) {
+    <div class="vs-loading"><ion-spinner name="crescent"></ion-spinner></div>
+  }
+
+  @if (!isSending && cards.length > 0) {
+    <div class="vs-board">
+      @for (card of cards; track card.id) {
+        <article class="vs-card" (click)="open_product(card)">
+          <div class="vs-card__img">
+            <div class="vs-img-skeleton" [class.hidden]="imageLoaded[card.id]"><div class="skeleton-shimmer"></div></div>
+            <img
+              [class.loaded]="imageLoaded[card.id]"
+              (load)="onImageLoad(card.id)"
+              (error)="onImageError(card.id)"
+              [src]="cfImage(card.primary_image?.url || '', 'card')"
+              alt="{{ card.name }}" />
+          </div>
+          <p class="vs-card__name">{{ card.name }}</p>
+          @if (card.vendor?.name) { <p class="vs-card__vendor">{{ card.vendor?.name }}</p> }
+          <div class="vs-card__price">
+            @if (card.sale_price) {
+              <span class="vs-price vs-price--sale">Ð{{ card.sale_price.amount }}</span>
+              <span class="vs-price-was">Ð{{ card.price?.amount }}</span>
+            } @else {
+              <span class="vs-price">Ð{{ card.price?.amount }}</span>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  }
+
+  @if (isEmpty) {
+    <p class="vs-empty">
+      @if (isError) { {{ 'visual_search_error' | translate }} } @else { {{ 'visual_search_empty' | translate }} }
+    </p>
+  }
+</ion-content>
