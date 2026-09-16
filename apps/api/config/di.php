@@ -701,6 +701,54 @@ return [
         return new \Bayti\Api\Ai\TryOn\OpenAiVirtualTryOnProvider($client, $tryOnModel, $imageSize, $logger);
     },
 
+    // WhatsApp Commerce messaging channel (env-gated). Defaults to the
+    // NullMessagingChannel so the container ALWAYS boots and the inbound webhook
+    // is a no-op until WHATSAPP_ENABLED=true (+ Meta Cloud API creds). The real
+    // channel sends free-form replies inside the 24h customer-initiated window.
+    \Bayti\Api\Messaging\MessagingChannelInterface::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Messaging\MessagingChannelInterface {
+        $logger = $c->get(\Psr\Log\LoggerInterface::class);
+
+        $enabled = filter_var($_ENV['WHATSAPP_ENABLED'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
+        if (!$enabled) {
+            return new \Bayti\Api\Messaging\NullMessagingChannel($logger);
+        }
+
+        $token = $_ENV['WHATSAPP_ACCESS_TOKEN'] ?? '';
+        $phoneId = $_ENV['WHATSAPP_PHONE_NUMBER_ID'] ?? '';
+        if ($token === '' || $phoneId === '') {
+            throw new \RuntimeException('WHATSAPP_ENABLED=true but WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID is empty.');
+        }
+
+        $timeout = (float) ($_ENV['WHATSAPP_REQUEST_TIMEOUT'] ?? 15);
+        $http = new GuzzleClient([
+            'timeout' => $timeout > 0 ? $timeout : 15,
+            'connect_timeout' => 6,
+        ]);
+        $client = new \Bayti\Api\Messaging\WhatsApp\WhatsAppCloudClient(
+            http: $http,
+            baseUrl: rtrim($_ENV['WHATSAPP_BASE_URL'] ?? 'https://graph.facebook.com/v21.0', '/'),
+            phoneNumberId: $phoneId,
+            accessToken: $token,
+            logger: $logger,
+        );
+
+        return new \Bayti\Api\Messaging\WhatsApp\WhatsAppMessagingChannel($client);
+    },
+
+    // Meta WhatsApp webhook verifier (HMAC over the raw body + the GET verify
+    // token). Env-wired like the OTO webhook verifier; passes null when unset so
+    // the webhook rejects (an unverified WhatsApp webhook is a spoofing vector).
+    \Bayti\Api\Messaging\WhatsApp\MetaWhatsAppWebhookVerifier::class => static function (): \Bayti\Api\Messaging\WhatsApp\MetaWhatsAppWebhookVerifier {
+        $secret = $_ENV['WHATSAPP_APP_SECRET'] ?? '';
+        $token = $_ENV['WHATSAPP_VERIFY_TOKEN'] ?? '';
+        return new \Bayti\Api\Messaging\WhatsApp\MetaWhatsAppWebhookVerifier(
+            appSecret: $secret !== '' ? $secret : null,
+            verifyToken: $token !== '' ? $token : null,
+        );
+    },
+
     // Booking orchestrator shared by the vendor + admin ship endpoints.
     // Factory-bound (like the notification services) so the logger + collaborators
     // come from the container rather than autowiring the nullable-logger default.

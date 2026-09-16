@@ -139,6 +139,32 @@ class User
     private ?string $pendingEmail = null;
 
     /**
+     * A WhatsApp number (E.164, e.g. '+971501234567') the customer has linked to
+     * this account for the WhatsApp Commerce channel, verified by OTP. NULL until
+     * they link one. Distinct from `phone` — a shopper may use a different number
+     * on WhatsApp. The inbound webhook resolves a message's sender to a user via
+     * this column (for personalisation + analytics attribution only; discovery
+     * works for unlinked numbers too).
+     */
+    #[ORM\Column(name: 'whatsapp_phone', type: 'string', length: 25, nullable: true)]
+    private ?string $whatsappPhone = null;
+
+    public function getWhatsappPhone(): ?string
+    {
+        return $this->whatsappPhone;
+    }
+
+    public function setWhatsappPhone(?string $phone): void
+    {
+        $this->whatsappPhone = $phone;
+    }
+
+    public function hasWhatsAppLinked(): bool
+    {
+        return $this->whatsappPhone !== null && $this->whatsappPhone !== '';
+    }
+
+    /**
      * ISO 3166-1 alpha-2 country code (e.g. 'AE', 'SA'). Stored
      * separately from phone so we can prefix-strip when displaying
      * and country-format when sending SMS.

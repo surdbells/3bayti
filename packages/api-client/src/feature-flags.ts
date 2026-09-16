@@ -782,6 +782,19 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/phone/claim/verify',
     shape: 'v3-envelope',
   },
+  // Link a WhatsApp number to this account (WhatsApp Commerce), OTP-verified.
+  'POST /me/whatsapp/link': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/whatsapp/link',
+    shape: 'v3-envelope',
+  },
+  'POST /me/whatsapp/link/verify': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/whatsapp/link/verify',
+    shape: 'v3-envelope',
+  },
   // Email-change (set a deliverable email + verify by OTP), for Apple
   // private-relay / placeholder accounts. v3-only.
   'POST /me/email': {

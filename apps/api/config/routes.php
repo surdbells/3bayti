@@ -250,6 +250,12 @@ return function (App $app): void {
         $group->post('/phone/claim', \Bayti\Api\Http\Controllers\Me\ClaimPhoneController::class);
         $group->post('/phone/claim/verify', \Bayti\Api\Http\Controllers\Me\ClaimPhoneVerifyController::class);
 
+        // Link a WhatsApp number to this account (WhatsApp Commerce). OTP to the
+        // number → verify → persist. Purpose WHATSAPP_LINK is isolated from the
+        // merge / phone-change flows.
+        $group->post('/whatsapp/link', \Bayti\Api\Http\Controllers\Me\LinkWhatsAppController::class);
+        $group->post('/whatsapp/link/verify', \Bayti\Api\Http\Controllers\Me\VerifyWhatsAppLinkController::class);
+
         // Email-change, set/verify a deliverable email on the current account.
         //   POST /email        send OTP to the new email (stores it pending)
         //   POST /email/verify  confirm the OTP → email switched + verified
@@ -497,6 +503,19 @@ return function (App $app): void {
     $app->post(
         '/v3/shipping/webhook/oto',
         \Bayti\Api\Http\Controllers\Shipping\OtoWebhookController::class,
+    );
+
+    // Meta WhatsApp Commerce webhook. INTENTIONALLY UNAUTHENTICATED (Meta has no
+    // 3bayti JWT). GET is Meta's verify-token challenge; POST events are HMAC-
+    // verified (X-Hub-Signature-256 over the raw body) inside the controller.
+    // NEVER add AuthMiddleware to these routes.
+    $app->get(
+        '/v3/channels/whatsapp/webhook',
+        \Bayti\Api\Http\Controllers\Channels\WhatsAppWebhookVerifyController::class,
+    );
+    $app->post(
+        '/v3/channels/whatsapp/webhook',
+        \Bayti\Api\Http\Controllers\Channels\WhatsAppWebhookController::class,
     );
 
     // M3.2.Y.3-A, Noon payment-return browser redirect.

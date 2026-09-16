@@ -26,6 +26,23 @@ use Doctrine\ORM\EntityRepository;
 class UserRepository extends EntityRepository
 {
     /**
+     * Find a user by their linked WhatsApp number (E.164 with '+'), excluding
+     * soft-deleted users. Used by the WhatsApp webhook to resolve a message's
+     * sender to an account. At most one match (a number links to one account).
+     */
+    public function findByWhatsAppPhone(string $phone): ?User
+    {
+        return $this->createQueryBuilder('u')
+            ->where('u.whatsappPhone = :phone')
+            ->andWhere('u.deletedAt IS NULL')
+            ->setParameter('phone', $phone)
+            ->orderBy('u.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
      * Find a user by their primary id, excluding soft-deleted users.
      */
     public function findById(int $id): ?User

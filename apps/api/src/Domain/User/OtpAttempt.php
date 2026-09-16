@@ -79,6 +79,15 @@ class OtpAttempt
      */
     public const PURPOSE_EMAIL_CHANGE = 'email_change';
 
+    /**
+     * WhatsApp link: attach a WhatsApp number to the CURRENT account (for the
+     * WhatsApp Commerce channel), confirmed by an OTP sent to that number.
+     * Distinct from ACCOUNT_LINK (which triggers an irreversible merge) so a
+     * WhatsApp-link OTP can never be replayed against the merge endpoint. See
+     * LinkWhatsAppController / VerifyWhatsAppLinkController.
+     */
+    public const PURPOSE_WHATSAPP_LINK = 'whatsapp_link';
+
     public const ALL_PURPOSES = [
         self::PURPOSE_REGISTRATION,
         self::PURPOSE_PASSWORD_RESET,
@@ -86,6 +95,7 @@ class OtpAttempt
         self::PURPOSE_LOGIN_2FA,
         self::PURPOSE_ACCOUNT_LINK,
         self::PURPOSE_EMAIL_CHANGE,
+        self::PURPOSE_WHATSAPP_LINK,
     ];
 
     /**
