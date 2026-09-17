@@ -595,8 +595,8 @@
   }
   }
 
-  <!-- Ain "Complete the look": real, in-stock complements -->
-  @if (completeLook.length > 0) {
+  <!-- Ain "Complete the look": shown only once the product is in the cart -->
+  @if (itemExists && completeLook.length > 0) {
     <section class="ctl">
       <div class="ctl-head">
         <h2 class="ctl-title">{{ 'complete_look_title' | translate }}</h2>

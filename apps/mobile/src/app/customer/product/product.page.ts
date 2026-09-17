@@ -960,7 +960,8 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
             this.add_cart.product_image = this.single.image_1;
             this.add_cart.price = this.single.price;
             this.add_cart.store = this.single.store;
-            this.get_complete_look();
+            // "Complete the look" is loaded only once the product is in the cart
+            // (see load_cart + addToCart), so it surfaces after add-to-cart.
             this.beaconProductViewed();
             this.get_store_measurement();
             this.apiSizes = {
@@ -1138,6 +1139,10 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
             }
             this.ui_controls.is_loading = false;
             this.itemExists = this.product.some((item: any) => item.product_id === this.single.product);
+            // Product already in the cart -> surface "Complete the look" now.
+            if (this.itemExists && this.completeLook.length === 0) {
+              this.get_complete_look();
+            }
             this.cdr.markForCheck();
           }
         }
@@ -1215,11 +1220,12 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
 
     this.recordAiEvent('complete_look_added', { count: added });
     this.isAddingLook = false;
-    if (added > 0) {
-      this.success_notification(this.i18n.t('text_added_to_cart'));
-      void this.cartCount.refresh();
-    }
     this.cdr.markForCheck();
+    if (added > 0) {
+      void this.cartCount.refresh();
+      // Take the shopper straight to the cart to review the full look.
+      this.router.navigate(['/', 'cart']);
+    }
   }
 
   private recordAiEvent(event: string, extra: Record<string, unknown> = {}): void {
@@ -1528,6 +1534,10 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
             this.success_notification(successText);
             this.ui_controls.is_adding_to_cart = false;
             this.itemExists = true; // flip the CTA to "Already in cart, View"
+            // Now that the product is in the cart, reveal "Complete the look".
+            if (this.completeLook.length === 0) {
+              this.get_complete_look();
+            }
             // Stay on the PDP (mirror web). Update the reactive cart-count
             // badge, the transformAddCartResponse transform exposes the new
             // total as response.data.count; publish it via the shared
