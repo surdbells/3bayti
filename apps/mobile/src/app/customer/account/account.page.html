@@ -121,6 +121,38 @@
   <!-- Update-email nudge (non-deliverable Apple relay / placeholder email) -->
   <app-add-email-banner></app-add-email-banner>
 
+  <!-- Ain concierge: quick access to the AI style & gifting tools. Surfaced
+       here (the customer landing / "home" tab) so they're discoverable — the
+       public /home page that also carries them isn't in the tab bar. -->
+  <section class="ain-concierge">
+    <p class="ain-concierge__eyebrow">
+      <ax-icon name="sparkles"></ax-icon>
+      {{ 'ask_ain_pill_hint' | translate }}
+    </p>
+    <div class="ain-concierge__row">
+      <button type="button" class="ain-card ain-card--ask" (click)="open_ask_ain()">
+        <span class="ain-card__orb"><ax-icon name="sparkles"></ax-icon></span>
+        <span class="ain-card__title">{{ 'ask_ain_title' | translate }}</span>
+        <span class="ain-card__sub">{{ 'ask_ain_pill_hint' | translate }}</span>
+      </button>
+      <button type="button" class="ain-card ain-card--gift" (click)="open_gift_ain()">
+        <span class="ain-card__orb"><ax-icon name="gift"></ax-icon></span>
+        <span class="ain-card__title">{{ 'gift_ain_title' | translate }}</span>
+        <span class="ain-card__sub">{{ 'gift_ain_pill_hint' | translate }}</span>
+      </button>
+      <button type="button" class="ain-card ain-card--style" (click)="open_outfit()">
+        <span class="ain-card__orb"><ax-icon name="shirt"></ax-icon></span>
+        <span class="ain-card__title">{{ 'outfit_title' | translate }}</span>
+        <span class="ain-card__sub">{{ 'outfit_pill_hint' | translate }}</span>
+      </button>
+      <button type="button" class="ain-card ain-card--photo" (click)="open_visual_search()">
+        <span class="ain-card__orb"><ax-icon name="camera"></ax-icon></span>
+        <span class="ain-card__title">{{ 'visual_search_title' | translate }}</span>
+        <span class="ain-card__sub">{{ 'visual_search_pill_hint' | translate }}</span>
+      </button>
+    </div>
+  </section>
+
   <!--
     Gift-card promo, compact by default, tap the row to expand.
     The gift-card BALANCE is nested inside this card (a line under the

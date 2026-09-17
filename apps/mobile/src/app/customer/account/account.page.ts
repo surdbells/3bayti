@@ -647,6 +647,12 @@ export class AccountPage implements OnInit, OnDestroy {
     this.open_product(product_id);
   }
 
+  /** Ain concierge entry points (surfaced on the customer landing). */
+  open_ask_ain() { this.router.navigate(['/ask-ain']); }
+  open_gift_ain() { this.router.navigate(['/gift-ain']); }
+  open_outfit() { this.router.navigate(['/outfit']); }
+  open_visual_search() { this.router.navigate(['/visual-search']); }
+
   /** Map a v3 listShape product to the legacy card shape the rails render. */
   private forYouCard(p: any): Products {
     return {
