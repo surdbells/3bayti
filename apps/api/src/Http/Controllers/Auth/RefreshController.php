@@ -110,16 +110,25 @@ final class RefreshController
      *
      * Covers the common mobile race: the server rotates the token, but the
      * client never receives or persists the replacement (dropped connection,
-     * app backgrounded mid-refresh), then retries with the token it still
-     * holds. Without this, that retry trips reuse-detection and logs the
-     * customer out of every session.
+     * app backgrounded/killed mid-refresh), then retries with the token it
+     * still holds. Without this, that retry trips reuse-detection and logs
+     * the customer out of every session.
      *
-     * 5 minutes comfortably covers a retry after a brief background/resume
-     * while staying far too short to be useful to an attacker (the real
-     * bearer credential is the 15-minute access token; this is only
-     * defense-in-depth on the refresh path).
+     * Why 30 days (was 5 minutes): the earlier 5-minute window only survived
+     * a retry moments after a brief background. Real customers background the
+     * app for hours or days, then reopen and refresh with a token whose
+     * rotation response was lost long ago, so a 5-minute window still logged
+     * them out. The product rule is "stay signed in until you log out", so
+     * the window is widened to comfortably cover normal usage gaps.
+     *
+     * Security note: this only softens defense-in-depth on the REFRESH path
+     * for tokens revoked specifically by 'rotated'. Every other revoke reason
+     * (logout, logout_all, password_changed, admin_force_logout) still trips
+     * wholesale reuse-detection regardless of timing, and the real bearer
+     * credential remains the short-lived (15-minute) access token. A truly
+     * expired refresh token is still rejected by the isExpired() check below.
      */
-    private const ROTATION_GRACE_SECONDS = 300;
+    private const ROTATION_GRACE_SECONDS = 2592000;
 
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
