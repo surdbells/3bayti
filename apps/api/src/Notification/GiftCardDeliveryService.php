@@ -56,19 +56,57 @@ class GiftCardDeliveryService
     }
 
     /**
-     * Deliver the card over every pending channel. Idempotent +
-     * non-blocking. Returns silently; failures are logged.
+     * Whether a real SMS provider is wired (vs the NullSmsSender no-op).
+     * The scheduled dispatcher passes this to
+     * GiftCardRepository::findDueForDelivery so a phone channel that can
+     * never be delivered doesn't keep a card perpetually "due".
      */
-    public function deliver(GiftCard $card): void
+    public function isSmsEnabled(): bool
     {
+        return $this->smsSender->isEnabled();
+    }
+
+    /**
+     * Deliver the card over every pending channel. Idempotent +
+     * non-blocking (failures are logged, never thrown).
+     *
+     * Returns a per-channel outcome so the caller (the scheduled dispatcher)
+     * can report what actually happened instead of a misleading "processed"
+     * count. Each value is one of:
+     *   - 'sent'                   delivered + the *_delivered_at stamp set
+     *   - 'failed'                 a recipient exists but the send errored
+     *   - 'skipped_not_configured' SMS only: no real SMS provider is wired
+     *   - 'not_pending'            channel had nothing to do (no recipient,
+     *                              or already delivered)
+     *
+     * @return array{email: string, sms: string}
+     */
+    public function deliver(GiftCard $card): array
+    {
+        $report = ['email' => 'not_pending', 'sms' => 'not_pending'];
         $changed = false;
 
         if ($card->needsEmailDelivery()) {
-            $changed = $this->deliverEmail($card);
+            $ok = $this->deliverEmail($card);
+            $report['email'] = $ok ? 'sent' : 'failed';
+            $changed = $ok;
         }
 
         if ($card->needsSmsDelivery()) {
-            $changed = $this->deliverSms($card) || $changed;
+            if (!$this->smsSender->isEnabled()) {
+                // No real SMS provider — record honestly instead of a silent
+                // no-op. deliverSms() would do the same skip; short-circuit to
+                // avoid the wasted call while keeping the observable log line.
+                $report['sms'] = 'skipped_not_configured';
+                $this->logger->info('gift_card.delivery.sms_skipped_not_configured', [
+                    'gift_card_id' => $card->getId(),
+                    'to' => $card->effectiveRecipientPhone(),
+                ]);
+            } else {
+                $ok = $this->deliverSms($card);
+                $report['sms'] = $ok ? 'sent' : 'failed';
+                $changed = $ok || $changed;
+            }
         }
 
         if ($changed) {
@@ -85,6 +123,8 @@ class GiftCardDeliveryService
                 ]);
             }
         }
+
+        return $report;
     }
 
     /**

@@ -126,25 +126,47 @@ class GiftCardRepository extends EntityRepository
      * A card is due when:
      *   - status IN (active, partially_used), it has been activated
      *     and is spendable (we don't deliver pending/voided/expired), AND
-     *   - at least one channel is pending:
+     *   - at least one DELIVERABLE channel is pending:
      *       (recipient_email IS NOT NULL AND email_delivered_at IS NULL) OR
      *       (recipient_phone IS NOT NULL AND sms_delivered_at  IS NULL), AND
      *   - scheduled_delivery_at IS NULL (send now) OR <= now (its time
      *     has come).
      *
+     * SMS gating ($smsEnabled): when no real SMS provider is wired
+     * (NullSmsSender), deliverSms() can never mark sms_delivered_at, so a
+     * card with a recipient phone would satisfy the pending-channel test on
+     * EVERY run forever — the dispatcher re-fetches it each cycle and
+     * "processes" it without ever delivering anything (email-once-then-stuck
+     * for a two-channel card, or never-deliverable for a phone-only card).
+     * To mirror the manual-send rule ("deliver whatever we actually can"),
+     * the SMS leg of the pending-channel test is dropped when SMS is off, so
+     * only the email channel makes a card due. Phone-only cards then simply
+     * aren't selected until SMS is configured (nothing we can do for them),
+     * instead of churning the queue. Pass $smsEnabled from
+     * GiftCardDeliveryService::isSmsEnabled().
+     *
      * Ordered oldest-first so a back-pressured queue drains fairly.
      *
      * @return list<GiftCard>
      */
-    public function findDueForDelivery(DateTimeImmutable $now, int $limit = 100): array
+    public function findDueForDelivery(DateTimeImmutable $now, int $limit = 100, bool $smsEnabled = true): array
     {
-        /** @var list<GiftCard> $results */
-        $results = $this->createQueryBuilder('g')
-            ->where("g.status IN ('active', 'partially_used')")
-            ->andWhere(
+        $qb = $this->createQueryBuilder('g')
+            ->where("g.status IN ('active', 'partially_used')");
+
+        if ($smsEnabled) {
+            $qb->andWhere(
                 '(g.recipientEmail IS NOT NULL AND g.emailDeliveredAt IS NULL) '
                 . 'OR (g.recipientPhone IS NOT NULL AND g.smsDeliveredAt IS NULL)'
-            )
+            );
+        } else {
+            // SMS is a no-op sender: only email can actually be delivered, so
+            // only a pending email channel makes a card due.
+            $qb->andWhere('g.recipientEmail IS NOT NULL AND g.emailDeliveredAt IS NULL');
+        }
+
+        /** @var list<GiftCard> $results */
+        $results = $qb
             ->andWhere('g.scheduledDeliveryAt IS NULL OR g.scheduledDeliveryAt <= :now')
             ->setParameter('now', $now)
             ->orderBy('g.id', 'ASC')

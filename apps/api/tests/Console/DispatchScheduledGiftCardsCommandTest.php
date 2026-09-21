@@ -72,13 +72,70 @@ final class DispatchScheduledGiftCardsCommandTest extends TestCase
         $cards = [$this->makeCard(1), $this->makeCard(2), $this->makeCard(3)];
         $this->repo->method('findDueForDelivery')->willReturn($cards);
 
-        $this->delivery->expects(self::exactly(3))->method('deliver');
+        $this->delivery->expects(self::exactly(3))
+            ->method('deliver')
+            ->willReturn(['email' => 'sent', 'sms' => 'not_pending']);
 
         $tester = $this->tester();
         $exit = $tester->execute([]);
 
         self::assertSame(Command::SUCCESS, $exit);
         self::assertStringContainsString('Found 3', $tester->getDisplay());
+        self::assertStringContainsString('Email sent', $tester->getDisplay());
+    }
+
+    #[Test]
+    public function passesSmsEnabledFlagFromDeliveryServiceToQuery(): void
+    {
+        $this->delivery->method('isSmsEnabled')->willReturn(false);
+
+        $captured = null;
+        $this->repo->expects(self::once())
+            ->method('findDueForDelivery')
+            ->willReturnCallback(function ($now, $limit, $smsEnabled = true) use (&$captured): array {
+                $captured = $smsEnabled;
+                return [];
+            });
+
+        $tester = $this->tester();
+        $exit = $tester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $exit);
+        self::assertFalse($captured, 'SMS-disabled flag must be forwarded to findDueForDelivery');
+    }
+
+    #[Test]
+    public function skippedSmsChannelIsNotCountedAsAFailure(): void
+    {
+        // isSmsEnabled() is unstubbed on the mock => false, so the "SMS is not
+        // configured" operator notice is expected alongside the skipped tally.
+        $cards = [$this->makeCard(1)];
+        $this->repo->method('findDueForDelivery')->willReturn($cards);
+        $this->delivery->method('deliver')
+            ->willReturn(['email' => 'sent', 'sms' => 'skipped_not_configured']);
+
+        $tester = $this->tester();
+        $exit = $tester->execute([]);
+
+        // A skipped (unconfigured) SMS leg is expected, not a failure.
+        self::assertSame(Command::SUCCESS, $exit);
+        self::assertStringContainsString('SMS is not configured', $tester->getDisplay());
+        self::assertStringContainsString('SMS skipped (not configured)', $tester->getDisplay());
+    }
+
+    #[Test]
+    public function realSendFailureExitsFailure(): void
+    {
+        $cards = [$this->makeCard(7)];
+        $this->repo->method('findDueForDelivery')->willReturn($cards);
+        $this->delivery->method('deliver')
+            ->willReturn(['email' => 'failed', 'sms' => 'not_pending']);
+
+        $tester = $this->tester();
+        $exit = $tester->execute([]);
+
+        self::assertSame(Command::FAILURE, $exit);
+        self::assertStringContainsString('Gift card #7 send failed', $tester->getDisplay());
     }
 
     #[Test]
@@ -108,11 +165,12 @@ final class DispatchScheduledGiftCardsCommandTest extends TestCase
         $seen = 0;
         $this->delivery->expects(self::exactly(3))
             ->method('deliver')
-            ->willReturnCallback(function (GiftCard $card) use (&$seen): void {
+            ->willReturnCallback(function (GiftCard $card) use (&$seen): array {
                 $seen++;
                 if ($card->getId() === 2) {
                     throw new \RuntimeException('transient boom');
                 }
+                return ['email' => 'sent', 'sms' => 'not_pending'];
             });
 
         $tester = $this->tester();

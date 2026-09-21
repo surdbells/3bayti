@@ -107,7 +107,11 @@ final class DispatchScheduledGiftCardsCommand extends Command
 
         /** @var GiftCardRepository $repo */
         $repo = $this->em->getRepository(GiftCard::class);
-        $due = $repo->findDueForDelivery($now, $batchSize);
+        // Gate the SMS channel: with no real SMS provider wired, a phone-only
+        // (or already-emailed two-channel) card would otherwise be re-fetched
+        // as "due" on every run forever and never actually delivered.
+        $smsEnabled = $this->deliveryService->isSmsEnabled();
+        $due = $repo->findDueForDelivery($now, $batchSize, $smsEnabled);
 
         $totalFound = count($due);
         $io->writeln(sprintf('Found <info>%d</info> gift card(s) due for delivery.', $totalFound));
@@ -126,13 +130,40 @@ final class DispatchScheduledGiftCardsCommand extends Command
             return Command::SUCCESS;
         }
 
-        $processed = 0;
-        $errors = 0;
+        if (!$smsEnabled) {
+            $io->writeln('<comment>SMS is not configured; only email is delivered. Phone-only cards are skipped until an SMS provider is enabled.</comment>');
+        }
+
+        $processed = 0;   // cards deliver() ran against without throwing
+        $emailSent = 0;
+        $smsSent = 0;
+        $smsSkipped = 0;  // phone channel present but SMS not configured
+        $sendFailures = 0; // a channel had a recipient but the send errored
+        $errors = 0;      // deliver() itself threw (rare, non-delivery infra)
 
         foreach ($due as $card) {
             try {
-                $this->deliveryService->deliver($card);
+                $report = $this->deliveryService->deliver($card);
                 $processed++;
+
+                if ($report['email'] === 'sent') {
+                    $emailSent++;
+                }
+                if ($report['sms'] === 'sent') {
+                    $smsSent++;
+                }
+                if ($report['sms'] === 'skipped_not_configured') {
+                    $smsSkipped++;
+                }
+                if ($report['email'] === 'failed' || $report['sms'] === 'failed') {
+                    $sendFailures++;
+                    $io->writeln(sprintf(
+                        '<error>Gift card #%d send failed (email=%s, sms=%s) — see the application log for the cause.</error>',
+                        (int) $card->getId(),
+                        $report['email'],
+                        $report['sms'],
+                    ));
+                }
             } catch (\Throwable $e) {
                 // deliver() is non-blocking, so reaching here is rare -
                 // but a per-card guard keeps the batch alive regardless.
@@ -155,18 +186,29 @@ final class DispatchScheduledGiftCardsCommand extends Command
             ['Outcome', 'Count'],
             [
                 ['Found', (string) $totalFound],
-                ['Processed', (string) $processed],
-                ['Errors', (string) $errors],
+                ['Email sent', (string) $emailSent],
+                ['SMS sent', (string) $smsSent],
+                ['SMS skipped (not configured)', (string) $smsSkipped],
+                ['Send failures', (string) $sendFailures],
+                ['Errors (exceptions)', (string) $errors],
             ],
         );
 
         $this->logger->info('gift_card.dispatch.batch_complete', [
             'found' => $totalFound,
             'processed' => $processed,
+            'email_sent' => $emailSent,
+            'sms_sent' => $smsSent,
+            'sms_skipped' => $smsSkipped,
+            'send_failures' => $sendFailures,
             'errors' => $errors,
+            'sms_enabled' => $smsEnabled,
             'batch_size' => $batchSize,
         ]);
 
-        return $errors === 0 ? Command::SUCCESS : Command::FAILURE;
+        // A card whose only pending channel is an unconfigured SMS leg is not
+        // a failure — it's expected until SMS is wired. Fail the run only when
+        // a real send errored or deliver() threw, so cron alerting is honest.
+        return ($errors === 0 && $sendFailures === 0) ? Command::SUCCESS : Command::FAILURE;
     }
 }

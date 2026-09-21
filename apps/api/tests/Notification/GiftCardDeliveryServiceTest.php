@@ -191,6 +191,53 @@ final class GiftCardDeliveryServiceTest extends TestCase
         self::assertTrue($card->needsSmsDelivery());
     }
 
+    #[Test]
+    public function deliverReturnsPerChannelReport(): void
+    {
+        $card = $this->makeCard(email: 'sara@example.com', phone: '+971501234567');
+
+        $report = $this->makeService()->deliver($card);
+
+        self::assertSame(['email' => 'sent', 'sms' => 'sent'], $report);
+    }
+
+    #[Test]
+    public function deliverReportsSmsSkippedWhenNotConfigured(): void
+    {
+        // Two-channel card, but SMS is the no-op sender: email sends, SMS is
+        // reported as skipped (not a failure) and the card is NOT marked, so
+        // the query gating (isSmsEnabled=false) keeps it out of the due list
+        // once the email has gone out.
+        $card = $this->makeCard(email: 'sara@example.com', phone: '+971501234567');
+        $service = new GiftCardDeliveryService(
+            renderer: new GiftCardEmailTemplateRenderer(),
+            mailer: $this->mailer,
+            smsSender: new NullSmsSender(),
+            em: $this->makeEm(),
+            logger: new NullLogger(),
+        );
+
+        $report = $service->deliver($card);
+
+        self::assertSame(['email' => 'sent', 'sms' => 'skipped_not_configured'], $report);
+        self::assertNull($card->getSmsDeliveredAt());
+    }
+
+    #[Test]
+    public function isSmsEnabledReflectsTheUnderlyingSender(): void
+    {
+        self::assertTrue($this->makeService()->isSmsEnabled());
+
+        $nullSmsService = new GiftCardDeliveryService(
+            renderer: new GiftCardEmailTemplateRenderer(),
+            mailer: $this->mailer,
+            smsSender: new NullSmsSender(),
+            em: $this->makeEm(),
+            logger: new NullLogger(),
+        );
+        self::assertFalse($nullSmsService->isSmsEnabled());
+    }
+
     // ---- resend() : the admin manual "Send to recipient" action --------
 
     #[Test]
