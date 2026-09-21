@@ -10,6 +10,7 @@ use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Responder;
 use DateTimeImmutable;
+use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -35,6 +36,14 @@ use Psr\Http\Message\ServerRequestInterface;
 final class PurchaseGiftCardController
 {
     use Responder;
+
+    /**
+     * Timezone an offset-less scheduled-delivery value is interpreted in.
+     * The mobile picker (datetime-local) sends a naive local wall-clock; the
+     * primary market is UAE, so a bare "2026-09-25T10:00" means 10:00 Dubai.
+     */
+    private const BUSINESS_TZ = 'Asia/Dubai';
+
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
@@ -98,15 +107,24 @@ final class PurchaseGiftCardController
             $recipientPhone = PhoneNumber::toE164($recipientPhone) ?? $recipientPhone;
         }
 
-        // Scheduled delivery
+        // Scheduled delivery. An offset-less value (the mobile datetime-local
+        // picker sends a naive local wall-clock) is interpreted in the UAE
+        // business timezone, then normalised to UTC for storage + the cron's
+        // UTC comparison. A value that already carries an offset or 'Z' (the
+        // web client sends toISOString()) is honoured as-is — PHP ignores the
+        // 2nd-arg timezone for a non-naive string — so both clients resolve to
+        // the same intended instant instead of the mobile one landing 4h late.
         $scheduledDeliveryAt = null;
         if (!empty($body['scheduled_delivery_at'])) {
             try {
-                $scheduledDeliveryAt = new DateTimeImmutable((string) $body['scheduled_delivery_at']);
+                $scheduledDeliveryAt = (new DateTimeImmutable(
+                    (string) $body['scheduled_delivery_at'],
+                    new DateTimeZone(self::BUSINESS_TZ),
+                ))->setTimezone(new DateTimeZone('UTC'));
             } catch (\Throwable) {
                 throw HttpException::badRequest('scheduled_delivery_at must be a valid ISO-8601 date string.');
             }
-            if ($scheduledDeliveryAt <= new DateTimeImmutable()) {
+            if ($scheduledDeliveryAt <= new DateTimeImmutable('now', new DateTimeZone('UTC'))) {
                 throw HttpException::badRequest('scheduled_delivery_at must be in the future.');
             }
         }

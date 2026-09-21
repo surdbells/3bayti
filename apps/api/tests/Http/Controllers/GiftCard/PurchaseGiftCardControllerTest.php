@@ -124,6 +124,57 @@ final class PurchaseGiftCardControllerTest extends TestCase
         self::assertNotNull($this->saved->getScheduledDeliveryAt());
     }
 
+    #[Test]
+    public function naiveScheduledTimeIsInterpretedAsDubaiAndStoredUtc(): void
+    {
+        // Mobile's datetime-local picker sends a naive wall-clock with NO
+        // offset. 10:00 in Dubai (UTC+4) must be stored as 06:00 UTC, not
+        // 10:00 UTC (the old 4-hours-late bug).
+        $naiveLocal = (new \DateTimeImmutable('+7 days', new \DateTimeZone('Asia/Dubai')))->setTime(10, 0, 0);
+        $naiveString = $naiveLocal->format('Y-m-d\TH:i:s'); // e.g. "2026-09-28T10:00:00", no zone
+
+        $this->invoke([
+            'denomination' => '100.00',
+            'theme' => 'eid',
+            'recipient_email' => 'sara@example.com',
+            'scheduled_delivery_at' => $naiveString,
+        ]);
+
+        $stored = $this->saved->getScheduledDeliveryAt();
+        self::assertNotNull($stored);
+        $expectedUtc = $naiveLocal->setTimezone(new \DateTimeZone('UTC'));
+        self::assertSame(
+            $expectedUtc->format('Y-m-d H:i:s'),
+            $stored->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+        );
+        // The stored UTC hour must be 4 behind the naive local hour.
+        self::assertSame('06', $stored->setTimezone(new \DateTimeZone('UTC'))->format('H'));
+    }
+
+    #[Test]
+    public function offsetBearingScheduledTimeIsHonouredAsIs(): void
+    {
+        // The web client sends toISOString() (a 'Z'/offset instant). PHP
+        // ignores the 2nd-arg Dubai timezone for a non-naive string, so the
+        // instant must be stored verbatim (NOT shifted by 4 hours).
+        $utc = (new \DateTimeImmutable('+7 days', new \DateTimeZone('UTC')))->setTime(6, 0, 0);
+        $iso = $utc->format(\DateTimeInterface::ATOM); // "...T06:00:00+00:00"
+
+        $this->invoke([
+            'denomination' => '100.00',
+            'theme' => 'eid',
+            'recipient_email' => 'sara@example.com',
+            'scheduled_delivery_at' => $iso,
+        ]);
+
+        $stored = $this->saved->getScheduledDeliveryAt();
+        self::assertNotNull($stored);
+        self::assertSame(
+            $utc->format('Y-m-d H:i:s'),
+            $stored->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+        );
+    }
+
     // -----------------------------------------------------------------
 
     /**
