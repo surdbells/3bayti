@@ -430,6 +430,14 @@ export const routes: Routes = [
     title: 'routeTitles.accountFollowing',
   },
   {
+    /* Bespoke customization requests (P5). */
+    path: 'account/customization-requests',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/customization/account-customization-page').then(m => m.AccountCustomizationPageComponent),
+    title: 'routeTitles.accountCustomizationRequests',
+  },
+  {
     /* Gift cards the buyer owns (purchased + redeemed), Phase E3. */
     path: 'account/gift-cards',
     canActivate: [authActivateGuard],

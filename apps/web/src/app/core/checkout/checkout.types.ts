@@ -77,6 +77,13 @@ export interface InitiateCheckoutInput {
    */
   gift_card_purchase_id?: number | null;
   /**
+   * Bespoke-customization payment flow (P5). When set, the server creates an
+   * item-less synthetic order to charge the buyer the accepted quote amount
+   * via Noon (cart is bypassed), exactly like gift_card_purchase_id. The
+   * request must be in 'accepted' status and belong to the buyer.
+   */
+  customization_request_id?: number | null;
+  /**
    * Apply an existing gift card to a NORMAL cart order (Phase E5). The
    * server debits the card's balance against the order total and charges
    * only the remainder via Noon.

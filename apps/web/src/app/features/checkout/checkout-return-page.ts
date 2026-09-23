@@ -9,6 +9,7 @@ import {
 import { NgIf, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { consumeGiftCardCheckoutRef } from '../gift-cards/gift-card-checkout-handoff';
+import { consumeCustomizationCheckoutRef } from '../customization/customization-checkout-handoff';
 import { TranslatePipe } from '@ngx-translate/core';
 import { CheckoutStepperComponent } from './checkout-stepper';
 import { CheckoutService, CheckoutStatusService } from '../../core/checkout';
@@ -191,6 +192,11 @@ export class CheckoutReturnPageComponent implements OnInit {
       const giftRef = consumeGiftCardCheckoutRef();
       if (giftRef !== null && giftRef === ref.trim()) {
         await this.router.navigateByUrl('/account/gift-cards');
+        return;
+      }
+      const customizationRef = consumeCustomizationCheckoutRef();
+      if (customizationRef !== null && customizationRef === ref.trim()) {
+        await this.router.navigateByUrl('/account/customization-requests');
         return;
       }
       await this.router.navigateByUrl(`/checkout/success/${result.status.order_id}`);

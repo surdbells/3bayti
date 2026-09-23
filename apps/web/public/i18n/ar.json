@@ -851,6 +851,10 @@
         "title": "المتابَعة",
         "desc": "المتاجر التي تتابعينها"
       },
+      "customizationRequests": {
+        "title": "التخصيصات",
+        "desc": "طلباتك المخصّصة"
+      },
       "giftCards": {
         "title": "بطاقات الهدايا",
         "desc": "اشتري واعرضي واستردي بطاقات الهدايا"
@@ -1130,6 +1134,33 @@
       "browse": "تصفّحي المتاجر",
       "errors": {
         "loadFailed": "تعذّر تحميل متاجرك. حاولي مرة أخرى."
+      }
+    },
+    "customizationRequests": {
+      "title": "طلبات التخصيص",
+      "loading": "جارٍ تحميل طلباتك…",
+      "empty": "لم تطلبي أي تخصيص بعد.",
+      "browse": "تصفّحي المنتجات",
+      "loadMore": "تحميل المزيد",
+      "accept": "قبول العرض",
+      "reject": "رفض",
+      "cancel": "إلغاء",
+      "pay": "ادفعي الآن",
+      "leadTime": "جاهز خلال ~{{days}} يوم",
+      "statuses": {
+        "pending": "بانتظار العرض",
+        "quoted": "العرض جاهز",
+        "accepted": "مقبول",
+        "paid": "مدفوع",
+        "completed": "مكتمل",
+        "declined": "مرفوض",
+        "rejected": "رفضتِه",
+        "cancelled": "ملغى"
+      },
+      "errors": {
+        "loadFailed": "تعذّر تحميل طلباتك. حاولي مرة أخرى.",
+        "actionFailed": "لم تتم العملية. حاولي مرة أخرى.",
+        "payFailed": "تعذّر بدء الدفع. حاولي مرة أخرى."
       }
     },
     "connected": {
@@ -1633,6 +1664,26 @@
     "increaseQty": "زيادة الكمية",
     "adding": "جارٍ الإضافة…",
     "addToCart": "أضيفي إلى السلّة",
+    "customization": {
+      "cta": "اطلبي تخصيصًا",
+      "heading": "اطلبي تخصيصًا",
+      "formHint": "أخبري المتجر بما تريدين — تعديل، تطريز، أو تفصيل حسب المقاس. سيراجع الطلب ويرسل لك السعر.",
+      "descLabel": "ما الذي تودّين تخصيصه؟",
+      "descPlaceholder": "مثال: تضييق الخصر 2 سم وإضافة تطريز ذهبي على الأكمام.",
+      "includeMeasurements": "مشاركة مقاساتي المحفوظة مع المتجر",
+      "submit": "إرسال الطلب",
+      "sending": "جارٍ الإرسال…",
+      "cancelForm": "إلغاء",
+      "signInPrompt": "سجّلي الدخول لطلب تخصيص.",
+      "signInLink": "تسجيل الدخول",
+      "sentTitle": "تم إرسال الطلب",
+      "sentNote": "سيراجع المتجر طلبك ويرسل لك عرض السعر. سنراسلك عند جهوزه.",
+      "viewRequests": "عرض طلباتي",
+      "errorDescription": "يرجى وصف التخصيص (بضع كلمات على الأقل).",
+      "errorDuplicate": "لديك طلب مفتوح بالفعل لهذا المنتج.",
+      "errorValidation": "يرجى مراجعة طلبك والمحاولة مرة أخرى.",
+      "errorSubmit": "تعذّر إرسال طلبك. حاولي مرة أخرى."
+    },
     "hintSize": "اختاري مقاسًا للمتابعة.",
     "hintColor": "اختاري لونًا للمتابعة.",
     "measurementTitle": "قياسات إضافية",
@@ -1856,6 +1907,7 @@
     "accountMessagesThread": "المحادثة · 3bayti",
     "accountWishlist": "قائمة أمنياتي · 3bayti",
     "accountFollowing": "المتاجر التي تتابعينها · 3bayti",
+    "accountCustomizationRequests": "طلبات التخصيص · 3bayti",
     "accountGiftCards": "بطاقات الهدايا الخاصة بي · 3bayti",
     "accountGiftCardDetail": "بطاقة هدية · 3bayti",
     "accountAddresses": "العناوين المحفوظة · 3bayti",

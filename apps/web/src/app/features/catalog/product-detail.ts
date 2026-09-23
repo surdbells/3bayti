@@ -1151,6 +1151,98 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       });
   }
 
+  // ===== Request customization (P5) ==================================
+  readonly customizationOpen = signal(false);
+  readonly customizationDescription = signal('');
+  readonly customizationIncludeMeasurements = signal(true);
+  readonly customizationSubmitting = signal(false);
+  readonly customizationSubmitted = signal(false);
+  readonly customizationError = signal<string | null>(null);
+
+  openCustomizationForm(): void {
+    this.customizationOpen.set(true);
+    this.customizationError.set(null);
+  }
+
+  closeCustomizationForm(): void {
+    this.customizationOpen.set(false);
+  }
+
+  onCustomizationDescriptionInput(event: Event): void {
+    this.customizationDescription.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  onCustomizationMeasurementsToggle(event: Event): void {
+    this.customizationIncludeMeasurements.set((event.target as HTMLInputElement).checked);
+  }
+
+  /**
+   * Open a bespoke-customization request on this product. Optionally attaches
+   * a snapshot of the shopper's saved default measurements so the vendor can
+   * size the work. A 409 means they already have an in-flight request here.
+   */
+  async submitCustomization(): Promise<void> {
+    const p = this.product();
+    if (!p || this.customizationSubmitting()) return;
+
+    const description = this.customizationDescription().trim();
+    if (description.length < 3) {
+      this.customizationError.set('product.customization.errorDescription');
+      return;
+    }
+
+    this.customizationSubmitting.set(true);
+    this.customizationError.set(null);
+
+    let snapshot: Record<string, number> | null = null;
+    if (this.customizationIncludeMeasurements()) {
+      try {
+        const saved = await this.measurements.getDefault();
+        if (saved !== null) {
+          const values: Record<string, number> = {};
+          for (const f of this.measurementFields) {
+            const v = saved.values[f];
+            if (typeof v === 'number' && !Number.isNaN(v)) {
+              values[f] = v;
+            }
+          }
+          if (Object.keys(values).length > 0) {
+            snapshot = values;
+          }
+        }
+      } catch {
+        /* Non-fatal: submit the request without measurements. */
+      }
+    }
+
+    const body: {
+      product_slug: string;
+      description: string;
+      measurement_snapshot?: Record<string, number>;
+    } = { product_slug: p.slug, description };
+    if (snapshot !== null) {
+      body.measurement_snapshot = snapshot;
+    }
+
+    this.routed.post<unknown>('POST /me/customization-requests', { body }).subscribe({
+      next: () => {
+        this.customizationSubmitting.set(false);
+        this.customizationSubmitted.set(true);
+        this.customizationOpen.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.customizationSubmitting.set(false);
+        this.customizationError.set(
+          err.status === 409
+            ? 'product.customization.errorDuplicate'
+            : err.status === 400 || err.status === 422
+              ? 'product.customization.errorValidation'
+              : 'product.customization.errorSubmit',
+        );
+      },
+    });
+  }
+
   /** Computed page title, fed to SeoService AND displayed in <title>. */
   readonly pageTitle = computed(() => {
     const p = this.product();

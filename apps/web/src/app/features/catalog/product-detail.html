@@ -361,6 +361,81 @@
               <span>{{ 'tryOn.cta' | translate }}</span>
             </button>
           }
+
+          <!-- ===== Request a bespoke customization (P5) ===== -->
+          <div class="pdp-customization" data-testid="pdp-customization">
+            @if (customizationSubmitted()) {
+              <div class="pdp-customization__done" role="status" data-testid="pdp-customization-done">
+                <p class="pdp-customization__done-title">{{ 'product.customization.sentTitle' | translate }}</p>
+                <p class="pdp-customization__done-note">{{ 'product.customization.sentNote' | translate }}</p>
+                <a class="pdp-customization__link" routerLink="/account/customization-requests">
+                  {{ 'product.customization.viewRequests' | translate }}
+                </a>
+              </div>
+            } @else if (!customizationOpen()) {
+              <button
+                type="button"
+                class="pdp-customization__cta"
+                (click)="openCustomizationForm()"
+                data-testid="pdp-customization-trigger"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M14.7 6.3l3 3L7.5 19.5l-3.5.9.9-3.5z"></path>
+                  <path d="M13.5 7.5l3 3"></path>
+                </svg>
+                <span>{{ 'product.customization.cta' | translate }}</span>
+              </button>
+            } @else if (!isAuthenticated()) {
+              <p class="pdp-customization__signin" data-testid="pdp-customization-signin">
+                {{ 'product.customization.signInPrompt' | translate }}
+                <a routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl() }">
+                  {{ 'product.customization.signInLink' | translate }}
+                </a>
+              </p>
+            } @else {
+              <form class="pdp-customization__form" (submit)="$event.preventDefault(); submitCustomization()">
+                <h3 class="pdp-customization__heading">{{ 'product.customization.heading' | translate }}</h3>
+                <p class="pdp-customization__hint">{{ 'product.customization.formHint' | translate }}</p>
+                <label class="pdp-customization__field">
+                  <span class="pdp-customization__label">{{ 'product.customization.descLabel' | translate }}</span>
+                  <textarea
+                    class="pdp-customization__textarea"
+                    rows="4"
+                    maxlength="2000"
+                    [value]="customizationDescription()"
+                    (input)="onCustomizationDescriptionInput($event)"
+                    [attr.placeholder]="'product.customization.descPlaceholder' | translate"
+                    data-testid="pdp-customization-desc"
+                  ></textarea>
+                </label>
+                <label class="pdp-customization__check">
+                  <input
+                    type="checkbox"
+                    [checked]="customizationIncludeMeasurements()"
+                    (change)="onCustomizationMeasurementsToggle($event)"
+                  />
+                  <span>{{ 'product.customization.includeMeasurements' | translate }}</span>
+                </label>
+                @if (customizationError()) {
+                  <p class="pdp-customization__error" role="alert">{{ customizationError()! | translate }}</p>
+                }
+                <div class="pdp-customization__actions">
+                  <ui-button
+                    variant="primary"
+                    size="md"
+                    [disabled]="customizationSubmitting()"
+                    (clicked)="submitCustomization()"
+                  >
+                    {{ customizationSubmitting() ? ('product.customization.sending' | translate) : ('product.customization.submit' | translate) }}
+                  </ui-button>
+                  <button type="button" class="pdp-customization__cancel" (click)="closeCustomizationForm()">
+                    {{ 'product.customization.cancelForm' | translate }}
+                  </button>
+                </div>
+              </form>
+            }
+          </div>
+
           @if (p.in_stock && hasSizes() && !selectedSize() && !isSizeOptional()) {
             <p class="pdp-buybox__hint" data-testid="pdp-hint-size">
               <svg class="pdp-buybox__hint-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">

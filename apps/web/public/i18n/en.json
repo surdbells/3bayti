@@ -851,6 +851,10 @@
         "title": "Following",
         "desc": "Stores you follow"
       },
+      "customizationRequests": {
+        "title": "Customizations",
+        "desc": "Your bespoke requests"
+      },
       "giftCards": {
         "title": "Gift Cards",
         "desc": "Buy, view and redeem gift cards"
@@ -1130,6 +1134,33 @@
       "browse": "Browse stores",
       "errors": {
         "loadFailed": "We couldn’t load your stores. Please try again."
+      }
+    },
+    "customizationRequests": {
+      "title": "Customization requests",
+      "loading": "Loading your requests…",
+      "empty": "You haven’t requested any customizations yet.",
+      "browse": "Browse products",
+      "loadMore": "Load more",
+      "accept": "Accept quote",
+      "reject": "Decline",
+      "cancel": "Cancel",
+      "pay": "Pay now",
+      "leadTime": "Ready in ~{{days}} days",
+      "statuses": {
+        "pending": "Awaiting quote",
+        "quoted": "Quote ready",
+        "accepted": "Accepted",
+        "paid": "Paid",
+        "completed": "Completed",
+        "declined": "Declined",
+        "rejected": "Declined by you",
+        "cancelled": "Cancelled"
+      },
+      "errors": {
+        "loadFailed": "We couldn’t load your requests. Please try again.",
+        "actionFailed": "That didn’t go through. Please try again.",
+        "payFailed": "We couldn’t start payment. Please try again."
       }
     },
     "connected": {
@@ -1633,6 +1664,26 @@
     "increaseQty": "Increase quantity",
     "adding": "Adding…",
     "addToCart": "Add to cart",
+    "customization": {
+      "cta": "Request a customization",
+      "heading": "Request a customization",
+      "formHint": "Tell the store what you'd like — an alteration, embroidery, a made-to-measure change. They'll review it and send you a price.",
+      "descLabel": "What would you like customized?",
+      "descPlaceholder": "e.g. Take in the waist by 2cm and add gold embroidery on the sleeves.",
+      "includeMeasurements": "Share my saved measurements with the store",
+      "submit": "Send request",
+      "sending": "Sending…",
+      "cancelForm": "Cancel",
+      "signInPrompt": "Sign in to request a customization.",
+      "signInLink": "Sign in",
+      "sentTitle": "Request sent",
+      "sentNote": "The store will review it and send you a quote. We'll email you when it's ready.",
+      "viewRequests": "View my requests",
+      "errorDescription": "Please describe the customization (at least a few words).",
+      "errorDuplicate": "You already have an open request for this product.",
+      "errorValidation": "Please check your request and try again.",
+      "errorSubmit": "We couldn't send your request. Please try again."
+    },
     "hintSize": "Select a size to continue.",
     "hintColor": "Select a colour to continue.",
     "measurementTitle": "Extra measurements",
@@ -1856,6 +1907,7 @@
     "accountMessagesThread": "Conversation · 3bayti",
     "accountWishlist": "My wishlist · 3bayti",
     "accountFollowing": "Stores you follow · 3bayti",
+    "accountCustomizationRequests": "Customization requests · 3bayti",
     "accountGiftCards": "My Gift Cards · 3bayti",
     "accountGiftCardDetail": "Gift Card · 3bayti",
     "accountAddresses": "Saved addresses · 3bayti",
