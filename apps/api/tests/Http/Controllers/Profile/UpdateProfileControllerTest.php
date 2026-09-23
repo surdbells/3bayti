@@ -364,4 +364,90 @@ final class UpdateProfileControllerTest extends HttpTestCase
         self::assertSame('Alice', $user->getFirstName());
         self::assertSame('Smith', $user->getLastName());
     }
+
+    #[Test]
+    public function setsStylePreferencesAndGrantsConsent(): void
+    {
+        $user = $this->makeUser(id: 20);
+        self::assertFalse($user->hasGrantedDataConsent());
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->willReturn($user);
+        $em = $this->stubEm(function ($em) use ($userRepo) {
+            $em->method('getRepository')->willReturn($userRepo);
+            $em->expects(self::once())->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('PATCH', '/v3/me/profile', [
+                // Duplicate is de-duped by the setter.
+                'style_preferences' => ['minimalist', 'elegant', 'minimalist'],
+                'data_consent' => true,
+            ], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame(['minimalist', 'elegant'], $user->getStylePreferences());
+        self::assertTrue($user->hasGrantedDataConsent());
+        self::assertSame(User::DATA_CONSENT_VERSION, $user->getDataConsentVersion());
+
+        $body = $this->jsonBody($response);
+        self::assertSame(['minimalist', 'elegant'], $body['user']['style_preferences']);
+        self::assertTrue($body['user']['data_consent']['granted']);
+    }
+
+    #[Test]
+    public function rejectsUnknownStyleTag(): void
+    {
+        $user = $this->makeUser(id: 21);
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->willReturn($user);
+        $em = $this->stubEm(fn ($em) => $em->method('getRepository')->willReturn($userRepo));
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('PATCH', '/v3/me/profile', [
+                'style_preferences' => ['minimalist', 'not-a-real-style'],
+            ], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(422, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function rejectsTooManyStyleTags(): void
+    {
+        $user = $this->makeUser(id: 22);
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->willReturn($user);
+        $em = $this->stubEm(fn ($em) => $em->method('getRepository')->willReturn($userRepo));
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        // 11 distinct valid tags — one over the max of 10.
+        $tags = array_slice(UpdateProfileInput::ALLOWED_STYLE_TAGS, 0, 11);
+
+        $response = $this->handle(
+            $this->jsonRequest('PATCH', '/v3/me/profile', [
+                'style_preferences' => $tags,
+            ], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(422, $response->getStatusCode());
+    }
 }

@@ -182,5 +182,15 @@ final class UpdateProfileController
         if ($input->timezone !== null) {
             $user->setTimezone($input->timezone);
         }
+
+        if ($input->style_preferences !== null) {
+            $user->setStylePreferences($input->style_preferences);
+        }
+
+        // Consent is grant-only via this endpoint (a durable PDPL record), and
+        // only stamped once per current version — re-sending true is a no-op.
+        if ($input->data_consent === true && !$user->hasGrantedDataConsent()) {
+            $user->grantDataConsent(User::DATA_CONSENT_VERSION);
+        }
     }
 }

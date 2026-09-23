@@ -90,6 +90,12 @@ final class UserSerializer
             // DOB is a calendar date, format as ISO 8601 date (YYYY-MM-DD).
             // Not the full ATOM datetime which includes time + timezone.
             'dob' => $user->getDob()?->format('Y-m-d'),
+            // Declared style aesthetics (onboarding) + data-collection consent.
+            'style_preferences' => $user->getStylePreferences(),
+            'data_consent' => [
+                'granted' => $user->hasGrantedDataConsent(),
+                'version' => $user->getDataConsentVersion(),
+            ],
             'avatar_url' => $user->getAvatarUrl(),
             'locale' => $user->getLocale(),
             'timezone' => $user->getTimezone(),

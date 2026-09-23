@@ -65,6 +65,18 @@ final class UpdateProfileInput
     public const ALLOWED_LOCALES = ['en', 'ar', 'en-AE', 'ar-AE'];
 
     /**
+     * Curated style-aesthetic tags the onboarding picker offers (P4). The
+     * client renders localized labels; these canonical slugs are what's
+     * stored + validated. Max 10 selected.
+     */
+    public const ALLOWED_STYLE_TAGS = [
+        'classic', 'minimalist', 'elegant', 'casual', 'streetwear', 'bohemian',
+        'modest', 'glam', 'chic', 'traditional', 'sporty', 'edgy', 'vintage', 'romantic',
+    ];
+
+    private const MAX_STYLE_TAGS = 10;
+
+    /**
      * Reasonable upper bound on age. Anyone older than 130 is either
      * lying or breaking world records, both warrant rejecting the
      * value rather than letting bogus data into the DB.
@@ -108,6 +120,23 @@ final class UpdateProfileInput
      */
     public readonly ?string $timezone;
 
+    /**
+     * Declared style aesthetics (onboarding). A list of ALLOWED_STYLE_TAGS
+     * slugs; validated in the Callback. Null = not provided (unchanged).
+     *
+     * @var list<string>|null
+     */
+    public readonly ?array $style_preferences;
+
+    /**
+     * Data-collection consent. true records consent (with the current copy
+     * version) if not already granted. Absent/false = no change.
+     */
+    public readonly ?bool $data_consent;
+
+    /**
+     * @param mixed[]|null $style_preferences untrusted request input; normalized to list<string>
+     */
     public function __construct(
         ?string $first_name = null,
         ?string $last_name = null,
@@ -115,6 +144,8 @@ final class UpdateProfileInput
         ?string $dob = null,
         ?string $locale = null,
         ?string $timezone = null,
+        ?array $style_preferences = null,
+        ?bool $data_consent = null,
     ) {
         // Trim text-ish fields. The User entity setters also trim
         // defensively, but doing it here means validation runs against
@@ -129,6 +160,19 @@ final class UpdateProfileInput
         $this->dob = self::nullifyEmpty($dob);
         $this->locale = self::nullifyEmpty($locale);
         $this->timezone = self::nullifyEmpty($timezone);
+        // Normalize style tags: keep strings only, trim, drop blanks, dedupe.
+        // An empty/blank list collapses to null ("not provided") rather than
+        // silently clearing existing prefs on an accidental empty array.
+        if ($style_preferences === null) {
+            $this->style_preferences = null;
+        } else {
+            $clean = array_values(array_unique(array_filter(
+                array_map(static fn ($t): string => is_string($t) ? trim($t) : '', $style_preferences),
+                static fn (string $t): bool => $t !== '',
+            )));
+            $this->style_preferences = $clean === [] ? null : $clean;
+        }
+        $this->data_consent = $data_consent;
     }
 
     /**
@@ -182,6 +226,21 @@ final class UpdateProfileInput
                     ->addViolation();
             }
         }
+
+        if ($this->style_preferences !== null) {
+            if (count($this->style_preferences) > self::MAX_STYLE_TAGS) {
+                $context->buildViolation(sprintf('style_preferences must not exceed %d tags.', self::MAX_STYLE_TAGS))
+                    ->atPath('style_preferences')
+                    ->addViolation();
+            }
+            foreach ($this->style_preferences as $tag) {
+                if (!in_array($tag, self::ALLOWED_STYLE_TAGS, true)) {
+                    $context->buildViolation(sprintf('style_preferences contains an unknown tag: %s.', $tag))
+                        ->atPath('style_preferences')
+                        ->addViolation();
+                }
+            }
+        }
     }
 
     /**
@@ -197,6 +256,8 @@ final class UpdateProfileInput
             || $this->gender !== null
             || $this->dob !== null
             || $this->locale !== null
-            || $this->timezone !== null;
+            || $this->timezone !== null
+            || $this->style_preferences !== null
+            || $this->data_consent === true;
     }
 }

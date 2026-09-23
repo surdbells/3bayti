@@ -346,6 +346,34 @@ class User
     #[ORM\Column(name: 'tryon_consent_granted_at', type: 'datetimetz_immutable', nullable: true)]
     private ?\DateTimeImmutable $tryOnConsentGrantedAt = null;
 
+    /**
+     * Customer-DECLARED style aesthetics collected at onboarding (P4),
+     * e.g. ['minimalist','elegant']. Distinct from the behaviour-derived AI
+     * style profile — this is what the customer explicitly said they like.
+     * NULL/[] = never asked.
+     *
+     * @var list<string>|null
+     */
+    #[ORM\Column(name: 'style_preferences', type: 'json', nullable: true)]
+    private ?array $stylePreferences = null;
+
+    /**
+     * When the customer consented to profile-data collection (onboarding), or
+     * NULL if never. Durable PDPL record, mirrors tryon_consent_granted_at.
+     */
+    #[ORM\Column(name: 'data_consent_granted_at', type: 'datetimetz_immutable', nullable: true)]
+    private ?\DateTimeImmutable $dataConsentGrantedAt = null;
+
+    /**
+     * The consent-copy version the customer agreed to, so re-consent can be
+     * re-prompted if the data-collection policy materially changes.
+     */
+    #[ORM\Column(name: 'data_consent_version', type: 'string', length: 20, nullable: true)]
+    private ?string $dataConsentVersion = null;
+
+    /** Current data-collection consent copy version. Bump to re-prompt users. */
+    public const DATA_CONSENT_VERSION = 'v1';
+
     public function hasTryOnConsent(): bool
     {
         return $this->tryOnConsentGrantedAt !== null;
@@ -633,6 +661,33 @@ class User
     public function setMarketingPushOptOut(bool $optedOut): void
     {
         $this->marketingPushOptOut = $optedOut;
+    }
+
+    /** @return list<string> */
+    public function getStylePreferences(): array
+    {
+        return $this->stylePreferences ?? [];
+    }
+
+    /** @param mixed[] $tags untrusted input; normalized to list<string> */
+    public function setStylePreferences(array $tags): void
+    {
+        $clean = array_values(array_unique(array_filter(
+            array_map(static fn ($t): string => is_string($t) ? trim($t) : '', $tags),
+            static fn (string $t): bool => $t !== '',
+        )));
+        $this->stylePreferences = $clean === [] ? null : $clean;
+    }
+
+    public function getDataConsentGrantedAt(): ?\DateTimeImmutable { return $this->dataConsentGrantedAt; }
+    public function getDataConsentVersion(): ?string { return $this->dataConsentVersion; }
+    public function hasGrantedDataConsent(): bool { return $this->dataConsentGrantedAt !== null; }
+
+    /** Record data-collection consent for a given copy version (idempotent per version). */
+    public function grantDataConsent(string $version): void
+    {
+        $this->dataConsentGrantedAt = new \DateTimeImmutable();
+        $this->dataConsentVersion = $version;
     }
     public function isStoreApproved(): bool  { return $this->isStoreApproved; }
     public function isStoreActive(): bool    { return $this->isStoreActive; }
