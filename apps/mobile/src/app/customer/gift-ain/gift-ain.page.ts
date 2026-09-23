@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import {
   IonContent,
   IonHeader,
@@ -156,7 +156,7 @@ export class GiftAinPage implements OnInit {
   hasSearched = false;
   imageLoaded: { [key: number]: boolean } = {};
 
-  @ViewChild('results') private resultsEl?: ElementRef<HTMLElement>;
+  @ViewChild(IonContent) private content?: IonContent;
 
   private user: StoredUser | null = null;
   private sessionId = '';
@@ -244,12 +244,19 @@ export class GiftAinPage implements OnInit {
     });
   }
 
-  /** Reveal the results block (spinner then cards) — it renders below a full
-   * form, so bring it into view once the search kicks off. */
+  /** Return to the brief form (selections kept) for a new/edited search. */
+  editSearch(): void {
+    this.hasSearched = false;
+    this.isSending = false;
+    this.cards = [];
+    this.giftCard = null;
+  }
+
+  /** The form is hidden on response, so snap the content to the top to reveal
+   * the thinking state → results. IonContent always exists (unlike a @if ref),
+   * so this fires reliably where the element-ref scroll did not. */
   private scrollToResults(): void {
-    setTimeout(() => {
-      this.resultsEl?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 120);
+    setTimeout(() => this.content?.scrollToTop(300), 80);
   }
 
   private runBrief(brief: Record<string, unknown>): void {

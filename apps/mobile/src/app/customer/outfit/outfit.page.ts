@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonContent,
@@ -122,7 +122,7 @@ export class OutfitPage implements OnInit {
   saved = false;
   imageLoaded: { [key: number]: boolean } = {};
 
-  @ViewChild('result') private resultEl?: ElementRef<HTMLElement>;
+  @ViewChild(IonContent) private content?: IonContent;
 
   private user: StoredUser | null = null;
   private sessionId = '';
@@ -222,6 +222,9 @@ export class OutfitPage implements OnInit {
     this.giftCard = null;
     this.totalPrice = null;
     this.imageLoaded = {};
+    // Form is hidden on response — snap to the top so the thinking state and
+    // then the generated look are visible without scrolling.
+    this.scrollTop();
 
     this.networkAdapter.post_v3('POST /ai/outfit', body, opts).subscribe({
       next: (res: any) => {
@@ -233,9 +236,6 @@ export class OutfitPage implements OnInit {
           this.totalPrice = res.data.total_price ?? null;
           this.giftCard = res.data.gift_card_suggestion ?? null;
           this.recordEvent('ai_outfit_generated', { count: this.pieces.length });
-          if (this.pieces.length > 0) {
-            this.scrollToResult();
-          }
         } else {
           this.error_notification(this.i18n.t('outfit_error'));
         }
@@ -247,11 +247,21 @@ export class OutfitPage implements OnInit {
     });
   }
 
-  /** Bring the generated look into view — it renders below the tall form. */
-  private scrollToResult(): void {
-    setTimeout(() => {
-      this.resultEl?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 120);
+  /** Return to the brief form (selections kept) for a new/edited look. */
+  editSearch(): void {
+    this.hasSearched = false;
+    this.isSending = false;
+    this.pieces = [];
+    this.rationale = '';
+    this.giftCard = null;
+    this.totalPrice = null;
+    this.saved = false;
+  }
+
+  /** Snap the content to the top on response. IonContent always exists, so this
+   * fires reliably (unlike a scrollIntoView on a @if-gated element ref). */
+  private scrollTop(): void {
+    setTimeout(() => this.content?.scrollToTop(300), 80);
   }
 
   onImageLoad(id: number): void {

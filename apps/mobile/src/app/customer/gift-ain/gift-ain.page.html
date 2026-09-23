@@ -10,6 +10,7 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" class="page-bg">
+  @if (!hasSearched) {
   <div class="ga-intro">
     <div class="ga-orb"><ax-icon name="gift" /></div>
     <h1 class="ga-heading">{{ 'gift_ain_heading' | translate }}</h1>
@@ -110,9 +111,14 @@
       }
     </button>
   </form>
+  }
 
   @if (hasSearched) {
     <div class="ga-results" #results>
+      <button type="button" class="ga-edit" (click)="editSearch()">
+        <ax-icon name="arrow-left" />
+        <span>{{ 'gift_ain_edit_search' | translate }}</span>
+      </button>
       @if (isSending) {
         <div class="ga-thinking"><ion-spinner name="dots"></ion-spinner><span>{{ 'gift_ain_finding' | translate }}</span></div>
       } @else {

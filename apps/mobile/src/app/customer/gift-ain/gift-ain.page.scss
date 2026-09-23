@@ -233,7 +233,23 @@
 .ga-submit ion-spinner { width: 1.25rem; height: 1.25rem; }
 
 /* ── Results ────────────────────────────────────────────────────────── */
-.ga-results { padding: 0 0.75rem 2rem; }
+.ga-results { padding: 0.75rem 0.75rem 2rem; }
+.ga-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid #e4d0b1;
+  background: #fff;
+  color: var(--ga-brand);
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 0.9rem;
+}
+.ga-edit ax-icon { --ax-icon-size: 1rem; }
 .ga-thinking {
   display: flex;
   align-items: center;

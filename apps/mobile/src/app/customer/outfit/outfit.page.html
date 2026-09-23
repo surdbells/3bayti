@@ -10,6 +10,7 @@
 </ion-header>
 
 <ion-content class="page-bg ion-padding-horizontal">
+  @if (!hasSearched) {
   <header class="ou-intro">
     <span class="ou-spark" aria-hidden="true"><ax-icon name="sparkles" /></span>
     <p class="ou-sub">{{ 'outfit_subtitle' | translate }}</p>
@@ -82,8 +83,17 @@
       }
     </button>
   </section>
+  } @else {
+    <button type="button" class="ou-edit" (click)="editSearch()">
+      <ax-icon name="arrow-left" />
+      <span>{{ 'outfit_edit_search' | translate }}</span>
+    </button>
 
-  @if (!isSending && pieces.length > 0) {
+    @if (isSending) {
+      <div class="ou-thinking"><ion-spinner name="dots"></ion-spinner><span>{{ 'outfit_generating' | translate }}</span></div>
+    }
+
+    @if (!isSending && pieces.length > 0) {
     <section class="ou-result" #result>
       <div class="ou-banner">
         <p class="ou-rationale">{{ rationale || ('outfit_rationale_fallback' | translate) }}</p>
@@ -149,5 +159,6 @@
 
   @if (isEmpty) {
     <p class="ou-empty">{{ 'outfit_empty' | translate }}</p>
+  }
   }
 </ion-content>
