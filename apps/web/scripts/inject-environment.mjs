@@ -12,9 +12,9 @@
  *
  * Environment variables consumed:
  *   SITE_URL            Canonical site URL, no trailing slash.
- *                       Default: https://staging.3bayti.ae (interim staging)
- *                       Production: set SITE_URL=https://3bayti.ae in
- *                       Cloudflare Pages once the production domain is wired.
+ *                       Default: https://3bayti.ae (production).
+ *                       Set SITE_URL=https://staging.3bayti.ae in Cloudflare
+ *                       Pages for the staging deployment.
  *
  *   SENTRY_DSN          Browser Sentry DSN for frontend error reporting.
  *                       Default: '' (unset → Sentry is a no-op; nothing is
@@ -47,13 +47,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ENV_FILE = join(__dirname, '..', 'src', 'environments', 'environment.ts');
 
 /* ----- Read env vars with defaults ----- */
-const SITE_URL = (process.env.SITE_URL || 'https://staging.3bayti.ae').replace(/\/$/, '');
+const SITE_URL = (process.env.SITE_URL || 'https://3bayti.ae').replace(/\/$/, '');
 const SENTRY_DSN = (process.env.SENTRY_DSN || 'https://822503d1eda33a1e983a6aa0a8f9dce7@o4511365625872384.ingest.us.sentry.io/4511365627772928').trim();
 const GA4_MEASUREMENT_ID = (process.env.GA4_MEASUREMENT_ID || 'G-W2YF72TS3F').trim();
 /* Mobile app store listing URLs for the home "Get the app" section.
    Default '#' renders a non-navigating "coming soon" badge. */
-const APP_STORE_URL = (process.env.APP_STORE_URL || 'https://apps.apple.com/ar/app/3bayti/id6752422907').trim();
-const PLAY_STORE_URL = (process.env.PLAY_STORE_URL || 'https://play.google.com/store/apps/details?id=ae.threebayti.app').trim();
+const APP_STORE_URL = (process.env.APP_STORE_URL || 'https://apps.apple.com/us/app/3bayti/id6752422907').trim();
+const PLAY_STORE_URL = (process.env.PLAY_STORE_URL || 'https://play.google.com/store/apps/details?id=com.threebayti.app').trim();
 
 /* Firebase Web config — powers Google + Apple social sign-in. Every value
    defaults to '' EXCEPT projectId (bayti-bcc5e) so a missing config is a

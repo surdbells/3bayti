@@ -63,7 +63,13 @@ export const environment = {
     configUrl: 'https://api.3bayti.ae/app_update.json' as string,
     /* iOS App Store country code for iTunes Lookup queries. UAE-focused. */
     iosCountry: 'ae'
-  }
+  },
+
+  /* Canonical PUBLIC storefront origin used to build shareable links (store /
+   * Style-Me hotlinks). Always the production storefront regardless of which
+   * API this build talks to — a shared link must be openable by anyone, so it
+   * must never leak a staging host. No trailing slash. */
+  publicWebUrl: 'https://3bayti.ae'
 };
 
 /*

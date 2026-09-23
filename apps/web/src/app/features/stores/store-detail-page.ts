@@ -294,8 +294,10 @@ export class StoreDetailPageComponent implements OnInit {
       return;
     }
     const hotlink = await this.hotlinks.create('store', this.slug);
-    if (hotlink !== null) {
-      this._shareUrl.set(hotlink.short_url);
+    if (hotlink !== null && hotlink.code) {
+      // Build off SITE_URL + the canonical code so the shared link tracks the
+      // storefront origin, not whatever WEB_APP_URL the API was deployed with.
+      this._shareUrl.set(`${environment.SITE_URL}/s/${hotlink.code}`);
     }
   }
 

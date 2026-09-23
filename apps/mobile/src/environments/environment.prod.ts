@@ -19,5 +19,8 @@ export const environment = {
   appUpdate: {
     configUrl: 'https://api.3bayti.ae/app_update.json' as string,
     iosCountry: 'ae'
-  }
+  },
+
+  /* Canonical PUBLIC storefront origin for shareable links — see environment.ts. */
+  publicWebUrl: 'https://3bayti.ae'
 };

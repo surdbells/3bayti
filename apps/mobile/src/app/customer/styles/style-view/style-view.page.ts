@@ -23,7 +23,7 @@ import {NetworkService} from "../../../service/network.service";
 import {MobileNetworkAdapter} from "../../../core/http/mobile-network-adapter";
 import {HotlinkService} from "../../../service/hotlink.service";
 import {apiErrorMessage} from "../../../core/http/api-error";
-import {GlobalComponent} from "../../../global-component";
+import { environment } from "../../../../environments/environment";
 
 import { AxIconComponent } from '../../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../../shared/app-tab-bar';
@@ -614,14 +614,10 @@ export class StyleViewPage implements OnInit, OnDestroy {
     }
   }
 
-  /** Web storefront origin, derived from the API base (api.<host> -> <host>). */
+  /** Canonical PUBLIC storefront origin for a shareable link — always prod,
+   *  never derived from the (possibly staging) API host. */
   private storefrontBase(): string {
-    try {
-      const u = new URL(GlobalComponent.baseURL);
-      return `${u.protocol}//${u.host.replace(/^api\./, '')}`;
-    } catch {
-      return 'https://3bayti.ae';
-    }
+    return environment.publicWebUrl;
   }
 
   triggerBack() {

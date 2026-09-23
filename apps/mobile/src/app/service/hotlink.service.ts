@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { MobileNetworkAdapter } from '../core/http/mobile-network-adapter';
+import { environment } from '../../environments/environment';
 
 export type HotlinkTargetType = 'store' | 'style';
 
@@ -25,6 +26,13 @@ export class HotlinkService {
       );
       if (res?.status === 'error') {
         return null;
+      }
+      // Build the share URL from the canonical code + the PROD storefront base,
+      // so a shared link is never tied to the API's environment (a staging API
+      // sets WEB_APP_URL to staging, which would otherwise leak into short_url).
+      const code = res?.data?.code;
+      if (typeof code === 'string' && code !== '') {
+        return `${environment.publicWebUrl}/s/${code}`;
       }
       const url = res?.data?.short_url;
       return typeof url === 'string' && url !== '' ? url : null;

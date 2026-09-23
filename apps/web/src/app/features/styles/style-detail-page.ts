@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
+import { environment } from '../../../environments/environment';
 import { ShareButtonsComponent } from '../../shared/ui/share-buttons';
 import { AuthService } from '../../core/auth/auth.service';
 import { HotlinkService } from '../../core/hotlinks/hotlink.service';
@@ -363,8 +364,11 @@ export class StyleDetailPageComponent implements OnInit {
       return;
     }
     const hotlink = await this.hotlinks.create('style', slug);
-    if (hotlink !== null) {
-      this._hotlinkUrl.set(hotlink.short_url);
+    if (hotlink !== null && hotlink.code) {
+      // Build off the canonical SITE_URL + code (matching the store share and
+      // the mobile app) so a shared link never leaks the serving host on a
+      // staging / preview deployment, not the API's WEB_APP_URL env.
+      this._hotlinkUrl.set(`${environment.SITE_URL}/s/${hotlink.code}`);
     }
   }
 

@@ -21,7 +21,7 @@
  *   VENDOR_API_BASE_URL   — vendors slug source. Default: v3.
  *   API_BASE_URL          — legacy single-base fallback if specific
  *                           overrides above aren't set.
- *   SITE_URL              — optional, defaults to https://staging.3bayti.ae
+ *   SITE_URL              — optional, defaults to https://3bayti.ae
  *   OUTPUT_DIR            — optional, defaults to dist/3bayti-web/browser
  */
 
@@ -55,7 +55,7 @@ const CATEGORY_API_BASE = process.env.CATEGORY_API_BASE_URL || process.env.API_B
 const PRODUCT_API_BASE  = process.env.PRODUCT_API_BASE_URL  || process.env.API_BASE_URL || V3_API_BASE_URL;
 // Vendors still served by v3 (target='new' for both list + detail).
 const VENDOR_API_BASE   = process.env.VENDOR_API_BASE_URL   || process.env.API_BASE_URL || V3_API_BASE_URL;
-const SITE_URL = process.env.SITE_URL || 'https://staging.3bayti.ae';
+const SITE_URL = process.env.SITE_URL || 'https://3bayti.ae';
 const OUT_DIR  = process.env.OUTPUT_DIR || join(__dirname, '..', 'dist', '3bayti-web', 'browser');
 
 const STATIC_PAGES = [
