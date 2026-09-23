@@ -59,6 +59,25 @@ final class SendMessageController
         }
 
         $body = (array) $request->getParsedBody();
+
+        // P1: a canned reply template sends { prompt_id } (vendor-audience).
+        $promptId = isset($body['prompt_id']) ? (int) $body['prompt_id'] : 0;
+        if ($promptId > 0) {
+            /** @var \Bayti\Api\Domain\Chat\ChatPromptRepository $prompts */
+            $prompts = $this->em->getRepository(\Bayti\Api\Domain\Chat\ChatPrompt::class);
+            $prompt = $prompts->findActiveForAudience($promptId, \Bayti\Api\Domain\Chat\PromptCatalog::AUDIENCE_VENDOR);
+            if ($prompt === null) {
+                throw HttpException::notFound('Prompt not found.');
+            }
+            $result = $this->sender->sendPrompt($conversation, $user, Conversation::PARTY_VENDOR, $prompt);
+            try {
+                $this->notifier->maybeNotify($conversation, Conversation::PARTY_CUSTOMER, $result->message);
+            } catch (\Throwable) {
+                // logged inside the notifier
+            }
+            return $this->created(['message' => $this->serializer->messageShape($result->message)]);
+        }
+
         $content = trim((string) ($body['content'] ?? ''));
         if ($content === '') {
             throw HttpException::validation(['content' => 'Message content is required.']);

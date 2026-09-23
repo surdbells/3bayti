@@ -50,4 +50,24 @@ final class ChatMessageSender
 
         return SendResult::delivered($message);
     }
+
+    /**
+     * Send a curated quick-start prompt (P1). The text comes from the seeded
+     * catalog, so it skips PII moderation (it can't contain contact details);
+     * always delivered.
+     *
+     * @param Conversation::PARTY_CUSTOMER|Conversation::PARTY_VENDOR $senderParty
+     */
+    public function sendPrompt(Conversation $conversation, User $sender, string $senderParty, ChatPrompt $prompt): SendResult
+    {
+        $message = $senderParty === Conversation::PARTY_CUSTOMER
+            ? Message::fromCustomerPrompt($conversation, $sender, $prompt)
+            : Message::fromVendorPrompt($conversation, $sender, $prompt);
+
+        $this->em->persist($message);
+        $conversation->recordMessage($senderParty, $prompt->getText());
+        $this->em->flush();
+
+        return SendResult::delivered($message);
+    }
 }

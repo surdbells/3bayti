@@ -444,6 +444,8 @@ return function (App $app): void {
         // Store-grouped inbox (replaces legacy /customer/read-messages).
         $group->get('/conversation-stores', \Bayti\Api\Http\Controllers\Chat\Customer\ListConversationStoresController::class);
         $group->get('/unread-count', \Bayti\Api\Http\Controllers\Chat\Customer\GetUnreadCountController::class);
+        // P1: quick-start prompt catalog (customer-audience) for the picker.
+        $group->get('/prompts', \Bayti\Api\Http\Controllers\Chat\Customer\GetPromptsController::class);
         $group->get(
             '/conversations/{uuid}/messages',
             \Bayti\Api\Http\Controllers\Chat\Customer\GetMessagesController::class,
@@ -1377,6 +1379,8 @@ return function (App $app): void {
     $app->group('/v3/vendor/chat', function (RouteCollectorProxy $group): void {
         $group->get('/conversations', \Bayti\Api\Http\Controllers\Chat\Vendor\ListConversationsController::class);
         $group->get('/unread-count', \Bayti\Api\Http\Controllers\Chat\Vendor\GetUnreadCountController::class);
+        // P1: canned reply-template catalog (vendor-audience) for the picker.
+        $group->get('/prompts', \Bayti\Api\Http\Controllers\Chat\Vendor\GetPromptsController::class);
         $group->get(
             '/conversations/{uuid}/messages',
             \Bayti\Api\Http\Controllers\Chat\Vendor\GetMessagesController::class,

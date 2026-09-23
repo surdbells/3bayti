@@ -60,6 +60,27 @@ final class SendMessageController
         }
 
         $body = (array) $request->getParsedBody();
+
+        // P1: tapping a quick-start prompt sends { prompt_id } instead of
+        // { content }. The curated prompt is resolved (audience-guarded) and
+        // sent as a prompt-type message; the free-text path is unchanged.
+        $promptId = isset($body['prompt_id']) ? (int) $body['prompt_id'] : 0;
+        if ($promptId > 0) {
+            /** @var \Bayti\Api\Domain\Chat\ChatPromptRepository $prompts */
+            $prompts = $this->em->getRepository(\Bayti\Api\Domain\Chat\ChatPrompt::class);
+            $prompt = $prompts->findActiveForAudience($promptId, \Bayti\Api\Domain\Chat\PromptCatalog::AUDIENCE_CUSTOMER);
+            if ($prompt === null) {
+                throw HttpException::notFound('Prompt not found.');
+            }
+            $result = $this->sender->sendPrompt($conversation, $user, Conversation::PARTY_CUSTOMER, $prompt);
+            try {
+                $this->notifier->maybeNotify($conversation, Conversation::PARTY_VENDOR, $result->message);
+            } catch (\Throwable) {
+                // logged inside the notifier
+            }
+            return $this->created(['message' => $this->serializer->messageShape($result->message)]);
+        }
+
         $content = trim((string) ($body['content'] ?? ''));
         if ($content === '') {
             throw HttpException::validation(['content' => 'Message content is required.']);

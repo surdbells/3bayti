@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Serializers;
 
 use Bayti\Api\Domain\Catalog\Vendor;
+use Bayti\Api\Domain\Chat\ChatPromptCategory;
 use Bayti\Api\Domain\Chat\Conversation;
 use Bayti\Api\Domain\Chat\Message;
 use Bayti\Api\Domain\User\User;
@@ -47,6 +48,42 @@ final class ChatSerializer
     }
 
     /** @return array<string, mixed> */
+    /**
+     * The quick-start prompt catalog for the picker (P1): categories with
+     * nested prompts, both languages (the client renders per its locale, the
+     * same way content/content_ar is handled).
+     *
+     * @param list<ChatPromptCategory> $categories
+     * @return list<array<string, mixed>>
+     */
+    public function promptCatalogShape(array $categories): array
+    {
+        $out = [];
+        foreach ($categories as $category) {
+            $prompts = [];
+            foreach ($category->getPrompts() as $prompt) {
+                $prompts[] = [
+                    'id'      => $prompt->getId(),
+                    'slug'    => $prompt->getSlug(),
+                    'text'    => $prompt->getText(),
+                    'text_ar' => $prompt->getTextAr(),
+                ];
+            }
+            $out[] = [
+                'id'       => $category->getId(),
+                'slug'     => $category->getSlug(),
+                'label'    => $category->getLabel(),
+                'label_ar' => $category->getLabelAr(),
+                'icon'     => $category->getIcon(),
+                'prompts'  => $prompts,
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function messageShape(Message $message): array
     {
         return [
@@ -54,6 +91,9 @@ final class ChatSerializer
             'uuid'        => $message->getUuid(),
             'sender_type' => $message->getSenderType(),
             'type'        => $message->getType(),
+            // Present (non-null) only for TYPE_PROMPT messages (P1); the catalog
+            // prompt that was tapped. Clients may style prompt bubbles distinctly.
+            'prompt_id'   => $message->getPromptId(),
             'content'     => $message->getContent(),
             'content_ar'  => $message->getContentAr(),
             'is_flagged'  => $message->isFlagged(),
