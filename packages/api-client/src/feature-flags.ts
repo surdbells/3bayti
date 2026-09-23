@@ -1115,6 +1115,25 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/styles',
     shape: 'v3-envelope',
   },
+  // Edit + soft-delete one's own saved look (v3-native, no legacy path).
+  'PUT /me/styles/:id': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/styles/:id',
+    shape: 'v3-envelope',
+  },
+  'PATCH /me/styles/:id': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/styles/:id',
+    shape: 'v3-envelope',
+  },
+  'DELETE /me/styles/:id': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/styles/:id',
+    shape: 'v3-envelope',
+  },
 
   // ---- Admin catalog (M2.1.A - on v3, raw shapes) ----
   // Note: admin endpoints don't follow the v3-envelope shape; they

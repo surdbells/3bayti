@@ -323,6 +323,12 @@ return function (App $app): void {
         // registered before POST under the same /v3/me authed group.
         $group->get('/styles', \Bayti\Api\Http\Controllers\Style\ListMyStylesController::class);
         $group->post('/styles', \Bayti\Api\Http\Controllers\Style\CreateStyleController::class);
+        // Edit (rename / replace products, slug kept stable) + soft-delete
+        // one's own saved look. Ownership is enforced 404-not-403 in the
+        // controllers so another user's style is never revealed.
+        $group->put('/styles/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Style\UpdateMyStyleController::class);
+        $group->patch('/styles/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Style\UpdateMyStyleController::class);
+        $group->delete('/styles/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Style\DeleteMyStyleController::class);
     })->add(AuthMiddleware::class);
 
     // ===================================================================
@@ -721,7 +727,10 @@ return function (App $app): void {
     // Single style by slug, backs the mobile deep-link / hard-reload path
     // (style-view re-fetches when router state is wiped). Registered after
     // the bare /v3/styles list so Slim matches the literal path first.
-    $app->get('/v3/styles/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetStyleController::class);
+    // OptionalAuth so an authenticated owner gets is_owner=true (drives the
+    // Edit/Delete controls on the detail page); anonymous reads are unchanged.
+    $app->get('/v3/styles/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetStyleController::class)
+        ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
 
     // M2.2, Sitemap data for apps/web build-time generator
     $app->get('/v3/sitemap-data', \Bayti\Api\Http\Controllers\Catalog\GetSitemapDataController::class);

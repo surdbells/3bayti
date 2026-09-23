@@ -101,6 +101,11 @@ final class StyleSerializer
      * so the mobile deep-link / hard-reload path can rebuild the style via
      * the same transformStylesListResponse mapper used for the list.
      *
+     * `is_owner` tells the client whether the authenticated viewer created
+     * this look, so the detail page can show Edit/Delete controls. It is
+     * false for anonymous viewers and for a non-owner ($viewerId null or
+     * mismatched); the server still enforces ownership on the write paths.
+     *
      * @param list<array{
      *     id: int,
      *     legacy_product_id: ?int,
@@ -113,9 +118,15 @@ final class StyleSerializer
      * }> $products
      * @return array<string, mixed>
      */
-    public function detailShape(Style $s, array $products): array
+    public function detailShape(Style $s, array $products, ?int $viewerId = null): array
     {
-        return $this->listShape($s, $products);
+        $shape = $this->listShape($s, $products);
+        $owner = $s->getCreatedByUser();
+        $shape['is_owner'] = $viewerId !== null
+            && $owner !== null
+            && (int) $owner->getId() === $viewerId;
+
+        return $shape;
     }
 
     private function styleTypeLabel(int $type): string

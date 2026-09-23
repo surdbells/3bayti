@@ -6,7 +6,9 @@ namespace Bayti\Api\Http\Controllers\Catalog;
 
 use Bayti\Api\Domain\Catalog\Style;
 use Bayti\Api\Domain\Catalog\StyleRepository;
+use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\HttpException;
+use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\StyleSerializer;
@@ -75,8 +77,13 @@ final class GetStyleController
         $styleId = (int) $style->getId();
         $productsByStyleId = $styleRepo->loadProductsForStyles([$styleId]);
 
+        // OptionalAuth: an authenticated owner gets is_owner=true so the
+        // detail page can offer Edit/Delete. Anonymous viewers get null.
+        $viewer = $request->getAttribute(AuthMiddleware::ATTR_USER);
+        $viewerId = $viewer instanceof User ? (int) $viewer->getId() : null;
+
         return $this->ok(PaginatedEnvelope::single(
-            $this->serializer->detailShape($style, $productsByStyleId[$styleId] ?? []),
+            $this->serializer->detailShape($style, $productsByStyleId[$styleId] ?? [], $viewerId),
         ));
     }
 }
