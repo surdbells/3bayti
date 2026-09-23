@@ -198,6 +198,12 @@ final class PermissionCatalog
                     'ai.manage' => 'Manage AI concierge settings',
                 ],
             ],
+            'hotlinks' => [
+                'label' => 'Store hotlinks',
+                'permissions' => [
+                    'hotlinks.view' => 'View store-hotlink analytics',
+                ],
+            ],
         ];
     }
 

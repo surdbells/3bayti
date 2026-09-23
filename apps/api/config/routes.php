@@ -818,6 +818,8 @@ return function (App $app): void {
         $group->get('/insights', \Bayti\Api\Http\Controllers\Admin\Analytics\GetAdminInsightsController::class)->add($perm->for('reports.view'));
         // Ain AI concierge BI, usage funnel + AI-assisted revenue (attribution)
         $group->get('/ai/analytics', \Bayti\Api\Http\Controllers\Admin\Analytics\GetAdminAiAnalyticsController::class)->add($perm->for('ai.view'));
+        // P9 store-hotlink BI, clicks + attributed conversions/revenue + top links
+        $group->get('/hotlinks/analytics', \Bayti\Api\Http\Controllers\Admin\Analytics\GetAdminHotlinkAnalyticsController::class)->add($perm->for('hotlinks.view'));
 
         // Vendor admin
         $group->get('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\ListVendorsAdminController::class)->add($perm->for('vendors.view'));
