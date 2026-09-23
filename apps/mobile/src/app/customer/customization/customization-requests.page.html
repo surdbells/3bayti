@@ -25,8 +25,8 @@
         <div class="cust-card">
           <button type="button" class="cust-card__head" (click)="openProduct(req)">
             <span class="cust-card__thumb">
-              @if (req.product.primary_image) {
-                <img [src]="req.product.primary_image" [alt]="req.product.name" loading="lazy" decoding="async" />
+              @if (req.product.primary_image?.url) {
+                <img [src]="req.product.primary_image!.url" [alt]="req.product.name" loading="lazy" decoding="async" />
               } @else {
                 <span class="cust-card__thumb-blank"></span>
               }

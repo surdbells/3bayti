@@ -886,10 +886,24 @@ final class InitiateCheckoutController
             }
         }
 
+        // Serialize concurrent pay attempts on the SAME request under a row
+        // lock: create the synthetic order AND stamp the back-reference inside
+        // one transaction, bailing if a racing checkout already attached a
+        // payment order. Without this, two inits could each create an order and
+        // the second's reference would overwrite the first — leaving a paid
+        // order the webhook can't reconcile against the request.
+        $alreadyInProgress = false;
         $order = $this->em->wrapInTransaction(
             function (\Doctrine\ORM\EntityManagerInterface $em) use (
-                $user, $orderReference, $amount, $payerAddress, $input,
-            ): Order {
+                $user, $orderReference, $amount, $payerAddress, $input, $customization, &$alreadyInProgress,
+            ): ?Order {
+                $em->lock($customization, \Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE);
+                $em->refresh($customization);
+                if ($customization->getPaymentOrderReference() !== null) {
+                    // Another checkout already owns this request's payment.
+                    $alreadyInProgress = true;
+                    return null;
+                }
                 $order = new Order(
                     user: $user,
                     orderReference: $orderReference,
@@ -901,14 +915,22 @@ final class InitiateCheckoutController
                 $order->addAddress($this->snapshotGiftCardAddress($payerAddress, $user, OrderAddress::TYPE_BILLING));
                 $order->addAddress($this->snapshotGiftCardAddress($payerAddress, $user, OrderAddress::TYPE_SHIPPING));
                 $em->persist($order);
+                // Back-reference so the webhook can resolve the request and
+                // markPaid() — committed atomically with the order, under the lock.
+                $customization->attachPaymentOrderReference($orderReference);
                 $em->flush();
                 return $order;
             }
         );
 
-        // Back-reference so the webhook can resolve the request and markPaid().
-        $customization->attachPaymentOrderReference($orderReference);
-        $this->em->flush();
+        if ($alreadyInProgress || $order === null) {
+            // The client retries and resumes the winning order via the
+            // idempotency cache once that checkout's transaction lands.
+            throw HttpException::conflict(
+                'CUSTOMIZATION_PAYMENT_IN_PROGRESS',
+                'A payment for this request is already in progress. Please try again in a moment.',
+            );
+        }
 
         $returnUrl = $this->buildReturnUrl($orderReference);
         try {

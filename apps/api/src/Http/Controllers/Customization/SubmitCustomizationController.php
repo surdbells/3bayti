@@ -91,7 +91,17 @@ final class SubmitCustomizationController
             customerNotes: $input->description,
             measurementSnapshot: $input->measurement_snapshot,
         );
-        $repo->save($customization);
+        try {
+            $repo->save($customization);
+        } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException) {
+            // Lost the race against a concurrent submit for the same product —
+            // the DB partial-unique index (uq_cr_active_per_product_customer)
+            // is the authoritative guard behind the advisory COUNT check above.
+            throw HttpException::conflict(
+                'CUSTOMIZATION_ALREADY_REQUESTED',
+                'You already have an active customization request for this product.',
+            );
+        }
 
         // Notify the vendor there's a request to quote. Never block the
         // response on an email failure.

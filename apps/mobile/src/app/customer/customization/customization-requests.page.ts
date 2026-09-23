@@ -24,7 +24,7 @@ import { CustomizationPaymentService } from './customization-payment.service';
 interface CustomizationRequestItem {
   id: number;
   status: string;
-  product: { slug: string; name: string; primary_image: string | null };
+  product: { slug: string; name: string; primary_image: { url: string } | null };
   vendor: { id: number; name: string; slug: string };
   customer_notes: string;
   quote: { amount: string; currency: string | null; lead_time_days: number | null; vendor_notes: string | null } | null;

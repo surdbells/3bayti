@@ -10,8 +10,11 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Input DTO for POST /v3/vendor/customization-requests/{id}/quote (P5).
  *
  * The vendor prices the work:
- *   - amount: positive DECIMAL(10,2)-shaped string (AED by default).
- *   - currency: optional ISO-4217 code, defaults to AED.
+ *   - amount: positive DECIMAL(10,2)-shaped string (AED).
+ *   - currency: AED only. The platform charges AED via Noon (the accepted
+ *     quote is paid through an item-less synthetic Order that is always AED),
+ *     so a non-AED quote would be shown to the customer in that currency but
+ *     charged the same number in AED — locking to AED closes that gap.
  *   - lead_time_days: optional turnaround estimate (0–365).
  *   - vendor_notes: optional message accompanying the quote.
  */
@@ -25,7 +28,7 @@ final class QuoteCustomizationInput
         )]
         public readonly string $amount = '',
 
-        #[Assert\Length(exactly: 3, exactMessage: 'currency must be a 3-letter ISO-4217 code.')]
+        #[Assert\Choice(choices: ['AED'], message: 'currency must be AED.')]
         public readonly string $currency = 'AED',
 
         #[Assert\Type(type: 'integer', message: 'lead_time_days must be an integer.')]

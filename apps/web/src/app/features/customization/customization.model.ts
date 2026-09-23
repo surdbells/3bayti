@@ -16,12 +16,20 @@ export type CustomizationStatus =
   | 'rejected'
   | 'cancelled';
 
+/** Product image as emitted by ProductSerializer::listShape (never a string). */
+export interface CustomizationImage {
+  url: string;
+  alt?: string | null;
+  width?: number | null;
+  height?: number | null;
+}
+
 /** The subset of the embedded product card the customization UI renders. */
 export interface CustomizationProduct {
   id: number | null;
   slug: string;
   name: string;
-  primary_image: string | null;
+  primary_image: CustomizationImage | null;
   price: string | null;
   sale_price: string | null;
 }

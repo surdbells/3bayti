@@ -49,8 +49,8 @@ import type { CustomizationRequest } from './customization.model';
               >
                 <a class="account-cust__thumb" [routerLink]="['/product', req.product.slug]">
                   <img
-                    *ngIf="(req.product.primary_image ?? '') !== ''; else thumbBlank"
-                    [src]="req.product.primary_image | cfImage: 'thumb'"
+                    *ngIf="req.product.primary_image?.url; else thumbBlank"
+                    [src]="req.product.primary_image!.url | cfImage: 'thumb'"
                     [alt]="req.product.name"
                     loading="lazy"
                   />

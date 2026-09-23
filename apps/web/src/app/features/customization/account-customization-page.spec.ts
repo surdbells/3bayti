@@ -116,6 +116,20 @@ describe('AccountCustomizationPageComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="cust-empty"]')).not.toBeNull();
   });
 
+  it('renders the product thumbnail from primary_image.url without crashing', async () => {
+    // Regression: primary_image is an OBJECT {url,...}, not a string. Feeding
+    // the object to the cfImage pipe crashed change detection.
+    const withImage = makeRequest({
+      product: { id: 10, slug: 'silk-abaya', name: 'Silk Abaya', primary_image: { url: 'https://cdn.example/x.jpg' }, price: '500.00', sale_price: null },
+    });
+    const { fixture } = setup({ items: [withImage], hasMore: false, total: 1 });
+    await flush();
+    fixture.detectChanges();
+    const img = fixture.nativeElement.querySelector('.account-cust__thumb img') as HTMLImageElement | null;
+    expect(img).not.toBeNull();
+    expect(img!.getAttribute('src') ?? '').toContain('cdn.example');
+  });
+
   it('renders a quoted request with accept + reject controls', async () => {
     const { fixture } = setup({ items: [makeRequest()], hasMore: false, total: 1 });
     await flush();

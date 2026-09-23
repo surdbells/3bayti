@@ -71,8 +71,17 @@ final class Version20260923000003 extends AbstractMigration
         $this->addSql('CREATE INDEX idx_cr_vendor_status ON customization_requests (vendor_id, status)');
         // Customer "my requests" list.
         $this->addSql('CREATE INDEX idx_cr_customer_status ON customization_requests (customer_user_id, status)');
-        // Dup guard (product + customer) and PDP "do I already have one" checks.
+        // PDP "do I already have one" checks.
         $this->addSql('CREATE INDEX idx_cr_product ON customization_requests (product_id)');
+        // Dup guard — ENFORCE one in-flight (non-terminal) request per
+        // (product, customer) at the DB, so the controller's COUNT-then-insert
+        // check can't be raced past. The controller catches the resulting
+        // unique violation and returns the same 409.
+        $this->addSql(
+            'CREATE UNIQUE INDEX uq_cr_active_per_product_customer '
+            . 'ON customization_requests (product_id, customer_user_id) '
+            . "WHERE status IN ('pending', 'quoted', 'accepted', 'paid')"
+        );
         // Webhook back-reference lookup (unique, partial — most rows are NULL).
         $this->addSql(
             'CREATE UNIQUE INDEX idx_cr_payment_order_ref ON customization_requests (payment_order_reference) '
