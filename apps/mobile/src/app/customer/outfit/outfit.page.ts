@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonContent,
@@ -122,6 +122,8 @@ export class OutfitPage implements OnInit {
   saved = false;
   imageLoaded: { [key: number]: boolean } = {};
 
+  @ViewChild('result') private resultEl?: ElementRef<HTMLElement>;
+
   private user: StoredUser | null = null;
   private sessionId = '';
   private interactionId: number | null = null;
@@ -231,6 +233,9 @@ export class OutfitPage implements OnInit {
           this.totalPrice = res.data.total_price ?? null;
           this.giftCard = res.data.gift_card_suggestion ?? null;
           this.recordEvent('ai_outfit_generated', { count: this.pieces.length });
+          if (this.pieces.length > 0) {
+            this.scrollToResult();
+          }
         } else {
           this.error_notification(this.i18n.t('outfit_error'));
         }
@@ -240,6 +245,13 @@ export class OutfitPage implements OnInit {
         this.error_notification(this.i18n.t('outfit_error'));
       },
     });
+  }
+
+  /** Bring the generated look into view — it renders below the tall form. */
+  private scrollToResult(): void {
+    setTimeout(() => {
+      this.resultEl?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
   }
 
   onImageLoad(id: number): void {

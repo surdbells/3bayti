@@ -72,10 +72,33 @@
 
     <div class="ga-group">
       <p class="ga-legend">{{ 'gift_ain_details_label' | translate }}</p>
-      <div class="ga-fields">
-        <input class="ga-input" type="text" [(ngModel)]="coloursText" name="colours" [placeholder]="'gift_ain_colours_placeholder' | translate" />
-        <input class="ga-input" type="text" [(ngModel)]="stylesText" name="styles" [placeholder]="'gift_ain_styles_placeholder' | translate" />
-        <input class="ga-input" type="text" [(ngModel)]="size" name="size" [placeholder]="'gift_ain_size_placeholder' | translate" />
+
+      <p class="ga-sublabel">{{ 'gift_ain_colours_label' | translate }}</p>
+      <div class="ga-chips">
+        @for (c of colourOptions; track c) {
+          <button type="button" class="ga-chip ga-chip--colour" [class.is-active]="isColourOn(c)" (click)="toggleColour(c)" [attr.aria-pressed]="isColourOn(c)">
+            <span class="ga-chip__swatch" [style.background]="colourHex(c)" aria-hidden="true"></span>
+            {{ ('outfit_colour_' + c) | translate }}
+          </button>
+        }
+      </div>
+
+      <p class="ga-sublabel">{{ 'gift_ain_styles_label' | translate }}</p>
+      <div class="ga-chips">
+        @for (s of styleOptions; track s) {
+          <button type="button" class="ga-chip" [class.is-active]="isStyleOn(s)" (click)="toggleStyle(s)" [attr.aria-pressed]="isStyleOn(s)">
+            {{ ('outfit_style_' + s) | translate }}
+          </button>
+        }
+      </div>
+
+      <p class="ga-sublabel">{{ 'gift_ain_size_label' | translate }}</p>
+      <div class="ga-chips">
+        @for (sz of sizeOptions; track sz) {
+          <button type="button" class="ga-chip" [class.is-active]="size === sz" (click)="pickSize(sz)" [attr.aria-pressed]="size === sz">
+            {{ sz }}
+          </button>
+        }
       </div>
     </div>
 
@@ -89,7 +112,7 @@
   </form>
 
   @if (hasSearched) {
-    <div class="ga-results">
+    <div class="ga-results" #results>
       @if (isSending) {
         <div class="ga-thinking"><ion-spinner name="dots"></ion-spinner><span>{{ 'gift_ain_finding' | translate }}</span></div>
       } @else {

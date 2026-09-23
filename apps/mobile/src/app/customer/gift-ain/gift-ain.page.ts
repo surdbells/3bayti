@@ -1,5 +1,4 @@
-import { Component, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import {
   IonContent,
   IonHeader,
@@ -86,7 +85,6 @@ interface StoredUser {
     IonGrid,
     IonRow,
     IonCol,
-    FormsModule,
     TranslatePipe,
     AxIconComponent,
   ],
@@ -102,6 +100,17 @@ export class GiftAinPage implements OnInit {
     { key: 'b500to1000', min: 500, max: 1000 },
     { key: 'over1000', min: 1000 },
   ];
+
+  /* Fixed-option pickers for the optional detail hints — no free text, so the
+   * brief maps onto canonical tags. Same vocabulary as the Outfit generator. */
+  readonly colourOptions = ['black', 'beige', 'rose', 'gold', 'navy', 'white', 'green', 'grey'];
+  readonly styleOptions = ['elegant', 'casual', 'traditional', 'modern', 'minimal', 'embellished'];
+  readonly sizeOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+
+  private readonly colourSwatch: Record<string, string> = {
+    black: '#2e241c', beige: '#e7d6bc', rose: '#c98a8a', gold: '#b18f1f',
+    navy: '#2b3a55', white: '#f4efe7', green: '#4a6350', grey: '#9a938a',
+  };
 
   /** Stroke-only SVG path data (24×24, currentColor) for each recipient avatar. */
   private readonly recipientIcons: Record<string, string[]> = {
@@ -137,8 +146,8 @@ export class GiftAinPage implements OnInit {
   recipient = '';
   occasion = '';
   budget: BudgetBand | null = null;
-  coloursText = '';
-  stylesText = '';
+  selectedColours: string[] = [];
+  selectedStyles: string[] = [];
   size = '';
 
   cards: GiftItem[] = [];
@@ -146,6 +155,8 @@ export class GiftAinPage implements OnInit {
   isSending = false;
   hasSearched = false;
   imageLoaded: { [key: number]: boolean } = {};
+
+  @ViewChild('results') private resultsEl?: ElementRef<HTMLElement>;
 
   private user: StoredUser | null = null;
   private sessionId = '';
@@ -187,16 +198,35 @@ export class GiftAinPage implements OnInit {
     this.budget = this.budget?.key === b.key ? null : b;
   }
 
+  colourHex(name: string): string {
+    return this.colourSwatch[name] ?? '#cbb79a';
+  }
+  toggleColour(c: string): void {
+    this.selectedColours = this.selectedColours.includes(c)
+      ? this.selectedColours.filter((x) => x !== c)
+      : [...this.selectedColours, c];
+  }
+  toggleStyle(s: string): void {
+    this.selectedStyles = this.selectedStyles.includes(s)
+      ? this.selectedStyles.filter((x) => x !== s)
+      : [...this.selectedStyles, s];
+  }
+  isColourOn(c: string): boolean {
+    return this.selectedColours.includes(c);
+  }
+  isStyleOn(s: string): boolean {
+    return this.selectedStyles.includes(s);
+  }
+  pickSize(s: string): void {
+    this.size = this.size === s ? '' : s;
+  }
+
   get canSubmit(): boolean {
-    return !!this.occasion || !!this.budget || !!this.coloursText.trim() || !!this.stylesText.trim();
+    return !!this.occasion || !!this.budget || this.selectedColours.length > 0 || this.selectedStyles.length > 0;
   }
 
   get isEmpty(): boolean {
     return this.hasSearched && !this.isSending && this.cards.length === 0 && !this.giftCard;
-  }
-
-  private toList(text: string): string[] {
-    return text.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
   }
 
   submit(): void {
@@ -206,12 +236,20 @@ export class GiftAinPage implements OnInit {
     this.runBrief({
       recipient: this.recipient || undefined,
       occasion: this.occasion === 'just_because' ? undefined : this.occasion || undefined,
-      colours: this.toList(this.coloursText),
-      styles: this.toList(this.stylesText),
-      size: this.size.trim() || undefined,
+      colours: this.selectedColours,
+      styles: this.selectedStyles,
+      size: this.size || undefined,
       budget_min: this.budget?.min,
       budget_max: this.budget?.max,
     });
+  }
+
+  /** Reveal the results block (spinner then cards) — it renders below a full
+   * form, so bring it into view once the search kicks off. */
+  private scrollToResults(): void {
+    setTimeout(() => {
+      this.resultsEl?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
   }
 
   private runBrief(brief: Record<string, unknown>): void {
@@ -230,6 +268,7 @@ export class GiftAinPage implements OnInit {
     this.cards = [];
     this.giftCard = null;
     this.imageLoaded = {};
+    this.scrollToResults();
 
     this.networkAdapter.post_v3('POST /ai/concierge/gift', body, opts).subscribe({
       next: (res: any) => {

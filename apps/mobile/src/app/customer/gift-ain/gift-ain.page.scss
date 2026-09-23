@@ -184,18 +184,36 @@
 }
 .ga-budget.is-active .ga-budget__coin.is-lit { background: #906952; }
 
-.ga-fields { display: flex; flex-direction: column; gap: 0.55rem; }
-.ga-input {
-  border: 1px solid #e2e5e9;
-  border-radius: 0.85rem;
-  padding: 0.7rem 0.95rem;
-  font-size: 0.9rem;
-  font-family: inherit;
-  background: #f6f7f9;
-  color: var(--ax-color-text-primary, #1a1a1a);
-  outline: none;
+.ga-sublabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ax-color-text-tertiary, #8a8a8a);
+  margin: 0.35rem 0 0.4rem;
 }
-.ga-input:focus { border-color: var(--ga-brand); background: #fff; }
+.ga-sublabel:first-of-type { margin-top: 0; }
+.ga-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.ga-chip {
+  border: 1px solid #e4d0b1;
+  background: #fff;
+  color: #2e241c;
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.ga-chip.is-active {
+  background: var(--ga-brand);
+  border-color: var(--ga-brand);
+  color: #fff;
+}
+.ga-chip--colour { display: inline-flex; align-items: center; gap: 0.45rem; }
+.ga-chip__swatch {
+  width: 0.95rem; height: 0.95rem; border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, .12);
+  flex: 0 0 auto;
+}
 
 .ga-submit {
   align-self: stretch;

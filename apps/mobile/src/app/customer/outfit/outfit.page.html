@@ -84,7 +84,7 @@
   </section>
 
   @if (!isSending && pieces.length > 0) {
-    <section class="ou-result">
+    <section class="ou-result" #result>
       <div class="ou-banner">
         <p class="ou-rationale">{{ rationale || ('outfit_rationale_fallback' | translate) }}</p>
         @if (totalPrice) {

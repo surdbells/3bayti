@@ -98,6 +98,10 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('swiper') swiperEl?: ElementRef<HTMLElement>;
   @ViewChild('lightboxSwiper') lightboxSwiperEl?: ElementRef<HTMLElement>;
   @ViewChild('thumbStrip') thumbStripEl?: ElementRef<HTMLElement>;
+  @ViewChild('ctlSection') ctlSectionEl?: ElementRef<HTMLElement>;
+  /** Set when an add-to-cart should reveal the "Complete the look" section;
+   *  consumed once the section is populated so page-load fetches never scroll. */
+  private pendingCtlScroll = false;
   index = signal(0);
 
   /** Fullscreen tap-to-expand image gallery (cinematic filmstrip). */
@@ -1168,10 +1172,29 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
             this.completeLook = Array.isArray(response.data.items) ? response.data.items : [];
             this.ctlInteractionId = response.data.interaction_id ?? null;
             this.cdr.markForCheck();
+            if (this.pendingCtlScroll) {
+              this.pendingCtlScroll = false;
+              if (this.completeLook.length > 0) {
+                this.scrollToCompleteLook();
+              }
+            }
+          } else {
+            // Non-success: drop the pending scroll so a later page-load fetch
+            // never consumes a stale flag and auto-scrolls on re-entry.
+            this.pendingCtlScroll = false;
           }
         },
-        error: () => {},
+        error: () => {
+          this.pendingCtlScroll = false;
+        },
       });
+  }
+
+  /** Smoothly bring the "Complete the look" section into view after an add. */
+  private scrollToCompleteLook(): void {
+    setTimeout(() => {
+      this.ctlSectionEl?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
   }
 
   open_complement(card: any): void {
@@ -1556,9 +1579,14 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
             this.success_notification(successText);
             this.ui_controls.is_adding_to_cart = false;
             this.itemExists = true; // flip the CTA to "Already in cart, View"
-            // Now that the product is in the cart, reveal "Complete the look".
+            // Now that the product is in the cart, reveal + scroll to "Complete
+            // the look" (it sits at the bottom of the scroll, below the fold).
+            this.pendingCtlScroll = true;
             if (this.completeLook.length === 0) {
               this.get_complete_look();
+            } else {
+              this.pendingCtlScroll = false;
+              this.scrollToCompleteLook();
             }
             // Stay on the PDP (mirror web). Update the reactive cart-count
             // badge, the transformAddCartResponse transform exposes the new

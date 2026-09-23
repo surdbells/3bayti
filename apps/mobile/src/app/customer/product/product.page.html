@@ -605,7 +605,7 @@
 
   <!-- Ain "Complete the look": shown only once the product is in the cart -->
   @if (itemExists && completeLook.length > 0) {
-    <section class="ctl">
+    <section class="ctl" #ctlSection>
       <div class="ctl-head">
         <h2 class="ctl-title">{{ 'complete_look_title' | translate }}</h2>
         <button type="button" class="ctl-add" [disabled]="isAddingLook" (click)="addTheLook()">
