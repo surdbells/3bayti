@@ -847,6 +847,10 @@
         "title": "قائمة الرغبات",
         "desc": "المنتجات التي حفظتِها"
       },
+      "following": {
+        "title": "المتابَعة",
+        "desc": "المتاجر التي تتابعينها"
+      },
       "giftCards": {
         "title": "بطاقات الهدايا",
         "desc": "اشتري واعرضي واستردي بطاقات الهدايا"
@@ -1090,6 +1094,16 @@
       "browse": "تصفّحي المجموعة",
       "errors": {
         "loadFailed": "تعذّر تحميل قائمة رغباتك. حاولي مرة أخرى."
+      }
+    },
+    "following": {
+      "title": "المتاجر التي تتابعينها",
+      "unfollow": "إلغاء المتابعة",
+      "loadMore": "تحميل المزيد",
+      "empty": "لا تتابعين أي متجر بعد.",
+      "browse": "تصفّحي المتاجر",
+      "errors": {
+        "loadFailed": "تعذّر تحميل متاجرك. حاولي مرة أخرى."
       }
     },
     "connected": {
@@ -1815,6 +1829,7 @@
     "accountMessages": "الرسائل · 3bayti",
     "accountMessagesThread": "المحادثة · 3bayti",
     "accountWishlist": "قائمة أمنياتي · 3bayti",
+    "accountFollowing": "المتاجر التي تتابعينها · 3bayti",
     "accountGiftCards": "بطاقات الهدايا الخاصة بي · 3bayti",
     "accountGiftCardDetail": "بطاقة هدية · 3bayti",
     "accountAddresses": "العناوين المحفوظة · 3bayti",

@@ -1,0 +1,202 @@
+/* /account/following — followed-stores list. Mirrors the wishlist page's
+   "Gilded Boutique" language. RTL-safe (logical / flex layout). */
+
+.account-following {
+  min-height: calc(100vh - 200px);
+  background: var(--color-bg-default, #faf7f1);
+  padding-bottom: 64px;
+}
+
+.account-following__container {
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding: 24px var(--page-padding-x) 0;
+}
+
+.account-following__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+  margin-bottom: 12px;
+
+  a {
+    color: var(--color-brand-700, #5a3a2c);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+}
+
+.account-following__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-brand-800, #472d22);
+  margin: 0 0 20px;
+}
+
+.account-following__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.following-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--color-surface-card, #fdfaf3);
+  border: 1px solid var(--color-border-subtle, #e4dccb);
+  border-radius: 14px;
+}
+
+.following-row__store {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+  flex: 1;
+}
+
+.following-row__logo {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-bg-muted, #f4f0ea);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.following-row__logo-blank {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-brand-700, #5a3a2c);
+}
+
+.following-row__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.following-row__name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+}
+
+.following-row__verified {
+  color: #16a34a;
+  font-size: 13px;
+  margin-inline-start: 4px;
+}
+
+.following-row__desc {
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 46ch;
+}
+
+.following-row__unfollow {
+  flex: 0 0 auto;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--color-text-secondary, #6b6056);
+  border: 1px solid var(--color-border-subtle, #e4dccb);
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+
+  &:hover:not(:disabled) {
+    color: #b4232a;
+    border-color: rgba(180, 35, 42, 0.4);
+    background: rgba(180, 35, 42, 0.06);
+  }
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500, #a97b53);
+    outline-offset: 2px;
+  }
+}
+
+.account-following__load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.account-following__load-more-btn {
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 11px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--color-brand-700, #5a3a2c);
+  border: 1px solid var(--color-brand-300, #d8c9ad);
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+
+.account-following__empty {
+  text-align: center;
+  padding: 64px 20px;
+}
+
+.account-following__empty-text {
+  font-size: 16px;
+  color: var(--color-text-muted, #6b6056);
+  margin-bottom: 18px;
+}
+
+.account-following__empty-cta {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 12px 28px;
+  font-weight: 600;
+  text-decoration: none;
+  color: #fff;
+  background: var(--color-brand-700, #5a3a2c);
+}
+
+.account-following__loading {
+  padding: 64px 20px;
+  text-align: center;
+  color: var(--color-text-muted, #6b6056);
+}

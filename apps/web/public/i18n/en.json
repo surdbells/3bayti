@@ -847,6 +847,10 @@
         "title": "Wishlist",
         "desc": "Products you’ve saved"
       },
+      "following": {
+        "title": "Following",
+        "desc": "Stores you follow"
+      },
       "giftCards": {
         "title": "Gift Cards",
         "desc": "Buy, view and redeem gift cards"
@@ -1090,6 +1094,16 @@
       "browse": "Browse the collection",
       "errors": {
         "loadFailed": "We couldn’t load your wishlist. Please try again."
+      }
+    },
+    "following": {
+      "title": "Stores you follow",
+      "unfollow": "Unfollow",
+      "loadMore": "Load more",
+      "empty": "You’re not following any stores yet.",
+      "browse": "Browse stores",
+      "errors": {
+        "loadFailed": "We couldn’t load your stores. Please try again."
       }
     },
     "connected": {
@@ -1815,6 +1829,7 @@
     "accountMessages": "Messages · 3bayti",
     "accountMessagesThread": "Conversation · 3bayti",
     "accountWishlist": "My wishlist · 3bayti",
+    "accountFollowing": "Stores you follow · 3bayti",
     "accountGiftCards": "My Gift Cards · 3bayti",
     "accountGiftCardDetail": "Gift Card · 3bayti",
     "accountAddresses": "Saved addresses · 3bayti",

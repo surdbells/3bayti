@@ -422,6 +422,14 @@ export const routes: Routes = [
     title: 'routeTitles.accountWishlist',
   },
   {
+    /* Stores the user follows (Phase 10). */
+    path: 'account/following',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/following/account-following-page').then(m => m.AccountFollowingPageComponent),
+    title: 'routeTitles.accountFollowing',
+  },
+  {
     /* Gift cards the buyer owns (purchased + redeemed), Phase E3. */
     path: 'account/gift-cards',
     canActivate: [authActivateGuard],
