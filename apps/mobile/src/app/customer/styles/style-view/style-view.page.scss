@@ -451,3 +451,18 @@ ion-content.page-bg {
   font-weight: 600;
 }
 .sv-restyle__save:disabled { opacity: 0.5; }
+
+/* Buy the look + share */
+.sv-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 18px;
+}
+.sv-actions__buy {
+  --border-radius: 14px;
+  font-weight: 600;
+}
+.sv-actions__share {
+  --border-radius: 14px;
+}

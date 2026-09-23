@@ -35,6 +35,25 @@
         <span class="total-price">Ð{{ getTotal() | number:'1.2-2' }}</span>
       </div>
     </div>
+
+    <!-- Buy the look + share -->
+    <div class="sv-actions">
+      <ion-button
+        expand="block"
+        class="sv-actions__buy"
+        [disabled]="isAddingLook || style.products.length === 0"
+        (click)="addAllToCart()">
+        <ax-icon name="shopping-cart" slot="start"></ax-icon>
+        {{ (isAddingLook ? 'adding_look' : 'button_add_look') | translate }}
+      </ion-button>
+      <ion-button
+        expand="block"
+        fill="outline"
+        class="sv-actions__share"
+        (click)="shareStyle()">
+        {{ 'button_share_look' | translate }}
+      </ion-button>
+    </div>
   }
   <!-- Section Title -->
   @if(style){

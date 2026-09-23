@@ -14,7 +14,7 @@ import {
 import { ActivatedRoute, Router } from "@angular/router";
 import { AxNotificationService } from '../../../shared/ax-mobile/notification';
 import { Preferences } from "@capacitor/preferences";
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import {TranslatePipe} from "../../../translate.pipe";
 import {Labels} from "../../../class/labels";
 import {ConnectionService} from "../../../service/connection.service";
@@ -79,6 +79,9 @@ export class StyleViewPage implements OnInit, OnDestroy {
 
   // Image loading tracking
   imageLoaded: { [key: number]: boolean } = {};
+
+  /** True while "Add the look to cart" is fanning out the per-item adds. */
+  isAddingLook = false;
 
   private sub: Subscription | null = null;
 
@@ -419,8 +422,93 @@ export class StyleViewPage implements OnInit, OnDestroy {
   }
 
   // ========================================
-  // Add all to cart
+  // Add all to cart (buy the look) + share
   // ========================================
+
+  /**
+   * Buy the look: add every product in the style to the (multi-vendor)
+   * cart, then go to the cart. Each add is independent, an out-of-stock or
+   * unorderable piece is skipped (partial success), mirroring the AI Outfit
+   * page's addLook(). Uses each product's v3 id (product_id post-transform).
+   */
+  async addAllToCart(): Promise<void> {
+    const products = this.style?.products ?? [];
+    if (products.length === 0 || this.isAddingLook) {
+      return;
+    }
+    if (!this.single_user.token) {
+      this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
+      return;
+    }
+    this.isAddingLook = true;
+    this.cdr.markForCheck();
+    let added = 0;
+    for (const item of products) {
+      const body = {
+        product_id: item.product_id,
+        quantity: 1,
+        size: '',
+        color: '',
+        is_custom: false,
+        measurement: null,
+        extra_measurement: null,
+        note: null,
+      };
+      try {
+        const res: any = await firstValueFrom(
+          this.networkAdapter.post_v3('POST /cart/items', body, { authToken: this.single_user.token }),
+        );
+        const ok = res?.response_code === 200 && (res?.status === 'success' || (res?.data && res.data.success === true));
+        if (ok) {
+          added++;
+        }
+      } catch {
+        // Skip a piece that can't be added; keep going.
+      }
+    }
+    this.isAddingLook = false;
+    this.cdr.markForCheck();
+    if (added > 0) {
+      this.success_notification(this.i18n.t('style_added_to_cart', { count: added }));
+      this.router.navigate(['/', 'cart']);
+    } else {
+      this.error_notification(this.i18n.t('style_add_failed'));
+    }
+  }
+
+  /**
+   * Share this look via the native share sheet (Web Share API), falling
+   * back to copying the storefront link. No @capacitor/share dependency, so
+   * this ships over OTA. Mirrors the gift-card-detail share.
+   */
+  async shareStyle(): Promise<void> {
+    const slug = this.style?.slug;
+    if (!slug) {
+      return;
+    }
+    const name = this.style?.style_name ?? '';
+    const url = `${this.storefrontBase()}/styles/${slug}`;
+    try {
+      if ((navigator as any).share) {
+        await (navigator as any).share({ title: name || '3bayti', text: name, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        this.success_notification(this.i18n.t('style_link_copied'));
+      }
+    } catch {
+      // User dismissed the share sheet; no-op.
+    }
+  }
+
+  /** Web storefront origin, derived from the API base (api.<host> -> <host>). */
+  private storefrontBase(): string {
+    try {
+      const u = new URL(GlobalComponent.baseURL);
+      return `${u.protocol}//${u.host.replace(/^api\./, '')}`;
+    } catch {
+      return 'https://3bayti.ae';
+    }
+  }
 
   triggerBack() {
     this.nav.back();
