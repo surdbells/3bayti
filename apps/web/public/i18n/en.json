@@ -927,6 +927,32 @@
         "en-AE": "English (UAE)",
         "ar-AE": "Arabic (UAE)"
       },
+      "style": {
+        "label": "Your style",
+        "hint": "Pick the aesthetics you love — we'll use them to tailor your recommendations. Choose up to 10.",
+        "maxReached": "You can select up to 10 styles.",
+        "tags": {
+          "classic": "Classic",
+          "minimalist": "Minimalist",
+          "elegant": "Elegant",
+          "casual": "Casual",
+          "streetwear": "Streetwear",
+          "bohemian": "Bohemian",
+          "modest": "Modest",
+          "glam": "Glam",
+          "chic": "Chic",
+          "traditional": "Traditional",
+          "sporty": "Sporty",
+          "edgy": "Edgy",
+          "vintage": "Vintage",
+          "romantic": "Romantic"
+        }
+      },
+      "consent": {
+        "label": "Personalisation",
+        "optIn": "I agree that 3bayti may use my activity and preferences to personalise my shopping experience.",
+        "granted": "Thanks — personalisation is on."
+      },
       "email": "Email",
       "phone": "Phone",
       "verified": "Verified",

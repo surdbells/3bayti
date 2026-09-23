@@ -37,6 +37,19 @@ export interface AuthUser {
   gender: string | null;
   /** ISO 8601 date (YYYY-MM-DD), not a full timestamp. */
   dob: string | null;
+  /**
+   * Customer-declared style-aesthetic tags (canonical slugs) captured at
+   * onboarding/profile edit. Optional so a token minted before the field
+   * existed still parses; a missing value is treated as "none declared".
+   * Mirrors UserSerializer.
+   */
+  style_preferences?: string[];
+  /**
+   * Data-collection consent state. `granted` is a durable, versioned PDPL
+   * record; `version` is the consent-copy version agreed to (or null).
+   * Optional for the same cached-token reason. Mirrors UserSerializer.
+   */
+  data_consent?: { granted: boolean; version: string | null };
   locale: Locale | null;
   timezone: string | null;
   is_phone_verified: boolean;

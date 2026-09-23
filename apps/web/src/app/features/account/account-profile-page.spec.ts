@@ -230,4 +230,65 @@ describe('AccountProfilePageComponent', () => {
       expect(toast.calls.some(c => c.kind === 'error')).toBe(true);
     });
   });
+
+  describe('style preferences + consent (P4)', () => {
+    function clickChip(fixture: ComponentFixture<AccountProfilePageComponent>, tag: string): void {
+      (fixture.nativeElement.querySelector(`[data-testid="prof-style-${tag}"]`) as HTMLButtonElement).click();
+    }
+
+    it('sends the selected style tags on save', async () => {
+      const { fixture, profile } = setup({ user: makeUser({ style_preferences: [] }) });
+      await flush();
+      fixture.detectChanges();
+      clickChip(fixture, 'classic');
+      clickChip(fixture, 'elegant');
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('[data-testid="prof-save"]') as HTMLButtonElement).click();
+      await flush();
+      expect(profile.updateCalls[0]).toEqual({ style_preferences: ['classic', 'elegant'] });
+    });
+
+    it('sends the full updated set when adding to existing preferences', async () => {
+      const { fixture, profile } = setup({ user: makeUser({ style_preferences: ['classic'] }) });
+      await flush();
+      fixture.detectChanges();
+      clickChip(fixture, 'elegant');
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('[data-testid="prof-save"]') as HTMLButtonElement).click();
+      await flush();
+      expect(profile.updateCalls[0]).toEqual({ style_preferences: ['classic', 'elegant'] });
+    });
+
+    it('does not resend style tags when the selection is unchanged', async () => {
+      const { fixture, profile } = setup({ user: makeUser({ first_name: 'Sara', style_preferences: ['modest'] }) });
+      await flush();
+      fixture.detectChanges();
+      setInput(getControl(fixture, 'prof-first'), 'Sarah');
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('[data-testid="prof-save"]') as HTMLButtonElement).click();
+      await flush();
+      expect(profile.updateCalls[0]).toEqual({ first_name: 'Sarah' });
+    });
+
+    it('sends data_consent true when the opt-in is checked', async () => {
+      const { fixture, profile } = setup({ user: makeUser({ data_consent: { granted: false, version: null } }) });
+      await flush();
+      fixture.detectChanges();
+      const cb = fixture.nativeElement.querySelector('[data-testid="prof-consent-checkbox"]') as HTMLInputElement;
+      cb.checked = true;
+      cb.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('[data-testid="prof-save"]') as HTMLButtonElement).click();
+      await flush();
+      expect(profile.updateCalls[0]).toEqual({ data_consent: true });
+    });
+
+    it('shows the granted state and hides the opt-in once consent is recorded', async () => {
+      const { fixture } = setup({ user: makeUser({ data_consent: { granted: true, version: 'v1' } }) });
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="prof-consent-granted"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="prof-consent-checkbox"]')).toBeNull();
+    });
+  });
 });

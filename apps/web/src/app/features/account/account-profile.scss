@@ -385,3 +385,94 @@
     outline: none;
   }
 }
+
+/* --- Style preferences + data-collection consent (P4) --- */
+.account-profile__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.account-profile__field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+}
+
+.account-profile__field-hint {
+  margin: -2px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-text-muted, #6b6056);
+}
+
+.account-profile__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.account-profile__chip {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  background: var(--color-bg-default, #fff);
+  border: 1px solid var(--color-border-subtle, #d8cfc1);
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary, #2e241c);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-brand-500, #b18f1f);
+    color: var(--color-brand-700, #5a3a2c);
+    background: rgba(177, 143, 31, 0.04);
+    outline: none;
+  }
+
+  &.--active {
+    background: var(--color-text-primary, #2e241c);
+    border-color: var(--color-text-primary, #2e241c);
+    color: #fff;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--color-brand-700, #5a3a2c);
+      border-color: var(--color-brand-700, #5a3a2c);
+      color: #fff;
+    }
+  }
+}
+
+.account-profile__consent-granted {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+}
+
+.account-profile__consent-optin {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-primary, #2e241c);
+  cursor: pointer;
+
+  input {
+    margin-top: 2px;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-brand-700, #5a3a2c);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+}

@@ -27,6 +27,19 @@ const GENDERS: ProfileGender[] = ['male', 'female', 'other', 'prefer_not_to_say'
 const LOCALES = ['en', 'ar', 'en-AE', 'ar-AE'];
 
 /**
+ * Curated style-aesthetic tags the picker offers (P4). Canonical slugs —
+ * must stay in lockstep with UpdateProfileInput::ALLOWED_STYLE_TAGS in the
+ * API. Rendered with localized labels (account.profile.style.tags.<slug>).
+ */
+const STYLE_TAGS = [
+  'classic', 'minimalist', 'elegant', 'casual', 'streetwear', 'bohemian',
+  'modest', 'glam', 'chic', 'traditional', 'sporty', 'edgy', 'vintage', 'romantic',
+];
+
+/** Max style tags a customer may select. Mirrors the API cap. */
+const MAX_STYLE_TAGS = 10;
+
+/**
  * /account/profile, edit the authenticated user's profile.
  *
  * Editable (mirrors apps/api UpdateProfileInput exactly):
@@ -183,6 +196,60 @@ const LOCALES = ['en', 'ar', 'en-AE', 'ar-AE'];
                 </option>
               </select>
             </ui-form-field>
+
+            <!-- Declared style preferences (P4) -->
+            <div class="account-profile__field" data-testid="prof-style">
+              <span class="account-profile__field-label">
+                {{ 'account.profile.style.label' | translate }}
+              </span>
+              <p class="account-profile__field-hint">
+                {{ 'account.profile.style.hint' | translate }}
+              </p>
+              <div
+                class="account-profile__chips"
+                role="group"
+                [attr.aria-label]="'account.profile.style.label' | translate"
+              >
+                <button
+                  *ngFor="let tag of styleTags"
+                  type="button"
+                  class="account-profile__chip"
+                  [class.--active]="isStyleSelected(tag)"
+                  [attr.aria-pressed]="isStyleSelected(tag)"
+                  [attr.data-testid]="'prof-style-' + tag"
+                  (click)="toggleStyleTag(tag)"
+                >
+                  {{ 'account.profile.style.tags.' + tag | translate }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Data-collection consent (P4) -->
+            <div class="account-profile__field" data-testid="prof-consent">
+              <span class="account-profile__field-label">
+                {{ 'account.profile.consent.label' | translate }}
+              </span>
+              <p
+                *ngIf="consentGranted()"
+                class="account-profile__consent-granted"
+                data-testid="prof-consent-granted"
+              >
+                <span class="account-profile__verified">✓</span>
+                {{ 'account.profile.consent.granted' | translate }}
+              </p>
+              <label
+                *ngIf="!consentGranted()"
+                class="account-profile__consent-optin"
+              >
+                <input
+                  type="checkbox"
+                  [checked]="grantConsentChecked()"
+                  (change)="onConsentToggle($event)"
+                  data-testid="prof-consent-checkbox"
+                />
+                <span>{{ 'account.profile.consent.optIn' | translate }}</span>
+              </label>
+            </div>
 
             <!-- Read-only contact info -->
             <div class="account-profile__readonly" data-testid="prof-readonly">
@@ -519,6 +586,20 @@ export class AccountProfilePageComponent implements OnInit {
 
   protected readonly genders = GENDERS;
   protected readonly locales = LOCALES;
+  protected readonly styleTags = STYLE_TAGS;
+
+  /**
+   * Declared style tags currently selected (P4). Signal-backed rather than a
+   * form control — it's a multi-select toggle, not a single value. Diffed
+   * against styleTagsBaseline in buildPatch().
+   */
+  protected readonly selectedStyleTags = signal<string[]>([]);
+  private styleTagsBaseline: string[] = [];
+
+  /** Whether data-collection consent is already on record (grant-only). */
+  protected readonly consentGranted = signal<boolean>(false);
+  /** The opt-in checkbox state, shown only while consent is not yet granted. */
+  protected readonly grantConsentChecked = signal<boolean>(false);
 
   protected readonly isLoading = this.profileService.isLoading;
   protected readonly isSaving = this.profileService.isSaving;
@@ -610,6 +691,7 @@ export class AccountProfilePageComponent implements OnInit {
         dob: user.dob ?? '',
         locale: user.locale ?? 'en',
       });
+      this.syncExtraFields(user);
       this.form.markAsPristine();
       // Deep-link from the "update your email" reminder banner opens the flow.
       if (this.route.snapshot.queryParamMap.get('editEmail')) {
@@ -682,6 +764,7 @@ export class AccountProfilePageComponent implements OnInit {
     try {
       const updated = await this.profileService.updateProfile(patch);
       this._user.set(updated);
+      this.syncExtraFields(updated);
       this.form.markAsPristine();
       this.toast.success('account.profile.saved');
     } catch (err) {
@@ -1064,6 +1147,65 @@ export class AccountProfilePageComponent implements OnInit {
 
     if (v.locale !== (user?.locale ?? null)) patch.locale = v.locale;
 
+    // Style tags: send the full selected list when it differs from baseline
+    // (order-insensitive). The API replaces the set. Note: clearing all tags
+    // sends [] which the API treats as "not provided" — it can't be emptied
+    // via this endpoint, same limitation as gender/dob unset.
+    if (this.styleTagsChanged()) {
+      patch.style_preferences = this.selectedStyleTags();
+    }
+
+    // Consent is grant-only: include it only when the user is opting in now
+    // and hasn't already consented.
+    if (!this.consentGranted() && this.grantConsentChecked()) {
+      patch.data_consent = true;
+    }
+
     return patch;
+  }
+
+  /**
+   * Reset the signal-backed extras (style tags + consent) from a freshly
+   * loaded/saved user, and re-baseline the style diff. Called from ngOnInit
+   * and after a successful save so the UI reflects server truth.
+   */
+  private syncExtraFields(user: AuthUser): void {
+    const tags = user.style_preferences ?? [];
+    this.selectedStyleTags.set([...tags]);
+    this.styleTagsBaseline = [...tags];
+    this.consentGranted.set(user.data_consent?.granted ?? false);
+    this.grantConsentChecked.set(false);
+  }
+
+  /** Toggle a style tag on/off, capping the selection at MAX_STYLE_TAGS. */
+  protected toggleStyleTag(slug: string): void {
+    const current = this.selectedStyleTags();
+    if (current.includes(slug)) {
+      this.selectedStyleTags.set(current.filter((t) => t !== slug));
+      return;
+    }
+    if (current.length >= MAX_STYLE_TAGS) {
+      this.toast.info('account.profile.style.maxReached');
+      return;
+    }
+    this.selectedStyleTags.set([...current, slug]);
+  }
+
+  /** Whether a style tag is currently selected (drives chip active state). */
+  protected isStyleSelected(slug: string): boolean {
+    return this.selectedStyleTags().includes(slug);
+  }
+
+  /** True when the selected tag set differs from the loaded baseline. */
+  private styleTagsChanged(): boolean {
+    const a = [...this.selectedStyleTags()].sort();
+    const b = [...this.styleTagsBaseline].sort();
+    if (a.length !== b.length) return true;
+    return a.some((t, i) => t !== b[i]);
+  }
+
+  /** Reflect the consent opt-in checkbox into the signal. */
+  protected onConsentToggle(event: Event): void {
+    this.grantConsentChecked.set((event.target as HTMLInputElement).checked);
   }
 }

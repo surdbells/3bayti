@@ -35,6 +35,20 @@ export interface ProfileUpdate {
   /** ISO 8601 date YYYY-MM-DD, or null to clear. */
   dob?: string | null;
   locale?: string | null;
+  /**
+   * Declared style-aesthetic tags (canonical slugs, max 10). Merge-patch:
+   * omit to leave unchanged; an empty array is treated by the API as
+   * "not provided" (it can't clear via this endpoint), so we omit it when
+   * nothing changed rather than send [].
+   */
+  style_preferences?: string[];
+  /**
+   * Grant data-collection consent. Request-body shape is a plain boolean
+   * (grant-only — the API stamps a versioned record once); note this is
+   * asymmetric with the response, where `user.data_consent` is an object
+   * `{ granted, version }`. Omit unless the user is granting now.
+   */
+  data_consent?: boolean;
 }
 
 /**
