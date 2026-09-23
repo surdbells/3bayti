@@ -231,6 +231,12 @@
             <span class="ax-sidenav-link-label">Ain concierge</span>
           </a>
         </li>
+        <li *axCan="'hotlinks.view'">
+          <a routerLink="/admin/hotlinks" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+            <app-icon name="link" aria-hidden="true"></app-icon>
+            <span class="ax-sidenav-link-label">Store hotlinks</span>
+          </a>
+        </li>
         <li *axCan="'notifications.send'">
           <a routerLink="/admin/notifications" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="campaign" aria-hidden="true"></app-icon>

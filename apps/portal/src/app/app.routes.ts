@@ -211,6 +211,12 @@ export const routes: Routes = [
     title: 'Ain concierge'
   },
   {
+    path: 'admin/hotlinks',
+    loadComponent: () => import('./backend/hotlink-analytics/hotlink-analytics.component').then(m => m.HotlinkAnalyticsComponent),
+    canActivate: [adminGuard, requirePermission('hotlinks.view')],
+    title: 'Store hotlinks'
+  },
+  {
     path: 'admin/collections/edit',
     loadComponent: () => import('./backend/collections/edit-collection/edit-collection.component').then(m => m.EditCollectionComponent),
     canActivate: [adminGuard, requirePermission('catalog.collections_manage')],

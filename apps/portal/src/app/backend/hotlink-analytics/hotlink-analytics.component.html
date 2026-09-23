@@ -1,0 +1,123 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <span class="ax-page-header-eyebrow">Engagement</span>
+        <h1 class="ax-page-title">Store hotlinks</h1>
+        <p class="ax-page-subtitle">Shared store &amp; look links — clicks, and the orders and revenue they drive.</p>
+      </div>
+    </header>
+
+    <!-- Time range switcher (shared semantics with the other analytics panels) -->
+    <div class="hla-head">
+      <p class="ax-card-subtitle">{{ subtitle }}</p>
+      <div class="ax-segment hla-range" role="tablist" aria-label="Time range">
+        <button *ngFor="let r of rangeOptions" type="button" class="ax-segment-item"
+                [class.ax-segment-item-active]="rangeMode === 'days' && rangeDays === r"
+                [attr.aria-selected]="rangeMode === 'days' && rangeDays === r" (click)="setRange(r)">{{ r }} days</button>
+        <button type="button" class="ax-segment-item"
+                [class.ax-segment-item-active]="rangeMode === 'current_month'"
+                [attr.aria-selected]="rangeMode === 'current_month'" (click)="setCurrentMonth()">This month</button>
+        <button type="button" class="ax-segment-item"
+                [class.ax-segment-item-active]="rangeMode === 'custom'"
+                [attr.aria-selected]="rangeMode === 'custom'" (click)="toggleCustom()">Custom</button>
+      </div>
+    </div>
+
+    <div class="hla-range-custom" *ngIf="showCustom">
+      <label class="hla-range-custom__field">
+        <span class="hla-range-custom__label">From</span>
+        <input type="date" class="ax-input" [(ngModel)]="customFrom" [max]="customTo || todayStr" />
+      </label>
+      <label class="hla-range-custom__field">
+        <span class="hla-range-custom__label">To</span>
+        <input type="date" class="ax-input" [(ngModel)]="customTo" [min]="customFrom" [max]="todayStr" />
+      </label>
+      <button type="button" class="ax-btn ax-btn-primary ax-btn-sm"
+              [disabled]="!customFrom || !customTo" (click)="applyCustomRange()">Apply</button>
+    </div>
+
+    <!-- KPI cards -->
+    <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-4 ax-gap-5 hla-kpis" [class.hla-dim]="loading">
+      <div class="ax-stat-card ax-stat-card-brand">
+        <div class="ax-stat-card-header">
+          <span class="ax-stat-card-label">Clicks</span>
+          <span class="ax-stat-card-icon"><app-icon name="ads_click" aria-hidden="true"></app-icon></span>
+        </div>
+        <div class="ax-stat-card-value">{{ total('clicks') | number:'1.0-0' }}</div>
+        <div class="ax-stat-card-footer">
+          <span class="ax-stat-card-caption">{{ total('unique_clickers') | number }} people · {{ total('unique_sessions') | number }} sessions</span>
+        </div>
+      </div>
+
+      <div class="ax-stat-card">
+        <div class="ax-stat-card-header">
+          <span class="ax-stat-card-label">Attributed orders</span>
+          <span class="ax-stat-card-icon"><app-icon name="shopping_bag" aria-hidden="true"></app-icon></span>
+        </div>
+        <div class="ax-stat-card-value">{{ total('attributed_orders') | number:'1.0-0' }}</div>
+        <div class="ax-stat-card-footer">
+          <span class="ax-stat-card-caption">Within {{ data?.attribution_window_days || 7 }} days of a click</span>
+        </div>
+      </div>
+
+      <div class="ax-stat-card">
+        <div class="ax-stat-card-header">
+          <span class="ax-stat-card-label">Attributed revenue</span>
+          <span class="ax-stat-card-icon"><app-icon name="payments" aria-hidden="true"></app-icon></span>
+        </div>
+        <div class="ax-stat-card-value">AED {{ revenue | number:'1.0-2' }}</div>
+      </div>
+
+      <div class="ax-stat-card">
+        <div class="ax-stat-card-header">
+          <span class="ax-stat-card-label">Conversion rate</span>
+          <span class="ax-stat-card-icon"><app-icon name="trending_up" aria-hidden="true"></app-icon></span>
+        </div>
+        <div class="ax-stat-card-value">{{ conversionRatePct }}%</div>
+        <div class="ax-stat-card-footer">
+          <span class="ax-stat-card-caption">{{ total('hotlinks_total') | number }} links created</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clicks over time -->
+    <section class="ax-card hla-series" *ngIf="hasClicks">
+      <h2 class="ax-card-title">Clicks over time</h2>
+      <div class="hla-bars" aria-hidden="true">
+        <span class="hla-bar" *ngFor="let v of series" [style.height.%]="barHeight(v)" [attr.title]="v"></span>
+      </div>
+    </section>
+
+    <!-- Top links -->
+    <section class="ax-card ax-p-0 hla-top">
+      <div class="hla-top__head">
+        <h2 class="ax-card-title">Top links</h2>
+      </div>
+      <table class="ax-table hla-table" *ngIf="topLinks.length > 0; else noLinks">
+        <thead>
+          <tr>
+            <th>Target</th>
+            <th>Code</th>
+            <th class="hla-num">Clicks</th>
+            <th class="hla-num">Conversions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of topLinks">
+            <td>
+              <span class="hla-badge" [attr.data-type]="row.target_type">{{ row.target_type | titlecase }}</span>
+              <span class="hla-target">{{ row.target_slug }}</span>
+            </td>
+            <td class="hla-code">{{ row.code }}</td>
+            <td class="hla-num">{{ row.clicks | number }}</td>
+            <td class="hla-num">{{ row.conversions | number }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #noLinks>
+        <p class="hla-empty">No hotlink activity in this period yet.</p>
+      </ng-template>
+    </section>
+  </div>
+</app-admin-shell>
