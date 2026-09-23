@@ -47,6 +47,7 @@ function pushStr(value: unknown): string {
  *   gift_card.expiry_nudge    { card_id }            -> /my-gift-cards
  *   cart.abandoned            { cart_id }            -> /cart
  *   re_engagement.nudge       { }                    -> /home
+ *   store.new_product         { product_id }         -> /product?id=:product_id
  *
  * Notes:
  *  - order.review_prompt deep-links to the same /orders/:id as the rest of
@@ -109,6 +110,12 @@ export function resolvePushDeepLink(data: Record<string, unknown> | null | undef
       if (reminderId !== '') { params.set('gift_reminder_id', reminderId); }
       const qs = params.toString();
       return qs === '' ? '/gift-ain' : `/gift-ain?${qs}`;
+    }
+    case 'store.new_product': {
+      // A followed store published a product -> open that product. The PDP
+      // loads by v3 id via ?id= (same as open_product across the app).
+      const productId = pushStr(data['product_id']);
+      return productId === '' ? null : `/product?id=${encodeURIComponent(productId)}`;
     }
     default:
       return null;

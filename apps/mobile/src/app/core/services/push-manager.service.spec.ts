@@ -86,6 +86,21 @@ describe('resolvePushDeepLink', () => {
     });
   });
 
+  describe('store.new_product -> /product?id=', () => {
+    it('maps product_id to the PDP query-param URL', () => {
+      expect(resolvePushDeepLink({ type: 'store.new_product', product_id: '5584', product_slug: 'abaya-x', vendor_slug: '7byash' }))
+        .toBe('/product?id=5584');
+    });
+
+    it('tolerates a numeric product_id', () => {
+      expect(resolvePushDeepLink({ type: 'store.new_product', product_id: 9002 })).toBe('/product?id=9002');
+    });
+
+    it('returns null when product_id is missing', () => {
+      expect(resolvePushDeepLink({ type: 'store.new_product', vendor_slug: '7byash' })).toBeNull();
+    });
+  });
+
   describe('unknown / empty payloads', () => {
     it('returns null for an unrecognised type', () => {
       expect(resolvePushDeepLink({ type: 'something.unknown' })).toBeNull();
