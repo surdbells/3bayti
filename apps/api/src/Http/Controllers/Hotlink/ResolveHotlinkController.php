@@ -61,10 +61,10 @@ final class ResolveHotlinkController
             throw HttpException::notFound('Link not found.');
         }
 
-        // Count the click (denormalized) + write the attribution ledger row.
-        $hotlink->recordClick();
-        $this->em->flush();
-
+        // Count the click (atomic denormalized bump) + write the attribution
+        // ledger row. Both writes live in the logger and are guarded/swallowed
+        // so click tracking can NEVER break the resolve/redirect — no unguarded
+        // flush on the hot path, and no request-length lock on the shared row.
         $viewer = $request->getAttribute(AuthMiddleware::ATTR_USER);
         $userId = $viewer instanceof User ? $viewer->getId() : null;
         $sid = $request->getQueryParams()['sid'] ?? null;

@@ -80,13 +80,23 @@ final class CreateHotlinkController
         try {
             $repo->save($hotlink);
         } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException) {
-            // Lost the race (concurrent create for the same target, or a code
-            // collision). Return the winning canonical link.
+            // The designed race: a concurrent create for the SAME target tripped
+            // uniq_hotlink_target. Return the winning canonical link. (The read
+            // path still works after a failed flush closes the EM — findOneBy
+            // does not assert an open manager, unlike persist/flush.)
             $winner = $repo->findByTarget($targetType, $targetSlug);
             if ($winner !== null) {
                 return $this->ok(['data' => $this->serializer->shape($winner)]);
             }
-            throw HttpException::conflict('HOTLINK_CREATE_FAILED', 'Could not create the link. Please try again.');
+            // No row for this target ⇒ the violation was a (vanishingly rare)
+            // code collision or a transient fault, not a target race. The EM is
+            // now closed so we cannot regenerate + re-save in this request;
+            // surface a retryable conflict — the client's next POST mints a
+            // fresh code.
+            throw HttpException::conflict(
+                ErrorCodes::CONFLICT_DUPLICATE,
+                'Could not create the link right now. Please try again.',
+            );
         }
 
         return $this->created(['data' => $this->serializer->shape($hotlink)]);

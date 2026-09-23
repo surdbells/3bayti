@@ -34,9 +34,29 @@ final class HotlinkClickLogger
      * Record one hotlink click. user_id is set for a logged-in resolve (drives
      * conversion attribution); session_id is an opaque client tag for
      * logged-out reach. Both nullable.
+     *
+     * Bumps the denormalized hotlinks.click_count with an atomic UPDATE (not a
+     * load-modify-flush) and writes the authoritative ledger row. Each write is
+     * guarded independently so a transient DB fault on either one is swallowed
+     * and NEVER breaks the resolve/redirect. The atomic increment also holds the
+     * canonical row's write-lock only for the UPDATE, avoiding request-length
+     * lock contention on a viral link.
      */
     public function recordClick(int $hotlinkId, ?int $userId, ?string $sessionId): void
     {
+        try {
+            $this->connection->executeStatement(
+                'UPDATE hotlinks SET click_count = click_count + 1 WHERE id = :id',
+                ['id' => $hotlinkId],
+                ['id' => ParameterType::INTEGER],
+            );
+        } catch (\Throwable $e) {
+            $this->logger->error('hotlink.click.count_failed', [
+                'hotlink_id' => $hotlinkId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         try {
             $this->connection->insert('hotlink_clicks', [
                 'hotlink_id' => $hotlinkId,

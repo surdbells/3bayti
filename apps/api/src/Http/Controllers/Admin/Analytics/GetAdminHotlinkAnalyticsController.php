@@ -77,15 +77,20 @@ final class GetAdminHotlinkAnalyticsController
             ['s' => $start, 'e' => $end],
         );
 
-        // ── Attributed orders + revenue (a click's user ordered within window) ──
+        // ── Attributed orders + revenue ────────────────────────────────────────
+        // Anchored on the CLICK falling inside the window (order up to N days
+        // after), so this reconciles with both `clicks` above and the per-link
+        // conversions below — all three count the same window-of-clicks
+        // population. (An order-anchored window would silently disagree with the
+        // top_links panel at the boundaries.)
         $attributed = $conn->fetchAssociative(
             "WITH attributed AS (
                  SELECT DISTINCT o.id, o.total
                  FROM orders o
                  JOIN hotlink_clicks c ON c.user_id = o.user_id
-                      AND c.created_at <= o.created_at
-                      AND c.created_at >= o.created_at - INTERVAL '{$winDays} days'
-                 WHERE o.status IN ($sale) AND o.created_at >= :s AND o.created_at < :e
+                      AND o.created_at >= c.created_at
+                      AND o.created_at <= c.created_at + INTERVAL '{$winDays} days'
+                 WHERE o.status IN ($sale) AND c.created_at >= :s AND c.created_at < :e
              )
              SELECT COUNT(*) AS orders, COALESCE(SUM(total), 0) AS revenue FROM attributed",
             ['s' => $start, 'e' => $end],
