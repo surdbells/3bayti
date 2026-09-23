@@ -121,6 +121,42 @@ export class StoreService {
   }
 
   /**
+   * Follow a store (idempotent server-side). Bearer-authed; the interceptor
+   * attaches the token. Resolves on success.
+   */
+  async followVendor(vendorId: number): Promise<void> {
+    await firstValueFrom(
+      this.http.post<Store>('POST /following/:vendorId', {
+        params: { vendorId: String(vendorId) },
+      }),
+    );
+  }
+
+  /** Unfollow a store (idempotent server-side). */
+  async unfollowVendor(vendorId: number): Promise<void> {
+    await firstValueFrom(
+      this.http.delete<unknown>('DELETE /following/:vendorId', {
+        params: { vendorId: String(vendorId) },
+      }),
+    );
+  }
+
+  /** A page of the stores the signed-in user follows (each is_following=true). */
+  async listFollowing(params: StoreListParams = {}): Promise<{ items: Store[]; hasMore: boolean }> {
+    const limit = params.limit ?? STORE_DIRECTORY_PAGE_SIZE;
+    const offset = params.offset ?? 0;
+    const env = await firstValueFrom(
+      this.http.get<Store[]>('GET /following', {
+        query: { limit, offset },
+      }),
+    );
+    return {
+      items: Array.isArray(env.data) ? env.data : [],
+      hasMore: env.meta?.has_more ?? false,
+    };
+  }
+
+  /**
    * A store's merchandising labels (collections) for the chip filter.
    * Stateless. Returns [] on any failure so the detail page degrades to
    * "no chips" rather than breaking the whole store view.

@@ -867,6 +867,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/following/:vendorId',
     shape: 'v3-envelope',
   },
+  // The stores the signed-in user follows (v3-native, no legacy path).
+  'GET /following': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/following',
+    shape: 'v3-envelope',
+  },
   // v3 customer reviews (Group B / B1). add-review is store-scoped
   // (vendor id in body); store-reviews + settings/store-reviews both
   // list a vendor's approved reviews (one v3 endpoint via alias).

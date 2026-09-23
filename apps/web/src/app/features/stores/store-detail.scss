@@ -295,3 +295,45 @@
     flex-direction: row-reverse;
   }
 }
+
+/* Follow / Following button */
+.store-detail__follow {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 12px;
+  padding: 9px 22px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  color: #fff;
+  background: var(--color-brand-700, #5a3a2c);
+  border: 1px solid var(--color-brand-700, #5a3a2c);
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500, #a97b53);
+    outline-offset: 2px;
+  }
+
+  /* Following = quieter, "outline" treatment so the primary CTA stands out. */
+  &.is-following {
+    background: transparent;
+    color: var(--color-brand-700, #5a3a2c);
+    border-color: var(--color-border-subtle, #e4dccb);
+  }
+}

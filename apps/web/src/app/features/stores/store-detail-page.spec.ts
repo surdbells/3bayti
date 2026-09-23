@@ -7,6 +7,8 @@ import { signal } from '@angular/core';
 import { StoreDetailPageComponent } from './store-detail-page';
 import { StoreService } from '../catalog/store.service';
 import type { StoreProductsPage } from '../catalog/store.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { ToastService } from '../../shared/forms';
 import { provideI18n } from '../../core/i18n';
 import type { Store, VendorLabel } from '../catalog/store.model';
 import type { Product } from '../catalog/product.model';
@@ -107,6 +109,10 @@ function setup(opts: {
       provideI18n(),
       { provide: StoreService, useValue: service },
       { provide: ActivatedRoute, useValue: activatedRouteStub },
+      // Stub AuthService (its real deps — AUTH_PROXY_BASE etc. — aren't wired
+      // here) and ToastService so the follow button's injections resolve.
+      { provide: AuthService, useValue: { isAuthenticated: signal(false) } },
+      { provide: ToastService, useValue: { success: () => {}, error: () => {}, info: () => {} } },
     ],
   });
   const fixture = TestBed.createComponent(StoreDetailPageComponent);

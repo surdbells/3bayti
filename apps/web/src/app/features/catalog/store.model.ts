@@ -33,6 +33,12 @@ export interface Store {
   logo_url: string | null;
   cover_image_url: string | null;
   is_verified: boolean;
+  /**
+   * Whether the signed-in viewer follows this store. Present only on the
+   * authenticated detail read (GET /vendors/:slug via OptionalAuth) and on
+   * the following list; absent for anonymous/directory reads.
+   */
+  is_following?: boolean;
 }
 
 /**

@@ -6,13 +6,15 @@ import {
   OnInit,
 } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ProductCardComponent } from '../catalog/product-card';
 import { StoreService, DESIGNER_PAGE_SIZE } from '../catalog/store.service';
 import type { Store, VendorLabel } from '../catalog/store.model';
 import type { Product } from '../catalog/product.model';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
+import { AuthService } from '../../core/auth/auth.service';
+import { ToastService } from '../../shared/forms';
 
 /**
  * /store/:slug, a single store's page.
@@ -94,6 +96,17 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
                   {{ 'stores.reviews.readReviews' | translate }}
                   <span aria-hidden="true">›</span>
                 </a>
+                <button
+                  type="button"
+                  class="store-detail__follow"
+                  [class.is-following]="isFollowing()"
+                  [disabled]="togglingFollow()"
+                  [attr.aria-pressed]="isFollowing()"
+                  (click)="toggleFollow()"
+                  data-testid="store-follow"
+                >
+                  {{ (isFollowing() ? 'stores.following' : 'stores.follow') | translate }}
+                </button>
               </div>
             </header>
 
@@ -200,10 +213,18 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 })
 export class StoreDetailPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly storeService = inject(StoreService);
+  private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
 
   private readonly _store = signal<Store | null>(null);
   protected readonly store = this._store.asReadonly();
+
+  /** Follow state (seeded from the store's is_following, flipped on toggle). */
+  private readonly _isFollowing = signal<boolean>(false);
+  protected readonly isFollowing = this._isFollowing.asReadonly();
+  protected readonly togglingFollow = signal(false);
 
   private readonly _notFound = signal<boolean>(false);
   protected readonly notFound = this._notFound.asReadonly();
@@ -237,6 +258,7 @@ export class StoreDetailPageComponent implements OnInit {
 
     try {
       this._store.set(await this.storeService.getBySlug(this.slug));
+      this._isFollowing.set(this._store()?.is_following === true);
     } catch {
       /* 404 / inactive → inline not-found (Q4.4), not a hard error. */
       this._notFound.set(true);
@@ -254,6 +276,38 @@ export class StoreDetailPageComponent implements OnInit {
     } catch {
       /* No chips rather than a broken page. */
       this._labels.set([]);
+    }
+  }
+
+  /**
+   * Follow / unfollow this store. Guests are routed to sign-in (following is
+   * an authenticated action). Optimistic flip, reverted on failure.
+   */
+  protected async toggleFollow(): Promise<void> {
+    const store = this._store();
+    if (!store || this.togglingFollow()) {
+      return;
+    }
+    if (!this.auth.isAuthenticated()) {
+      void this.router.navigate(['/login'], {
+        queryParams: { returnUrl: `/stores/${store.slug}` },
+      });
+      return;
+    }
+    this.togglingFollow.set(true);
+    const wasFollowing = this._isFollowing();
+    this._isFollowing.set(!wasFollowing); // optimistic
+    try {
+      if (wasFollowing) {
+        await this.storeService.unfollowVendor(store.id);
+      } else {
+        await this.storeService.followVendor(store.id);
+      }
+    } catch {
+      this._isFollowing.set(wasFollowing); // revert
+      this.toast.error('stores.followError');
+    } finally {
+      this.togglingFollow.set(false);
     }
   }
 

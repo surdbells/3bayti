@@ -778,6 +778,9 @@
   },
   "stores": {
     "verified": "Verified store",
+    "follow": "Follow",
+    "following": "Following",
+    "followError": "Couldn't update follow. Please try again.",
     "directory": {
       "title": "Our Stores",
       "subtitle": "Discover the ateliers and labels behind every piece in our collection.",
