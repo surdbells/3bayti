@@ -106,6 +106,14 @@
           <span class="item-label">{{ 'my_styles' | translate }}</span>
           <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
         </button>
+
+        <button type="button" class="settings-item" (click)="openFollowing()">
+          <div class="item-icon">
+            <ax-icon name="heart" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'following_stores' | translate }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
       </div>
     </div>
 

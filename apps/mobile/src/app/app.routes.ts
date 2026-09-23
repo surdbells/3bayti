@@ -159,6 +159,11 @@ export const routes: Routes = [
     loadComponent: () => import('./customer/styles/create/create.page').then( m => m.CreatePage)
   },
   {
+    // Stores the user follows (Phase 10).
+    path: 'following',
+    loadComponent: () => import('./customer/following/following.page').then( m => m.FollowingPage)
+  },
+  {
     path: 'best-sellers',
     loadComponent: () => import('./customer/best-sellers/best-sellers.page').then( m => m.BestSellersPage)
   },

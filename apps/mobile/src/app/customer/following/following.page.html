@@ -1,0 +1,59 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="triggerBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'following_title' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="page-bg ion-padding" [fullscreen]="true">
+  @if (isLoading && !hasLoaded) {
+    <div class="following-loading">{{ 'following_loading' | translate }}</div>
+  } @else if (stores.length === 0) {
+    <div class="following-empty">
+      <p class="following-empty__text">{{ 'following_empty' | translate }}</p>
+      <ion-button expand="block" fill="outline" (click)="browseStores()">
+        {{ 'following_browse' | translate }}
+      </ion-button>
+    </div>
+  } @else {
+    <div class="following-list">
+      @for (store of stores; track store.id) {
+        <div class="follow-row">
+          <button type="button" class="follow-row__store" (click)="openStore(store)">
+            <span class="follow-row__logo">
+              @if (store.logo_url) {
+                <img [src]="store.logo_url" [alt]="store.name" loading="lazy" decoding="async" />
+              } @else {
+                <span class="follow-row__logo-blank">{{ initialOf(store) }}</span>
+              }
+            </span>
+            <span class="follow-row__text">
+              <span class="follow-row__name">
+                {{ store.name }}
+                @if (store.is_verified) { <span class="follow-row__verified" aria-hidden="true">✓</span> }
+              </span>
+              @if (store.description) {
+                <span class="follow-row__desc" [innerHTML]="store.description"></span>
+              }
+            </span>
+          </button>
+          <ion-button
+            fill="clear"
+            size="small"
+            color="danger"
+            class="follow-row__unfollow"
+            [disabled]="isUnfollowing(store.id)"
+            (click)="unfollow(store)">
+            {{ 'following_unfollow' | translate }}
+          </ion-button>
+        </div>
+      }
+    </div>
+  }
+</ion-content>
+
+<app-tab-bar active="profile"></app-tab-bar>
