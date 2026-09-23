@@ -53,6 +53,13 @@ export interface Style {
   total_price: string;
   /** The bundled products, in display order. */
   products: StyleProduct[];
+  /**
+   * True when the authenticated viewer created this look, so the detail
+   * page can offer Edit/Delete. Present only on the detailShape (GET
+   * /styles/:slug via OptionalAuth); absent/false for anonymous viewers
+   * and in the list shapes. The server still enforces ownership on writes.
+   */
+  is_owner?: boolean;
 }
 
 /** Pagination params for the style lists. */

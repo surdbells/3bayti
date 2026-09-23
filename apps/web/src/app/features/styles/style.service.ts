@@ -195,6 +195,36 @@ export class StyleService {
     return env.data;
   }
 
+  /**
+   * Edit one of the user's own looks: rename and/or replace its product
+   * set (still up to 4 v3 ids). Full-replace semantics, mirrors the create
+   * body. The server keeps the slug stable so shared links survive.
+   */
+  async updateStyle(id: number, input: CreateStyleInput): Promise<Style> {
+    const env = await firstValueFrom(
+      this.http.put<Style>('PUT /me/styles/:id', {
+        params: { id: String(id) },
+        body: {
+          name: input.name,
+          products: input.products,
+        },
+      }),
+    );
+    return env.data;
+  }
+
+  /**
+   * Soft-delete one of the user's own looks (reversible server-side). 404
+   * if it isn't theirs; a 2xx (incl. 204) resolves.
+   */
+  async deleteStyle(id: number): Promise<void> {
+    await firstValueFrom(
+      this.http.delete<unknown>('DELETE /me/styles/:id', {
+        params: { id: String(id) },
+      }),
+    );
+  }
+
   /* ------ Internals ----------------------------------------------- */
 
   private patchTab(tab: StyleTab, patch: Partial<TabState>): void {

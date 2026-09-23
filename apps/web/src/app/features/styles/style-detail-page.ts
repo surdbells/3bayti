@@ -4,13 +4,17 @@ import {
   inject,
   signal,
   OnInit,
+  PLATFORM_ID,
 } from '@angular/core';
-import { NgIf, NgFor } from '@angular/common';
+import { NgIf, NgFor, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
+import { ShareButtonsComponent } from '../../shared/ui/share-buttons';
 import { AuthService } from '../../core/auth/auth.service';
+import { CartService } from '../../core/cart/cart.service';
+import { ToastService } from '../../shared/forms';
 import { WishlistService } from '../wishlist/wishlist.service';
 import { StyleService } from './style.service';
 import { ConciergeService, type RestyleResult } from '../ai-concierge/concierge.service';
@@ -38,7 +42,7 @@ import type { Style, StyleProduct } from './style.model';
 @Component({
   selector: 'app-style-detail',
   standalone: true,
-  imports: [NgIf, NgFor, FormsModule, RouterLink, TranslatePipe, CfImagePipe],
+  imports: [NgIf, NgFor, FormsModule, RouterLink, TranslatePipe, CfImagePipe, ShareButtonsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="style-detail" data-testid="style-detail-page">
@@ -67,6 +71,17 @@ import type { Style, StyleProduct } from './style.model';
               <p class="style-detail__count">
                 {{ 'styles.itemCount' | translate:{ count: style()!.products.length } }}
               </p>
+              <div class="style-detail__owner" *ngIf="isOwner()" data-testid="style-owner-actions">
+                <button
+                  type="button"
+                  class="style-detail__owner-btn is-danger"
+                  [disabled]="deleting()"
+                  (click)="onDelete()"
+                  data-testid="style-delete"
+                >
+                  {{ (deleting() ? 'styles.detail.deleting' : 'styles.detail.delete') | translate }}
+                </button>
+              </div>
             </header>
 
             <section
@@ -132,6 +147,20 @@ import type { Style, StyleProduct } from './style.model';
               <div class="style-detail__summary" data-testid="style-total">
                 <span class="style-detail__summary-label">{{ 'styles.total' | translate }}</span>
                 <span class="style-detail__summary-value">{{ style()!.total_price }}</span>
+              </div>
+
+              <!-- Buy the look (adds every piece to the multi-vendor cart) + share. -->
+              <div class="style-detail__actions-row">
+                <button
+                  type="button"
+                  class="style-detail__buy-btn"
+                  [disabled]="adding() || style()!.products.length === 0"
+                  (click)="addTheLook()"
+                  data-testid="style-add-look"
+                >
+                  {{ (adding() ? 'styles.detail.addingToCart' : 'styles.detail.addTheLook') | translate }}
+                </button>
+                <ui-share-buttons [url]="shareUrl()" [title]="style()!.name" />
               </div>
             </section>
 
@@ -224,12 +253,19 @@ export class StyleDetailPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly concierge = inject(ConciergeService);
   private readonly i18n = inject(TranslateService);
+  private readonly cart = inject(CartService);
+  private readonly toast = inject(ToastService);
+  private readonly platformId = inject(PLATFORM_ID);
 
   private readonly _style = signal<Style | null>(null);
   protected readonly style = this._style.asReadonly();
 
   private readonly _notFound = signal<boolean>(false);
   protected readonly notFound = this._notFound.asReadonly();
+
+  /** Buy-the-look / delete in-flight flags. */
+  protected readonly adding = signal(false);
+  protected readonly deleting = signal(false);
 
   // ── Restyle with Ain ──────────────────────────────────────────────────
   protected restyleInstruction = '';
@@ -331,6 +367,83 @@ export class StyleDetailPageComponent implements OnInit {
       await this.wishlist.add({ id: p.id } as { id: number } as never);
     } catch {
       /* Swallow, the heart simply won't flip; no destructive failure. */
+    }
+  }
+
+  /** Whether the signed-in viewer owns this look (drives Edit/Delete). */
+  protected isOwner(): boolean {
+    return this.style()?.is_owner === true;
+  }
+
+  /** Absolute canonical URL for sharing this look. */
+  protected shareUrl(): string {
+    const slug = this.style()?.slug ?? '';
+    if (isPlatformBrowser(this.platformId) && typeof window !== 'undefined') {
+      return `${window.location.origin}/styles/${slug}`;
+    }
+    return `/styles/${slug}`;
+  }
+
+  /**
+   * Buy the look: add every bundled product to the (multi-vendor) cart,
+   * then go to the cart. Each add is independent, an out-of-stock or
+   * unorderable piece is skipped (partial success), mirroring the AI
+   * Outfit page's addLook(). Uses the v3 product id, never total_price.
+   */
+  protected async addTheLook(): Promise<void> {
+    const products = this.style()?.products ?? [];
+    if (products.length === 0 || this.adding()) {
+      return;
+    }
+    this.adding.set(true);
+    let added = 0;
+    for (const p of products) {
+      try {
+        await this.cart.addItem({
+          product_id: p.id,
+          quantity: 1,
+          size: null,
+          color: null,
+          is_custom: false,
+        });
+        added++;
+      } catch {
+        /* Skip a piece that's out of stock / from a suspended store. */
+      }
+    }
+    this.adding.set(false);
+    if (added > 0) {
+      this.toast.success('styles.detail.addedToCart', { count: added });
+      void this.router.navigate(['/cart']);
+    } else {
+      this.toast.error('styles.detail.addFailed');
+    }
+  }
+
+  /**
+   * Soft-delete this look (owner only; the server re-checks ownership).
+   * Confirms first, then routes back to the hub on success.
+   */
+  protected async onDelete(): Promise<void> {
+    const s = this.style();
+    if (!s || this.deleting()) {
+      return;
+    }
+    if (
+      isPlatformBrowser(this.platformId) &&
+      typeof window !== 'undefined' &&
+      !window.confirm(this.i18n.instant('styles.detail.deleteConfirm'))
+    ) {
+      return;
+    }
+    this.deleting.set(true);
+    try {
+      await this.styleService.deleteStyle(s.id);
+      this.toast.success('styles.detail.deleted');
+      void this.router.navigate(['/styles']);
+    } catch {
+      this.toast.error('styles.detail.deleteFailed');
+      this.deleting.set(false);
     }
   }
 
