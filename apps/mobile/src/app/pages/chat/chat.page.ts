@@ -239,6 +239,18 @@ export class ChatPage implements OnInit, OnDestroy, AfterViewInit {
     return this.currentLang === 'ar' && p.text_ar ? p.text_ar : (p.text_en || p.text);
   }
 
+  /**
+   * Localized message body: prefer the Arabic snapshot when the app is in
+   * Arabic. System + prompt messages are stored bilingually (content +
+   * content_ar); mirrors the web thread's bodyOf().
+   */
+  bodyOf(m: ChatMessage): string {
+    if (this.currentLang === 'ar' && m.content_ar) {
+      return m.content_ar;
+    }
+    return m.content ?? '';
+  }
+
   /** Send a tapped quick-start prompt with an optimistic prompt-type message. */
   sendPrompt(prompt: Prompt): void {
     if (!this.uuid || this.isSending || !this.canSend) {

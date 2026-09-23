@@ -29,13 +29,13 @@
 
       <!-- System (order details / notices) -->
       <div *ngIf="isSystem(m)" class="system-row">
-        <pre class="system-text">{{ m.content }}</pre>
+        <pre class="system-text">{{ bodyOf(m) }}</pre>
       </div>
 
       <!-- Party message -->
       <div *ngIf="!isSystem(m)" class="message-wrapper" [class.own]="isOwnMessage(m)">
         <div class="message-bubble" [class.own]="isOwnMessage(m)" [class.blocked]="isBlocked(m)">
-          <div class="message-text">{{ m.content }}</div>
+          <div class="message-text">{{ bodyOf(m) }}</div>
           <div class="message-meta">
             <span *ngIf="isBlocked(m)" class="message-blocked">
               <ax-icon name="alert-circle"></ax-icon> {{ 'text_not_delivered' | translate }}
