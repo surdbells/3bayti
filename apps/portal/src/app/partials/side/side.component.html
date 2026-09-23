@@ -67,6 +67,16 @@
         </li>
         <li>
           <a
+            routerLink="/customization"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <app-icon name="checkroom" aria-hidden="true"></app-icon>
+            <span class="ax-sidenav-link-label">Customization</span>
+          </a>
+        </li>
+        <li>
+          <a
             routerLink="/reviews"
             routerLinkActive="ax-sidenav-link-active"
             class="ax-sidenav-link"

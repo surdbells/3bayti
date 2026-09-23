@@ -145,6 +145,12 @@ export const routes: Routes = [
     title: 'Returns'
   },
   {
+    path: 'customization',
+    loadComponent: () => import('./vendor/vendor-customization/vendor-customization.component').then(m => m.VendorCustomizationComponent),
+    canActivate: [vendorGuard],
+    title: 'Customization requests'
+  },
+  {
     path: 'reviews',
     loadComponent: () => import('./vendor/vendor-reviews/vendor-reviews.component').then(m => m.VendorReviewsComponent),
     canActivate: [vendorGuard],

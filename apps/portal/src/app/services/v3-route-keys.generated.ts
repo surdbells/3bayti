@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 348 route keys.
+ * 363 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -27,6 +27,7 @@ export type V3RouteKey =
   | 'DELETE /me/measurements/:id'
   | 'DELETE /me/reviews/:id'
   | 'DELETE /me/social-identities/:provider'
+  | 'DELETE /me/styles/:id'
   | 'DELETE /me/whatsapp/link'
   | 'DELETE /me/wishlist/:productId'
   | 'DELETE /me/wishlist/labels/:id'
@@ -108,6 +109,7 @@ export type V3RouteKey =
   | 'GET /chat/unread-count'
   | 'GET /checkout/status/:order_reference'
   | 'GET /featured-vendors'
+  | 'GET /following'
   | 'GET /gift-cards/balance'
   | 'GET /gift-cards/mine'
   | 'GET /gift-cards/themes'
@@ -117,6 +119,8 @@ export type V3RouteKey =
   | 'GET /me/addresses/:id'
   | 'GET /me/ai/for-you'
   | 'GET /me/billing-address'
+  | 'GET /me/customization-requests'
+  | 'GET /me/customization-requests/:id'
   | 'GET /me/gift-reminders'
   | 'GET /me/measurements'
   | 'GET /me/profile'
@@ -170,6 +174,8 @@ export type V3RouteKey =
   | 'GET /vendor/coupons'
   | 'GET /vendor/coupons/:id'
   | 'GET /vendor/coupons/:id/analytics'
+  | 'GET /vendor/customization-requests'
+  | 'GET /vendor/customization-requests/:id'
   | 'GET /vendor/dashboard'
   | 'GET /vendor/labels'
   | 'GET /vendor/measurements'
@@ -214,6 +220,7 @@ export type V3RouteKey =
   | 'PATCH /me/notification-preferences'
   | 'PATCH /me/password'
   | 'PATCH /me/profile'
+  | 'PATCH /me/styles/:id'
   | 'PATCH /me/wishlist/:productId'
   | 'PATCH /me/wishlist/labels/:id'
   | 'PATCH /vendor/compliance'
@@ -301,6 +308,10 @@ export type V3RouteKey =
   | 'POST /gift-cards/redeem'
   | 'POST /me/addresses'
   | 'POST /me/avatar'
+  | 'POST /me/customization-requests'
+  | 'POST /me/customization-requests/:id/accept'
+  | 'POST /me/customization-requests/:id/cancel'
+  | 'POST /me/customization-requests/:id/reject'
   | 'POST /me/device-tokens'
   | 'POST /me/email'
   | 'POST /me/email/verify'
@@ -326,6 +337,9 @@ export type V3RouteKey =
   | 'POST /vendor/chat/conversations/:uuid/read'
   | 'POST /vendor/coupons'
   | 'POST /vendor/coupons/:id/toggle'
+  | 'POST /vendor/customization-requests/:id/complete'
+  | 'POST /vendor/customization-requests/:id/decline'
+  | 'POST /vendor/customization-requests/:id/quote'
   | 'POST /vendor/labels'
   | 'POST /vendor/measurements'
   | 'POST /vendor/messages'
@@ -352,6 +366,7 @@ export type V3RouteKey =
   | 'PUT /me/gift-reminders/:id'
   | 'PUT /me/measurements/:id'
   | 'PUT /me/measurements/default'
+  | 'PUT /me/styles/:id'
   | 'PUT /vendor/coupons/:id'
   | 'PUT /vendor/labels/:id'
   | 'PUT /vendor/measurements/:id'
@@ -378,6 +393,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'DELETE /me/measurements/:id',
   'DELETE /me/reviews/:id',
   'DELETE /me/social-identities/:provider',
+  'DELETE /me/styles/:id',
   'DELETE /me/whatsapp/link',
   'DELETE /me/wishlist/:productId',
   'DELETE /me/wishlist/labels/:id',
@@ -459,6 +475,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /chat/unread-count',
   'GET /checkout/status/:order_reference',
   'GET /featured-vendors',
+  'GET /following',
   'GET /gift-cards/balance',
   'GET /gift-cards/mine',
   'GET /gift-cards/themes',
@@ -468,6 +485,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /me/addresses/:id',
   'GET /me/ai/for-you',
   'GET /me/billing-address',
+  'GET /me/customization-requests',
+  'GET /me/customization-requests/:id',
   'GET /me/gift-reminders',
   'GET /me/measurements',
   'GET /me/profile',
@@ -521,6 +540,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /vendor/coupons',
   'GET /vendor/coupons/:id',
   'GET /vendor/coupons/:id/analytics',
+  'GET /vendor/customization-requests',
+  'GET /vendor/customization-requests/:id',
   'GET /vendor/dashboard',
   'GET /vendor/labels',
   'GET /vendor/measurements',
@@ -565,6 +586,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PATCH /me/notification-preferences',
   'PATCH /me/password',
   'PATCH /me/profile',
+  'PATCH /me/styles/:id',
   'PATCH /me/wishlist/:productId',
   'PATCH /me/wishlist/labels/:id',
   'PATCH /vendor/compliance',
@@ -652,6 +674,10 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /gift-cards/redeem',
   'POST /me/addresses',
   'POST /me/avatar',
+  'POST /me/customization-requests',
+  'POST /me/customization-requests/:id/accept',
+  'POST /me/customization-requests/:id/cancel',
+  'POST /me/customization-requests/:id/reject',
   'POST /me/device-tokens',
   'POST /me/email',
   'POST /me/email/verify',
@@ -677,6 +703,9 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /vendor/chat/conversations/:uuid/read',
   'POST /vendor/coupons',
   'POST /vendor/coupons/:id/toggle',
+  'POST /vendor/customization-requests/:id/complete',
+  'POST /vendor/customization-requests/:id/decline',
+  'POST /vendor/customization-requests/:id/quote',
   'POST /vendor/labels',
   'POST /vendor/measurements',
   'POST /vendor/messages',
@@ -703,6 +732,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PUT /me/gift-reminders/:id',
   'PUT /me/measurements/:id',
   'PUT /me/measurements/default',
+  'PUT /me/styles/:id',
   'PUT /vendor/coupons/:id',
   'PUT /vendor/labels/:id',
   'PUT /vendor/measurements/:id',

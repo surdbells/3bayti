@@ -1,0 +1,102 @@
+<app-vendor-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to account
+        </button>
+        <span class="ax-page-header-eyebrow">Bespoke</span>
+        <h1 class="ax-page-title">Customization requests</h1>
+        <p class="ax-page-subtitle">Review requests, send a quote, and mark work complete.</p>
+      </div>
+    </header>
+
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+        <ng-template axCell="status" let-row>
+          <span [ngClass]="statusBadgeClass(row.status)">{{ row.status | titlecase }}</span>
+        </ng-template>
+      </app-ax-data-table>
+    </section>
+  </div>
+
+  <!-- Manage modal -->
+  <div class="vc-modal-backdrop" *ngIf="selected() as row" (click)="closeManage()">
+    <div class="vc-modal" role="dialog" aria-modal="true" [attr.aria-label]="row.product" (click)="$event.stopPropagation()">
+      <div class="vc-modal-head">
+        <div>
+          <span class="ax-page-header-eyebrow">{{ row.status | titlecase }}</span>
+          <h2 class="vc-modal-title">{{ row.product }}</h2>
+        </div>
+        <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="closeManage()" aria-label="Close">
+          <app-icon name="close" aria-hidden="true"></app-icon>
+        </button>
+      </div>
+
+      <div class="vc-modal-body">
+        <div class="vc-field">
+          <span class="vc-label">Customer request</span>
+          <p class="vc-value">{{ row.customer_notes }}</p>
+        </div>
+
+        <div class="vc-field" *ngIf="measurementRows(row).length > 0">
+          <span class="vc-label">Measurements shared</span>
+          <ul class="vc-measure">
+            <li *ngFor="let m of measurementRows(row)"><span>{{ m.label }}</span><strong>{{ m.value }} cm</strong></li>
+          </ul>
+        </div>
+
+        <!-- Existing quote (read-only) once quoted -->
+        <div class="vc-field" *ngIf="row.quote as q">
+          <span class="vc-label">Your quote</span>
+          <p class="vc-value"><strong>{{ q.amount }} {{ q.currency ?? 'AED' }}</strong>
+            <span *ngIf="q.lead_time_days !== null"> · ready in ~{{ q.lead_time_days }} day(s)</span></p>
+          <p class="vc-value" *ngIf="(q.vendor_notes ?? '') !== ''">“{{ q.vendor_notes }}”</p>
+        </div>
+
+        <!-- Quote form — only when the request is pending -->
+        <form class="vc-form" *ngIf="row.status === 'pending'" (submit)="$event.preventDefault(); sendQuote()">
+          <span class="vc-label">Send a quote</span>
+          <div class="vc-form-row">
+            <label class="vc-input">
+              <span>Amount</span>
+              <input type="number" min="0" step="0.01" [(ngModel)]="quoteForm.amount" name="amount" placeholder="150.00" />
+            </label>
+            <label class="vc-input vc-input--sm">
+              <span>Currency</span>
+              <input type="text" maxlength="3" [(ngModel)]="quoteForm.currency" name="currency" />
+            </label>
+            <label class="vc-input vc-input--sm">
+              <span>Lead time (days)</span>
+              <input type="number" min="0" max="365" [(ngModel)]="quoteForm.lead_time_days" name="lead" placeholder="7" />
+            </label>
+          </div>
+          <label class="vc-input">
+            <span>Note to the customer (optional)</span>
+            <textarea rows="3" [(ngModel)]="quoteForm.vendor_notes" name="notes" placeholder="e.g. Includes gold thread; two fittings."></textarea>
+          </label>
+        </form>
+
+        <p class="vc-note" *ngIf="row.status === 'accepted'">The customer accepted your quote and is completing payment. You’ll be able to mark this complete once it’s paid.</p>
+        <p class="vc-note" *ngIf="row.status === 'paid'">Payment received. Mark this complete once the work is done.</p>
+      </div>
+
+      <div class="vc-modal-foot">
+        <ng-container *ngIf="selected() as row">
+          <button type="button" class="ax-btn ax-btn-ghost" (click)="closeManage()" [disabled]="busy()">Close</button>
+
+          <ng-container *ngIf="row.status === 'pending'">
+            <button type="button" class="ax-btn ax-btn-danger" (click)="decline()" [disabled]="busy()">Decline</button>
+            <button type="button" class="ax-btn ax-btn-primary" (click)="sendQuote()" [disabled]="busy()">
+              {{ busy() ? 'Sending…' : 'Send quote' }}
+            </button>
+          </ng-container>
+
+          <button *ngIf="row.status === 'paid'" type="button" class="ax-btn ax-btn-primary" (click)="complete()" [disabled]="busy()">
+            {{ busy() ? 'Saving…' : 'Mark completed' }}
+          </button>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+</app-vendor-shell>
