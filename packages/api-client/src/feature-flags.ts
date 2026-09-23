@@ -1046,6 +1046,26 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'DELETE /me/gift-reminders/:id': {
     target: 'new', oldPath: '', newPath: '/v3/me/gift-reminders/:id', shape: 'v3-envelope',
   },
+  // P5 — Bespoke Customization (customer request lifecycle:
+  // request → accept/reject vendor quote → cancel). v3-only.
+  'GET /me/customization-requests': {
+    target: 'new', oldPath: '', newPath: '/v3/me/customization-requests', shape: 'v3-envelope',
+  },
+  'POST /me/customization-requests': {
+    target: 'new', oldPath: '', newPath: '/v3/me/customization-requests', shape: 'v3-envelope',
+  },
+  'GET /me/customization-requests/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/me/customization-requests/:id', shape: 'v3-envelope',
+  },
+  'POST /me/customization-requests/:id/accept': {
+    target: 'new', oldPath: '', newPath: '/v3/me/customization-requests/:id/accept', shape: 'v3-envelope',
+  },
+  'POST /me/customization-requests/:id/reject': {
+    target: 'new', oldPath: '', newPath: '/v3/me/customization-requests/:id/reject', shape: 'v3-envelope',
+  },
+  'POST /me/customization-requests/:id/cancel': {
+    target: 'new', oldPath: '', newPath: '/v3/me/customization-requests/:id/cancel', shape: 'v3-envelope',
+  },
   'GET /me/addresses': {
     target: 'new',
     oldPath: '/users/addresses',
@@ -1472,6 +1492,23 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
   'GET /vendor/orders/:orderId/delivery-options': {
     target: 'new', oldPath: '', newPath: '/v3/vendor/orders/:orderId/delivery-options', shape: 'v3-envelope',
+  },
+  // P5 — Bespoke Customization (vendor side: review → quote/decline →
+  // mark complete). v3-only.
+  'GET /vendor/customization-requests': {
+    target: 'new', oldPath: '', newPath: '/v3/vendor/customization-requests', shape: 'v3-envelope',
+  },
+  'GET /vendor/customization-requests/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/vendor/customization-requests/:id', shape: 'v3-envelope',
+  },
+  'POST /vendor/customization-requests/:id/quote': {
+    target: 'new', oldPath: '', newPath: '/v3/vendor/customization-requests/:id/quote', shape: 'v3-envelope',
+  },
+  'POST /vendor/customization-requests/:id/decline': {
+    target: 'new', oldPath: '', newPath: '/v3/vendor/customization-requests/:id/decline', shape: 'v3-envelope',
+  },
+  'POST /vendor/customization-requests/:id/complete': {
+    target: 'new', oldPath: '', newPath: '/v3/vendor/customization-requests/:id/complete', shape: 'v3-envelope',
   },
   // Noon webhook receiver — server-to-server, NEVER called by mobile.
   // Listed here for routing-table completeness only; mobile clients
