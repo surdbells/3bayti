@@ -334,6 +334,9 @@ return function (App $app): void {
         // registered before POST under the same /v3/me authed group.
         $group->get('/styles', \Bayti\Api\Http\Controllers\Style\ListMyStylesController::class);
         $group->post('/styles', \Bayti\Api\Http\Controllers\Style\CreateStyleController::class);
+
+        // P9: get-or-create the canonical shareable hotlink for a store/look.
+        $group->post('/hotlinks', \Bayti\Api\Http\Controllers\Hotlink\CreateHotlinkController::class);
         // Edit (rename / replace products, slug kept stable) + soft-delete
         // one's own saved look. Ownership is enforced 404-not-403 in the
         // controllers so another user's style is never revealed.
@@ -580,6 +583,13 @@ return function (App $app): void {
     // OptionalAuth so an authenticated viewer gets is_following (drives the
     // storefront Follow button); anonymous reads are unchanged + cacheable.
     $app->get('/v3/vendors/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetVendorController::class)
+        ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
+
+    // P9: public hotlink resolver. Records the click (OptionalAuth → user_id
+    // when logged in) and returns { target_type, target_slug } for the web
+    // /s/:code route to navigate. 'hotlinks' is its own literal segment — no
+    // {slug} collision.
+    $app->get('/v3/hotlinks/{code}', \Bayti\Api\Http\Controllers\Hotlink\ResolveHotlinkController::class)
         ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
 
     // Guest cart price resolution (public, no auth). Resolves a device-

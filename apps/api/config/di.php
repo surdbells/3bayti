@@ -372,6 +372,12 @@ return [
     \Bayti\Api\Http\Controllers\Vendor\Customization\DeclineCustomizationController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\Customization\MarkCompletedController::class => \DI\autowire(),
 
+    // P9, Store Hotlinks & Style-Me codes (short links + click/conversion tracking)
+    \Bayti\Api\Domain\Hotlink\HotlinkClickLogger::class => \DI\autowire(),
+    \Bayti\Api\Http\Serializers\HotlinkSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Hotlink\CreateHotlinkController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Hotlink\ResolveHotlinkController::class => \DI\autowire(),
+
     // M3.1.7-G, Dispute persistence + admin endpoints
     \Bayti\Api\Http\Serializers\DisputeSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Dispute\ListDisputesController::class => \DI\autowire(),
