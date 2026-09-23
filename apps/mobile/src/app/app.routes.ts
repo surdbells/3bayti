@@ -164,6 +164,15 @@ export const routes: Routes = [
     loadComponent: () => import('./customer/following/following.page').then( m => m.FollowingPage)
   },
   {
+    // Bespoke customization requests (P5).
+    path: 'customization-requests',
+    loadComponent: () => import('./customer/customization/customization-requests.page').then( m => m.CustomizationRequestsPage)
+  },
+  {
+    path: 'customization-new',
+    loadComponent: () => import('./customer/customization/customization-new.page').then( m => m.CustomizationNewPage)
+  },
+  {
     path: 'best-sellers',
     loadComponent: () => import('./customer/best-sellers/best-sellers.page').then( m => m.BestSellersPage)
   },

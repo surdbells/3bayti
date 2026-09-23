@@ -1,0 +1,81 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="triggerBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'cust_title' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="page-bg ion-padding" [fullscreen]="true">
+  @if (isLoading && !hasLoaded) {
+    <div class="cust-loading">{{ 'cust_loading' | translate }}</div>
+  } @else if (requests.length === 0) {
+    <div class="cust-empty">
+      <p class="cust-empty__text">{{ 'cust_empty' | translate }}</p>
+      <ion-button expand="block" fill="outline" (click)="browse()">
+        {{ 'cust_browse' | translate }}
+      </ion-button>
+    </div>
+  } @else {
+    <div class="cust-list">
+      @for (req of requests; track req.id) {
+        <div class="cust-card">
+          <button type="button" class="cust-card__head" (click)="openProduct(req)">
+            <span class="cust-card__thumb">
+              @if (req.product.primary_image) {
+                <img [src]="req.product.primary_image" [alt]="req.product.name" loading="lazy" decoding="async" />
+              } @else {
+                <span class="cust-card__thumb-blank"></span>
+              }
+            </span>
+            <span class="cust-card__head-text">
+              <span class="cust-card__name">{{ req.product.name }}</span>
+              <span class="cust-card__vendor">{{ req.vendor.name }}</span>
+            </span>
+            <span class="cust-card__status" [attr.data-status]="req.status">{{ statusLabel(req.status) }}</span>
+          </button>
+
+          <p class="cust-card__notes">{{ req.customer_notes }}</p>
+
+          @if (req.quote; as q) {
+            <div class="cust-card__quote">
+              <span class="cust-card__price">{{ q.amount }} {{ q.currency ?? 'AED' }}</span>
+              @if (q.lead_time_days !== null) {
+                <span class="cust-card__lead"> · {{ 'cust_lead' | translate: { days: q.lead_time_days } }}</span>
+              }
+              @if (q.vendor_notes) {
+                <p class="cust-card__vendor-note">“{{ q.vendor_notes }}”</p>
+              }
+            </div>
+          }
+
+          <div class="cust-card__actions">
+            @if (req.status === 'quoted') {
+              <ion-button size="small" [disabled]="isBusy(req.id)" (click)="accept(req)">
+                {{ 'cust_accept' | translate }}
+              </ion-button>
+              <ion-button size="small" fill="outline" [disabled]="isBusy(req.id)" (click)="reject(req)">
+                {{ 'cust_reject' | translate }}
+              </ion-button>
+            }
+            @if (req.status === 'accepted') {
+              <ion-button size="small" [disabled]="isBusy(req.id)" (click)="pay(req)">
+                {{ 'cust_pay' | translate }}
+              </ion-button>
+            }
+            @if (req.status === 'pending' || req.status === 'quoted') {
+              <ion-button size="small" fill="clear" color="medium" [disabled]="isBusy(req.id)" (click)="cancel(req)">
+                {{ 'cust_cancel' | translate }}
+              </ion-button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</ion-content>
+
+<app-tab-bar active="profile"></app-tab-bar>

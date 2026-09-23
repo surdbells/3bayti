@@ -552,6 +552,9 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     category_id: "",
     category_slug: "",
     category_name: "",
+    // Product slug (v3 detailShape emits it). Used to open a P5 customization
+    // request by slug, never by legacy id.
+    slug: "",
     name: "",
     description: "",
     image_1: "assets/img/placeholder-1.png",
@@ -1239,6 +1242,25 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     } catch {
       // analytics must never break the page
     }
+  }
+
+  /**
+   * Open the "request a customization" form for this product (P5). Auth-only;
+   * navigates by SLUG (never legacy id). The form page resolves the product.
+   */
+  requestCustomization(): void {
+    if (this.isGuest || !this.single_user.token) {
+      this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
+      return;
+    }
+    const slug = String((this.single as any).slug ?? '').trim();
+    if (slug === '') {
+      this.error_notification(this.i18n.t('cust_error_no_product'));
+      return;
+    }
+    this.router.navigate(['/', 'customization-new'], {
+      queryParams: { slug, name: this.single.name },
+    });
   }
 
   /** Open the try-on sheet (auth-only). */

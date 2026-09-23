@@ -472,6 +472,10 @@ export class SettingsPage implements OnInit, OnDestroy {
     this.router.navigate(['/following']);
   }
 
+  openCustomizationRequests(): void {
+    this.router.navigate(['/customization-requests']);
+  }
+
   openGiftCards(): void {
     // Open the gift-card WALLET (manage / see-all-by-status / pay pending);
     // the wallet has Buy + Redeem buttons, so buying stays reachable.

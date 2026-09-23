@@ -1719,3 +1719,21 @@ swiper-slide,
   font-weight: 600;
   cursor: pointer;
 }
+
+.customization-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.8rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--ax-color-border, rgba(0, 0, 0, 0.15));
+  background: var(--ion-item-background, #fff);
+  color: var(--ax-color-text-primary, #1a1a1a);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.customization-cta svg { color: var(--ax-color-bg-brand, #906952); flex: none; }

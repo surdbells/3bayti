@@ -1,0 +1,50 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="triggerBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'cust_new_title' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="page-bg ion-padding" [fullscreen]="true">
+  <div class="cnew">
+    @if (productName) {
+      <p class="cnew__product">{{ productName }}</p>
+    }
+    <p class="cnew__hint">{{ 'cust_new_hint' | translate }}</p>
+
+    <label class="cnew__field">
+      <span class="cnew__label">{{ 'cust_new_desc_label' | translate }}</span>
+      <textarea
+        class="cnew__textarea"
+        rows="5"
+        maxlength="2000"
+        [value]="description"
+        (input)="onDescriptionInput($event)"
+        [attr.placeholder]="'cust_new_desc_placeholder' | translate"
+      ></textarea>
+    </label>
+
+    <ion-checkbox
+      class="cnew__check"
+      labelPlacement="end"
+      justify="start"
+      [(ngModel)]="includeMeasurements"
+      name="includeMeasurements"
+    >
+      {{ 'cust_new_include_measurements' | translate }}
+    </ion-checkbox>
+
+    <ion-button
+      expand="block"
+      class="cnew__submit"
+      [disabled]="submitting"
+      (click)="submit()"
+    >
+      {{ submitting ? ('cust_new_sending' | translate) : ('cust_new_submit' | translate) }}
+    </ion-button>
+  </div>
+</ion-content>
