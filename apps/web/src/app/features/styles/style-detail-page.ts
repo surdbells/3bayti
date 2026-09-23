@@ -72,6 +72,13 @@ import type { Style, StyleProduct } from './style.model';
                 {{ 'styles.itemCount' | translate:{ count: style()!.products.length } }}
               </p>
               <div class="style-detail__owner" *ngIf="isOwner()" data-testid="style-owner-actions">
+                <a
+                  [routerLink]="['/styles', style()!.slug, 'edit']"
+                  class="style-detail__owner-btn"
+                  data-testid="style-edit"
+                >
+                  {{ 'styles.detail.edit' | translate }}
+                </a>
                 <button
                   type="button"
                   class="style-detail__owner-btn is-danger"

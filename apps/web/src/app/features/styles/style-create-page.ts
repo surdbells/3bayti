@@ -4,10 +4,11 @@ import {
   inject,
   signal,
   computed,
+  OnInit,
 } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
@@ -16,6 +17,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { SearchService } from '../search/search.service';
 import { StyleService } from './style.service';
 import type { Product } from '../catalog/product.model';
+import type { StyleProduct } from './style.model';
 
 /** A product the user has added to the outfit-in-progress. */
 interface PickedProduct {
@@ -54,8 +56,8 @@ const MAX_PRODUCTS = 4;
     <main class="style-create" data-testid="style-create-page">
       <div class="style-create__container">
         <header class="style-create__header">
-          <h1 class="style-create__title">{{ 'styles.create.title' | translate }}</h1>
-          <p class="style-create__subtitle">{{ 'styles.create.subtitle' | translate }}</p>
+          <h1 class="style-create__title">{{ (isEdit() ? 'styles.edit.title' : 'styles.create.title') | translate }}</h1>
+          <p class="style-create__subtitle">{{ (isEdit() ? 'styles.edit.subtitle' : 'styles.create.subtitle') | translate }}</p>
         </header>
 
         <!-- Guests: sign-in prompt instead of the form -->
@@ -211,7 +213,7 @@ const MAX_PRODUCTS = 4;
               (click)="submit()"
               data-testid="style-create-submit"
             >
-              {{ (isSubmitting() ? 'common.loading' : 'styles.create.submit') | translate }}
+              {{ (isSubmitting() ? 'common.loading' : (isEdit() ? 'styles.edit.submit' : 'styles.create.submit')) | translate }}
             </button>
             <a routerLink="/styles" class="style-create__cancel" data-testid="style-create-cancel">
               {{ 'common.cancel' | translate }}
@@ -223,15 +225,21 @@ const MAX_PRODUCTS = 4;
   `,
   styleUrl: './style-create.scss',
 })
-export class StyleCreatePageComponent {
+export class StyleCreatePageComponent implements OnInit {
   private readonly styleService = inject(StyleService);
   private readonly searchService = inject(SearchService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly maxProducts = MAX_PRODUCTS;
   protected readonly isAuthenticated = this.auth.isAuthenticated;
+
+  /** In edit mode (/styles/:slug/edit) this holds the style's id + slug. */
+  private readonly _editId = signal<number | null>(null);
+  private editSlug: string | null = null;
+  protected readonly isEdit = computed(() => this._editId() !== null);
 
   protected name = '';
   protected query = '';
@@ -259,6 +267,38 @@ export class StyleCreatePageComponent {
   /* Debounce token so only the latest in-flight search updates results. */
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
   private searchSeq = 0;
+
+  async ngOnInit(): Promise<void> {
+    const slug = this.route.snapshot.paramMap.get('slug');
+    if (slug === null || slug.trim() === '') {
+      return; // create mode
+    }
+    // Edit mode: load the existing look and prefill. Ownership is enforced
+    // server-side on save; we also redirect a non-owner away up front.
+    try {
+      const style = await this.styleService.getBySlug(slug.trim());
+      if (style.is_owner !== true) {
+        this.toast.error('styles.edit.notOwner');
+        await this.router.navigate(['/styles', slug.trim()]);
+        return;
+      }
+      this.editSlug = style.slug;
+      this._editId.set(style.id);
+      this.name = style.name;
+      this._picked.set(
+        style.products.slice(0, MAX_PRODUCTS).map((p: StyleProduct) => ({
+          id: p.id,
+          slug: p.slug,
+          name: p.name,
+          image: p.primary_image_url ?? null,
+          price: p.price,
+        })),
+      );
+    } catch {
+      this.toast.error('styles.edit.loadFailed');
+      await this.router.navigate(['/styles']);
+    }
+  }
 
   protected onQueryChange(value: string): void {
     this.query = value;
@@ -326,25 +366,29 @@ export class StyleCreatePageComponent {
   protected async submit(): Promise<void> {
     if (!this.canSubmit() || this._isSubmitting()) return;
     this._isSubmitting.set(true);
+    const input = {
+      name: this.name.trim(),
+      products: this._picked().map((p) => p.id),
+    };
     try {
-      const created = await this.styleService.createStyle({
-        name: this.name.trim(),
-        products: this._picked().map((p) => p.id),
-      });
-      this.toast.success('styles.create.success');
-      /* Reset the 'mine' tab accumulator so the hub refetches with the
-         new style on next visit. */
+      const editId = this._editId();
+      const saved =
+        editId !== null
+          ? await this.styleService.updateStyle(editId, input)
+          : await this.styleService.createStyle(input);
+      this.toast.success(editId !== null ? 'styles.edit.success' : 'styles.create.success');
+      /* Reset the 'mine' tab accumulator so the hub refetches the
+         created/edited style on next visit. */
       this.styleService.reset('mine');
-      if (created?.slug) {
-        await this.router.navigate(['/styles', created.slug]);
-      } else {
-        await this.router.navigate(['/styles']);
-      }
+      /* On edit the server keeps the slug stable; fall back to the loaded
+         edit slug (the update response is a summary that also carries it). */
+      const slug = saved?.slug ?? this.editSlug;
+      await this.router.navigate(slug ? ['/styles', slug] : ['/styles']);
     } catch (err) {
       if (err instanceof HttpErrorResponse && err.status === 401) {
         this.toast.error('styles.create.errors.unauthenticated');
       } else {
-        this.toast.error('styles.create.errors.failed');
+        this.toast.error(this._editId() !== null ? 'styles.edit.errors.failed' : 'styles.create.errors.failed');
       }
     } finally {
       this._isSubmitting.set(false);

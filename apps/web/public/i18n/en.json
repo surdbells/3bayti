@@ -1778,6 +1778,7 @@
     "privacy": "Privacy Policy · 3bayti",
     "deleteAccount": "Delete your account · 3bayti",
     "styleCreate": "Create a style · 3bayti",
+    "styleEdit": "Edit your style · 3bayti",
     "askAin": "Ask Ain · 3bayti",
     "giftAin": "Gift Finder · 3bayti",
     "outfit": "Style me with Ain · 3bayti",
@@ -1911,6 +1912,17 @@
         "unauthenticated": "Please sign in to create a style."
       }
     },
+    "edit": {
+      "title": "Edit your style",
+      "subtitle": "Rename your look or swap the pieces. Your saved link stays the same.",
+      "submit": "Save changes",
+      "success": "Your style has been updated.",
+      "notOwner": "You can only edit styles you created.",
+      "loadFailed": "We couldn't load that style to edit.",
+      "errors": {
+        "failed": "Could not save your changes. Please try again."
+      }
+    },
     "title": "Styles",
     "subtitle": "Shop the look, curated outfits that bundle pieces our community and editors love.",
     "tabs": {
@@ -1940,6 +1952,7 @@
       "addingToCart": "Adding to cart",
       "addedToCart": "Added {{count}} item(s) to your cart.",
       "addFailed": "Sorry, none of these pieces could be added right now.",
+      "edit": "Edit",
       "delete": "Delete",
       "deleting": "Deleting",
       "deleteConfirm": "Delete this look? This can't be undone from here.",

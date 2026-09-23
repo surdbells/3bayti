@@ -186,6 +186,16 @@ export const routes: Routes = [
     title: 'routeTitles.styleCreate',
   },
   {
+    /* Edit a saved style, `/styles/:slug/edit`. Reuses the create page in
+       edit mode (prefills name + products, PUT /me/styles/:id). Auth-gated.
+       Two segments, so it never collides with single-segment `styles/:slug`. */
+    path: 'styles/:slug/edit',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/styles/style-create-page').then(m => m.StyleCreatePageComponent),
+    title: 'routeTitles.styleEdit',
+  },
+  {
     /* Style detail, `/styles/:slug`. Cover + the bundled products with
        View product + Add to wishlist, plus a display-only total. */
     path: 'styles/:slug',
