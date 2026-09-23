@@ -2,7 +2,7 @@ import {Component} from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import {Subscription} from "rxjs";
-import {Router} from "@angular/router";
+import {ActivatedRoute, Router} from "@angular/router";
 import {ConnectionService} from "../../../service/connection.service";
 import {BlockerService} from "../../../blocker.service";
 import {NetworkService} from "../../../service/network.service";
@@ -173,9 +173,17 @@ export class CreatePage {
   }
   selectedCount = 0;
   isOnline = true;
+
+  /** Edit mode (/style-edit/:slug): prefill + save via PUT /me/styles/:id. */
+  isEditMode = false;
+  editId = 0;
+  editSlug = '';
+  private editPrefilled = false;
+
   private sub: Subscription;
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private platform: Platform,
     private nav: NavController,
     private net: ConnectionService,
@@ -227,7 +235,71 @@ export class CreatePage {
       // Prime the product picker with the first product category so the
       // grid is populated the moment the sheet opens.
       this.loadProductsForCategory(this.selectedProductCategoryId);
+      this.prefillForEdit();
     }
+  }
+
+  /**
+   * If the route carries a :slug we're editing an existing look. Prefill the
+   * name + product tray from the style passed in router state (from the
+   * style-view Edit button), or re-fetch it by slug (authenticated, so the
+   * detail carries is_owner) and redirect a non-owner away. Runs once.
+   */
+  private prefillForEdit(): void {
+    if (this.editPrefilled) {
+      return;
+    }
+    const slug = this.route.snapshot.paramMap.get('slug');
+    if (!slug) {
+      return; // create mode
+    }
+    this.editPrefilled = true;
+    this.isEditMode = true;
+    this.editSlug = slug;
+
+    const stateStyle: any = history.state?.style;
+    if (stateStyle && stateStyle.id) {
+      this.applyEditStyle(stateStyle);
+      return;
+    }
+    this.networkAdapter.get_v3('GET /mobile/style-detail', {
+      pathParams: { slug },
+      authToken: this.single_user.token,
+    }).subscribe({
+      next: (res: any) => {
+        if (res?.response_code === 200 && res?.status === 'success' && res?.data?.id) {
+          if (res.data.is_owner !== true) {
+            // Not the owner: bounce to the read-only detail page.
+            this.router.navigate(['/', 'style-view', slug]);
+            return;
+          }
+          this.applyEditStyle(res.data);
+        } else {
+          this.router.navigate(['/', 'styles']);
+        }
+      },
+      error: () => {
+        this.router.navigate(['/', 'styles']);
+      },
+    });
+  }
+
+  /** Prefill the form + tray from a style (router-state or detail-fetch shape). */
+  private applyEditStyle(style: any): void {
+    this.editId = Number(style.id) || 0;
+    this.create_style.name = String(style.style_name ?? style.name ?? '');
+    const products = Array.isArray(style.products) ? style.products : [];
+    this.create_style.products = products
+      .map((p: any) => String(p.product_id ?? p.id))
+      .join(',');
+    this.selectedProducts = products.map((p: any) => ({
+      id: 0,
+      token: '',
+      product_id: Number(p.product_id ?? p.id) || 0,
+      product_name: String(p.product_name ?? p.name ?? ''),
+      image_1: String(p.image ?? p.image_1 ?? p.primary_image_url ?? ''),
+      price: String(p.price ?? ''),
+    }));
   }
 
   /** Human label for the currently selected aesthetic style category. */
@@ -381,6 +453,35 @@ export class CreatePage {
     this.ui_controls.is_creating = true;
     this.create_style.id = this.single_user.id;
     this.create_style.token = this.single_user.token;
+
+    // Edit mode: PUT /v3/me/styles/:id (rename / replace products). The
+    // server keeps the slug stable, so route back to the same detail page.
+    if (this.isEditMode && this.editId > 0) {
+      this.networkAdapter.put_v3(
+        'PUT /me/styles/:id',
+        {
+          name: this.create_style.name,
+          products: this.create_style.products,
+        },
+        { authToken: this.single_user.token, pathParams: { id: String(this.editId) } },
+      ).subscribe({
+        next: (response: any) => {
+          this.ui_controls.is_creating = false;
+          if ((response.response_code === 200 || response.response_code === 201) && response.status === 'success') {
+            this.success_notification(response.message);
+            this.router.navigate(['/', 'style-view', this.editSlug]);
+          } else {
+            this.error_notification(response.message);
+          }
+        },
+        error: () => {
+          this.ui_controls.is_creating = false;
+          this.error_notification('Could not save your changes.');
+        },
+      });
+      return;
+    }
+
     // Direct v3 (POST /v3/me/styles). Authed, token rides the
     // Authorization header via opts.authToken, not the body. The v3
     // CreateStyleController reads only `name` and `products` (CSV);

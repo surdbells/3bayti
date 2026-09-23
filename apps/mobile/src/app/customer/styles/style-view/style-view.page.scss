@@ -466,3 +466,9 @@ ion-content.page-bg {
 .sv-actions__share {
   --border-radius: 14px;
 }
+.sv-owner {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: -6px 0 16px;
+}

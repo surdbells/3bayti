@@ -669,6 +669,10 @@ function legacyStyleFromV3Style(item: unknown): Record<string, unknown> {
     description: asString(item['description']),
     cover_image_url: asString(item['cover_image_url']),
     style_type: asString(item['style_type']),
+    // OWNER flag (detailShape only; absent → false). Drives the style-view
+    // Edit/Delete controls. The list shapes never set it, so it stays false
+    // there; the style-view resolves it via an authenticated detail fetch.
+    is_owner: item['is_owner'] === true,
   };
 }
 

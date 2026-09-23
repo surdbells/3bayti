@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrateg
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
+  AlertController,
   IonButton,
   IonButtons,
   IonContent,
@@ -43,6 +44,8 @@ export interface Styles {
   category: string;
   style_name: string;
   products: StyleProduct[];
+  /** True when the authenticated viewer created this look (detail fetch only). */
+  is_owner?: boolean;
 }
 
 @Component({
@@ -82,6 +85,8 @@ export class StyleViewPage implements OnInit, OnDestroy {
 
   /** True while "Add the look to cart" is fanning out the per-item adds. */
   isAddingLook = false;
+  /** True while a soft-delete is in flight. */
+  isDeleting = false;
 
   private sub: Subscription | null = null;
 
@@ -141,20 +146,29 @@ export class StyleViewPage implements OnInit, OnDestroy {
     private wishlistService: WishlistService,
     private i18n: I18nService,
     private toast: AxNotificationService,
+    private alertCtrl: AlertController,
     private cdr: ChangeDetectorRef
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
   }
 
-  ngOnInit() {
+  async ngOnInit() {
+    // Resolve the signed-in user first (the style-view is auth-only; guests
+    // are bounced to /login by getObject). From here single_user.token is set,
+    // which the ownership + edit/delete paths rely on.
+    await this.getObject();
+    if (!this.single_user.token) {
+      return;
+    }
+
     // Fast path: the style was passed in router state from the list. On a
     // hard reload / deep link that state is wiped, so fall back to fetching
     // the style by its slug (from the route) and rebuilding it, instead of
     // bouncing back to /styles, which broke deep links + refresh.
     this.style = history.state?.style;
+    const slug = this.route.snapshot.paramMap.get('slug');
     if (!this.style) {
-      const slug = this.route.snapshot.paramMap.get('slug');
       if (slug) {
         this.loadStyleBySlug(slug);
       } else {
@@ -162,9 +176,98 @@ export class StyleViewPage implements OnInit, OnDestroy {
         this.router.navigate(['/styles']);
         return;
       }
+    } else if (this.style.is_owner === undefined) {
+      // A style from the list fast-path carries no is_owner (the list shapes
+      // don't compute it), so resolve it authoritatively for the Edit/Delete
+      // controls. loadStyleBySlug already carries is_owner.
+      this.resolveOwnership();
     }
-    this.getObject();
     void this.ensureAinSession();
+  }
+
+  /**
+   * Whether the signed-in viewer owns this look (drives Edit/Delete).
+   */
+  isOwner(): boolean {
+    return this.style?.is_owner === true;
+  }
+
+  /**
+   * Resolve is_owner for a style that arrived via router state. Re-fetches
+   * the authenticated detail purely to read is_owner and merges it in, so
+   * the owner's Edit/Delete controls appear a moment after the fast render.
+   */
+  private resolveOwnership(): void {
+    const slug = this.style?.slug;
+    if (!slug || !this.single_user.token) {
+      return;
+    }
+    this.networkAdapter.get_v3('GET /mobile/style-detail', {
+      pathParams: { slug },
+      authToken: this.single_user.token,
+    }).subscribe({
+      next: (res: any) => {
+        if (res?.response_code === 200 && res?.status === 'success' && res?.data && this.style) {
+          this.style = { ...this.style, is_owner: res.data.is_owner === true };
+          this.cdr.markForCheck();
+        }
+      },
+      error: () => {
+        // Ownership stays unknown; the controls simply stay hidden.
+      },
+    });
+  }
+
+  /** Open the edit flow (reuses the create page in edit mode). */
+  editStyle(): void {
+    const slug = this.style?.slug;
+    if (!slug) {
+      return;
+    }
+    this.router.navigate(['/', 'style-edit', slug], { state: { style: this.style } });
+  }
+
+  /** Confirm, then soft-delete this look (owner only; server re-checks). */
+  async deleteStyle(): Promise<void> {
+    const id = this.style?.id;
+    if (!id || this.isDeleting) {
+      return;
+    }
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('style_delete_title'),
+      message: this.i18n.t('style_delete_message'),
+      buttons: [
+        { text: this.i18n.t('style_delete_cancel'), role: 'cancel' },
+        {
+          text: this.i18n.t('style_delete_confirm'),
+          role: 'destructive',
+          handler: () => { this.performDelete(id); },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private performDelete(id: number): void {
+    this.isDeleting = true;
+    this.cdr.markForCheck();
+    this.networkAdapter.delete_v3('DELETE /me/styles/:id', {
+      pathParams: { id: String(id) },
+      authToken: this.single_user.token,
+    }).subscribe({
+      next: () => {
+        // delete_v3 resolves next() only on a 2xx (incl. 204 No Content).
+        this.isDeleting = false;
+        this.success_notification(this.i18n.t('style_deleted'));
+        this.router.navigate(['/', 'styles']);
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.isDeleting = false;
+        this.error_notification(this.i18n.t('style_delete_failed'));
+        this.cdr.markForCheck();
+      },
+    });
   }
 
   // ── Restyle with Ain ──────────────────────────────────────────────────
@@ -295,6 +398,8 @@ export class StyleViewPage implements OnInit, OnDestroy {
 
     this.networkAdapter.get_v3('GET /mobile/style-detail', {
       pathParams: { slug },
+      // Authenticated so the detailShape resolves is_owner for the viewer.
+      authToken: this.single_user.token,
     }).subscribe({
       next: (response: any) => {
         if (

@@ -153,6 +153,12 @@ export const routes: Routes = [
     loadComponent: () => import('./customer/styles/create/create.page').then( m => m.CreatePage)
   },
   {
+    // Edit a saved look: reuses the create page in edit mode (prefills from
+    // the passed style / a slug re-fetch, saves via PUT /me/styles/:id).
+    path: 'style-edit/:slug',
+    loadComponent: () => import('./customer/styles/create/create.page').then( m => m.CreatePage)
+  },
+  {
     path: 'best-sellers',
     loadComponent: () => import('./customer/best-sellers/best-sellers.page').then( m => m.BestSellersPage)
   },

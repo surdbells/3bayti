@@ -5,7 +5,7 @@
         <ax-icon name="arrow-left" />
       </ion-button>
     </ion-buttons>
-    <ion-title class="m7-title">{{ 'title_create_style' | translate }}</ion-title>
+    <ion-title class="m7-title">{{ (isEditMode ? 'title_edit_style' : 'title_create_style') | translate }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -70,7 +70,7 @@
       </ion-button>
       @if (!ui_controls.is_creating){
         <ion-button (click)="createStyle()" expand="block" class="primary-btn">
-          {{ 'button_create_style' | translate }}
+          {{ (isEditMode ? 'button_save_style' : 'button_create_style') | translate }}
         </ion-button>
       }
       @if (ui_controls.is_creating){

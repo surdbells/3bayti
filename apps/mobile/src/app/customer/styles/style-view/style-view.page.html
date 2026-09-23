@@ -54,6 +54,18 @@
         {{ 'button_share_look' | translate }}
       </ion-button>
     </div>
+
+    <!-- Owner controls -->
+    @if(isOwner()){
+      <div class="sv-owner">
+        <ion-button fill="clear" size="small" class="sv-owner__edit" (click)="editStyle()">
+          {{ 'button_edit_look' | translate }}
+        </ion-button>
+        <ion-button fill="clear" size="small" color="danger" class="sv-owner__delete" [disabled]="isDeleting" (click)="deleteStyle()">
+          {{ 'button_delete_look' | translate }}
+        </ion-button>
+      </div>
+    }
   }
   <!-- Section Title -->
   @if(style){
