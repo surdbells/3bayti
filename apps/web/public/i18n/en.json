@@ -1090,6 +1090,9 @@
         "send": "Send",
         "notFound": "We couldn’t find this conversation.",
         "backToList": "Back to messages",
+        "prompts": {
+          "toggle": "Quick questions"
+        },
         "errors": {
           "sendFailed": "We couldn’t send your message. Please try again."
         }

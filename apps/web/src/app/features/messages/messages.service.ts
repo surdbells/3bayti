@@ -79,6 +79,24 @@ export interface ChatMessage {
   created_at: string;
 }
 
+/** A canned quick-start prompt (P1). */
+export interface ChatPrompt {
+  id: number;
+  slug: string;
+  text: string;
+  text_ar: string;
+}
+
+/** A group of prompts shown as a section in the picker. */
+export interface ChatPromptCategory {
+  id: number;
+  slug: string;
+  label: string;
+  label_ar: string;
+  icon: string | null;
+  prompts: ChatPrompt[];
+}
+
 export interface ConversationListResult {
   conversations: ConversationSummary[];
   unreadTotal: number;
@@ -176,6 +194,57 @@ export class MessagesService {
     } finally {
       this._isSending.set(false);
     }
+  }
+
+  /**
+   * Send a canned quick-start prompt (P1). Same endpoint as sendMessage but
+   * with { prompt_id }; the server snapshots the prompt text as a prompt-type
+   * message. Prompt sends are never moderated so no 422-blocked path here.
+   */
+  async sendPrompt(uuid: string, promptId: number): Promise<ChatMessage> {
+    this._isSending.set(true);
+    try {
+      const env = await firstValueFrom(
+        this.http.post<RawSendBody>('POST /chat/conversations/:uuid/messages', {
+          params: { uuid },
+          body: { prompt_id: promptId },
+        }),
+      );
+      return this.mapMessage((env.data ?? {}).message);
+    } finally {
+      this._isSending.set(false);
+    }
+  }
+
+  /** Load the customer quick-start prompt catalog for the picker. */
+  async getPromptCatalog(): Promise<ChatPromptCategory[]> {
+    try {
+      const env = await firstValueFrom(
+        this.http.get<{ categories?: unknown[] }>('GET /chat/prompts'),
+      );
+      const cats = Array.isArray((env.data ?? {}).categories) ? (env.data as { categories: unknown[] }).categories : [];
+      return cats.map((c) => this.mapPromptCategory(c)).filter((c) => c.prompts.length > 0);
+    } catch {
+      return [];
+    }
+  }
+
+  private mapPromptCategory(raw: unknown): ChatPromptCategory {
+    const c = (raw ?? {}) as Record<string, any>;
+    const prompts = Array.isArray(c['prompts']) ? c['prompts'] : [];
+    return {
+      id: typeof c['id'] === 'number' ? c['id'] : 0,
+      slug: c['slug'] ?? '',
+      label: c['label'] ?? '',
+      label_ar: c['label_ar'] ?? '',
+      icon: c['icon'] ?? null,
+      prompts: prompts.map((p: Record<string, any>) => ({
+        id: typeof p['id'] === 'number' ? p['id'] : 0,
+        slug: p['slug'] ?? '',
+        text: p['text'] ?? '',
+        text_ar: p['text_ar'] ?? '',
+      })).filter((p: ChatPrompt) => p.id > 0),
+    };
   }
 
   /** Mark a conversation read for the customer. Never throws. */

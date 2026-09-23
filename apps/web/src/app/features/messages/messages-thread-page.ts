@@ -19,7 +19,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { ToastService } from '../../shared/forms';
 import { LocaleService } from '../../core/i18n/locale.service';
 import { MessagesService } from './messages.service';
-import type { ConversationSummary, ChatMessage } from './messages.service';
+import type { ConversationSummary, ChatMessage, ChatPrompt, ChatPromptCategory } from './messages.service';
 
 /** Polling cadence for new messages, mirrors mobile's 5s loop. */
 const POLL_INTERVAL_MS = 5000;
@@ -91,6 +91,34 @@ const POLL_INTERVAL_MS = 5000;
             (ngSubmit)="onSubmit()"
             novalidate
           >
+            <!-- P1: quick-start prompts, alongside (not replacing) the composer -->
+            <div class="message-prompts" *ngIf="promptCategories().length > 0" data-testid="chat-prompts">
+              <button
+                type="button"
+                class="message-prompts__toggle"
+                (click)="togglePrompts()"
+                [attr.aria-expanded]="promptsOpen()"
+                data-testid="chat-prompts-toggle"
+              >
+                <span>{{ 'account.messages.thread.prompts.toggle' | translate }}</span>
+                <span class="message-prompts__chevron" [class.--open]="promptsOpen()" aria-hidden="true">⌄</span>
+              </button>
+              <div class="message-prompts__panel" *ngIf="promptsOpen()">
+                <div class="message-prompts__cat" *ngFor="let cat of promptCategories()">
+                  <span class="message-prompts__cat-label">{{ promptLabel(cat) }}</span>
+                  <div class="message-prompts__chips">
+                    <button
+                      *ngFor="let p of cat.prompts"
+                      type="button"
+                      class="message-prompts__chip"
+                      [disabled]="isSending()"
+                      (click)="sendPromptMessage(p)"
+                    >{{ promptText(p) }}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <label class="message-composer__label" for="composer-input">
               {{ 'account.messages.thread.replyLabel' | translate }}
             </label>
@@ -142,6 +170,12 @@ export class MessagesThreadPageComponent implements OnInit, OnDestroy {
 
   private readonly _messages = signal<ChatMessage[]>([]);
 
+  // P1: quick-start prompt catalog + picker open state.
+  private readonly _promptCategories = signal<ChatPromptCategory[]>([]);
+  protected readonly promptCategories = this._promptCategories.asReadonly();
+  private readonly _promptsOpen = signal<boolean>(false);
+  protected readonly promptsOpen = this._promptsOpen.asReadonly();
+
   private readonly _loadError = signal<boolean>(false);
   protected readonly loadError = this._loadError.asReadonly();
 
@@ -170,6 +204,8 @@ export class MessagesThreadPageComponent implements OnInit, OnDestroy {
       return;
     }
     await this.loadInitial();
+    /* Load the quick-start prompt catalog (best-effort; no picker if empty). */
+    this._promptCategories.set(await this.chat.getPromptCatalog());
     /* Light poll for vendor replies, like the mobile chat screen. */
     this.pollTimer = setInterval(() => void this.poll(), POLL_INTERVAL_MS);
   }
@@ -233,6 +269,30 @@ export class MessagesThreadPageComponent implements OnInit, OnDestroy {
 
   protected trackById(_index: number, item: ChatMessage): number {
     return item.id;
+  }
+
+  protected togglePrompts(): void {
+    this._promptsOpen.set(!this._promptsOpen());
+  }
+
+  protected promptLabel(cat: ChatPromptCategory): string {
+    return this.locale.current() === 'ar' && cat.label_ar ? cat.label_ar : cat.label;
+  }
+
+  protected promptText(p: ChatPrompt): string {
+    return this.locale.current() === 'ar' && p.text_ar ? p.text_ar : p.text;
+  }
+
+  /** Send a tapped quick-start prompt, then collapse the picker. */
+  protected async sendPromptMessage(prompt: ChatPrompt): Promise<void> {
+    if (this.isSending()) return;
+    try {
+      const sent = await this.chat.sendPrompt(this.uuid, prompt.id);
+      this.appendNew([sent]);
+      this._promptsOpen.set(false);
+    } catch {
+      this.toast.error('account.messages.thread.errors.sendFailed');
+    }
   }
 
   protected async onSubmit(): Promise<void> {

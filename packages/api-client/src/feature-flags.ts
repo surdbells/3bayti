@@ -1697,6 +1697,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /chat/unread-count': {
     target: 'new', oldPath: '/chat/get_unread_count', newPath: '/v3/chat/unread-count', shape: 'v3-envelope',
   },
+  // P1: customer quick-start prompt catalog for the picker (v3-only).
+  'GET /chat/prompts': {
+    target: 'new', oldPath: '', newPath: '/v3/chat/prompts', shape: 'v3-envelope',
+  },
   'GET /chat/conversations/:uuid/messages': {
     target: 'new', oldPath: '/chat/get_messages', newPath: '/v3/chat/conversations/:uuid/messages', shape: 'v3-envelope',
   },
