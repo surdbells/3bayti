@@ -166,6 +166,17 @@ final class InitiateCheckoutController
         }
 
         // ------------------------------------------------------------------
+        // P5, Bespoke customization payment (no cart involved). Same synthetic
+        // item-less order shape as the gift-card branch: total = the accepted
+        // quote amount. On Noon webhook paid → NoonWebhookController marks the
+        // request paid via its payment_order_reference. Early-returns; the
+        // cart flow below never runs for this path.
+        // ------------------------------------------------------------------
+        if ($input->customization_request_id !== null) {
+            return $this->initiateCustomizationPayment($user, $input);
+        }
+
+        // ------------------------------------------------------------------
         // Resume payment for an EXISTING pending_payment order, the mobile
         // "Complete payment" action. Like the gift-card branch this bypasses
         // the cart entirely: no new order is created, we just hand back a
@@ -808,6 +819,145 @@ final class InitiateCheckoutController
             'order_id'           => $order->getId() ?? 0,
             'idempotent'         => false,
             'gift_card_id'       => $card->getId(),
+        ]);
+    }
+
+    /**
+     * Bespoke customization payment (P5). Same synthetic item-less order
+     * shape as the gift-card branch — total = the accepted quote amount, no
+     * cart, addresses synthesized for Noon. Called when
+     * customization_request_id is set.
+     */
+    private function initiateCustomizationPayment(
+        User $user,
+        InitiateCheckoutInput $input,
+    ): \Psr\Http\Message\ResponseInterface {
+        /** @var \Bayti\Api\Domain\Customization\CustomizationRequestRepository $crRepo */
+        $crRepo = $this->em->getRepository(\Bayti\Api\Domain\Customization\CustomizationRequest::class);
+
+        $customization = $crRepo->find($input->customization_request_id);
+        // 404-not-403 for a request that isn't the caller's (existence-leak
+        // prevention, matching the customization controllers).
+        if ($customization === null || $customization->getCustomer()->getId() !== $user->getId()) {
+            throw HttpException::notFound('Customization request not found.');
+        }
+        if ($customization->getStatus() !== \Bayti\Api\Domain\Customization\CustomizationRequest::STATUS_ACCEPTED) {
+            throw HttpException::badRequest(
+                'This customization request is not awaiting payment (status: ' . $customization->getStatus() . ').'
+            );
+        }
+        $amount = $customization->getQuoteAmount();
+        if ($amount === null) {
+            // Shouldn't happen (accepted implies quoted), but never charge a
+            // null/zero amount.
+            throw HttpException::badRequest('This customization request has no quote to pay.');
+        }
+
+        // Like the gift-card path, a customization payment needs no deliverable
+        // shipping address (the vendor already has the request + the customer);
+        // resolve the buyer's billing address for a nicer payer name, else
+        // synthesize, and snapshot it as both billing + shipping so both rows
+        // exist for Noon.
+        /** @var \Bayti\Api\Domain\User\AddressRepository $addresses */
+        $addresses    = $this->em->getRepository(\Bayti\Api\Domain\User\Address::class);
+        $payerAddress = $this->resolveGiftCardPayerAddress($addresses, $user, $input->billing_address_id);
+
+        $orderReference = $this->generateOrderReference();
+        $idempotencyKey = sprintf(
+            'customization:user=%d:req=%d',
+            $user->getId() ?? 0,
+            $customization->getId() ?? 0,
+        );
+
+        /** @var \Bayti\Api\Domain\Payment\PaymentTransactionRepository $transactions */
+        $transactions = $this->em->getRepository(\Bayti\Api\Domain\Payment\PaymentTransaction::class);
+        $existing = $transactions->findByIdempotencyKey($idempotencyKey);
+        if ($existing !== null) {
+            $cachedUrl = $this->extractCheckoutUrl($existing);
+            if ($cachedUrl !== null) {
+                return $this->ok([
+                    'checkout_url'             => $cachedUrl,
+                    'order_reference'          => $existing->getOrder()->getOrderReference(),
+                    'provider_order_ref'       => $existing->getProviderOrderRef() ?? '',
+                    'order_id'                 => $existing->getOrder()->getId() ?? 0,
+                    'idempotent'               => true,
+                    'customization_request_id' => $customization->getId(),
+                ]);
+            }
+        }
+
+        $order = $this->em->wrapInTransaction(
+            function (\Doctrine\ORM\EntityManagerInterface $em) use (
+                $user, $orderReference, $amount, $payerAddress, $input,
+            ): Order {
+                $order = new Order(
+                    user: $user,
+                    orderReference: $orderReference,
+                    subtotal: $amount,
+                    deliveryFee: '0.00',
+                    discount: '0.00',
+                    channel: $input->channel,
+                );
+                $order->addAddress($this->snapshotGiftCardAddress($payerAddress, $user, OrderAddress::TYPE_BILLING));
+                $order->addAddress($this->snapshotGiftCardAddress($payerAddress, $user, OrderAddress::TYPE_SHIPPING));
+                $em->persist($order);
+                $em->flush();
+                return $order;
+            }
+        );
+
+        // Back-reference so the webhook can resolve the request and markPaid().
+        $customization->attachPaymentOrderReference($orderReference);
+        $this->em->flush();
+
+        $returnUrl = $this->buildReturnUrl($orderReference);
+        try {
+            $initiation = $this->gateway->initiateCheckout(
+                order: $order,
+                returnUrl: $returnUrl,
+                channel: $input->channel,
+            );
+        } catch (\Bayti\Api\Payment\PaymentGatewayException $e) {
+            $this->markOrderFailed($order, $e);
+            $this->logger->error('checkout.initiate: customization gateway failure', [
+                'user_id' => $user->getId(),
+                'customization_id' => $customization->getId(),
+                'message' => $e->getMessage(),
+            ]);
+            throw HttpException::upstreamFailure(
+                ErrorCodes::PAYMENT_PROVIDER_ERROR,
+                'Payment provider could not initiate checkout. Please try again.',
+            );
+        }
+
+        $tx = new \Bayti\Api\Domain\Payment\PaymentTransaction(
+            order: $order,
+            operation: \Bayti\Api\Domain\Payment\PaymentTransaction::OPERATION_INITIATE,
+            status: 'initiated',
+            amount: $order->gatewayChargeAmount(),
+            idempotencyKey: $idempotencyKey,
+            provider: \Bayti\Api\Domain\Payment\PaymentTransaction::PROVIDER_NOON,
+            providerOrderRef: $initiation->providerOrderRef,
+            currency: $order->getCurrency(),
+            requestPayload: ['returnUrl' => $returnUrl, 'channel' => $input->channel],
+            responsePayload: $initiation->rawResponse,
+        );
+        $transactions->save($tx);
+
+        $this->logger->info('checkout.initiate: customization success', [
+            'user_id' => $user->getId(),
+            'order_id' => $order->getId(),
+            'customization_id' => $customization->getId(),
+            'amount' => $amount,
+        ]);
+
+        return $this->ok([
+            'checkout_url'             => $initiation->checkoutUrl,
+            'order_reference'          => $orderReference,
+            'provider_order_ref'       => $initiation->providerOrderRef,
+            'order_id'                 => $order->getId() ?? 0,
+            'idempotent'               => false,
+            'customization_request_id' => $customization->getId(),
         ]);
     }
 

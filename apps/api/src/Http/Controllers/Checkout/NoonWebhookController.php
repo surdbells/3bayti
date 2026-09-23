@@ -306,14 +306,23 @@ final class NoonWebhookController
                 $this->activateGiftCardForOrder($order);
             } catch (\Throwable) { /* silent, logged inside activateGiftCardForOrder */ }
 
-            // A gift-card PURCHASE order is a synthetic payment vehicle with
-            // NO vendor line items, so the vendor "new order to prepare" email
-            // and per-item chat provisioning must NOT fire for it. Detect it
-            // via the same purchase-order back-reference lookup that
-            // activateGiftCardForOrder uses (reusing GiftCardRepository).
+            // P5, mark a bespoke-customization request paid when its synthetic
+            // payment order settles (same synthetic-order posture as gift cards).
+            try {
+                $this->markCustomizationPaidForOrder($order);
+            } catch (\Throwable) { /* silent, logged inside markCustomizationPaidForOrder */ }
+
+            // A gift-card PURCHASE order — and a customization payment order —
+            // is a synthetic payment vehicle with NO vendor line items, so the
+            // vendor "new order to prepare" email and per-item chat provisioning
+            // must NOT fire for it. Detect both via their back-reference lookups.
             /** @var GiftCardRepository $gcRepo */
             $gcRepo = $this->em->getRepository(GiftCard::class);
             $isGiftCardPurchase = $gcRepo->findByPurchaseOrderReference($order->getOrderReference()) !== null;
+            /** @var \Bayti\Api\Domain\Customization\CustomizationRequestRepository $crRepo */
+            $crRepo = $this->em->getRepository(\Bayti\Api\Domain\Customization\CustomizationRequest::class);
+            $isCustomizationPayment = $crRepo->findByPaymentOrderReference($order->getOrderReference()) !== null;
+            $isSyntheticPayment = $isGiftCardPurchase || $isCustomizationPayment;
 
             // Single order-confirmation for the gateway flow. This is the
             // authoritative paid transition (gated above on $transition ===
@@ -327,7 +336,7 @@ final class NoonWebhookController
             $this->pushNotifications->orderPaid($order);
 
             // Vendor-facing side effects, ONLY for real product orders.
-            if (!$isGiftCardPurchase) {
+            if (!$isSyntheticPayment) {
                 //   - orderPaidVendors(): vendor "new order to prepare" email
                 //     (moved here from the old pre-payment orderPlaced() so
                 //     vendors are only asked to prepare a PAID order).
@@ -988,6 +997,39 @@ final class NoonWebhookController
                 'order_reference' => $ref,
                 'card_id'         => $card->getId(),
                 'error'           => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * If this order was created to fund a bespoke-customization quote (P5),
+     * mark the request paid now that payment is confirmed. Idempotent:
+     * requests not in 'accepted' are silently skipped.
+     */
+    private function markCustomizationPaidForOrder(Order $order): void
+    {
+        $ref = $order->getOrderReference();
+        /** @var \Bayti\Api\Domain\Customization\CustomizationRequestRepository $crRepo */
+        $crRepo = $this->em->getRepository(\Bayti\Api\Domain\Customization\CustomizationRequest::class);
+        $customization = $crRepo->findByPaymentOrderReference($ref);
+        if ($customization === null) {
+            return;
+        }
+        // Idempotent: markPaid() requires 'accepted'; a re-delivered webhook
+        // finds it already 'paid' and would throw — skip instead.
+        if ($customization->getStatus() !== \Bayti\Api\Domain\Customization\CustomizationRequest::STATUS_ACCEPTED) {
+            return;
+        }
+
+        try {
+            $customization->markPaid();
+            $crRepo->save($customization);
+        } catch (\Throwable $e) {
+            // Log but never throw, the order is already paid.
+            $this->logger->error('webhook: customization mark-paid failed', [
+                'order_reference'  => $ref,
+                'customization_id' => $customization->getId(),
+                'error'            => $e->getMessage(),
             ]);
         }
     }

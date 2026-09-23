@@ -133,6 +133,17 @@ final class InitiateCheckoutInput
     public readonly ?int $gift_card_purchase_id;
 
     /**
+     * Bespoke customization payment flow (P5). Mirrors the gift-card purchase
+     * flow: when supplied, checkout bypasses the cart and creates a synthetic
+     * item-less order whose total is the accepted quote amount of this
+     * customization request. On Noon webhook paid, NoonWebhookController marks
+     * the request paid via its payment_order_reference back-reference. The
+     * request must belong to the buyer and be in 'accepted' status.
+     */
+    #[Assert\Positive(message: 'customization_request_id must be a positive integer.')]
+    public readonly ?int $customization_request_id;
+
+    /**
      * Resume payment for an EXISTING pending_payment order, the mobile
      * "Complete payment" action. When supplied, checkout does NOT touch the
      * cart or create a new order: it re-initiates the gateway session for
@@ -168,6 +179,7 @@ final class InitiateCheckoutInput
         ?int $gift_card_purchase_id = null,
         ?bool $use_gift_wallet = false,
         ?string $order_reference = null,
+        ?int $customization_request_id = null,
     ) {
         /* Accept any casing from clients (the web app sends 'web'); the
            Choice + Noon gateway require uppercase. Normalising here means
@@ -189,6 +201,7 @@ final class InitiateCheckoutInput
             ? (strtoupper(str_replace('-', '', trim($gift_card_code))) ?: null)
             : null;
         $this->gift_card_purchase_id = $gift_card_purchase_id;
+        $this->customization_request_id = $customization_request_id;
         $this->use_gift_wallet = $use_gift_wallet ?? false;
         $this->order_reference = ($order_reference !== null && trim($order_reference) !== '')
             ? trim($order_reference)
