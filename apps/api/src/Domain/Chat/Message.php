@@ -24,6 +24,8 @@ class Message
     public const TYPE_TEXT   = 'text';
     public const TYPE_IMAGE  = 'image';
     public const TYPE_SYSTEM = 'system';
+    /** A canned quick-start prompt the sender tapped (P1); content is a snapshot. */
+    public const TYPE_PROMPT = 'prompt';
 
     public const STATUS_SENT     = 'sent';
     public const STATUS_BLOCKED  = 'blocked';
@@ -32,6 +34,7 @@ class Message
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'bigint')]
+    // @phpstan-ignore-next-line property.unusedType
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 36, unique: true)]
@@ -56,9 +59,18 @@ class Message
     #[ORM\Column(type: 'text')]
     private string $content;
 
-    /** Optional Arabic rendering (system messages are bilingual). */
+    /** Optional Arabic rendering (system + prompt messages are bilingual). */
     #[ORM\Column(name: 'content_ar', type: 'text', nullable: true)]
     private ?string $contentAr = null;
+
+    /**
+     * For a TYPE_PROMPT message: the id of the ChatPrompt that was tapped
+     * (analytics link back to the catalog). Null for every other type. Not a
+     * mapped relation — the content is snapshotted, so the message survives the
+     * prompt being edited or removed.
+     */
+    #[ORM\Column(name: 'prompt_id', type: 'bigint', nullable: true)]
+    private ?int $promptId = null;
 
     #[ORM\Column(name: 'is_flagged', type: 'boolean', options: ['default' => false])]
     private bool $isFlagged = false;
@@ -106,6 +118,31 @@ class Message
         return $m;
     }
 
+    /**
+     * A customer tapped a quick-start prompt. Content is a bilingual snapshot
+     * of the prompt text; prompt_id links back to the catalog for analytics.
+     */
+    public static function fromCustomerPrompt(Conversation $c, User $sender, ChatPrompt $prompt): self
+    {
+        $m = new self($c, Conversation::PARTY_CUSTOMER, $prompt->getText());
+        $m->sender = $sender;
+        $m->type = self::TYPE_PROMPT;
+        $m->contentAr = $prompt->getTextAr();
+        $m->promptId = $prompt->getId();
+        return $m;
+    }
+
+    /** A vendor tapped a canned reply template. */
+    public static function fromVendorPrompt(Conversation $c, User $sender, ChatPrompt $prompt): self
+    {
+        $m = new self($c, Conversation::PARTY_VENDOR, $prompt->getText());
+        $m->sender = $sender;
+        $m->type = self::TYPE_PROMPT;
+        $m->contentAr = $prompt->getTextAr();
+        $m->promptId = $prompt->getId();
+        return $m;
+    }
+
     public function getId(): ?int { return $this->id; }
     public function getUuid(): string { return $this->uuid; }
     public function getConversation(): Conversation { return $this->conversation; }
@@ -114,6 +151,7 @@ class Message
     public function getType(): string { return $this->type; }
     public function getContent(): string { return $this->content; }
     public function getContentAr(): ?string { return $this->contentAr; }
+    public function getPromptId(): ?int { return $this->promptId; }
     public function isFlagged(): bool { return $this->isFlagged; }
     public function getFlagType(): ?string { return $this->flagType; }
     public function getStatus(): string { return $this->status; }
