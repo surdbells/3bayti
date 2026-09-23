@@ -21,6 +21,7 @@ import {Labels} from "../../../class/labels";
 import {ConnectionService} from "../../../service/connection.service";
 import {NetworkService} from "../../../service/network.service";
 import {MobileNetworkAdapter} from "../../../core/http/mobile-network-adapter";
+import {HotlinkService} from "../../../service/hotlink.service";
 import {apiErrorMessage} from "../../../core/http/api-error";
 import {GlobalComponent} from "../../../global-component";
 
@@ -143,6 +144,7 @@ export class StyleViewPage implements OnInit, OnDestroy {
     private net: ConnectionService,
     private networkService: NetworkService,
     private networkAdapter: MobileNetworkAdapter,
+    private hotlinks: HotlinkService,
     private wishlistService: WishlistService,
     private i18n: I18nService,
     private toast: AxNotificationService,
@@ -592,7 +594,14 @@ export class StyleViewPage implements OnInit, OnDestroy {
       return;
     }
     const name = this.style?.style_name ?? '';
-    const url = `${this.storefrontBase()}/styles/${slug}`;
+    // Prefer a tracked Style-Me hotlink; fall back to the plain storefront URL.
+    let url = `${this.storefrontBase()}/styles/${slug}`;
+    if (this.single_user.token) {
+      const tracked = await this.hotlinks.createShortUrl('style', slug, this.single_user.token);
+      if (tracked !== null) {
+        url = tracked;
+      }
+    }
     try {
       if ((navigator as any).share) {
         await (navigator as any).share({ title: name || '3bayti', text: name, url });

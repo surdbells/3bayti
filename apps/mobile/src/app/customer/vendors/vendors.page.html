@@ -33,6 +33,13 @@
           <ax-icon name="star" [size]="13" />
           <span>{{ 'button_reviews' | translate }}</span>
         </button>
+        <button type="button"
+                class="vendor-reviews-link"
+                (click)="shareStore()"
+                aria-label="Share store">
+          <ax-icon name="share" [size]="13" />
+          <span>{{ 'button_share' | translate }}</span>
+        </button>
       </div>
 
       <!-- Compact Follow pill (overlay, near the name) -->

@@ -13,6 +13,8 @@ import {ActivatedRoute, Router} from "@angular/router";
 import {ActionSheetController} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import {HotlinkService} from "../../service/hotlink.service";
+import {GlobalComponent} from "../../global-component";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Labels} from "../../class/labels";
 import {Products} from "../../class/products";
@@ -63,6 +65,7 @@ export class VendorsPage implements OnInit {
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
     private networkAdapter: MobileNetworkAdapter,
+    private hotlinks: HotlinkService,
     private toast: AxNotificationService,
     private i18n: I18nService,
   ) {}
@@ -134,6 +137,46 @@ goToReviews(slug: string, vendorId: number, name: string) {
       ['/', 'vendor-reviews'],
       { queryParams: { slug, vendor_id: vendorId, name } }
     );
+  }
+
+  /**
+   * Share this store (P9). Prefers a tracked hotlink (signed-in) → falls back
+   * to the plain storefront URL. Web Share API with a clipboard fallback, no
+   * @capacitor/share dependency (OTA-safe). Mirrors style-view shareStyle().
+   */
+  async shareStore(): Promise<void> {
+    const slug = this.rqst_param.store_slug;
+    if (!slug) {
+      return;
+    }
+    const name = (this.view_vendor as any)?.name ?? '';
+    let url = `${this.storefrontBase()}/stores/${slug}`;
+    if (this.single_user.token) {
+      const tracked = await this.hotlinks.createShortUrl('store', slug, this.single_user.token);
+      if (tracked !== null) {
+        url = tracked;
+      }
+    }
+    try {
+      if ((navigator as any).share) {
+        await (navigator as any).share({ title: name || '3bayti', text: name, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        this.success_notification(this.i18n.t('store_link_copied'));
+      }
+    } catch {
+      // User dismissed the share sheet; no-op.
+    }
+  }
+
+  /** Web storefront origin, derived from the API base (api.<host> -> <host>). */
+  private storefrontBase(): string {
+    try {
+      const u = new URL(GlobalComponent.baseURL);
+      return `${u.protocol}//${u.host.replace(/^api\./, '')}`;
+    } catch {
+      return 'https://3bayti.ae';
+    }
   }
   single_user = {
     id: 0,
