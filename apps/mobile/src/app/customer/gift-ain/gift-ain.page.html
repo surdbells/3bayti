@@ -18,7 +18,7 @@
     <button type="button" class="ga-reminders-link" (click)="goReminders()">{{ 'gift_reminders_pill' | translate }}</button>
   </div>
 
-  <form class="ga-form" (ngSubmit)="submit()">
+  <section class="ga-form">
     <div class="ga-group">
       <p class="ga-legend">{{ 'gift_ain_recipient_label' | translate }}</p>
       <div class="ga-personas">
@@ -103,14 +103,14 @@
       </div>
     </div>
 
-    <button type="submit" class="ga-submit" [disabled]="!canSubmit || isSending">
+    <button type="button" class="ga-submit" [disabled]="!canSubmit || isSending" (click)="submit()">
       @if (isSending) {
         <ion-spinner name="crescent"></ion-spinner>
       } @else {
         {{ 'gift_ain_find' | translate }}
       }
     </button>
-  </form>
+  </section>
   }
 
   @if (hasSearched) {
