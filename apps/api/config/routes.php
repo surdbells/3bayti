@@ -175,6 +175,16 @@ return function (App $app): void {
         $group->put('/gift-reminders/{id:[0-9]+}', \Bayti\Api\Http\Controllers\GiftReminder\UpdateGiftReminderController::class);
         $group->delete('/gift-reminders/{id:[0-9]+}', \Bayti\Api\Http\Controllers\GiftReminder\DeleteGiftReminderController::class);
 
+        // P5, Bespoke Customization — customer's own request lifecycle
+        // (request → accept/reject a vendor quote → cancel). Inherits
+        // AuthMiddleware from this group.
+        $group->get('/customization-requests', \Bayti\Api\Http\Controllers\Customization\ListCustomerCustomizationsController::class);
+        $group->post('/customization-requests', \Bayti\Api\Http\Controllers\Customization\SubmitCustomizationController::class);
+        $group->get('/customization-requests/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Customization\GetCustomizationController::class);
+        $group->post('/customization-requests/{id:[0-9]+}/accept', \Bayti\Api\Http\Controllers\Customization\AcceptQuoteController::class);
+        $group->post('/customization-requests/{id:[0-9]+}/reject', \Bayti\Api\Http\Controllers\Customization\RejectQuoteController::class);
+        $group->post('/customization-requests/{id:[0-9]+}/cancel', \Bayti\Api\Http\Controllers\Customization\CancelCustomizationController::class);
+
         // M3.2.X.12-G, Personalized "for-you" recommendations
         $group->get(
             '/recommendations',
@@ -1176,6 +1186,28 @@ return function (App $app): void {
         $group->post(
             '/returns/{id:[0-9]+}/confirm-receipt',
             \Bayti\Api\Http\Controllers\Vendor\Order\ConfirmReceiptController::class,
+        );
+        // P5, vendor bespoke-customization endpoints (review → quote/decline →
+        // mark complete). Inherits VendorAuthMiddleware from this group.
+        $group->get(
+            '/customization-requests',
+            \Bayti\Api\Http\Controllers\Vendor\Customization\ListVendorCustomizationsController::class,
+        );
+        $group->get(
+            '/customization-requests/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Vendor\Customization\GetVendorCustomizationController::class,
+        );
+        $group->post(
+            '/customization-requests/{id:[0-9]+}/quote',
+            \Bayti\Api\Http\Controllers\Vendor\Customization\QuoteCustomizationController::class,
+        );
+        $group->post(
+            '/customization-requests/{id:[0-9]+}/decline',
+            \Bayti\Api\Http\Controllers\Vendor\Customization\DeclineCustomizationController::class,
+        );
+        $group->post(
+            '/customization-requests/{id:[0-9]+}/complete',
+            \Bayti\Api\Http\Controllers\Vendor\Customization\MarkCompletedController::class,
         );
         // M3.2.X.14-C, vendor self-serve performance metrics
         $group->get(

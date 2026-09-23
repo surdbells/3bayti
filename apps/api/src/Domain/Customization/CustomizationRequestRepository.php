@@ -93,18 +93,24 @@ class CustomizationRequestRepository extends EntityRepository
 
     /**
      * Vendor's incoming customization requests (their products only),
-     * newest first. Authorization is the caller's job (verify the user
-     * owns this vendor id).
+     * newest first. Accepts the caller's full set of owned vendor ids so a
+     * user owning multiple stores sees them all. Authorization is the
+     * caller's job (pass only vendor ids the user owns).
      *
+     * @param list<int> $vendorIds
      * @param array{status?: string, limit?: int, offset?: int} $filters
      *
      * @return array{items: list<CustomizationRequest>, total: int}
      */
-    public function findForVendorPaginated(int $vendorId, array $filters = []): array
+    public function findForVendorPaginated(array $vendorIds, array $filters = []): array
     {
+        if ($vendorIds === []) {
+            return ['items' => [], 'total' => 0];
+        }
+
         $qb = $this->createQueryBuilder('cr')
-            ->where('IDENTITY(cr.vendor) = :vendorId')
-            ->setParameter('vendorId', $vendorId);
+            ->where('IDENTITY(cr.vendor) IN (:vendorIds)')
+            ->setParameter('vendorIds', $vendorIds);
 
         if (!empty($filters['status'])) {
             $qb->andWhere('cr.status = :status')

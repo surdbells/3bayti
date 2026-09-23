@@ -357,6 +357,20 @@ return [
     \Bayti\Api\Http\Controllers\Admin\Order\MarkPickedUpController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\RecordReturnRefundController::class => \DI\autowire(),
 
+    // P5, Bespoke Customization (customer request → vendor quote → accept → pay)
+    \Bayti\Api\Http\Serializers\CustomizationRequestSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Customization\SubmitCustomizationController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Customization\ListCustomerCustomizationsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Customization\GetCustomizationController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Customization\AcceptQuoteController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Customization\RejectQuoteController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Customization\CancelCustomizationController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Vendor\Customization\ListVendorCustomizationsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Vendor\Customization\GetVendorCustomizationController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Vendor\Customization\QuoteCustomizationController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Vendor\Customization\DeclineCustomizationController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Vendor\Customization\MarkCompletedController::class => \DI\autowire(),
+
     // M3.1.7-G, Dispute persistence + admin endpoints
     \Bayti\Api\Http\Serializers\DisputeSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Dispute\ListDisputesController::class => \DI\autowire(),
