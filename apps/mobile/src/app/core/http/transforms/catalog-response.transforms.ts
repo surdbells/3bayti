@@ -478,7 +478,9 @@ export function transformVendorResponse(data: unknown): unknown {
     cover: asString(data['cover_image_url']),
     description: asString(data['description']),
     tagline: '',         // not in v3
-    following: false,    // not in v3 (anonymous read)
+    // is_following is present on the v3 detailShape when the read is
+    // authenticated (GET /vendors/:slug via OptionalAuth); absent → false.
+    following: data['is_following'] === true,
     // Pass-through for callers that want slug-based navigation:
     slug: asString(data['slug']),
     is_verified: data['is_verified'] === true,

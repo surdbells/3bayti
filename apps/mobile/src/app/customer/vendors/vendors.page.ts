@@ -213,12 +213,14 @@ goToReviews(slug: string, vendorId: number, name: string) {
       }))
   }
   get_vendor() {
-    // Direct v3 (GET /v3/vendors/by-legacy-id/{id}). Public read, no
-    // authToken. transformReadVendorRequest maps store_id into the {id} path
-    // param. Response transform applies via get_v3, so response.data keeps the
-    // legacy storefront-header shape.
+    // Direct v3 (GET /v3/vendors/{slug}), read AUTHENTICATED so the
+    // OptionalAuth detailShape resolves is_following for this viewer
+    // (transformVendorResponse maps it to view_vendor.following, driving the
+    // Follow/Following pill). Response transform applies via get_v3, so
+    // response.data keeps the legacy storefront-header shape.
     this.networkAdapter.get_v3('GET /mobile/read-vendor', {
       pathParams: { slug: this.rqst_param.store_slug },
+      authToken: this.read_vendor.token,
     })
       .subscribe(({
         next: (response: any) => {
@@ -249,10 +251,9 @@ goToReviews(slug: string, vendorId: number, name: string) {
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
-            // Reflect the new state locally. We do NOT re-read via
-            // get_vendor() because the v3 public vendor read is anonymous
-            // and always reports following:false (transformVendorResponse),
-            // which would immediately flip the pill back to "Follow".
+            // Optimistic local flip (avoids a re-fetch for one flag); the
+            // authenticated get_vendor() read already seeds the correct
+            // initial state on page load.
             this.view_vendor.following = true;
           }else {
             this.error_notification(response.message);
@@ -278,8 +279,7 @@ goToReviews(slug: string, vendorId: number, name: string) {
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
-            // Reflect locally instead of re-reading (anonymous vendor read
-            // always reports following:false, see follow handler above).
+            // Optimistic local flip (see the follow handler above).
             this.view_vendor.following = false;
           }else {
             this.error_notification(response.message);
