@@ -6,7 +6,7 @@ import {
     IonButton,
     IonButtons,
     IonCard,
-    IonCardContent, IonCardHeader, IonCardSubtitle, IonCardTitle, IonCol,
+    IonCardContent, IonCardHeader, IonCardSubtitle, IonCardTitle, IonCheckbox, IonCol,
     IonContent,
     IonHeader, IonRow,
     IonSelect, IonSelectOption,
@@ -58,6 +58,7 @@ const V3_BASE = 'https://api-v3.3bayti.ae';
     IonCardTitle,
     IonSelect,
     IonSelectOption,
+    IonCheckbox,
     TranslatePipe,
     AxIconComponent,
     AxLoaderComponent,
@@ -136,11 +137,26 @@ export class ProfilePage implements OnInit, OnDestroy {
     // respected in update_profile() (an empty value omits the key).
     gender: "",
     dob: "",
-    locale: "en"
+    locale: "en",
+    // Declared style aesthetics (P4). Canonical slugs; diffed against
+    // styleBaseline in update_profile() so only a real change is sent.
+    stylePreferences: [] as string[]
   };
   // Mirror web exactly (account-profile-page.ts).
   readonly genderOptions = ['male', 'female', 'other', 'prefer_not_to_say'];
   readonly localeOptions = ['en', 'ar', 'en-AE', 'ar-AE'];
+  // Curated style-tag vocab — lockstep with the API's ALLOWED_STYLE_TAGS.
+  readonly styleTagOptions = [
+    'classic', 'minimalist', 'elegant', 'casual', 'streetwear', 'bohemian',
+    'modest', 'glam', 'chic', 'traditional', 'sporty', 'edgy', 'vintage', 'romantic'
+  ];
+  readonly maxStyleTags = 10;
+  // Baseline for the style diff, set on load.
+  private styleBaseline: string[] = [];
+  // Data-collection consent: granted = on record (grant-only, can't revoke
+  // here); grantConsent = the opt-in toggle shown while ungranted.
+  dataConsentGranted = false;
+  grantConsent = false;
   // Cap the date-of-birth picker at today.
   readonly maxDob = new Date().toISOString().slice(0, 10);
   dialCodes: DialCode[] = DIAL_CODES;
@@ -660,6 +676,13 @@ export class ProfilePage implements OnInit, OnDestroy {
               this.update.gender = u.gender ?? '';
               this.update.dob = u.dob ? String(u.dob).slice(0, 10) : '';
               this.update.locale = u.locale ?? 'en';
+              // Declared style tags + consent (P4). Raw v3 passthrough
+              // (no transform registered), so read snake_case directly.
+              const tags: string[] = Array.isArray(u.style_preferences) ? u.style_preferences : [];
+              this.update.stylePreferences = [...tags];
+              this.styleBaseline = [...tags];
+              this.dataConsentGranted = u.data_consent?.granted === true;
+              this.grantConsent = false;
               if (u.avatar_url) {
                 this.single_user.avatar = u.avatar_url;
               }
@@ -782,6 +805,33 @@ export class ProfilePage implements OnInit, OnDestroy {
       });
   }
 
+  /** Whether a style tag is currently selected (drives chip active state). */
+  isStyleSelected(slug: string): boolean {
+    return this.update.stylePreferences.includes(slug);
+  }
+
+  /** Toggle a style tag on/off, capping the selection at maxStyleTags. */
+  toggleStyleTag(slug: string) {
+    const current = this.update.stylePreferences;
+    if (current.includes(slug)) {
+      this.update.stylePreferences = current.filter(t => t !== slug);
+      return;
+    }
+    if (current.length >= this.maxStyleTags) {
+      this.error_notification(this.i18n.t('text_style_max_reached'));
+      return;
+    }
+    this.update.stylePreferences = [...current, slug];
+  }
+
+  /** True when the selected tag set differs from the loaded baseline. */
+  private styleTagsChanged(): boolean {
+    const a = [...this.update.stylePreferences].sort();
+    const b = [...this.styleBaseline].sort();
+    if (a.length !== b.length) return true;
+    return a.some((t, i) => t !== b[i]);
+  }
+
   update_profile() {
     if(this.isOnline){
       this.update.id = this.single_user.id;
@@ -810,6 +860,8 @@ export class ProfilePage implements OnInit, OnDestroy {
         gender?: string;
         dob?: string;
         locale?: string;
+        style_preferences?: string[];
+        data_consent?: boolean;
       } = {
         first_name: this.update.first_name,
         last_name: this.update.last_name,
@@ -822,6 +874,16 @@ export class ProfilePage implements OnInit, OnDestroy {
       }
       if (this.update.locale) {
         body.locale = this.update.locale;
+      }
+      // Style tags: send the full selected list only when it differs from
+      // the loaded baseline (order-insensitive). Clearing all tags sends []
+      // which the API treats as "not provided" — can't be emptied here.
+      if (this.styleTagsChanged()) {
+        body.style_preferences = [...this.update.stylePreferences];
+      }
+      // Consent is grant-only: include it only when opting in now.
+      if (!this.dataConsentGranted && this.grantConsent) {
+        body.data_consent = true;
       }
       this.networkAdapter.patch_v3('PATCH /me/profile', body, { authToken: this.single_user.token })
         .subscribe(({

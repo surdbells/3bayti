@@ -232,6 +232,48 @@
             </ion-col>
           </ion-row>
         }
+        @if (!ui_controls.is_loading || !ui_controls.is_updating) {
+          <ion-row class="profile-row">
+            <ion-col class="ion-no-padding">
+              <label class="profile-field-label">{{ 'label_style_preferences' | translate }}</label>
+              <p class="profile-field-hint">{{ 'hint_style_preferences' | translate }}</p>
+              <div class="style-chips">
+                @for (tag of styleTagOptions; track tag) {
+                  <button
+                    type="button"
+                    class="style-chip"
+                    [class.style-chip--active]="isStyleSelected(tag)"
+                    [attr.aria-pressed]="isStyleSelected(tag)"
+                    (click)="toggleStyleTag(tag)">
+                    {{ 'style_pref_' + tag | translate }}
+                  </button>
+                }
+              </div>
+            </ion-col>
+          </ion-row>
+        }
+        @if (!ui_controls.is_loading || !ui_controls.is_updating) {
+          <ion-row class="profile-row">
+            <ion-col class="ion-no-padding">
+              <label class="profile-field-label">{{ 'label_data_consent' | translate }}</label>
+              @if (dataConsentGranted) {
+                <p class="consent-granted">
+                  <span class="consent-granted__tick">✓</span>
+                  {{ 'text_consent_granted' | translate }}
+                </p>
+              } @else {
+                <ion-checkbox
+                  class="consent-checkbox"
+                  labelPlacement="end"
+                  justify="start"
+                  [(ngModel)]="grantConsent"
+                  name="dataConsent">
+                  {{ 'text_consent_optin' | translate }}
+                </ion-checkbox>
+              }
+            </ion-col>
+          </ion-row>
+        }
         <ion-row class="profile-row profile-row--submit">
           <ion-col class="ion-no-padding">
             @if (!ui_controls.is_loading) {
