@@ -780,6 +780,7 @@
     "verified": "متجر موثّق",
     "follow": "متابعة",
     "following": "تتابعين",
+    "share": "شاركي هذا المتجر",
     "followError": "تعذّر تحديث المتابعة. يرجى المحاولة مرة أخرى.",
     "directory": {
       "title": "متاجرنا",
@@ -1871,6 +1872,11 @@
       }
     }
   },
+  "hotlink": {
+    "resolving": "جارٍ فتح الرابط…",
+    "notFound": "هذا الرابط غير صالح أو منتهي الصلاحية.",
+    "goHome": "الذهاب إلى الصفحة الرئيسية"
+  },
   "routeTitles": {
     "privacy": "سياسة الخصوصية · 3bayti",
     "deleteAccount": "حذف حسابك · 3bayti",
@@ -1910,6 +1916,7 @@
     "accountMessagesThread": "المحادثة · 3bayti",
     "accountWishlist": "قائمة أمنياتي · 3bayti",
     "accountFollowing": "المتاجر التي تتابعينها · 3bayti",
+    "hotlink": "جارٍ فتح الرابط · 3bayti",
     "accountCustomizationRequests": "طلبات التخصيص · 3bayti",
     "accountGiftCards": "بطاقات الهدايا الخاصة بي · 3bayti",
     "accountGiftCardDetail": "بطاقة هدية · 3bayti",

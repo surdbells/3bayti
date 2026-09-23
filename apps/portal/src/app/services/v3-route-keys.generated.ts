@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 363 route keys.
+ * 367 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -52,6 +52,7 @@ export type V3RouteKey =
   | 'GET /admin/gift-cards'
   | 'GET /admin/gift-cards/:id'
   | 'GET /admin/gift-cards/redemptions'
+  | 'GET /admin/hotlinks/analytics'
   | 'GET /admin/insights'
   | 'GET /admin/notification-broadcasts'
   | 'GET /admin/notification-broadcasts/:id'
@@ -106,6 +107,7 @@ export type V3RouteKey =
   | 'GET /chat/conversation-stores'
   | 'GET /chat/conversations'
   | 'GET /chat/conversations/:uuid/messages'
+  | 'GET /chat/prompts'
   | 'GET /chat/unread-count'
   | 'GET /checkout/status/:order_reference'
   | 'GET /featured-vendors'
@@ -115,6 +117,7 @@ export type V3RouteKey =
   | 'GET /gift-cards/themes'
   | 'GET /gift-cards/wallet'
   | 'GET /health'
+  | 'GET /hotlinks/:code'
   | 'GET /me/addresses'
   | 'GET /me/addresses/:id'
   | 'GET /me/ai/for-you'
@@ -316,6 +319,7 @@ export type V3RouteKey =
   | 'POST /me/email'
   | 'POST /me/email/verify'
   | 'POST /me/gift-reminders'
+  | 'POST /me/hotlinks'
   | 'POST /me/measurements'
   | 'POST /me/phone'
   | 'POST /me/phone/claim'
@@ -418,6 +422,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/gift-cards',
   'GET /admin/gift-cards/:id',
   'GET /admin/gift-cards/redemptions',
+  'GET /admin/hotlinks/analytics',
   'GET /admin/insights',
   'GET /admin/notification-broadcasts',
   'GET /admin/notification-broadcasts/:id',
@@ -472,6 +477,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /chat/conversation-stores',
   'GET /chat/conversations',
   'GET /chat/conversations/:uuid/messages',
+  'GET /chat/prompts',
   'GET /chat/unread-count',
   'GET /checkout/status/:order_reference',
   'GET /featured-vendors',
@@ -481,6 +487,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /gift-cards/themes',
   'GET /gift-cards/wallet',
   'GET /health',
+  'GET /hotlinks/:code',
   'GET /me/addresses',
   'GET /me/addresses/:id',
   'GET /me/ai/for-you',
@@ -682,6 +689,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /me/email',
   'POST /me/email/verify',
   'POST /me/gift-reminders',
+  'POST /me/hotlinks',
   'POST /me/measurements',
   'POST /me/phone',
   'POST /me/phone/claim',

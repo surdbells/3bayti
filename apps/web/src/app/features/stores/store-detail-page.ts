@@ -13,8 +13,11 @@ import { StoreService, DESIGNER_PAGE_SIZE } from '../catalog/store.service';
 import type { Store, VendorLabel } from '../catalog/store.model';
 import type { Product } from '../catalog/product.model';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
+import { ShareButtonsComponent } from '../../shared/ui';
 import { AuthService } from '../../core/auth/auth.service';
+import { HotlinkService } from '../../core/hotlinks/hotlink.service';
 import { ToastService } from '../../shared/forms';
+import { environment } from '../../../environments/environment';
 
 /**
  * /store/:slug, a single store's page.
@@ -45,7 +48,7 @@ import { ToastService } from '../../shared/forms';
 @Component({
   selector: 'app-store-detail',
   standalone: true,
-  imports: [CfImagePipe, NgIf, NgFor, RouterLink, TranslatePipe, ProductCardComponent],
+  imports: [CfImagePipe, NgIf, NgFor, RouterLink, TranslatePipe, ProductCardComponent, ShareButtonsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="store-detail" data-testid="store-detail-page">
@@ -107,6 +110,10 @@ import { ToastService } from '../../shared/forms';
                 >
                   {{ (isFollowing() ? 'stores.following' : 'stores.follow') | translate }}
                 </button>
+                <div class="store-detail__share" *ngIf="shareUrl() !== ''" data-testid="store-share">
+                  <span class="store-detail__share-label">{{ 'stores.share' | translate }}</span>
+                  <ui-share-buttons [url]="shareUrl()" [title]="store()!.name" />
+                </div>
               </div>
             </header>
 
@@ -216,7 +223,13 @@ export class StoreDetailPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly storeService = inject(StoreService);
   private readonly auth = inject(AuthService);
+  private readonly hotlinks = inject(HotlinkService);
   private readonly toast = inject(ToastService);
+
+  /** Shareable URL: a tracked hotlink for signed-in sharers, else the plain
+   *  storefront URL. Populated once the store loads. */
+  private readonly _shareUrl = signal<string>('');
+  protected readonly shareUrl = this._shareUrl.asReadonly();
 
   private readonly _store = signal<Store | null>(null);
   protected readonly store = this._store.asReadonly();
@@ -265,9 +278,25 @@ export class StoreDetailPageComponent implements OnInit {
       return;
     }
 
+    /* Share URL: plain storefront link by default; upgrade to a tracked
+       hotlink for signed-in sharers (best-effort — a failure keeps the plain
+       link). */
+    this._shareUrl.set(`${environment.SITE_URL}/stores/${this.slug}`);
+    void this.prepareShareLink();
+
     /* Store loaded, fetch the first page of their collection + the label
        chips. Labels are best-effort (a failure just hides the chip row). */
     await Promise.all([this.onLoadMoreProducts(), this.loadLabels()]);
+  }
+
+  private async prepareShareLink(): Promise<void> {
+    if (!this.auth.isAuthenticated()) {
+      return;
+    }
+    const hotlink = await this.hotlinks.create('store', this.slug);
+    if (hotlink !== null) {
+      this._shareUrl.set(hotlink.short_url);
+    }
   }
 
   private async loadLabels(): Promise<void> {

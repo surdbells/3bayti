@@ -337,3 +337,19 @@
     border-color: var(--color-border-subtle, #e4dccb);
   }
 }
+
+/* Share this store (P9) */
+.store-detail__share {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.store-detail__share-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #6b6056);
+}

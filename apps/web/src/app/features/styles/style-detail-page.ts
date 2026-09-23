@@ -13,6 +13,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { ShareButtonsComponent } from '../../shared/ui/share-buttons';
 import { AuthService } from '../../core/auth/auth.service';
+import { HotlinkService } from '../../core/hotlinks/hotlink.service';
 import { CartService } from '../../core/cart/cart.service';
 import { ToastService } from '../../shared/forms';
 import { WishlistService } from '../wishlist/wishlist.service';
@@ -258,6 +259,7 @@ export class StyleDetailPageComponent implements OnInit {
   private readonly styleService = inject(StyleService);
   private readonly wishlist = inject(WishlistService);
   private readonly auth = inject(AuthService);
+  private readonly hotlinks = inject(HotlinkService);
   private readonly concierge = inject(ConciergeService);
   private readonly i18n = inject(TranslateService);
   private readonly cart = inject(CartService);
@@ -348,6 +350,21 @@ export class StyleDetailPageComponent implements OnInit {
     } catch {
       /* 404 / inactive → inline not-found, not a hard router error. */
       this._notFound.set(true);
+      return;
+    }
+    /* Upgrade the share link to a tracked Style-Me hotlink for signed-in
+       sharers (best-effort — falls back to the plain /styles/:slug URL). */
+    void this.prepareShareLink();
+  }
+
+  private async prepareShareLink(): Promise<void> {
+    const slug = this.style()?.slug;
+    if (slug === undefined || slug === '' || !this.auth.isAuthenticated()) {
+      return;
+    }
+    const hotlink = await this.hotlinks.create('style', slug);
+    if (hotlink !== null) {
+      this._hotlinkUrl.set(hotlink.short_url);
     }
   }
 
@@ -383,7 +400,14 @@ export class StyleDetailPageComponent implements OnInit {
   }
 
   /** Absolute canonical URL for sharing this look. */
+  /** A tracked Style-Me hotlink once created, else the plain storefront URL. */
+  private readonly _hotlinkUrl = signal<string | null>(null);
+
   protected shareUrl(): string {
+    const tracked = this._hotlinkUrl();
+    if (tracked !== null) {
+      return tracked;
+    }
     const slug = this.style()?.slug ?? '';
     if (isPlatformBrowser(this.platformId) && typeof window !== 'undefined') {
       return `${window.location.origin}/styles/${slug}`;

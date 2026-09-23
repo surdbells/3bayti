@@ -780,6 +780,7 @@
     "verified": "Verified store",
     "follow": "Follow",
     "following": "Following",
+    "share": "Share this store",
     "followError": "Couldn't update follow. Please try again.",
     "directory": {
       "title": "Our Stores",
@@ -1871,6 +1872,11 @@
       }
     }
   },
+  "hotlink": {
+    "resolving": "Opening your link…",
+    "notFound": "This link is invalid or has expired.",
+    "goHome": "Go to the home page"
+  },
   "routeTitles": {
     "privacy": "Privacy Policy · 3bayti",
     "deleteAccount": "Delete your account · 3bayti",
@@ -1910,6 +1916,7 @@
     "accountMessagesThread": "Conversation · 3bayti",
     "accountWishlist": "My wishlist · 3bayti",
     "accountFollowing": "Stores you follow · 3bayti",
+    "hotlink": "Opening link · 3bayti",
     "accountCustomizationRequests": "Customization requests · 3bayti",
     "accountGiftCards": "My Gift Cards · 3bayti",
     "accountGiftCardDetail": "Gift Card · 3bayti",

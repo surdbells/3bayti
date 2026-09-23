@@ -1054,6 +1054,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'POST /me/customization-requests': {
     target: 'new', oldPath: '', newPath: '/v3/me/customization-requests', shape: 'v3-envelope',
   },
+  // P9 — Store hotlinks (create canonical link + public resolve). v3-only.
+  'POST /me/hotlinks': {
+    target: 'new', oldPath: '', newPath: '/v3/me/hotlinks', shape: 'v3-envelope',
+  },
+  'GET /hotlinks/:code': {
+    target: 'new', oldPath: '', newPath: '/v3/hotlinks/:code', shape: 'v3-envelope',
+  },
   'GET /me/customization-requests/:id': {
     target: 'new', oldPath: '', newPath: '/v3/me/customization-requests/:id', shape: 'v3-envelope',
   },
@@ -1218,6 +1225,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new',
     oldPath: '',
     newPath: '/v3/admin/ai/analytics',
+    shape: 'raw',
+  },
+  // P9 — store-hotlink analytics (portal admin panel). Raw JSON like ai/analytics.
+  'GET /admin/hotlinks/analytics': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/hotlinks/analytics',
     shape: 'raw',
   },
   'POST /admin/vendors': {

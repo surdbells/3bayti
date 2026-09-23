@@ -125,6 +125,14 @@ export const routes: Routes = [
   { path: 'designer', pathMatch: 'full', redirectTo: 'stores' },
   { path: 'designer/:slug', redirectTo: 'stores/:slug' },
   {
+    /* P9: shared hotlink short URL. Resolves the code (records the click) then
+       forwards to /stores/:slug or /styles/:slug. */
+    path: 's/:code',
+    loadComponent: () =>
+      import('./features/hotlinks/hotlink-resolver-page').then(m => m.HotlinkResolverPageComponent),
+    title: 'routeTitles.hotlink',
+  },
+  {
     /* Style Hub, `/styles`. Public storefront page: Community,
        3bayti (editorial), and My styles (auth) tabs, each a grid of
        curated-outfit cards. Backed by /v3/styles + /v3/me/styles.
