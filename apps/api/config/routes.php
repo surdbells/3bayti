@@ -310,6 +310,7 @@ return function (App $app): void {
 
         // v3 customer Follow (replaces legacy /customer/follow + /unfollow).
         // Idempotent + owner-scoped; the vendor id is in the path.
+        $group->get('/following', \Bayti\Api\Http\Controllers\Following\ListFollowingController::class);
         $group->post('/following/{vendorId:[0-9]+}', \Bayti\Api\Http\Controllers\Following\FollowVendorController::class);
         $group->delete('/following/{vendorId:[0-9]+}', \Bayti\Api\Http\Controllers\Following\UnfollowVendorController::class);
 
@@ -564,7 +565,10 @@ return function (App $app): void {
     // captured by the slug placeholder.
     $app->get('/v3/campaigns/active', \Bayti\Api\Http\Controllers\Catalog\GetActiveCampaignsController::class);
     $app->get('/v3/campaigns/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetCampaignController::class);
-    $app->get('/v3/vendors/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetVendorController::class);
+    // OptionalAuth so an authenticated viewer gets is_following (drives the
+    // storefront Follow button); anonymous reads are unchanged + cacheable.
+    $app->get('/v3/vendors/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetVendorController::class)
+        ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
 
     // Guest cart price resolution (public, no auth). Resolves a device-
     // local cart payload into a server-priced display cart so the

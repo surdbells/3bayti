@@ -23,11 +23,16 @@ use DateTimeInterface;
 final class VendorSerializer
 {
     /**
+     * @param ?bool $isFollowing whether the authenticated viewer follows this
+     *   store. Pass null (the default, and every anonymous/cacheable caller)
+     *   to OMIT the field entirely, so the public shape stays stable for
+     *   SSR/prerender/directory reads; pass a bool only on an authenticated
+     *   read to include an accurate is_following.
      * @return array<string, mixed>
      */
-    public function publicShape(Vendor $v): array
+    public function publicShape(Vendor $v, ?bool $isFollowing = null): array
     {
-        return [
+        $shape = [
             'id' => $v->getId(),
             'slug' => $v->getSlug(),
             'name' => $v->getName(),
@@ -36,6 +41,11 @@ final class VendorSerializer
             'cover_image_url' => $v->getCoverImageUrl(),
             'is_verified' => $v->isVerified(),
         ];
+        if ($isFollowing !== null) {
+            $shape['is_following'] = $isFollowing;
+        }
+
+        return $shape;
     }
 
     /**
