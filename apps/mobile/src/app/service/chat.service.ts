@@ -4,7 +4,7 @@ import { Observable, BehaviorSubject, from, throwError } from 'rxjs';
 import { map, switchMap, catchError, tap } from 'rxjs/operators';
 import { Preferences } from '@capacitor/preferences';
 
-import { ChatMessage, ChatConversationSummary } from '../models/chat.models';
+import { ChatMessage, ChatConversationSummary, PromptCategory } from '../models/chat.models';
 
 const V3_BASE = 'https://api-v3.3bayti.ae';
 const CUSTOMER_BASE = '/v3/chat';
@@ -80,6 +80,34 @@ export class ChatService {
    */
   sendMessage(uuid: string, content: string, role: ChatRole = 'customer'): Observable<ChatMessage> {
     return this.authedPost(`${this.base(role)}/conversations/${uuid}/messages`, { content }).pipe(
+      map((r: any) => {
+        const message = this.mapMessage(r?.message);
+        this.messages$.next([...this.messages$.value, message]);
+        return message;
+      }),
+      catchError((err: HttpErrorResponse) => throwError(() => err)),
+    );
+  }
+
+  /**
+   * Load the audience-scoped quick-start prompt catalog (P1) for the picker.
+   * Customer role → /v3/chat/prompts; vendor role → /v3/vendor/chat/prompts.
+   */
+  getPromptCatalog(role: ChatRole = 'customer'): Observable<PromptCategory[]> {
+    return this.authedGet(`${this.base(role)}/prompts`, {}).pipe(
+      map((r: any) => ((r?.categories ?? []) as any[]).map((c) => this.mapPromptCategory(c))
+        .filter((c: PromptCategory) => c.prompts.length > 0)),
+      catchError(() => from([[] as PromptCategory[]])),
+    );
+  }
+
+  /**
+   * Send a tapped quick-start prompt (P1). Same endpoint as sendMessage but
+   * with { prompt_id }; the server snapshots the prompt text as a prompt-type
+   * message.
+   */
+  sendPrompt(uuid: string, promptId: number, role: ChatRole = 'customer'): Observable<ChatMessage> {
+    return this.authedPost(`${this.base(role)}/conversations/${uuid}/messages`, { prompt_id: promptId }).pipe(
       map((r: any) => {
         const message = this.mapMessage(r?.message);
         this.messages$.next([...this.messages$.value, message]);
@@ -184,6 +212,28 @@ export class ChatService {
     };
   }
 
+  /** Map the API catalog category onto the app's PromptCategory shape. */
+  private mapPromptCategory(c: any): PromptCategory {
+    const label = c?.label ?? '';
+    const prompts = Array.isArray(c?.prompts) ? c.prompts : [];
+    return {
+      category_id: typeof c?.id === 'number' ? c.id : 0,
+      slug: c?.slug ?? '',
+      name: label,
+      name_en: label,
+      name_ar: c?.label_ar ?? label,
+      icon: c?.icon ?? '',
+      prompts: prompts
+        .map((p: any) => ({
+          prompt_id: typeof p?.id === 'number' ? p.id : 0,
+          text: p?.text ?? '',
+          text_en: p?.text ?? '',
+          text_ar: p?.text_ar ?? (p?.text ?? ''),
+        }))
+        .filter((p: any) => p.prompt_id > 0),
+    };
+  }
+
   private mapMessage(m: any): ChatMessage {
     const rawStatus = m?.status ?? 'sent';
     return {
@@ -195,8 +245,8 @@ export class ChatService {
       message_type: m?.type ?? 'text',
       content: m?.content ?? null,
       content_ar: m?.content_ar ?? null,
-      prompt_id: null,
-      prompt_category: null,
+      prompt_id: typeof m?.prompt_id === 'number' ? m.prompt_id : null,
+      prompt_category: m?.prompt_category ?? null,
       has_attachments: 0,
       attachments: [],
       status: rawStatus === 'blocked' ? 'failed' : rawStatus === 'redacted' ? 'sent' : rawStatus,

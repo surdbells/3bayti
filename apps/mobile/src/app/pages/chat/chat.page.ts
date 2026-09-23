@@ -31,7 +31,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 import { ChatService, ChatRole } from '../../service/chat.service';
 import { apiErrorMessage } from '../../core/http/api-error';
-import { ChatMessage, ChatConversationSummary } from '../../models/chat.models';
+import { ChatMessage, ChatConversationSummary, PromptCategory, Prompt } from '../../models/chat.models';
 import { TranslatePipe } from '../../translate.pipe';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
@@ -74,6 +74,9 @@ export class ChatPage implements OnInit, OnDestroy, AfterViewInit {
 
   conversation: ChatConversationSummary | null = null;
   messages: ChatMessage[] = [];
+  // P1: quick-start prompt catalog + picker state.
+  promptCategories: PromptCategory[] = [];
+  promptsOpen = false;
 
   messageText = '';
   isLoading = true;
@@ -137,6 +140,15 @@ export class ChatPage implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     this.loadMessages();
+    this.loadPromptCatalog();
+  }
+
+  private loadPromptCatalog(): void {
+    const sub = this.chatService.getPromptCatalog(this.role).subscribe((cats) => {
+      this.promptCategories = cats;
+      this.cdr.markForCheck();
+    });
+    this.subscriptions.push(sub);
   }
 
   private loadMessages(): void {
@@ -208,6 +220,59 @@ export class ChatPage implements OnInit, OnDestroy, AfterViewInit {
           this.toast.error(apiErrorMessage(err, this.i18n.t('text_message_send_failed')), { position: 'top-center' });
         }
         this.messageText = content;
+        this.cdr.markForCheck();
+      },
+    });
+    this.subscriptions.push(sub);
+  }
+
+  togglePrompts(): void {
+    this.promptsOpen = !this.promptsOpen;
+    this.cdr.markForCheck();
+  }
+
+  promptName(cat: PromptCategory): string {
+    return this.currentLang === 'ar' && cat.name_ar ? cat.name_ar : (cat.name_en || cat.name);
+  }
+
+  promptText(p: Prompt): string {
+    return this.currentLang === 'ar' && p.text_ar ? p.text_ar : (p.text_en || p.text);
+  }
+
+  /** Send a tapped quick-start prompt with an optimistic prompt-type message. */
+  sendPrompt(prompt: Prompt): void {
+    if (!this.uuid || this.isSending || !this.canSend) {
+      return;
+    }
+    const text = this.promptText(prompt);
+    this.promptsOpen = false;
+    this.isSending = true;
+
+    const tempUuid = 'temp-' + Date.now();
+    const temp = this.createTempMessage(tempUuid, text);
+    temp.message_type = 'prompt';
+    temp.prompt_id = prompt.prompt_id;
+    this.messages = [...this.messages, temp];
+    this.scrollToBottom();
+    this.triggerHaptic();
+    this.cdr.markForCheck();
+
+    const sub = this.chatService.sendPrompt(this.uuid, prompt.prompt_id, this.role).subscribe({
+      next: (message) => {
+        this.messages = this.messages.map((m) => (m.uuid === tempUuid ? message : m));
+        this.refreshLastSeen();
+        if (this.conversation) {
+          this.conversation.preview = text;
+          this.conversation.last_message_at = message.created_at;
+        }
+        this.isSending = false;
+        this.scrollToBottom();
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.messages = this.messages.filter((m) => m.uuid !== tempUuid);
+        this.isSending = false;
+        this.toast.error(apiErrorMessage(err, this.i18n.t('text_message_send_failed')), { position: 'top-center' });
         this.cdr.markForCheck();
       },
     });

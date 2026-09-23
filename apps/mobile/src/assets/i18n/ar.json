@@ -1036,6 +1036,7 @@
   "text_customer_messages": "رسائل العملاء",
   "text_chat": "الدردشة",
   "text_type_message": "اكتب رسالة",
+  "chat_quick_questions": "أسئلة سريعة",
   "text_message_too_long": "الرسالة طويلة جدًا",
   "text_chat_blocked": "تم حظر الرسالة: يرجى عدم مشاركة بيانات الاتصال أو الدفع هنا",
   "text_message_send_failed": "تعذّر إرسال رسالتك. يرجى المحاولة مرة أخرى.",

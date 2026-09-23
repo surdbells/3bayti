@@ -53,6 +53,28 @@
 
 <ion-footer class="chat-footer ion-no-border">
   <div *ngIf="!canSend" class="disabled-notice">{{ 'text_chat_closed' | translate }}</div>
+
+  <!-- P1: quick-start prompts, alongside (not replacing) the composer -->
+  <div class="chat-prompts" *ngIf="canSend && promptCategories.length > 0">
+    <button type="button" class="chat-prompts__toggle" (click)="togglePrompts()" [attr.aria-expanded]="promptsOpen">
+      <ax-icon name="sparkles" [size]="16"></ax-icon>
+      <span>{{ 'chat_quick_questions' | translate }}</span>
+    </button>
+    <div class="chat-prompts__panel" *ngIf="promptsOpen">
+      <div class="chat-prompts__cat" *ngFor="let cat of promptCategories">
+        <span class="chat-prompts__cat-label">{{ promptName(cat) }}</span>
+        <div class="chat-prompts__chips">
+          <button
+            *ngFor="let p of cat.prompts"
+            type="button"
+            class="chat-prompts__chip"
+            [disabled]="isSending"
+            (click)="sendPrompt(p)">{{ promptText(p) }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="input-container" *ngIf="canSend">
     <textarea
       #messageInput
