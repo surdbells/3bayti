@@ -12,10 +12,12 @@ use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\CustomizationRequestSerializer;
+use Bayti\Api\Notification\CustomizationNotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * POST /v3/me/customization-requests/{id}/accept
@@ -33,6 +35,8 @@ final class AcceptQuoteController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly CustomizationRequestSerializer $serializer,
+        private readonly CustomizationNotificationService $notifications,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -77,6 +81,16 @@ final class AcceptQuoteController
         }
 
         $repo->save($customization);
+
+        // Notify the vendor the customer accepted (payment now in progress).
+        try {
+            $this->notifications->customizationAccepted($customization);
+        } catch (\Throwable $e) {
+            $this->logger->error('customization.notification.accepted_failed', [
+                'customization_id' => $customization->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $this->ok([
             'data' => $this->serializer->customerShape($customization),

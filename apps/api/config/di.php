@@ -358,6 +358,7 @@ return [
     \Bayti\Api\Http\Controllers\Admin\Order\RecordReturnRefundController::class => \DI\autowire(),
 
     // P5, Bespoke Customization (customer request → vendor quote → accept → pay)
+    \Bayti\Api\Notification\CustomizationNotificationService::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\CustomizationRequestSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Customization\SubmitCustomizationController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Customization\ListCustomerCustomizationsController::class => \DI\autowire(),

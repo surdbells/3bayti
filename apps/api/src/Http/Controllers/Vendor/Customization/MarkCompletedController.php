@@ -9,10 +9,12 @@ use Bayti\Api\Domain\Customization\CustomizationRequestRepository;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\CustomizationRequestSerializer;
+use Bayti\Api\Notification\CustomizationNotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * POST /v3/vendor/customization-requests/{id}/complete
@@ -29,6 +31,8 @@ final class MarkCompletedController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly CustomizationRequestSerializer $serializer,
+        private readonly CustomizationNotificationService $notifications,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -60,6 +64,16 @@ final class MarkCompletedController
         /** @var CustomizationRequestRepository $repo */
         $repo = $this->em->getRepository(CustomizationRequest::class);
         $repo->save($customization);
+
+        // Tell the customer their customization is ready.
+        try {
+            $this->notifications->customizationCompleted($customization);
+        } catch (\Throwable $e) {
+            $this->logger->error('customization.notification.completed_failed', [
+                'customization_id' => $customization->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $this->ok([
             'data' => $this->serializer->vendorShape($customization),

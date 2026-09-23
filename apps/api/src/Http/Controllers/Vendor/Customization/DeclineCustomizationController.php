@@ -9,10 +9,12 @@ use Bayti\Api\Domain\Customization\CustomizationRequestRepository;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\CustomizationRequestSerializer;
+use Bayti\Api\Notification\CustomizationNotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * POST /v3/vendor/customization-requests/{id}/decline
@@ -30,6 +32,8 @@ final class DeclineCustomizationController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly CustomizationRequestSerializer $serializer,
+        private readonly CustomizationNotificationService $notifications,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -67,6 +71,16 @@ final class DeclineCustomizationController
         /** @var CustomizationRequestRepository $repo */
         $repo = $this->em->getRepository(CustomizationRequest::class);
         $repo->save($customization);
+
+        // Let the customer know their request was declined.
+        try {
+            $this->notifications->customizationDeclined($customization);
+        } catch (\Throwable $e) {
+            $this->logger->error('customization.notification.declined_failed', [
+                'customization_id' => $customization->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $this->ok([
             'data' => $this->serializer->vendorShape($customization),

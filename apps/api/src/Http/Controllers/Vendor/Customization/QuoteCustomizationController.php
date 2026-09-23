@@ -10,10 +10,12 @@ use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\CustomizationRequestSerializer;
 use Bayti\Api\Http\Validator\RequestValidator;
+use Bayti\Api\Notification\CustomizationNotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * POST /v3/vendor/customization-requests/{id}/quote
@@ -31,6 +33,8 @@ final class QuoteCustomizationController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly CustomizationRequestSerializer $serializer,
+        private readonly CustomizationNotificationService $notifications,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -70,6 +74,16 @@ final class QuoteCustomizationController
         /** @var CustomizationRequestRepository $repo */
         $repo = $this->em->getRepository(\Bayti\Api\Domain\Customization\CustomizationRequest::class);
         $repo->save($customization);
+
+        // Notify the customer their quote is ready to accept/decline.
+        try {
+            $this->notifications->customizationQuoted($customization);
+        } catch (\Throwable $e) {
+            $this->logger->error('customization.notification.quoted_failed', [
+                'customization_id' => $customization->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $this->ok([
             'data' => $this->serializer->vendorShape($customization),

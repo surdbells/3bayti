@@ -16,10 +16,12 @@ use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\CustomizationRequestSerializer;
 use Bayti\Api\Http\Validator\RequestValidator;
+use Bayti\Api\Notification\CustomizationNotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * POST /v3/me/customization-requests
@@ -41,6 +43,8 @@ final class SubmitCustomizationController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly CustomizationRequestSerializer $serializer,
+        private readonly CustomizationNotificationService $notifications,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -88,6 +92,17 @@ final class SubmitCustomizationController
             measurementSnapshot: $input->measurement_snapshot,
         );
         $repo->save($customization);
+
+        // Notify the vendor there's a request to quote. Never block the
+        // response on an email failure.
+        try {
+            $this->notifications->customizationSubmitted($customization);
+        } catch (\Throwable $e) {
+            $this->logger->error('customization.notification.submitted_failed', [
+                'customization_id' => $customization->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $this->created([
             'data' => $this->serializer->customerShape($customization),
