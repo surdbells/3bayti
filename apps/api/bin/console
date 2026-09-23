@@ -237,6 +237,21 @@ try {
     ]);
 }
 
+// Store-follower new-product alerts (Phase 10). Pushes "new from a store you
+// follow" to a vendor's followers when it publishes a product. The finder is a
+// thin DBAL wrapper (built from the EM connection); push resolves from the
+// container. Schedule every ~15 minutes.
+try {
+    /** @var PushNotificationService $pushService */
+    $pushService = $container->get(PushNotificationService::class);
+    $followerAlertFinder = new \Bayti\Api\Domain\Following\FollowerProductAlertFinder($em->getConnection());
+    $cli->add(new \Bayti\Api\Console\SendFollowerProductAlertsCommand($em, $followerAlertFinder, $pushService, $logger));
+} catch (\Throwable $e) {
+    $logger->info('follower-alert command not registered', [
+        'reason' => $e->getMessage(),
+    ]);
+}
+
 // Gift-card scheduled/retry delivery. Resolves the delivery service
 // via DI (which env-gates the SMS sender, defaulting to a no-op). No
 // payment-gateway dependency, so it registers on a fresh sandbox too.

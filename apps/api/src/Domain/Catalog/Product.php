@@ -86,6 +86,22 @@ class Product
     #[ORM\Column(name: 'is_active', type: 'boolean')]
     private bool $isActive = false;
 
+    /**
+     * When the product was FIRST published (draft→active). Stamped once by
+     * setStatus() and never reset, so re-saving an already-published product
+     * never re-fires the follower-alert cron. Null for never-published drafts.
+     */
+    #[ORM\Column(name: 'published_at', type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $publishedAt = null;
+
+    /**
+     * When the "new product" push was sent to the store's followers. The
+     * follower-alert cron selects published-but-not-yet-notified products, so
+     * this is the idempotency marker (null = pending a first alert).
+     */
+    #[ORM\Column(name: 'followers_notified_at', type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $followersNotifiedAt = null;
+
     // ---- pricing ----
 
     #[ORM\Column(type: 'decimal', precision: 10, scale: 2)]
@@ -381,7 +397,29 @@ class Product
         }
         $this->status = $status;
         $this->isActive = ($status === self::STATUS_ACTIVE);
+        // Stamp the first publish so the follower-alert cron can find newly
+        // published products. Once set it is never reset, so re-saving an
+        // already-published product never re-notifies followers.
+        if ($this->isActive && $this->publishedAt === null) {
+            $this->publishedAt = new \DateTimeImmutable();
+        }
         $this->touch();
+    }
+
+    public function getPublishedAt(): ?\DateTimeImmutable
+    {
+        return $this->publishedAt;
+    }
+
+    public function getFollowersNotifiedAt(): ?\DateTimeImmutable
+    {
+        return $this->followersNotifiedAt;
+    }
+
+    /** Mark that the store's followers have been alerted about this new product. */
+    public function markFollowersNotified(\DateTimeImmutable $at): void
+    {
+        $this->followersNotifiedAt = $at;
     }
 
     public function softDelete(): void

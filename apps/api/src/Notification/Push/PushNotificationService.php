@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Bayti\Api\Notification\Push;
 
 use Bayti\Api\Domain\Cart\Cart;
+use Bayti\Api\Domain\Catalog\Product;
+use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Notification\DeviceToken;
 use Bayti\Api\Domain\Notification\DeviceTokenRepository;
 use Bayti\Api\Domain\Order\Order;
@@ -552,6 +554,60 @@ class PushNotificationService
         $context = [
             'event'   => 're_engagement.nudge',
             'user_id' => $user->getId(),
+        ];
+
+        foreach ($tokens as $deviceToken) {
+            $this->sendOne($deviceToken, $message, $context);
+        }
+    }
+
+    /**
+     * "New from a store you follow" push, sent by the
+     * stores:send-follower-alerts cron when a followed store publishes a
+     * product. Marketing-ish (a store-marketing message, not a transactional
+     * one about the user's own order), so it respects the marketing-push
+     * opt-out. Deep-links to the product via the store.new_product type.
+     * Fire-and-forget: never throws.
+     */
+    public function newProductFromFollowedStore(User $follower, Vendor $vendor, Product $product): void
+    {
+        if ($follower->isMarketingPushOptedOut()) {
+            return;
+        }
+
+        $tokens = $this->activeTokensFor($follower);
+        if ($tokens === []) {
+            return;
+        }
+
+        $locale = $this->localeFor($follower);
+        $storeName = $vendor->getName();
+        $productName = $product->getName();
+
+        if ($locale === User::LOCALE_AR) {
+            $title = sprintf('جديد من %s', $storeName);
+            $body  = sprintf('أضاف %s قطعة جديدة: %s. اكتشفيها الآن.', $storeName, $productName);
+        } else {
+            $title = sprintf('New from %s', $storeName);
+            $body  = sprintf('%s just added %s. Take a look.', $storeName, $productName);
+        }
+
+        $message = new PushMessage(
+            title: $title,
+            body: $body,
+            data: [
+                'type'         => 'store.new_product',
+                'vendor_slug'  => $vendor->getSlug(),
+                'product_id'   => (string) ($product->getId() ?? ''),
+                'product_slug' => $product->getSlug(),
+            ],
+        );
+
+        $context = [
+            'event'      => 'store.new_product',
+            'vendor_id'  => $vendor->getId(),
+            'product_id' => $product->getId(),
+            'user_id'    => $follower->getId(),
         ];
 
         foreach ($tokens as $deviceToken) {

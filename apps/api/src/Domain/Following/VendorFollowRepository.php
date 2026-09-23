@@ -83,6 +83,42 @@ class VendorFollowRepository extends EntityRepository
             ->getSingleScalarResult();
     }
 
+    /**
+     * The users who follow a vendor, for fanning out a store notification
+     * (new-product alert). Joins the user eagerly so the caller reads it +
+     * its device tokens without an N+1. Bounded by limit/offset so a store
+     * with a huge following is paged rather than loaded all at once.
+     *
+     * @return list<User>
+     */
+    public function findFollowersOfVendor(Vendor $vendor, int $limit, int $offset = 0): array
+    {
+        /** @var list<VendorFollow> $rows */
+        $rows = $this->createQueryBuilder('f')
+            ->addSelect('u')
+            ->innerJoin('f.user', 'u')
+            ->where('f.vendor = :vendor')
+            ->setParameter('vendor', $vendor)
+            ->orderBy('f.id', 'ASC')
+            ->setMaxResults(max(1, $limit))
+            ->setFirstResult(max(0, $offset))
+            ->getQuery()
+            ->getResult();
+
+        return array_map(static fn (VendorFollow $f): User => $f->getUser(), $rows);
+    }
+
+    /** Total followers of a vendor (so the cron can log when it caps a fan-out). */
+    public function countFollowersOfVendor(Vendor $vendor): int
+    {
+        return (int) $this->createQueryBuilder('f')
+            ->select('COUNT(f.id)')
+            ->where('f.vendor = :vendor')
+            ->setParameter('vendor', $vendor)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     public function save(VendorFollow $entry, bool $flush = true): void
     {
         $em = $this->getEntityManager();
