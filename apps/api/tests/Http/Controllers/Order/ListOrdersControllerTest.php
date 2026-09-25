@@ -326,6 +326,9 @@ final class ListOrdersControllerTest extends HttpTestCase
         $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($vendor, 'id', $id);
         $this->setEntityProp($vendor, 'name', 'Test Store');
+        // itemShape() now emits vendor_slug, so the slug (a non-nullable
+        // typed prop) must be initialised or getSlug() fatals.
+        $this->setEntityProp($vendor, 'slug', 'test-store');
         return $vendor;
     }
 

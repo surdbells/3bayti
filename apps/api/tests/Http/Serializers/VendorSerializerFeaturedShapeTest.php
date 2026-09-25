@@ -54,8 +54,10 @@ final class VendorSerializerFeaturedShapeTest extends TestCase
 
         // Exact key set. store_id is additive for apps/mobile (legacy
         // vendor id for by-legacy-id navigation); apps/web ignores it.
+        // logo_url + cover_image_url feed the rich hero-image store card
+        // (apps/web falls back to a product image when cover is null).
         self::assertEqualsCanonicalizing(
-            ['slug', 'store_id', 'name', 'description', 'rating', 'rating_count', 'products'],
+            ['slug', 'store_id', 'name', 'description', 'logo_url', 'cover_image_url', 'rating', 'rating_count', 'products'],
             array_keys($shape),
             'Top-level keys must match the FeaturedVendor contract.'
         );

@@ -38,10 +38,18 @@ final class LoginControllerTest extends HttpTestCase
         $refreshRepo = $this->createMock(RefreshTokenRepository::class);
         $refreshRepo->expects(self::once())->method('save');
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $refreshRepo) {
+        // UserSerializer::publicProfile() (called to build the response body)
+        // derives store flags by querying the Vendor repo. The success path is
+        // the only one in this class that serializes the user, so it's the only
+        // one that needs this stub; a null repo here would 500 the response.
+        $vendorRepo = $this->createMock(\Doctrine\ORM\EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $refreshRepo, $vendorRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [RefreshToken::class, $refreshRepo],
+                [\Bayti\Api\Domain\Catalog\Vendor::class, $vendorRepo],
             ]);
             $em->expects(self::atLeastOnce())->method('flush');
         });

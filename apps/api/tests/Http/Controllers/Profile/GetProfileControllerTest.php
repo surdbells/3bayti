@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Tests\Http\Controllers\Profile;
 
+use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Profile\GetProfileController;
@@ -37,8 +38,17 @@ final class GetProfileControllerTest extends HttpTestCase
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->with(7)->willReturn($user);
 
-        $em = $this->stubEm(fn ($em) =>
-            $em->method('getRepository')->with(User::class)->willReturn($userRepo));
+        // UserSerializer::publicProfile() derives store flags from the user's
+        // vendor(s), so it queries the Vendor repo, stub it (no store).
+        $vendorRepo = $this->createMock(\Doctrine\ORM\EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $vendorRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Vendor::class, $vendorRepo],
+            ]);
+        });
         $this->bind(EntityManagerInterface::class, $em);
 
         $jwt = $this->app->getContainer()->get(JwtService::class);
@@ -72,8 +82,15 @@ final class GetProfileControllerTest extends HttpTestCase
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->with(8)->willReturn($user);
 
-        $em = $this->stubEm(fn ($em) =>
-            $em->method('getRepository')->with(User::class)->willReturn($userRepo));
+        $vendorRepo = $this->createMock(\Doctrine\ORM\EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $vendorRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Vendor::class, $vendorRepo],
+            ]);
+        });
         $this->bind(EntityManagerInterface::class, $em);
 
         $jwt = $this->app->getContainer()->get(JwtService::class);

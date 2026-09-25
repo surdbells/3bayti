@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Tests\Http\Controllers\Profile;
 
+use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
+use Doctrine\ORM\EntityRepository;
 use Bayti\Api\Http\Controllers\Profile\Dto\UpdateProfileInput;
 use Bayti\Api\Http\Controllers\Profile\UpdateProfileController;
 use Bayti\Api\Http\Serializers\UserSerializer;
@@ -41,8 +43,16 @@ final class UpdateProfileControllerTest extends HttpTestCase
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->with(9)->willReturn($user);
 
-        $em = $this->stubEm(function ($em) use ($userRepo) {
-            $em->method('getRepository')->with(User::class)->willReturn($userRepo);
+        // UserSerializer::publicProfile() derives store flags from the
+        // user's vendor(s), so it queries the Vendor repo too.
+        $vendorRepo = $this->createMock(EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $vendorRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Vendor::class, $vendorRepo],
+            ]);
             // Exactly one flush expected.
             $em->expects(self::once())->method('flush');
         });
@@ -87,8 +97,14 @@ final class UpdateProfileControllerTest extends HttpTestCase
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->with(10)->willReturn($user);
 
-        $em = $this->stubEm(function ($em) use ($userRepo) {
-            $em->method('getRepository')->with(User::class)->willReturn($userRepo);
+        $vendorRepo = $this->createMock(EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $vendorRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Vendor::class, $vendorRepo],
+            ]);
             // Empty body must NOT trigger a flush.
             $em->expects(self::never())->method('flush');
         });

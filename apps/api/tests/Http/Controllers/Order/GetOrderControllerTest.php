@@ -10,6 +10,8 @@ use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderAddress;
 use Bayti\Api\Domain\Order\OrderItem;
 use Bayti\Api\Domain\Order\OrderRepository;
+use Bayti\Api\Domain\Order\OrderShipment;
+use Bayti\Api\Domain\Order\OrderShipmentRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Order\GetOrderController;
@@ -69,10 +71,17 @@ final class GetOrderControllerTest extends HttpTestCase
         $orderRepo = $this->createMock(OrderRepository::class);
         $orderRepo->method('findForUser')->with(100, $user)->willReturn($order);
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo) {
+        // The controller also resolves per-vendor courier shipments (OTO
+        // tracking) via OrderShipmentRepository::findForOrder(); stub it so
+        // the success path doesn't 500 on an unmapped repo.
+        $shipmentRepo = $this->createMock(OrderShipmentRepository::class);
+        $shipmentRepo->method('findForOrder')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $shipmentRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Order::class, $orderRepo],
+                [OrderShipment::class, $shipmentRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
@@ -205,6 +214,10 @@ final class GetOrderControllerTest extends HttpTestCase
     {
         $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($vendor, 'id', $id);
+        // itemShape() reads the vendor's slug + name (storefront deep-link);
+        // both are non-nullable typed props, so initialise them here.
+        $this->setEntityProp($vendor, 'slug', 'vendor-' . $id);
+        $this->setEntityProp($vendor, 'name', 'Vendor ' . $id);
         return $vendor;
     }
 }

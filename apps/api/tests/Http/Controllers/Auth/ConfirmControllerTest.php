@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Tests\Http\Controllers\Auth;
 
+use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\User\OtpAttempt;
 use Bayti\Api\Domain\User\OtpAttemptRepository;
 use Bayti\Api\Domain\User\RefreshToken;
@@ -62,10 +63,18 @@ final class ConfirmControllerTest extends HttpTestCase
         $refreshRepo = $this->createMock(RefreshTokenRepository::class);
         $refreshRepo->expects(self::once())->method('save');
 
+        // The success response serializes the user via
+        // UserSerializer::publicProfile(), which resolves store state from the
+        // Vendor repo (findBy ownerUser). Stub an empty set so this customer
+        // has no store instead of the lookup 500ing on an unmapped repo.
+        $vendorRepo = $this->createMock(\Doctrine\ORM\EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
         $em = $this->stubEm(fn ($em) =>
             $em->method('getRepository')->willReturnMap([
                 [OtpAttempt::class, $otpRepo],
                 [RefreshToken::class, $refreshRepo],
+                [Vendor::class, $vendorRepo],
             ]));
         $this->bind(EntityManagerInterface::class, $em);
 
@@ -115,10 +124,15 @@ final class ConfirmControllerTest extends HttpTestCase
         $refreshRepo = $this->createMock(RefreshTokenRepository::class);
         $refreshRepo->method('save');
 
+        // publicProfile() resolves store state from the Vendor repo; stub it.
+        $vendorRepo = $this->createMock(\Doctrine\ORM\EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
         $em = $this->stubEm(fn ($em) =>
             $em->method('getRepository')->willReturnMap([
                 [OtpAttempt::class, $otpRepo],
                 [RefreshToken::class, $refreshRepo],
+                [Vendor::class, $vendorRepo],
             ]));
         $this->bind(EntityManagerInterface::class, $em);
 

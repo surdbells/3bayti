@@ -10,6 +10,8 @@ use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderItem;
+use Bayti\Api\Domain\Order\OrderShipment;
+use Bayti\Api\Domain\Order\OrderShipmentRepository;
 use Bayti\Api\Domain\GiftCard\GiftCard;
 use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Domain\Order\OrderRepository;
@@ -310,6 +312,12 @@ final class AdminOrderControllersTest extends HttpTestCase
         $giftCardRepo = $this->createMock(GiftCardRepository::class);
         $giftCardRepo->method('findByPurchaseOrderReference')->willReturn($giftCard);
 
+        // GetAdminOrderController appends per-vendor courier shipments
+        // (OTO tracking) via OrderShipmentRepository::findForOrder(); an
+        // empty set keeps the detail shape well-formed without a DB.
+        $shipmentRepo = $this->createMock(OrderShipmentRepository::class);
+        $shipmentRepo->method('findForOrder')->willReturn([]);
+
         // Capturing audit repository, collects logs in $this->recordedAuditLogs
         $auditRepo = new class($this->recordedAuditLogs) extends \Doctrine\ORM\EntityRepository {
             public function __construct(private array &$sink) {}
@@ -320,13 +328,14 @@ final class AdminOrderControllersTest extends HttpTestCase
             public function getClassName(): string { return AuditLog::class; }
         };
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $auditRepo, $measurementRepo, $giftCardRepo) {
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $auditRepo, $measurementRepo, $giftCardRepo, $shipmentRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Order::class, $orderRepo],
                 [AuditLog::class, $auditRepo],
                 [Measurement::class, $measurementRepo],
                 [GiftCard::class, $giftCardRepo],
+                [OrderShipment::class, $shipmentRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
@@ -406,6 +415,10 @@ final class AdminOrderControllersTest extends HttpTestCase
         $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($vendor, 'id', $id);
         $this->setEntityProp($vendor, 'name', 'Test Store');
+        // OrderSerializer::itemShape() reads the vendor slug (mobile order pages
+        // open the storefront by slug); the entity has no default, so a fixture
+        // built without the constructor must set it or getSlug() throws.
+        $this->setEntityProp($vendor, 'slug', 'test-store');
         return $vendor;
     }
 

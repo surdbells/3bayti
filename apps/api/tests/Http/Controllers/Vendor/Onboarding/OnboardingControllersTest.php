@@ -12,7 +12,7 @@ use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Vendor\Onboarding\Dto\SubmitOnboardingInput;
 use Bayti\Api\Http\Controllers\Vendor\Onboarding\GetOnboardingStatusController;
-use Bayti\Api\Http\Controllers\Vendor\Onboarding\SubmitOnboardingController;
+use Bayti\Api\Http\Controllers\Vendor\Onboarding\SubmitOnboardingDisabledController;
 use Bayti\Api\Infrastructure\Auth\JwtService;
 use Bayti\Api\Tests\Http\HttpTestCase;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,10 +28,11 @@ use Psr\Log\NullLogger;
  *   GET  /v3/vendor/onboarding/status
  *
  * Verifies:
- *   - Submit creates a pending vendor + flips is_vendor=true
- *   - Submit returns 409 on slug collision
- *   - Submit returns 422 on validation errors
- *   - Submit emits audit ACTION_CREATED row
+ *   - Submit is CLOSED: returns 410 Gone and performs no side effects
+ *     (no vendor persisted, is_vendor not flipped, no audit emitted).
+ *     Self-serve creation was replaced by the admin-approved
+ *     POST /v3/vendor-applications flow, so the old /submit route now
+ *     resolves to SubmitOnboardingDisabledController.
  *   - Status endpoint accessible to PENDING vendors (key design
  *     point, Option I locked: separate route group bypasses
  *     VendorAuthMiddleware lifecycle gate)
@@ -40,7 +41,7 @@ use Psr\Log\NullLogger;
  *   - Status endpoint returns 401 for unauthenticated users
  *   - Status endpoint shows multi-vendor users all their stores
  */
-#[CoversClass(SubmitOnboardingController::class)]
+#[CoversClass(SubmitOnboardingDisabledController::class)]
 #[CoversClass(GetOnboardingStatusController::class)]
 #[CoversClass(SubmitOnboardingInput::class)]
 final class OnboardingControllersTest extends HttpTestCase
@@ -64,6 +65,11 @@ final class OnboardingControllersTest extends HttpTestCase
     #[Test]
     public function submitCreatesPendingVendorAndFlipsIsVendor(): void
     {
+        // Self-serve onboarding is CLOSED (SubmitOnboardingDisabledController):
+        // the /submit route now returns 410 Gone and creates NOTHING. Sellers
+        // apply via POST /v3/vendor-applications and an admin provisions the
+        // vendor. So submit no longer creates a pending vendor or flips
+        // is_vendor.
         $user = $this->makeUser(id: 42);
         self::assertFalse($user->isVendor(), 'precondition: user is not a vendor');
 
@@ -78,29 +84,15 @@ final class OnboardingControllersTest extends HttpTestCase
             'legal_name' => 'Almas Trading LLC',
         ]);
 
-        self::assertSame(201, $response->getStatusCode());
+        self::assertSame(410, $response->getStatusCode());
 
-        // User became a vendor
-        self::assertTrue($user->isVendor(), 'is_vendor flag flipped to true on submit');
-
-        // One vendor persisted
-        self::assertCount(1, $this->persistedVendors);
-        $vendor = $this->persistedVendors[0];
-
-        // Vendor is in pending state
-        self::assertSame(Vendor::STATUS_PENDING, $vendor->getStatus());
-        self::assertSame('almas-fashion', $vendor->getSlug());
-        self::assertSame('Almas Fashion', $vendor->getName());
-        self::assertSame('store@almas.example', $vendor->getContactEmail());
-        self::assertSame('Almas Trading LLC', $vendor->getLegalName());
-        self::assertSame($user, $vendor->getOwnerUser());
-
-        // Response shape
-        $body = $this->jsonBody($response);
-        self::assertSame('almas-fashion', $body['vendor']['slug']);
-        self::assertSame('pending', $body['vendor']['status']);
-        // Onboarding shape omits commission_rate (admin-only)
-        self::assertArrayNotHasKey('commission_rate', $body['vendor']);
+        // No vendor persisted and is_vendor NOT flipped: the endpoint is
+        // disabled and short-circuits before any write.
+        self::assertCount(0, $this->persistedVendors);
+        self::assertFalse(
+            $user->isVendor(),
+            'is_vendor stays false: self-serve vendor creation is closed',
+        );
     }
 
     #[Test]
@@ -116,11 +108,10 @@ final class OnboardingControllersTest extends HttpTestCase
             'contact_email' => 'new@store.example',
         ]);
 
-        self::assertSame(409, $response->getStatusCode());
-
-        // Vendor NOT persisted on collision
+        // Endpoint is disabled (410 Gone) and short-circuits before the old
+        // slug-collision check ever runs, so nothing is persisted.
+        self::assertSame(410, $response->getStatusCode());
         self::assertCount(0, $this->persistedVendors);
-        // is_vendor NOT flipped on failure
         self::assertFalse($user->isVendor());
     }
 
@@ -137,7 +128,8 @@ final class OnboardingControllersTest extends HttpTestCase
             'contact_email' => 'not-an-email',
         ]);
 
-        self::assertSame(422, $response->getStatusCode());
+        // Disabled endpoint returns 410 before validation runs; nothing persists.
+        self::assertSame(410, $response->getStatusCode());
         self::assertCount(0, $this->persistedVendors);
     }
 
@@ -154,7 +146,8 @@ final class OnboardingControllersTest extends HttpTestCase
             'contact_email' => 'store@example.com',
         ]);
 
-        self::assertSame(422, $response->getStatusCode());
+        // Disabled endpoint returns 410 before validation runs; nothing persists.
+        self::assertSame(410, $response->getStatusCode());
         self::assertCount(0, $this->persistedVendors);
     }
 
@@ -172,7 +165,8 @@ final class OnboardingControllersTest extends HttpTestCase
             'contact_email' => 'store@example.com',
         ]);
 
-        self::assertSame(422, $response->getStatusCode());
+        // Disabled endpoint returns 410 before validation runs; nothing persists.
+        self::assertSame(410, $response->getStatusCode());
         self::assertCount(0, $this->persistedVendors);
     }
 
@@ -198,22 +192,19 @@ final class OnboardingControllersTest extends HttpTestCase
 
         $this->bindEmForSubmit($user, slugTaken: false);
 
-        $this->makePost($user, '/v3/vendor/onboarding/submit', [
+        $response = $this->makePost($user, '/v3/vendor/onboarding/submit', [
             'slug' => 'almas-fashion',
             'name' => 'Almas Fashion',
             'contact_email' => 'store@almas.example',
         ]);
 
-        self::assertGreaterThan(0, count($this->recordedAuditLogs));
-        $audit = end($this->recordedAuditLogs);
-        self::assertSame(AuditLog::ACTION_CREATED, $audit->getAction());
-        self::assertSame('Vendor', $audit->getSubjectType());
-
-        // afterSnapshot captures the new vendor's status
-        $changes = $audit->getChanges();
-        self::assertArrayHasKey('after', $changes);
-        self::assertSame('pending', $changes['after']['status']);
-        self::assertSame('almas-fashion', $changes['after']['slug']);
+        // The disabled endpoint creates no Vendor, so it emits NO audit row.
+        self::assertSame(410, $response->getStatusCode());
+        self::assertCount(
+            0,
+            $this->recordedAuditLogs,
+            'disabled endpoint performs no create, so no audit row is emitted',
+        );
     }
 
     // -----------------------------------------------------------------

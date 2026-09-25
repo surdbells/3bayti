@@ -194,6 +194,10 @@ final class OrderSerializerPromoTest extends TestCase
     {
         $user = (new \ReflectionClass(User::class))->newInstanceWithoutConstructor();
         $this->setProp($user, 'id', 99);
+        // OrderSerializer::listShape() now surfaces a customer block, which
+        // reads the non-nullable User::$email. newInstanceWithoutConstructor()
+        // leaves it uninitialized, so seed it via the real setter.
+        $user->setEmail('customer@example.com');
         return $user;
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Tests\Http\Controllers\Auth;
 
+use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Auth\MeController;
@@ -11,6 +12,7 @@ use Bayti\Api\Http\Serializers\UserSerializer;
 use Bayti\Api\Infrastructure\Auth\JwtService;
 use Bayti\Api\Tests\Http\HttpTestCase;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -27,8 +29,17 @@ final class MeControllerTest extends HttpTestCase
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->with(7)->willReturn($user);
 
+        // UserSerializer::publicProfile() now derives the store flags + the
+        // 'vendor' role from the user's Vendor record(s), so it queries the
+        // Vendor repo. Stub it (no stores) so the map is complete.
+        $vendorRepo = $this->createMock(EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
         $em = $this->stubEm(fn ($em) =>
-            $em->method('getRepository')->with(User::class)->willReturn($userRepo));
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Vendor::class, $vendorRepo],
+            ]));
         $this->bind(EntityManagerInterface::class, $em);
 
         // Issue a real access token for this user via the live JwtService.

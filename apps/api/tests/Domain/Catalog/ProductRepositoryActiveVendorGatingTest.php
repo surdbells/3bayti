@@ -89,16 +89,21 @@ final class ProductRepositoryActiveVendorGatingTest extends TestCase
         // without dropping uncategorised products.
         self::assertMatchesRegularExpression('/LEFT JOIN\s+p\.category\s+sc\b/i', $dql);
 
-        // All four searched columns appear in a LOWER(...) LIKE form.
-        self::assertMatchesRegularExpression('/LOWER\(p\.name\)\s+LIKE\s+:searchTerm/i', $dql);
-        self::assertMatchesRegularExpression('/LOWER\(p\.description\)\s+LIKE\s+:searchTerm/i', $dql);
-        self::assertMatchesRegularExpression('/LOWER\(v\.name\)\s+LIKE\s+:searchTerm/i', $dql);
-        self::assertMatchesRegularExpression('/LOWER\(sc\.name\)\s+LIKE\s+:searchTerm/i', $dql);
+        // All four searched columns appear in a LOWER(...) LIKE form. Each
+        // column binds a DISTINCT placeholder (:stName/:stDesc/:stVendor/:stCat)
+        // — one bound value per column — rather than a shared :searchTerm, which
+        // corrupted the cloned COUNT query's DQL->SQL parameter mapping (HY093).
+        self::assertMatchesRegularExpression('/LOWER\(p\.name\)\s+LIKE\s+:stName/i', $dql);
+        self::assertMatchesRegularExpression('/LOWER\(p\.description\)\s+LIKE\s+:stDesc/i', $dql);
+        self::assertMatchesRegularExpression('/LOWER\(v\.name\)\s+LIKE\s+:stVendor/i', $dql);
+        self::assertMatchesRegularExpression('/LOWER\(sc\.name\)\s+LIKE\s+:stCat/i', $dql);
     }
 
     /**
-     * The bound :searchTerm must be lower-cased and wrapped in % wildcards
+     * The bound search term must be lower-cased and wrapped in % wildcards
      * so a 2-char query like "Ab" becomes '%ab%' (substring, case-folded).
+     * The same value is bound to each per-column placeholder; we probe the
+     * product-name one (:stName).
      */
     #[Test]
     public function searchTermIsLowerCasedSubstring(): void
@@ -123,7 +128,7 @@ final class ProductRepositoryActiveVendorGatingTest extends TestCase
 
         $boundValue = null;
         foreach ($builders as $qb) {
-            $param = $qb->getParameter('searchTerm');
+            $param = $qb->getParameter('stName');
             if ($param !== null) {
                 $boundValue = $param->getValue();
                 break;

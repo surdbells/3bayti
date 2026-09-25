@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Tests\Http\Controllers\Wishlist;
 
 use Bayti\Api\Domain\Catalog\Product;
+use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
@@ -202,12 +203,18 @@ final class WishlistControllerTest extends HttpTestCase
         $wishlistRepo->method('findOneForUserAndProduct')->willReturn(null);
         $wishlistRepo->expects(self::once())->method('save');
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $product) {
+        // The controller resolves the product via
+        // ProductRepository::findByIdOrLegacyId (legacy-id-first), not
+        // EntityManager::find.
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('findByIdOrLegacyId')->with(901)->willReturn($product);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $productRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Wishlist::class, $wishlistRepo],
+                [Product::class, $productRepo],
             ]);
-            $em->method('find')->with(Product::class, 901)->willReturn($product);
         });
         $this->bind(EntityManagerInterface::class, $em);
 
@@ -235,12 +242,15 @@ final class WishlistControllerTest extends HttpTestCase
         // Must NOT save a duplicate.
         $wishlistRepo->expects(self::never())->method('save');
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $product) {
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('findByIdOrLegacyId')->with(902)->willReturn($product);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $productRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Wishlist::class, $wishlistRepo],
+                [Product::class, $productRepo],
             ]);
-            $em->method('find')->with(Product::class, 902)->willReturn($product);
         });
         $this->bind(EntityManagerInterface::class, $em);
 
@@ -264,12 +274,16 @@ final class WishlistControllerTest extends HttpTestCase
         $wishlistRepo = $this->createMock(WishlistRepository::class);
         $wishlistRepo->expects(self::never())->method('save');
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo) {
+        // Product missing → findByIdOrLegacyId returns null → 404.
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('findByIdOrLegacyId')->with(999)->willReturn(null);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $productRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Wishlist::class, $wishlistRepo],
+                [Product::class, $productRepo],
             ]);
-            $em->method('find')->with(Product::class, 999)->willReturn(null);
         });
         $this->bind(EntityManagerInterface::class, $em);
 
@@ -330,12 +344,15 @@ final class WishlistControllerTest extends HttpTestCase
         $wishlistRepo->method('findOneForUserAndProduct')->willReturn($existing);
         $wishlistRepo->expects(self::once())->method('remove')->with($existing);
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $product) {
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('findByIdOrLegacyId')->with(903)->willReturn($product);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $productRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Wishlist::class, $wishlistRepo],
+                [Product::class, $productRepo],
             ]);
-            $em->method('find')->with(Product::class, 903)->willReturn($product);
         });
         $this->bind(EntityManagerInterface::class, $em);
 
@@ -359,12 +376,15 @@ final class WishlistControllerTest extends HttpTestCase
         $wishlistRepo->method('findOneForUserAndProduct')->willReturn(null);
         $wishlistRepo->expects(self::never())->method('remove');
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $product) {
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('findByIdOrLegacyId')->with(904)->willReturn($product);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $productRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Wishlist::class, $wishlistRepo],
+                [Product::class, $productRepo],
             ]);
-            $em->method('find')->with(Product::class, 904)->willReturn($product);
         });
         $this->bind(EntityManagerInterface::class, $em);
 

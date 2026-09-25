@@ -477,6 +477,10 @@ final class TransitionVendorOrderItemControllerTest extends HttpTestCase
     {
         $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($vendor, 'id', $id);
+        // itemShape() reads the vendor's slug + name (storefront deep-link);
+        // both are non-nullable typed props, so initialise them here.
+        $this->setEntityProp($vendor, 'slug', 'vendor-' . $id);
+        $this->setEntityProp($vendor, 'name', 'Vendor ' . $id);
         return $vendor;
     }
 

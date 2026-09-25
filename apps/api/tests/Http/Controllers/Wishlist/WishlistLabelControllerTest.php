@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Tests\Http\Controllers\Wishlist;
 
 use Bayti\Api\Domain\Catalog\Product;
+use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
@@ -343,13 +344,16 @@ final class WishlistLabelControllerTest extends HttpTestCase
         $labelRepo = $this->createMock(WishlistLabelRepository::class);
         $labelRepo->method('findOneForUser')->willReturn($label);
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $labelRepo, $product) {
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('findByIdOrLegacyId')->with(700)->willReturn($product);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $labelRepo, $productRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Wishlist::class, $wishlistRepo],
                 [WishlistLabel::class, $labelRepo],
+                [Product::class, $productRepo],
             ]);
-            $em->method('find')->with(Product::class, 700)->willReturn($product);
         });
         $this->bind(EntityManagerInterface::class, $em);
 
@@ -374,12 +378,15 @@ final class WishlistLabelControllerTest extends HttpTestCase
         $wishlistRepo->method('findOneForUserAndProduct')->willReturn($entry);
         $wishlistRepo->expects(self::once())->method('save');
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $product) {
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('findByIdOrLegacyId')->with(701)->willReturn($product);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $productRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Wishlist::class, $wishlistRepo],
+                [Product::class, $productRepo],
             ]);
-            $em->method('find')->with(Product::class, 701)->willReturn($product);
         });
         $this->bind(EntityManagerInterface::class, $em);
 
@@ -401,12 +408,15 @@ final class WishlistLabelControllerTest extends HttpTestCase
         $wishlistRepo = $this->createMock(WishlistRepository::class);
         $wishlistRepo->method('findOneForUserAndProduct')->willReturn(null);
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $product) {
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('findByIdOrLegacyId')->with(702)->willReturn($product);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo, $productRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Wishlist::class, $wishlistRepo],
+                [Product::class, $productRepo],
             ]);
-            $em->method('find')->with(Product::class, 702)->willReturn($product);
         });
         $this->bind(EntityManagerInterface::class, $em);
 

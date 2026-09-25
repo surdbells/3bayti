@@ -35,6 +35,10 @@ final class CampaignSerializerTest extends TestCase
         $vIdRef = new \ReflectionProperty(Vendor::class, 'id');
         $vIdRef->setAccessible(true);
         $vIdRef->setValue($vendor, 5);
+        // The serializer now filters items to isOrderable() products
+        // (product active AND vendor may sell). A freshly-built vendor is
+        // pending, so approve it and activate the product to keep it visible.
+        $vendor->approve();
 
         $product = new Product($vendor, 'test-product', 'Test Product');
         $idRef = new \ReflectionProperty(Product::class, 'id');
@@ -45,6 +49,7 @@ final class CampaignSerializerTest extends TestCase
             $product->setSalePrice($salePrice);
         }
         $product->setStockQuantity($stock);
+        $product->setStatus(Product::STATUS_ACTIVE);
         return $product;
     }
 

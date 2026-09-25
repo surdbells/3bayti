@@ -321,6 +321,11 @@ final class ListVendorOrdersControllerTest extends HttpTestCase
     {
         $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($vendor, 'id', $id);
+        // OrderSerializer::itemShape() reads the vendor name + slug; neither has
+        // an entity default, so a constructor-less fixture must set them or the
+        // typed-property access throws (before-initialization) → 500.
+        $this->setEntityProp($vendor, 'name', 'Store ' . $id);
+        $this->setEntityProp($vendor, 'slug', 'store-' . $id);
         return $vendor;
     }
 }

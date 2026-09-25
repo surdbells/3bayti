@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Tests\Http\Controllers\Auth;
 
+use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\User\OtpAttempt;
 use Bayti\Api\Domain\User\OtpAttemptRepository;
 use Bayti\Api\Domain\User\RefreshToken;
@@ -54,10 +55,17 @@ final class RegisterConfirmEmailControllerTest extends HttpTestCase
         $refreshRepo = $this->createMock(RefreshTokenRepository::class);
         $refreshRepo->method('save');
 
+        // The success response serializes the user via
+        // UserSerializer::publicProfile(), which resolves store state from the
+        // Vendor repo (findBy ownerUser); stub an empty set so it doesn't 500.
+        $vendorRepo = $this->createMock(\Doctrine\ORM\EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
         $em = $this->stubEm(fn ($em) =>
             $em->method('getRepository')->willReturnMap([
                 [OtpAttempt::class, $otpRepo],
                 [RefreshToken::class, $refreshRepo],
+                [Vendor::class, $vendorRepo],
             ]));
         $this->bind(EntityManagerInterface::class, $em);
 

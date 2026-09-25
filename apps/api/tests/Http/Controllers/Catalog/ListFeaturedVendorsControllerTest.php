@@ -457,7 +457,10 @@ final class ListFeaturedVendorsControllerTest extends HttpTestCase
 
         $body = $this->jsonBody($response);
         self::assertEqualsCanonicalizing(
-            ['slug', 'store_id', 'name', 'description', 'rating', 'rating_count', 'products'],
+            // logo_url + cover_image_url are additive keys the serializer now
+            // emits for the rich hero-image store card (apps/web falls back to
+            // a product image when cover is null, so this degrades gracefully).
+            ['slug', 'store_id', 'name', 'logo_url', 'cover_image_url', 'description', 'rating', 'rating_count', 'products'],
             array_keys($body['data'][0]),
             'Exact FeaturedVendor key set must be preserved'
         );

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Tests\Http\Controllers\Profile;
 
+use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\User\RefreshToken;
 use Bayti\Api\Domain\User\RefreshTokenRepository;
 use Bayti\Api\Domain\User\User;
@@ -40,10 +41,17 @@ final class ChangePasswordControllerTest extends HttpTestCase
             ->with($user, 'password_changed');
         $refreshRepo->expects(self::once())->method('save');
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $refreshRepo) {
+        // UserSerializer::publicProfile() (in the 200 response) derives store
+        // flags via getRepository(Vendor::class)->findBy(); stub it so the
+        // success path doesn't 500 on an unmapped repo.
+        $vendorRepo = $this->createMock(\Doctrine\ORM\EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $refreshRepo, $vendorRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [RefreshToken::class, $refreshRepo],
+                [Vendor::class, $vendorRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
@@ -309,10 +317,17 @@ final class ChangePasswordControllerTest extends HttpTestCase
             );
         $refreshRepo->expects(self::once())->method('save');
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $refreshRepo) {
+        // UserSerializer::publicProfile() (in the 200 response) derives store
+        // flags via getRepository(Vendor::class)->findBy(); stub it so the
+        // success path doesn't 500 on an unmapped repo.
+        $vendorRepo = $this->createMock(\Doctrine\ORM\EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $refreshRepo, $vendorRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [RefreshToken::class, $refreshRepo],
+                [Vendor::class, $vendorRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);

@@ -6,6 +6,8 @@ namespace Bayti\Api\Tests\Http\Controllers\Admin\Notification;
 
 use Bayti\Api\Domain\Notification\DeviceToken;
 use Bayti\Api\Domain\Notification\DeviceTokenRepository;
+use Bayti\Api\Domain\Notification\NotificationBroadcastRecipient;
+use Bayti\Api\Domain\Notification\NotificationBroadcastRecipientRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Admin\Notification\SendBroadcastNotificationController;
@@ -14,6 +16,7 @@ use Bayti\Api\Notification\Push\InMemoryPushSender;
 use Bayti\Api\Notification\Push\PushException;
 use Bayti\Api\Notification\Push\PushSenderInterface;
 use Bayti\Api\Tests\Http\HttpTestCase;
+use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -52,8 +55,17 @@ final class SendBroadcastNotificationControllerTest extends HttpTestCase
     }
 
     /**
-     * Bind an EM whose DeviceTokenRepository returns the given tokens and
-     * records deactivations. The admin caller is resolved by AuthMiddleware.
+     * Bind an EM whose DeviceTokenRepository yields the given tokens for the
+     * broadcast fan-out and whose DBAL connection records dead-token pruning.
+     * The admin caller is resolved by AuthMiddleware.
+     *
+     * The controller now delegates the send to BroadcastSender, which:
+     *   - sizes the audience via countActiveForAudienceByPlatform($audience),
+     *   - streams recipients via findActiveForAudienceBatch(), and
+     *   - deactivates UNREGISTERED tokens with a DBAL
+     *     `UPDATE device_tokens ... WHERE id = :id` (not deactivateByToken).
+     * So we stub those and capture the pruning UPDATE by mapping the row id
+     * back to its token string.
      *
      * @param list<string> $tokens
      */
@@ -62,22 +74,59 @@ final class SendBroadcastNotificationControllerTest extends HttpTestCase
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->willReturn($caller);
 
+        // Synthetic device rows in the shape findActiveForAudienceBatch returns
+        // (all Android for simplicity), with stable ids 1..N.
+        $rows = [];
+        $tokenById = [];
+        $i = 1;
+        foreach ($tokens as $token) {
+            $rows[] = [
+                'id' => $i,
+                'token' => $token,
+                'platform' => DeviceToken::PLATFORM_ANDROID,
+                'user_id' => 0,
+                'first_name' => null,
+                'last_name' => null,
+                'email' => null,
+            ];
+            $tokenById[$i] = $token;
+            $i++;
+        }
+
         $deviceRepo = $this->createMock(DeviceTokenRepository::class);
-        $deviceRepo->method('findAllActiveTokenStrings')
+        $deviceRepo->method('countActiveForAudienceByPlatform')
             ->with($expectAudience)
-            ->willReturn($tokens);
-        $deviceRepo->method('deactivateByToken')->willReturnCallback(
-            function (string $t): bool {
-                $this->deactivated[] = $t;
-                return true;
+            ->willReturn(['total' => count($tokens), 'android' => count($tokens), 'ios' => 0]);
+        // First batch = all rows, then an empty batch ends the keyset loop.
+        $deviceRepo->method('findActiveForAudienceBatch')
+            ->willReturnOnConsecutiveCalls($rows, []);
+
+        // Resend path is not exercised here, but the sender resolves the repo
+        // unconditionally — provide a stub so the graph is complete.
+        $recipientRepo = $this->createMock(NotificationBroadcastRecipientRepository::class);
+
+        // DBAL connection: dead tokens are pruned via executeStatement(); the
+        // per-recipient result rows are written via insert(). Capture the
+        // pruning UPDATE and translate the row id back to its token.
+        $conn = $this->createMock(Connection::class);
+        $conn->method('executeStatement')->willReturnCallback(
+            function (string $sql, array $params = []) use ($tokenById): int {
+                $id = $params['id'] ?? null;
+                if (is_int($id) && isset($tokenById[$id])) {
+                    $this->deactivated[] = $tokenById[$id];
+                }
+                return 1;
             },
         );
+        $conn->method('insert')->willReturn(1);
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $deviceRepo): void {
+        $em = $this->stubEm(function ($em) use ($userRepo, $deviceRepo, $recipientRepo, $conn): void {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [DeviceToken::class, $deviceRepo],
+                [NotificationBroadcastRecipient::class, $recipientRepo],
             ]);
+            $em->method('getConnection')->willReturn($conn);
         });
         $this->bind(EntityManagerInterface::class, $em);
         $this->bind(DeviceTokenRepository::class, $deviceRepo);
@@ -129,7 +178,9 @@ final class SendBroadcastNotificationControllerTest extends HttpTestCase
 
         self::assertSame(200, $response->getStatusCode());
         $json = json_decode((string) $response->getBody(), true);
-        self::assertSame('vendors', $json['data']['audience']);
+        // The response now carries the audience as a structured object
+        // ({type: ...}) rather than a bare string.
+        self::assertSame('vendors', $json['data']['audience']['type']);
         self::assertSame(2, $json['data']['sent']);
     }
 

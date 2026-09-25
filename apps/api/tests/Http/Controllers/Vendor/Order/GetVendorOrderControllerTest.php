@@ -10,6 +10,10 @@ use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderItem;
 use Bayti\Api\Domain\Order\OrderRepository;
+use Bayti\Api\Domain\Order\OrderShipment;
+use Bayti\Api\Domain\Order\OrderShipmentRepository;
+use Bayti\Api\Domain\User\Measurement;
+use Bayti\Api\Domain\User\MeasurementRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderController;
@@ -143,11 +147,23 @@ final class GetVendorOrderControllerTest extends HttpTestCase
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->willReturn($user);
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $vendorRepo) {
+        // The controller now also enriches the order with this store's courier
+        // shipments and the customer's saved measurements, so it resolves the
+        // OrderShipment + Measurement repos. Stub both empty (only reached on
+        // the success path; the 404 cases return before this).
+        $shipmentRepo = $this->createMock(OrderShipmentRepository::class);
+        $shipmentRepo->method('findForOrder')->willReturn([]);
+
+        $measurementRepo = $this->createMock(MeasurementRepository::class);
+        $measurementRepo->method('findAllForUser')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $vendorRepo, $shipmentRepo, $measurementRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Order::class, $orderRepo],
                 [Vendor::class, $vendorRepo],
+                [OrderShipment::class, $shipmentRepo],
+                [Measurement::class, $measurementRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
@@ -195,6 +211,11 @@ final class GetVendorOrderControllerTest extends HttpTestCase
     {
         $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($vendor, 'id', $id);
+        // itemShape() now serialises vendor_slug + vendor_name (mobile opens the
+        // storefront by slug), so these non-nullable typed properties must be
+        // initialised or the serializer trips "accessed before initialization".
+        $this->setEntityProp($vendor, 'name', 'Store ' . $id);
+        $this->setEntityProp($vendor, 'slug', 'store-' . $id);
         return $vendor;
     }
 }
