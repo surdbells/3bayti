@@ -293,7 +293,7 @@ class UserRepository extends EntityRepository
      * so the listing never fires an N+1 Order count per row.
      *
      * Filters (all optional, applied only when present):
-     *   - search        : email / first name / last name LIKE
+     *   - search        : email / first name / last name LIKE, or phone by digits
      *   - status        : 'active' | 'inactive'  → is_active = true/false
      *   - email_verified: bool → is_email_verified
      *   - phone_verified: bool → is_phone_verified
@@ -321,14 +321,26 @@ class UserRepository extends EntityRepository
             ->andWhere('u.isCustomer = true');
 
         if (!empty($filters['search'])) {
-            $needle = '%' . $filters['search'] . '%';
-            $qb->andWhere(
-                $qb->expr()->orX(
-                    $qb->expr()->like('u.email', ':s'),
-                    $qb->expr()->like('u.firstName', ':s'),
-                    $qb->expr()->like('u.lastName', ':s'),
-                ),
-            )->setParameter('s', $needle);
+            $raw = (string) $filters['search'];
+            $orX = $qb->expr()->orX(
+                $qb->expr()->like('u.email', ':s'),
+                $qb->expr()->like('u.firstName', ':s'),
+                $qb->expr()->like('u.lastName', ':s'),
+            );
+            $qb->setParameter('s', '%' . $raw . '%');
+
+            // Phone search: match on digits only, so a number stored as
+            // '+971506…', local '0506…' or '506…' is found by whatever the
+            // admin types (a leading '+', spaces and leading zeros are ignored).
+            // Requires >= 3 digits so a name that merely contains a digit does
+            // not pull in unrelated phone matches.
+            $digits = ltrim((string) preg_replace('/\D+/', '', $raw), '0');
+            if (strlen($digits) >= 3) {
+                $orX->add($qb->expr()->like('u.phone', ':phone'));
+                $qb->setParameter('phone', '%' . $digits . '%');
+            }
+
+            $qb->andWhere($orX);
         }
 
         if (isset($filters['status']) && $filters['status'] !== null && $filters['status'] !== '') {

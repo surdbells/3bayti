@@ -157,7 +157,7 @@ export class CustomersComponent implements OnInit {
       pageSize: 20,
       pageSizeOptions: [20, 50, 100],
       globalSearch: true,
-      searchPlaceholder: 'Search customers by name or email…',
+      searchPlaceholder: 'Search customers by name, email, or phone…',
       stickyHeader: true,
       hover: true,
       emptyTitle: 'No customers found',
