@@ -103,7 +103,7 @@ final class ResetController
         // verified is NOT required (a half-verified phone-first account
         // can still reset via email it owns), but the account must be
         // active and have completed registration (phone verified).
-        if ($user === null || !$user->isActive() || !$user->isPhoneVerified() || $email === null) {
+        if ($user === null || !$user->isActive() || !$user->isPhoneVerified()) {
             return $this->fakeVid();
         }
 

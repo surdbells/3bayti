@@ -54,6 +54,7 @@ class Product
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     #[ORM\Column(type: 'bigint')]
+    // @phpstan-ignore-next-line property.unusedType
     private ?int $id = null;
 
     #[ORM\Column(name: 'legacy_product_id', type: 'integer', nullable: true, unique: true)]
@@ -216,6 +217,7 @@ class Product
      * the SELECT fires).
      */
     #[ORM\Column(name: 'search_tsv', type: 'string', nullable: true, insertable: false, updatable: false)]
+    // @phpstan-ignore-next-line property.unusedType, property.onlyWritten (Doctrine-managed generated column, hydrated via reflection and queried via DQL)
     private ?string $searchTsv = null;
 
     // ---- timestamps ----

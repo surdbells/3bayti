@@ -163,11 +163,11 @@ final class AuthMiddleware implements MiddlewareInterface
             if ($tokenPwdChanged < $userPwdChanged) {
                 return null;
             }
-        } elseif ($userPwdChanged !== null && $tokenPwdChanged === null) {
+        } elseif ($userPwdChanged !== null) {
             // Edge case: user changed their password (so they have
             // a pwd_changed_at value) but the token was issued before
-            // that change (so it has no claim). Reject, the token
-            // pre-dates the password change.
+            // that change (so it has no claim, i.e. $tokenPwdChanged is
+            // null here). Reject, the token pre-dates the password change.
             return null;
         }
 

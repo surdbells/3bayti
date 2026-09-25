@@ -46,7 +46,7 @@ class GiftCardRepository extends EntityRepository
      */
     public function findByPurchaseOrderReferences(array $refs): array
     {
-        $refs = array_values(array_unique(array_filter($refs, static fn ($r): bool => is_string($r) && $r !== '')));
+        $refs = array_values(array_unique(array_filter($refs, static fn ($r): bool => $r !== '')));
         if ($refs === []) {
             return [];
         }
@@ -231,19 +231,19 @@ class GiftCardRepository extends EntityRepository
                 ->setParameter('status', $filters['status']);
         }
 
-        if (isset($filters['minBalance']) && $filters['minBalance'] !== null) {
+        if (isset($filters['minBalance'])) {
             $qb->andWhere('g.balance >= :minBalance')
                 ->setParameter('minBalance', $filters['minBalance']);
         }
-        if (isset($filters['maxBalance']) && $filters['maxBalance'] !== null) {
+        if (isset($filters['maxBalance'])) {
             $qb->andWhere('g.balance <= :maxBalance')
                 ->setParameter('maxBalance', $filters['maxBalance']);
         }
-        if (isset($filters['minValue']) && $filters['minValue'] !== null) {
+        if (isset($filters['minValue'])) {
             $qb->andWhere('g.denomination >= :minValue')
                 ->setParameter('minValue', $filters['minValue']);
         }
-        if (isset($filters['maxValue']) && $filters['maxValue'] !== null) {
+        if (isset($filters['maxValue'])) {
             $qb->andWhere('g.denomination <= :maxValue')
                 ->setParameter('maxValue', $filters['maxValue']);
         }
@@ -257,7 +257,7 @@ class GiftCardRepository extends EntityRepository
                 ->setParameter('createdTo', $filters['createdTo']);
         }
 
-        if (isset($filters['delivered']) && $filters['delivered'] !== null) {
+        if (isset($filters['delivered'])) {
             if ($filters['delivered'] === true) {
                 $qb->andWhere('g.emailDeliveredAt IS NOT NULL OR g.smsDeliveredAt IS NOT NULL');
             } else {

@@ -51,6 +51,7 @@ class Measurement
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     #[ORM\Column(type: 'bigint')]
+    // @phpstan-ignore-next-line property.unusedType
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'measurements')]
@@ -87,6 +88,8 @@ class Measurement
      * and (b) it sidesteps the N+1 query problem for what's an
      * inherently bounded dataset (no vendor will define 200
      * measurement fields).
+     *
+     * @var array<string, float>
      */
     #[ORM\Column(type: 'json', options: ['jsonb' => true])]
     private array $values;
@@ -95,6 +98,9 @@ class Measurement
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $notes = null;
 
+    /**
+     * @param array<string, float> $values
+     */
     public function __construct(User $user, array $values = [], ?int $categoryId = null, ?string $notes = null)
     {
         $this->user = $user;
@@ -113,9 +119,13 @@ class Measurement
     public function getId(): ?int           { return $this->id; }
     public function getUser(): User         { return $this->user; }
     public function getCategoryId(): ?int   { return $this->categoryId; }
+    /** @return array<string, float> */
     public function getValues(): array      { return $this->values; }
     public function getNotes(): ?string     { return $this->notes; }
 
+    /**
+     * @param array<string, float>|null $values
+     */
     public function update(?array $values = null, ?string $notes = null): void
     {
         if ($values !== null) { $this->values = $values; }

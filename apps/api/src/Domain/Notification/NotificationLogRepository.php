@@ -128,6 +128,11 @@ class NotificationLogRepository extends EntityRepository
         return (int) $qb->getQuery()->execute();
     }
 
+    /**
+     * @param array<string, mixed> $filters
+     *
+     * @return array{items: list<NotificationLog>, total: int}
+     */
     public function findFilteredPaginated(array $filters = []): array
     {
         $qb = $this->createQueryBuilder('nl');

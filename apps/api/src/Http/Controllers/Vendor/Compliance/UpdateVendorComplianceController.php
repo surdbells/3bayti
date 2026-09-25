@@ -107,6 +107,8 @@ final class UpdateVendorComplianceController
      * Whether a document field carries a real new upload (a base64 data
      * URL), empty strings, placeholders, and short/echoed values are
      * treated as "leave unchanged".
+     *
+     * @param array<string, mixed> $body
      */
     private function isProvided(array $body, string $key): bool
     {

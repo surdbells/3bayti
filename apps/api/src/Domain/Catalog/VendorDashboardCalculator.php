@@ -61,7 +61,10 @@ class VendorDashboardCalculator
         ];
     }
 
-    /** @param list<int> $vendorIds @return array<string,int> */
+    /**
+     * @param list<int> $vendorIds
+     * @return array<string,int>
+     */
     private function catalog(Connection $conn, array $vendorIds): array
     {
         $row = $conn->fetchAssociative(
@@ -86,7 +89,10 @@ class VendorDashboardCalculator
         ];
     }
 
-    /** @param list<int> $vendorIds @return array<string,mixed> */
+    /**
+     * @param list<int> $vendorIds
+     * @return array<string,mixed>
+     */
     private function sales(Connection $conn, array $vendorIds, string $saleStatuses, int $days): array
     {
         $period = $this->salesAggregate(
@@ -148,7 +154,10 @@ class VendorDashboardCalculator
         ];
     }
 
-    /** @param list<int> $vendorIds @return array<string,int> */
+    /**
+     * @param list<int> $vendorIds
+     * @return array<string,int>
+     */
     private function operations(Connection $conn, array $vendorIds): array
     {
         $row = $conn->fetchAssociative(
@@ -169,7 +178,10 @@ class VendorDashboardCalculator
         ];
     }
 
-    /** @param list<int> $vendorIds @return list<array<string,mixed>> */
+    /**
+     * @param list<int> $vendorIds
+     * @return list<array<string,mixed>>
+     */
     private function revenueSeries(Connection $conn, array $vendorIds, string $saleStatuses, int $days): array
     {
         $rows = $conn->fetchAllAssociative(
@@ -192,7 +204,10 @@ class VendorDashboardCalculator
         ], $rows);
     }
 
-    /** @param list<int> $vendorIds @return list<array<string,mixed>> */
+    /**
+     * @param list<int> $vendorIds
+     * @return list<array<string,mixed>>
+     */
     private function topProducts(Connection $conn, array $vendorIds, string $saleStatuses, int $days): array
     {
         $rows = $conn->fetchAllAssociative(
@@ -219,7 +234,10 @@ class VendorDashboardCalculator
         ], $rows);
     }
 
-    /** @param list<int> $vendorIds @return list<array<string,mixed>> */
+    /**
+     * @param list<int> $vendorIds
+     * @return list<array<string,mixed>>
+     */
     private function recentOrders(Connection $conn, array $vendorIds, string $saleStatuses): array
     {
         $rows = $conn->fetchAllAssociative(

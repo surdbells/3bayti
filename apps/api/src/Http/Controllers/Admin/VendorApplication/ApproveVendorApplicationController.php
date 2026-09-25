@@ -58,6 +58,7 @@ final class ApproveVendorApplicationController
         private readonly VendorApplicationSerializer $serializer,
         private readonly VendorApplicationWelcomeMailer $welcomeMailer,
         private readonly AuditEmitter $audit,
+        // @phpstan-ignore-next-line property.onlyWritten -- DI-injected logger kept for future use / autowiring
         private readonly LoggerInterface $logger,
     ) {
     }

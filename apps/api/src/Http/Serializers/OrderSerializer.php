@@ -236,6 +236,9 @@ final class OrderSerializer
      * list shows the sale with a product label + item count instead of a
      * blank row. The caller prefetches a reference→card map
      * (ListAdminOrdersController) to keep this N+1-free.
+     *
+     * @param list<OrderReturnRequest>|null $returns
+     * @return array<string, mixed>
      */
     public function adminListShape(Order $order, ?array $returns = null, ?GiftCard $giftCard = null): array
     {
@@ -247,14 +250,16 @@ final class OrderSerializer
 
     /**
      * Lightweight delivery destination for list/logistics rows (the full
-     * address lives on the detail shape). @return array{name:string|null, city:string|null, area:string|null, phone:string|null}|null
+     * address lives on the detail shape).
+     *
+     * @return array{name:string|null, city:string|null, area:string|null, phone:string|null}|null
      */
     private function deliverySummary(?OrderAddress $a): ?array
     {
         if ($a === null) {
             return null;
         }
-        $name = trim(($a->getFirstName() ?? '') . ' ' . ($a->getLastName() ?? ''));
+        $name = trim($a->getFirstName() . ' ' . ($a->getLastName() ?? ''));
         return [
             'name' => $name !== '' ? $name : null,
             'city' => $a->getCity(),
@@ -271,6 +276,9 @@ final class OrderSerializer
      * Gift-card purchase orders carry no real items; pass the linked $giftCard
      * (looked up by the controller) so the serializer synthesizes the "Gift
      * Card" line here too, matching the list + customer detail views.
+     *
+     * @param list<OrderReturnRequest>|null $returns
+     * @return array<string, mixed>
      */
     public function adminDetailShape(Order $order, ?array $returns = null, ?GiftCard $giftCard = null): array
     {

@@ -39,7 +39,11 @@ final class ModerationResult
         return $this->flagTypes === [] ? null : implode(',', $this->flagTypes);
     }
 
-    /** All matched snippets across every category, de-duplicated. */
+    /**
+     * All matched snippets across every category, de-duplicated.
+     *
+     * @return list<string>
+     */
     public function allMatches(): array
     {
         $all = [];

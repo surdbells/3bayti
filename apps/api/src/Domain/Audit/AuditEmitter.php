@@ -537,6 +537,8 @@ final class AuditEmitter
      * Brand snapshot.
      *
      * No redaction needed, Brand has no sensitive fields.
+     *
+     * @return array<string, mixed>
      */
     private function snapshotBrand(\Bayti\Api\Domain\Catalog\Brand $b): array
     {
@@ -558,6 +560,8 @@ final class AuditEmitter
      * Contact email/phone are NOT PII-redacted here, they're
      * vendor-business data, not customer PII, and Q5=A policy only
      * redacts *_hash and *_token fields.
+     *
+     * @return array<string, mixed>
      */
     private function snapshotVendor(\Bayti\Api\Domain\Catalog\Vendor $v): array
     {
@@ -607,6 +611,8 @@ final class AuditEmitter
      *
      * reviewed_by / vendor captured as scalar ids, the audit log is meant to
      * be readable without joins.
+     *
+     * @return array<string, mixed>
      */
     private function snapshotVendorApplication(\Bayti\Api\Domain\Catalog\VendorApplication $a): array
     {
@@ -631,6 +637,8 @@ final class AuditEmitter
      *
      * parent_id captured as scalar (not the parent entity), the
      * audit log is meant to be readable without joins.
+     *
+     * @return array<string, mixed>
      */
     private function snapshotCategory(\Bayti\Api\Domain\Catalog\Category $c): array
     {

@@ -33,6 +33,9 @@ final class DuplicateTemplateController
         return $this->responseFactory;
     }
 
+    /**
+     * @param array<string, string> $args
+     */
     public function __invoke(ServerRequestInterface $request, ResponseInterface $_r, array $args): ResponseInterface
     {
         $user = $request->getAttribute(AuthMiddleware::ATTR_USER);

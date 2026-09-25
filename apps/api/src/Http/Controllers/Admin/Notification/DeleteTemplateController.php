@@ -29,6 +29,9 @@ final class DeleteTemplateController
         return $this->responseFactory;
     }
 
+    /**
+     * @param array<string, string> $args
+     */
     public function __invoke(ServerRequestInterface $request, ResponseInterface $_r, array $args): ResponseInterface
     {
         $id = (int) ($args['id'] ?? 0);

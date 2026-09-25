@@ -75,6 +75,9 @@ final class GetAdminPlatformAnalyticsController
         return $this->responseFactory;
     }
 
+    /**
+     * @param array<string, string> $args
+     */
     public function __invoke(
         ServerRequestInterface $request,
         ResponseInterface $_response,
@@ -309,10 +312,10 @@ final class GetAdminPlatformAnalyticsController
             'total_orders'        => $totalOrders,
             'products_sold'       => $productsSold,
             'return_orders'       => $returnOrders,
-            'total_products_stats'=> array_values($productBy12Month),
-            'total_orders_stats'  => array_values($ordersBy12Month),
-            'products_sold_stats' => array_values($soldBy12Month),
-            'return_orders_stats' => array_values($returnBy12Month),
+            'total_products_stats'=> $productBy12Month,
+            'total_orders_stats'  => $ordersBy12Month,
+            'products_sold_stats' => $soldBy12Month,
+            'return_orders_stats' => $returnBy12Month,
             'top_products'        => $topProducts,
             'data'                => $recentRows,
             // Pagination metadata for the recent-orders list (server-driven).

@@ -51,12 +51,18 @@ final class VendorCouponAnalyticsController
         return $this->responseFactory;
     }
 
+    /**
+     * @param array<string, string> $args
+     */
     public function detail(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
     {
         [$coupon] = $this->resolveCoupon($request, (int) ($args['id'] ?? 0));
         return $this->ok(['data' => $this->serializer->adminShape($coupon)]);
     }
 
+    /**
+     * @param array<string, string> $args
+     */
     public function analytics(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
     {
         [$coupon, $vendorId] = $this->resolveCoupon($request, (int) ($args['id'] ?? 0));
@@ -79,6 +85,8 @@ final class VendorCouponAnalyticsController
     /**
      * This coupon's lifetime totals. Scoped to PAID orders only — a redemption
      * on a pending / cancelled / failed order isn't counted as usage.
+     *
+     * @return array{total_uses: int, total_discount_given: float, unique_customers: int, total_revenue_generated: float}
      */
     private function couponStats(Connection $conn, int $couponId): array
     {
@@ -111,7 +119,11 @@ final class VendorCouponAnalyticsController
         ];
     }
 
-    /** Store-wide coupon KPIs (active coupons + this coupon's figures). */
+    /**
+     * Store-wide coupon KPIs (active coupons + this coupon's figures).
+     *
+     * @return array{active_coupons: int, total_redemptions: int, total_discount_given: float, total_revenue_with_coupons: float}
+     */
     private function overview(Connection $conn, int $vendorId, int $couponId): array
     {
         $activeCoupons = (int) $conn->fetchOne(
@@ -128,7 +140,11 @@ final class VendorCouponAnalyticsController
         ];
     }
 
-    /** Daily PAID redemption counts for the last N days (default 30). */
+    /**
+     * Daily PAID redemption counts for the last N days (default 30).
+     *
+     * @return list<array<string, mixed>>
+     */
     private function usageOverTime(Connection $conn, int $couponId, ServerRequestInterface $request): array
     {
         $daysBack = max(1, min(365, (int) ($request->getQueryParams()['days_back'] ?? 30)));
@@ -151,7 +167,11 @@ final class VendorCouponAnalyticsController
         ], $rows);
     }
 
-    /** Paginated redemption log for this coupon (most recent first). */
+    /**
+     * Paginated redemption log for this coupon (most recent first).
+     *
+     * @return array{data: list<array<string, mixed>>, pagination: array{page: int, per_page: int, total: int, total_pages: int}}
+     */
     private function usageLog(Connection $conn, int $couponId, ServerRequestInterface $request): array
     {
         $q = $request->getQueryParams();

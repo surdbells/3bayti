@@ -47,7 +47,7 @@ class AuditLogRepository extends EntityRepository
     {
         $em = $this->getEntityManager();
         $em->persist($log);
-        $em->flush($log);
+        $em->flush();
     }
 
     /**

@@ -86,6 +86,9 @@ final class VendorSizeChartController
         return $this->created(['data' => $this->shape($chart)]);
     }
 
+    /**
+     * @param array<string, string> $args
+     */
     public function update(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
     {
         $vendor = $this->resolveVendor($request);
@@ -111,6 +114,9 @@ final class VendorSizeChartController
         return $this->ok(['data' => $this->shape($chart)]);
     }
 
+    /**
+     * @param array<string, string> $args
+     */
     public function delete(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
     {
         $vendor = $this->resolveVendor($request);

@@ -62,7 +62,7 @@ final class ZeptoMailHttpMailer implements MailerInterface
     private readonly string $normalizedToken;
 
     public function __construct(
-        private readonly string $apiToken,
+        string $apiToken,
         private readonly string $fromEmail,
         private readonly string $fromName,
         private readonly ?Client $httpClient = null,

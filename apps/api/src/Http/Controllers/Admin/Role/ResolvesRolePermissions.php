@@ -17,7 +17,7 @@ trait ResolvesRolePermissions
     private function validatePermissionKeys(mixed $raw): array
     {
         if (!is_array($raw)) {
-            throw HttpException::validation(['permissions' => 'Permissions must be an array of permission keys.']);
+            throw HttpException::validation(['permissions' => ['Permissions must be an array of permission keys.']]);
         }
         $keys = array_values(array_unique(array_filter(
             array_map(static fn ($k): string => (string) $k, $raw),
@@ -25,7 +25,7 @@ trait ResolvesRolePermissions
         )));
         $invalid = array_values(array_filter($keys, static fn (string $k): bool => !PermissionCatalog::isValid($k)));
         if ($invalid !== []) {
-            throw HttpException::validation(['permissions' => 'Unknown permission(s): ' . implode(', ', $invalid)]);
+            throw HttpException::validation(['permissions' => ['Unknown permission(s): ' . implode(', ', $invalid)]]);
         }
         return $keys;
     }

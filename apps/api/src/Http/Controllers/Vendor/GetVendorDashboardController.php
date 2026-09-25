@@ -62,7 +62,7 @@ final class GetVendorDashboardController
         $query = $request->getQueryParams();
 
         // Optional: scope to a single owned store; default = all stores.
-        $vendorIds = array_values(array_map('intval', $ownedIds));
+        $vendorIds = array_map('intval', $ownedIds);
         if (!empty($query['vendor_id'])) {
             $requested = (int) $query['vendor_id'];
             if (!in_array($requested, $vendorIds, true)) {

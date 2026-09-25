@@ -435,6 +435,7 @@ class OrderRepository extends EntityRepository
         // Normalise the status filter into a clean list (drops empties).
         // A single string stays a 1-element list; null/[] means "no filter".
         $statusList = is_array($statusFilter)
+            // @phpstan-ignore-next-line function.alreadyNarrowedType -- $statusFilter is docblock-narrowed to list<string>, but the is_string() stays as a runtime guard for out-of-contract array elements.
             ? array_values(array_filter($statusFilter, static fn ($s): bool => is_string($s) && $s !== ''))
             : ($statusFilter !== null && $statusFilter !== '' ? [$statusFilter] : []);
 
@@ -680,6 +681,10 @@ class OrderRepository extends EntityRepository
         }
     }
 
+    /**
+     * @param list<int> $vendorIds
+     * @return array{0: list<Order>, 1: int}
+     */
     public function paginatedForVendorIds(
         array $vendorIds,
         int $limit,

@@ -32,6 +32,9 @@ final class GetAdminVendorComplianceController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
+        // DI-autowired dependency retained; kept as a constructor param to
+        // avoid a signature change (removal is deferred).
+        // @phpstan-ignore-next-line property.onlyWritten
         private readonly ComplianceDocumentService $docs,
         private readonly ComplianceDocumentSigner $signer,
     ) {

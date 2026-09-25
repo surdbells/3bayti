@@ -66,6 +66,9 @@ final class VendorMessagesController
         return $this->ok($envelope);
     }
 
+    /**
+     * @param array<string, string> $args
+     */
     public function markRead(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
     {
         $vendor = $this->resolveVendor($request);

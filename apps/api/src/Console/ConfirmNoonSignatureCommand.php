@@ -181,7 +181,7 @@ final class ConfirmNoonSignatureCommand extends Command
         }
         if (is_dir($path)) {
             $glob = glob(rtrim($path, '/\\') . '/*.jsonl');
-            return $glob === false ? [] : array_values($glob);
+            return $glob === false ? [] : $glob;
         }
         return [];
     }

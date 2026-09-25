@@ -145,7 +145,7 @@ final class OrderNotificationService
         try {
             /** @var \Bayti\Api\Domain\GiftCard\GiftCardRepository $repo */
             $repo = $this->em?->getRepository(\Bayti\Api\Domain\GiftCard\GiftCard::class);
-            $card = $repo?->findByPurchaseOrderReference($order->getOrderReference());
+            $card = $repo->findByPurchaseOrderReference($order->getOrderReference());
         } catch (\Throwable) {
             return [];
         }

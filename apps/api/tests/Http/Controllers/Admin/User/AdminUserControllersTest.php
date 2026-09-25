@@ -6,6 +6,7 @@ namespace Bayti\Api\Tests\Http\Controllers\Admin\User;
 
 use Bayti\Api\Domain\Authz\Permission;
 use Bayti\Api\Domain\Authz\Role;
+use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\User\RefreshToken;
 use Bayti\Api\Domain\User\RefreshTokenRepository;
 use Bayti\Api\Domain\User\User;
@@ -348,10 +349,17 @@ final class AdminUserControllersTest extends HttpTestCase
         $roleRepo = $this->createMock(EntityRepository::class);
         $roleRepo->method('findBy')->willReturn($roles);
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $roleRepo): void {
+        // publicProfile() (returned on success) derives store flags from the
+        // user's vendor(s), so the serializer queries the Vendor repo — a staff
+        // account has none.
+        $vendorRepo = $this->createMock(EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $roleRepo, $vendorRepo): void {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Role::class, $roleRepo],
+                [Vendor::class, $vendorRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
@@ -394,10 +402,16 @@ final class AdminUserControllersTest extends HttpTestCase
             },
         );
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $refreshRepo): void {
+        // The 200 response serializes the target via publicProfile(), which
+        // reads the user's vendor(s) for store flags — stub an empty set.
+        $vendorRepo = $this->createMock(EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $refreshRepo, $vendorRepo): void {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [RefreshToken::class, $refreshRepo],
+                [Vendor::class, $vendorRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);

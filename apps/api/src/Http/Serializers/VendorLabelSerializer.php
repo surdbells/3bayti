@@ -35,11 +35,8 @@ final class VendorLabelSerializer
 
     /**
      * @param list<VendorLabel> $labels
-     * @return list<array<string, mixed>>
-     */
-    /**
-     * @param list<VendorLabel> $labels
      * @param array<int,int>    $counts map of label_id => active product count
+     * @return list<array<string, mixed>>
      */
     public function publicShapeMany(array $labels, array $counts = []): array
     {

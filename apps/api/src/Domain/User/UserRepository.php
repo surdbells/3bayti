@@ -177,6 +177,8 @@ class UserRepository extends EntityRepository
             '0' . $national,         // local, leading zero
             $raw,                    // caller's original input
             $phone,
+            // defensive empty-string filter; $phone is external lookup input
+            // @phpstan-ignore-next-line notIdentical.alwaysTrue
         ], static fn (string $c): bool => $c !== '')));
     }
 
@@ -221,7 +223,7 @@ class UserRepository extends EntityRepository
      * Paginated list of users with optional role + search filters.
      * Used by GET /v3/admin/users (M3.3.2-C).
      *
-     * @param array{role?:string|null,search?:string|null,limit?:int,offset?:int} $filters
+     * @param array{role?:string|null,search?:string|null,staff?:bool,limit?:int,offset?:int} $filters
      * @return array{items: list<User>, total: int}
      */
     public function findPaginated(array $filters = []): array
@@ -343,7 +345,7 @@ class UserRepository extends EntityRepository
             $qb->andWhere($orX);
         }
 
-        if (isset($filters['status']) && $filters['status'] !== null && $filters['status'] !== '') {
+        if (isset($filters['status']) && $filters['status'] !== '') {
             if ($filters['status'] === 'active') {
                 $qb->andWhere('u.isActive = true');
             } elseif ($filters['status'] === 'inactive') {
@@ -351,12 +353,12 @@ class UserRepository extends EntityRepository
             }
         }
 
-        if (isset($filters['email_verified']) && $filters['email_verified'] !== null) {
+        if (isset($filters['email_verified'])) {
             $qb->andWhere('u.isEmailVerified = :emailVerified')
                ->setParameter('emailVerified', (bool) $filters['email_verified']);
         }
 
-        if (isset($filters['phone_verified']) && $filters['phone_verified'] !== null) {
+        if (isset($filters['phone_verified'])) {
             $qb->andWhere('u.isPhoneVerified = :phoneVerified')
                ->setParameter('phoneVerified', (bool) $filters['phone_verified']);
         }

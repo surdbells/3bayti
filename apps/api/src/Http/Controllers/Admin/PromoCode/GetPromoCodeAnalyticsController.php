@@ -93,6 +93,8 @@ final class GetPromoCodeAnalyticsController
     /**
      * This code's lifetime totals. Scoped to PAID orders only — a redemption on
      * a pending / cancelled / failed order isn't counted usage.
+     *
+     * @return array{total_uses: int, total_discount_given: float, unique_customers: int, total_revenue_generated: float}
      */
     private function couponStats(Connection $conn, int $couponId): array
     {
@@ -125,7 +127,11 @@ final class GetPromoCodeAnalyticsController
         ];
     }
 
-    /** Daily PAID redemption counts + discount for the last N days (default 30). */
+    /**
+     * Daily PAID redemption counts + discount for the last N days (default 30).
+     *
+     * @return list<array{day: mixed, uses: int, discount: float}>
+     */
     private function usageOverTime(Connection $conn, int $couponId, ServerRequestInterface $request): array
     {
         $daysBack = max(1, min(365, (int) ($request->getQueryParams()['days_back'] ?? 30)));
@@ -148,7 +154,11 @@ final class GetPromoCodeAnalyticsController
         ], $rows);
     }
 
-    /** Paginated redemption log for this code (most recent first). */
+    /**
+     * Paginated redemption log for this code (most recent first).
+     *
+     * @return array{data: list<array<string, mixed>>, pagination: array{page: int, per_page: int, total: int, total_pages: int}}
+     */
     private function usageLog(Connection $conn, int $couponId, ServerRequestInterface $request): array
     {
         $q = $request->getQueryParams();

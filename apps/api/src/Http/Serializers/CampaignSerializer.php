@@ -29,7 +29,6 @@ use DateTimeInterface;
 final class CampaignSerializer
 {
     /**
-     * @param array<string,mixed> ...$noop
      * @return array<string,mixed>
      */
     public function shape(Campaign $c, ProductSerializer $products): array

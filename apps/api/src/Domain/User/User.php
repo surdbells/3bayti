@@ -72,6 +72,7 @@ class User
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     #[ORM\Column(type: 'bigint')]
+    // @phpstan-ignore-next-line property.unusedType
     private ?int $id = null;
 
     /**
@@ -578,7 +579,11 @@ class User
 
     public function clearRoles(): void { $this->roles->clear(); }
 
-    /** Union of permission keys granted by all of the user's roles. @return list<string> */
+    /**
+     * Union of permission keys granted by all of the user's roles.
+     *
+     * @return list<string>
+     */
     public function effectivePermissionKeys(): array
     {
         $keys = [];

@@ -117,6 +117,8 @@ final class ProductSerializer
      * fields the vendor preview drawer needs (description, gallery, sizes,
      * colors). Works for any status (drafts included). Used by
      * GET /v3/vendor/products/{id}.
+     *
+     * @return array<string, mixed>
      */
     public function vendorDetailShape(Product $p): array
     {
@@ -140,6 +142,9 @@ final class ProductSerializer
         ]);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function vendorManageShape(Product $p): array
     {
         $primaryImage = $this->primaryImage($p);
@@ -173,7 +178,7 @@ final class ProductSerializer
             'in_stock'        => $p->isInStock(),
             'label_id'        => $p->getLabelId(),
             'collection_id'   => $p->getCollectionId(),
-            'created_at'      => $p->getCreatedAt()?->format(\DateTimeInterface::ATOM),
+            'created_at'      => $p->getCreatedAt()->format(\DateTimeInterface::ATOM),
         ];
     }
 
@@ -224,6 +229,9 @@ final class ProductSerializer
         return $out;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function listShape(Product $p): array
     {
         $primaryImage = $this->primaryImage($p);

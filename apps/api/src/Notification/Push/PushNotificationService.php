@@ -72,6 +72,7 @@ class PushNotificationService
 {
     public function __construct(
         private readonly PushSenderInterface $sender,
+        // @phpstan-ignore-next-line property.onlyWritten (injected for DI wiring; locale resolved via LocaleResolver static call)
         private readonly LocaleResolver $localeResolver,
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly ?EntityManagerInterface $em = null,

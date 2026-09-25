@@ -56,12 +56,12 @@ final class UpdateRoleController
         if ($role->isSystem()) {
             if (array_key_exists('slug', $body) && trim((string) $body['slug']) !== $role->getSlug()) {
                 throw HttpException::validation([
-                    'slug' => 'The slug of a system role cannot be changed.',
+                    'slug' => ['The slug of a system role cannot be changed.'],
                 ]);
             }
             if (array_key_exists('permissions', $body)) {
                 throw HttpException::validation([
-                    'permissions' => 'The permissions of a system role cannot be changed.',
+                    'permissions' => ['The permissions of a system role cannot be changed.'],
                 ]);
             }
         }
@@ -71,7 +71,7 @@ final class UpdateRoleController
         if (array_key_exists('name', $body)) {
             $name = trim((string) $body['name']);
             if ($name === '') {
-                throw HttpException::validation(['name' => 'A role name is required.']);
+                throw HttpException::validation(['name' => ['A role name is required.']]);
             }
             $role->setName($name);
         }

@@ -32,6 +32,7 @@ final class GetVendorComplianceController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
+        // @phpstan-ignore-next-line property.onlyWritten -- injected via DI; retained for parity with sibling compliance endpoints
         private readonly ComplianceDocumentService $docs,
         private readonly ComplianceDocumentSigner $signer,
     ) {

@@ -46,6 +46,9 @@ final class SendMessageController
         return $this->responseFactory;
     }
 
+    /**
+     * @param array<string, string> $args
+     */
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
     {
         $user = $request->getAttribute(AuthMiddleware::ATTR_USER);
@@ -80,17 +83,17 @@ final class SendMessageController
 
         $content = trim((string) ($body['content'] ?? ''));
         if ($content === '') {
-            throw HttpException::validation(['content' => 'Message content is required.']);
+            throw HttpException::validation(['content' => ['Message content is required.']]);
         }
         if (mb_strlen($content) > self::MAX_LENGTH) {
-            throw HttpException::validation(['content' => 'Message is too long (max ' . self::MAX_LENGTH . ' characters).']);
+            throw HttpException::validation(['content' => ['Message is too long (max ' . self::MAX_LENGTH . ' characters).']]);
         }
 
         $result = $this->sender->send($conversation, $user, Conversation::PARTY_VENDOR, $content);
         if (!$result->delivered) {
             $moderation = $result->moderation;
             throw HttpException::chatBlocked(
-                $moderation?->flagTypes ?? [],
+                $moderation->flagTypes ?? [],
                 'Your message wasn\'t sent because it looks like it contains a ' . $moderation?->labels()
                 . '. To stay protected, please keep contact details out of chat.',
             );

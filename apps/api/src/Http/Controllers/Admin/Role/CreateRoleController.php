@@ -34,7 +34,7 @@ final class CreateRoleController
 
         $name = trim((string) ($body['name'] ?? ''));
         if ($name === '') {
-            throw HttpException::validation(['name' => 'A role name is required.']);
+            throw HttpException::validation(['name' => ['A role name is required.']]);
         }
 
         $keys = $this->validatePermissionKeys($body['permissions'] ?? []);

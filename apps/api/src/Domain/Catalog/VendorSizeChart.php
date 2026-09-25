@@ -25,6 +25,7 @@ class VendorSizeChart
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'bigint')]
+    // @phpstan-ignore-next-line property.unusedType
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: Vendor::class)]

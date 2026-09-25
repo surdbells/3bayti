@@ -110,6 +110,7 @@ final class FirebaseIdTokenVerifier
 
         $keys = [];
         foreach ($certs as $kid => $pem) {
+            // @phpstan-ignore-next-line function.alreadyNarrowedType — defensive: certs originate from external JSON via a mixed PSR-6 cache, so the string types are optimistic
             if (is_string($kid) && is_string($pem) && $pem !== '') {
                 $keys[$kid] = new Key($pem, 'RS256');
             }
@@ -133,6 +134,7 @@ final class FirebaseIdTokenVerifier
         if ($item->isHit()) {
             /** @var array<string, string> $cached */
             $cached = $item->get();
+            // @phpstan-ignore-next-line function.alreadyNarrowedType — defensive: $item->get() is mixed, guard defends against a non-array cache payload
             if (is_array($cached) && $cached !== []) {
                 return $cached;
             }

@@ -24,6 +24,8 @@ final class Bootstrap
      * Build a fully-wired Slim App.
      *
      * @param string|null $envPath Override .env file path (used by tests).
+     *
+     * @return App<\Psr\Container\ContainerInterface|null>
      */
     public static function createApp(?string $envPath = null): App
     {
@@ -103,6 +105,11 @@ final class Bootstrap
         //    stays readable as the route count grows.
         (require $rootPath . '/config/routes.php')($app);
 
+        // AppFactory::create() (no container arg) yields a benevolent
+        // App<ContainerInterface|null> from its conditional return type,
+        // which PHPStan won't unify with the identical declared union under
+        // the invariant TContainerInterface template. Types match exactly.
+        // @phpstan-ignore-next-line return.type
         return $app;
     }
 

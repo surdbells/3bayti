@@ -32,6 +32,9 @@ final class ServeComplianceDocumentController
     ) {
     }
 
+    /**
+     * @param array<string, string> $args
+     */
     public function __invoke(
         ServerRequestInterface $request,
         ResponseInterface $response,
@@ -61,7 +64,6 @@ final class ServeComplianceDocumentController
             'front'       => $vendor->getIdFront(),
             'back'        => $vendor->getIdBack(),
             'license_doc' => $vendor->getLicenseDoc(),
-            default       => null,
         };
 
         $doc = $this->docs->openForDownload($path);

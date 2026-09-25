@@ -42,7 +42,7 @@ final class AssignUserRolesController
         $body = (array) $request->getParsedBody();
         $raw = $body['role_ids'] ?? null;
         if (!is_array($raw)) {
-            throw HttpException::validation(['role_ids' => 'role_ids must be an array of role ids.']);
+            throw HttpException::validation(['role_ids' => ['role_ids must be an array of role ids.']]);
         }
         $ids = array_values(array_unique(array_filter(
             array_map(static fn ($i): int => (int) $i, $raw),
@@ -51,7 +51,7 @@ final class AssignUserRolesController
 
         $roles = $ids === [] ? [] : $this->em->getRepository(Role::class)->findBy(['id' => $ids]);
         if (count($roles) !== count($ids)) {
-            throw HttpException::validation(['role_ids' => 'One or more roles were not found.']);
+            throw HttpException::validation(['role_ids' => ['One or more roles were not found.']]);
         }
 
         // Privilege-escalation guard: a non-super-admin can only assign roles

@@ -132,6 +132,10 @@ class OrderDetailsMessageBuilder
         return [implode("\n", $en), implode("\n", $ar)];
     }
 
+    /**
+     * @param list<string> $en
+     * @param list<string> $ar
+     */
     private function line(array &$en, array &$ar, string $enLabel, string $arLabel, string $value): void
     {
         $en[] = "{$enLabel}: {$value}";

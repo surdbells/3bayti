@@ -67,6 +67,9 @@ final class EntityAuditListener
 
         try {
             $em = $args->getObjectManager();
+            // Defensive: Doctrine's base contract types this as ObjectManager;
+            // guard kept in case a non-ORM manager ever fires this event.
+            // @phpstan-ignore-next-line instanceof.alwaysTrue
             if (!$em instanceof EntityManagerInterface) {
                 return;
             }
@@ -123,6 +126,9 @@ final class EntityAuditListener
         $this->pending = [];
 
         $em = $args->getObjectManager();
+        // Defensive: Doctrine's base contract types this as ObjectManager;
+        // guard kept in case a non-ORM manager ever fires this event.
+        // @phpstan-ignore-next-line instanceof.alwaysTrue
         if (!$em instanceof EntityManagerInterface) {
             return;
         }

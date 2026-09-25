@@ -614,6 +614,9 @@ TXT,
         );
     }
 
+    /**
+     * @param array<string, mixed> $extra
+     */
     private function orderAcceptedCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
@@ -625,6 +628,9 @@ TXT,
         ]);
     }
 
+    /**
+     * @param array<string, mixed> $extra
+     */
     private function orderAcceptedCustomerAr(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
@@ -636,6 +642,9 @@ TXT,
         ]);
     }
 
+    /**
+     * @param array<string, mixed> $extra
+     */
     private function orderPreparingCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
@@ -647,6 +656,9 @@ TXT,
         ]);
     }
 
+    /**
+     * @param array<string, mixed> $extra
+     */
     private function orderPreparingCustomerAr(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
@@ -658,6 +670,9 @@ TXT,
         ]);
     }
 
+    /**
+     * @param array<string, mixed> $extra
+     */
     private function orderRejectedCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
@@ -669,6 +684,9 @@ TXT,
         ]);
     }
 
+    /**
+     * @param array<string, mixed> $extra
+     */
     private function orderRejectedCustomerAr(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
@@ -680,6 +698,9 @@ TXT,
         ]);
     }
 
+    /**
+     * @param array<string, mixed> $extra
+     */
     private function orderShippedCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();

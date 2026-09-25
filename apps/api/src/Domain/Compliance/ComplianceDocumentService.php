@@ -136,6 +136,8 @@ class ComplianceDocumentService
      * Read a stored document for streaming. Returns
      * ['bytes' => string, 'mime' => string] or null when the path is
      * null/empty or the file is missing. Tolerates a legacy data-URL value.
+     *
+     * @return array{bytes: string, mime: string}|null
      */
     public function openForDownload(?string $path): ?array
     {

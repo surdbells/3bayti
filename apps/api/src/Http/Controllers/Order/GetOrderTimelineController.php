@@ -115,16 +115,16 @@ final class GetOrderTimelineController
 
         $safe = [];
         foreach ($result['events'] as $event) {
-            $type = (string) ($event['type'] ?? '');
+            $type = (string) $event['type'];
             if (!in_array($type, self::CUSTOMER_TYPES, true)) {
                 continue;
             }
             $safe[] = [
-                'id' => (string) ($event['id'] ?? ''),
+                'id' => (string) $event['id'],
                 'type' => $type,
-                'occurred_at' => $event['occurred_at'] ?? null,
-                'actor' => $this->sanitizeActor(is_array($event['actor'] ?? null) ? $event['actor'] : []),
-                'summary' => (string) ($event['summary'] ?? ''),
+                'occurred_at' => $event['occurred_at'],
+                'actor' => $this->sanitizeActor($event['actor']),
+                'summary' => (string) $event['summary'],
             ];
         }
 

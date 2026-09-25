@@ -575,9 +575,6 @@ final class NoonPaymentGateway implements PaymentGatewayInterface
         }
     }
 
-    /**
-     * @return array<string, string|null>
-     */
     public static function getProviderName(): string
     {
         return self::PROVIDER_NAME;

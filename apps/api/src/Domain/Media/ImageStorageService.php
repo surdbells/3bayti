@@ -356,6 +356,9 @@ final class ImageStorageService
         }
     }
 
+    /**
+     * @param resource $resource
+     */
     private function writeStreamPrivate(string $path, $resource): void
     {
         $previousUmask = umask(0077);

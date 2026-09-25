@@ -109,7 +109,7 @@ final class VendorApplicationWelcomeMailer
                 'template' => 'vendor_application.approved',
                 'application_id' => $application->getId(),
             ]);
-        } catch (MailerException | \Throwable $e) {
+        } catch (\Throwable $e) {
             $this->logger->warning('vendor-application welcome email failed (non-blocking)', [
                 'application_id' => $application->getId(),
                 'user_id' => $user->getId(),

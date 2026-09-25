@@ -30,6 +30,9 @@ final class GetTemplateVariablesController
         return $this->responseFactory;
     }
 
+    /**
+     * @param array<string, string> $args
+     */
     public function __invoke(ServerRequestInterface $request, ResponseInterface $_r, array $args): ResponseInterface
     {
         return $this->ok(['data' => TemplateVariableResolver::catalog()]);

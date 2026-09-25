@@ -56,6 +56,7 @@ class DeviceTokenRepository extends EntityRepository
             $flag = match ($audience) {
                 'customers' => 'u.isCustomer',
                 'vendors'   => 'u.isVendor',
+                // @phpstan-ignore-next-line match.alwaysTrue -- $audience is docblock-narrowed here, but the default arm stays as a runtime guard for out-of-contract strings.
                 'admins'    => 'u.isAdmin',
                 default     => null,
             };
@@ -105,6 +106,7 @@ class DeviceTokenRepository extends EntityRepository
             $flag = match ($audience) {
                 'customers' => 'u.isCustomer',
                 'vendors'   => 'u.isVendor',
+                // @phpstan-ignore-next-line match.alwaysTrue -- $audience is docblock-narrowed here, but the default arm stays as a runtime guard for out-of-contract strings.
                 'admins'    => 'u.isAdmin',
                 default     => null,
             };

@@ -192,7 +192,12 @@ class NotificationSchedule
         $this->touch();
     }
 
-    /** Re-usable edit of the message + recurrence config (before completion). */
+    /**
+     * Re-usable edit of the message + recurrence config (before completion).
+     *
+     * @param array<string, mixed>        $audience
+     * @param array<string, string>|null  $data
+     */
     public function reschedule(
         string $title,
         string $body,

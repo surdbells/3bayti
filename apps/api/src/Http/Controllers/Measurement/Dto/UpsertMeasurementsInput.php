@@ -90,22 +90,10 @@ final class UpsertMeasurementsInput
     #[Assert\Callback]
     public function validate(ExecutionContextInterface $context): void
     {
-        // Reject if the body lacked a "values" field. We can't
-        // distinguish "values: null" from "values omitted" because
-        // of constructor-based hydration, but treating both as the
-        // same is fine, both should fail.
-        // Empty object {} is accepted (means "clear all measurements").
-        // We use the count() check to catch the case where the user
-        // sent {"values": null} explicitly.
-
-        if (!is_array($this->values)) {
-            // Defensive, should not happen since the constructor
-            // forces array, but keep the check for clarity.
-            $context->buildViolation('values must be an object.')
-                ->atPath('values')
-                ->addViolation();
-            return;
-        }
+        // `$this->values` is always an array: the constructor coerces a
+        // missing or null "values" field to []. An empty object {} and a
+        // null/omitted field therefore both validate as "clear all
+        // measurements".
 
         // Iterate keys + values, validating each.
         foreach ($this->values as $key => $value) {

@@ -105,7 +105,7 @@ final class OtpLoginSendController
         $users = $this->em->getRepository(User::class);
         $user = $email !== null ? $users->findByEmail($email) : null;
 
-        if ($user === null || !$user->isActive() || !$user->isPhoneVerified() || $email === null) {
+        if ($user === null || !$user->isActive() || !$user->isPhoneVerified()) {
             return $this->fakeVid();
         }
 

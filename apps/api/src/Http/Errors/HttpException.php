@@ -110,7 +110,7 @@ final class HttpException extends \RuntimeException
             status: 422,
             errorCode: ErrorCodes::CHAT_MESSAGE_BLOCKED,
             publicMessage: $message,
-            details: ['flag_types' => array_values($flagTypes)],
+            details: ['flag_types' => $flagTypes],
         );
     }
 

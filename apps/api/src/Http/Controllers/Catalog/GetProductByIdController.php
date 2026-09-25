@@ -49,6 +49,9 @@ final class GetProductByIdController
         return $this->responseFactory;
     }
 
+    /**
+     * @param array<string, string> $args
+     */
     public function __invoke(
         ServerRequestInterface $request,
         ResponseInterface $response,

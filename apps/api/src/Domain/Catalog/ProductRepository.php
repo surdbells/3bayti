@@ -72,55 +72,6 @@ class ProductRepository extends EntityRepository
     }
 
     /**
-     * Paginated active products with filters.
-     *
-     * @param array{
-     *     vendorId?: int|null,
-     *     categoryId?: int|null,
-     *     labelId?: int|null,
-     *     minPrice?: string|null,
-     *     maxPrice?: string|null,
-     *     isFeatured?: bool|null,
-     *     isNew?: bool|null,
-     *     isSale?: bool|null,
-     *     sort?: string,
-     *     seed?: int|null,
-     *     searchQuery?: string|null,
-     *     limit?: int,
-     *     offset?: int,
-     * } $filters
-     *
-     * Search semantics
-     * ================
-     * When `searchQuery` is a non-empty string, the query gains a
-     * TSMATCH(p.searchTsv, :q) = TRUE clause that uses PostgreSQL's
-     * `<col> @@ websearch_to_tsquery('english', :q)` operator.
-     * `websearch_to_tsquery` is the user-input-friendly variant that
-     * gracefully handles quoted phrases, OR/AND/NOT operators, and
-     * arbitrary punctuation without throwing.
-     *
-     * When `sort` is 'relevance' AND a search query is supplied, the
-     * primary ORDER BY becomes TSRANK(p.searchTsv, :q) DESC. The id
-     * tie-break still applies.
-     *
-     * If 'relevance' is passed without a search query, falls back to
-     * 'newest' (the no-search default), ranking against no query
-     * would produce zero values for all rows.
-     *
-     * @return array{items: list<Product>, total: int}
-     */
-    /**
-     * Vendor-owned product list for the seller's own catalog management.
-     *
-     * Unlike findActivePaginated (storefront, active products only), this
-     * returns the vendor's products in ALL states (draft, inactive,
-     * out-of-stock) so the vendor can see and edit everything they own.
-     * Scoped strictly to the given v3 vendor id.
-     *
-     * @param array{vendorId:int, limit?:int, offset?:int, search?:string} $filters
-     * @return array{items: list<Product>, total: int}
-     */
-    /**
      * A single product owned by the vendor, regardless of status (draft,
      * inactive, etc.), for the vendor's own detail/preview view.
      */
@@ -132,6 +83,17 @@ class ProductRepository extends EntityRepository
             ->getQuery()->getOneOrNullResult();
     }
 
+    /**
+     * Vendor-owned product list for the seller's own catalog management.
+     *
+     * Unlike findActivePaginated (storefront, active products only), this
+     * returns the vendor's products in ALL states (draft, inactive,
+     * out-of-stock) so the vendor can see and edit everything they own.
+     * Scoped strictly to the given v3 vendor id.
+     *
+     * @param array<string, mixed> $filters
+     * @return array{items: list<Product>, total: int}
+     */
     public function findForVendorPaginated(array $filters): array
     {
         $limit  = max(1, min(100, (int) ($filters['limit'] ?? 24)));
@@ -281,6 +243,29 @@ class ProductRepository extends EntityRepository
         return $map;
     }
 
+    /**
+     * Paginated active products with filters.
+     *
+     * Search semantics
+     * ================
+     * When `searchQuery` is a non-empty string, the query gains a
+     * TSMATCH(p.searchTsv, :q) = TRUE clause that uses PostgreSQL's
+     * `<col> @@ websearch_to_tsquery('english', :q)` operator.
+     * `websearch_to_tsquery` is the user-input-friendly variant that
+     * gracefully handles quoted phrases, OR/AND/NOT operators, and
+     * arbitrary punctuation without throwing.
+     *
+     * When `sort` is 'relevance' AND a search query is supplied, the
+     * primary ORDER BY becomes TSRANK(p.searchTsv, :q) DESC. The id
+     * tie-break still applies.
+     *
+     * If 'relevance' is passed without a search query, falls back to
+     * 'newest' (the no-search default), ranking against no query
+     * would produce zero values for all rows.
+     *
+     * @param array<string, mixed> $filters
+     * @return array{items: list<Product>, total: int}
+     */
     public function findActivePaginated(array $filters = []): array
     {
         $qb = $this->createQueryBuilder('p')

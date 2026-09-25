@@ -33,6 +33,9 @@ final class ChatMessageSender
 
         $message = match ($senderParty) {
             Conversation::PARTY_CUSTOMER => Message::fromCustomer($conversation, $sender, $content),
+            // Native param type is `string`; the default arm is a runtime guard
+            // for callers that pass a value outside the PHPDoc union.
+            // @phpstan-ignore-next-line match.alwaysTrue
             Conversation::PARTY_VENDOR   => Message::fromVendor($conversation, $sender, $content),
             default => throw new \InvalidArgumentException("Unsupported sender party: {$senderParty}"),
         };

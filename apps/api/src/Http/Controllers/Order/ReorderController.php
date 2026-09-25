@@ -129,7 +129,7 @@ final class ReorderController
         // sell (unapproved/suspended). This is the highest-risk leak: a
         // customer who ordered from a store that was later suspended would
         // otherwise re-add its items via "Buy again".
-        if (!$product instanceof Product || !$product->isOrderable()) {
+        if (!$product->isOrderable()) {
             return false;
         }
 

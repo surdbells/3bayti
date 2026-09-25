@@ -445,7 +445,7 @@ final class MigrationSteps
                     $migrated++;
                 }
 
-                if (($migrated % 500) === 0 && $migrated > 0) {
+                if (($migrated % 500) === 0) {
                     echo "  ... {$migrated} processed\n";
                 }
             }
@@ -542,7 +542,7 @@ final class MigrationSteps
                 $storeName = trim((string) ($u['store_name'] ?? ''));
                 $isSynthetic = false;
                 if ($storeName === '') {
-                    $emailLocal = explode('@', (string) $u['email'])[0] ?? 'store';
+                    $emailLocal = explode('@', (string) $u['email'])[0];
                     $clean = ucwords(str_replace(['.', '_', '-'], ' ', $emailLocal));
                     $storeName = 'Store - ' . $clean;
                     if (strlen($storeName) > 180) {
@@ -634,7 +634,7 @@ final class MigrationSteps
                                 'legacy_id' => $userId, 'slug' => $slug, 'name' => $storeName,
                                 'description' => $description, 'contact_email' => $contactEmail,
                                 'contact_phone' => $contactPhone,
-                                'is_active' => $isActive ? 'true' : 'false',
+                                'is_active' => 'true',
                                 'is_verified' => $isStoreApproved ? 'true' : 'false',
                                 'is_approved' => $isStoreApproved ? 'true' : 'false',
                                 // Lifecycle status must track the legacy approval, not
@@ -1962,6 +1962,8 @@ final class MigrationSteps
      * orders whose payment succeeded. Uniform terminal states (every item
      * cancelled / every item refunded) map through; otherwise the
      * most-advanced fulfilment state wins.
+     *
+     * @param list<array<string, mixed>> $items
      */
     private function deriveOrderStatusFromItems(array $items): string
     {
