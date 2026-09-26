@@ -610,6 +610,56 @@ class GiftCard
         return $this->recipientPhone !== null && $this->smsDeliveredAt === null;
     }
 
+    /**
+     * Like needsEmailDelivery(), but ALSO reaches the claimed recipient
+     * account's email when the buyer supplied no delivery email.
+     *
+     * A gift bought with only a phone (and SMS switched off) whose recipient
+     * has since CLAIMED it — so we now know their account email — is in fact
+     * deliverable by email. The buyer-column-only needsEmailDelivery() missed
+     * that case, so the scheduled-delivery cron never selected the card and it
+     * sat undelivered until an admin sent it by hand (a silent casualty). This
+     * predicate closes that gap while staying scoped to designated gifts, so a
+     * self-purchase top-up (no recipient details) is never auto-emailed.
+     *
+     * The automatic on-activation path is unaffected: a freshly activated gift
+     * has no recipient_user yet, so this reduces to the buyer-provided email.
+     */
+    public function needsEmailDeliveryToRecipient(): bool
+    {
+        if ($this->emailDeliveredAt !== null) {
+            return false;
+        }
+        if ($this->recipientEmail !== null && $this->recipientEmail !== '') {
+            return true; // buyer-provided delivery email (original behaviour)
+        }
+        if (!$this->isGiftForSomeoneElse()) {
+            return false; // self-purchase top-up — never "delivered"
+        }
+        $accountEmail = $this->recipientUser?->getEmail();
+        return $accountEmail !== null && $accountEmail !== '';
+    }
+
+    /**
+     * SMS analogue of needsEmailDeliveryToRecipient(): the buyer-provided
+     * delivery phone, or — absent that — the claimed recipient account's phone
+     * (again only for designated gifts). See that method for the rationale.
+     */
+    public function needsSmsDeliveryToRecipient(): bool
+    {
+        if ($this->smsDeliveredAt !== null) {
+            return false;
+        }
+        if ($this->recipientPhone !== null && $this->recipientPhone !== '') {
+            return true;
+        }
+        if (!$this->isGiftForSomeoneElse()) {
+            return false;
+        }
+        $accountPhone = $this->recipientUser?->getPhone();
+        return $accountPhone !== null && $accountPhone !== '';
+    }
+
     public function markEmailDelivered(DateTimeImmutable $at): void
     {
         $this->emailDeliveredAt = $at;

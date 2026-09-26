@@ -182,6 +182,25 @@ final class DispatchScheduledGiftCardsCommandTest extends TestCase
         self::assertStringContainsString('Gift card #2 failed', $tester->getDisplay());
     }
 
+    #[Test]
+    public function warnsAboutUndeliverableScheduledCardsWithoutFailingTheRun(): void
+    {
+        // Nothing due to deliver, but a scheduled card is past its date with no
+        // deliverable channel (phone-only, SMS off). It must surface as a WARNING
+        // — the exact silent casualty the operator hit — not vanish, and not fail
+        // the run (there is nothing the cron can do about it).
+        $this->repo->method('findDueForDelivery')->willReturn([]);
+        $this->repo->method('findUndeliverableScheduled')->willReturn([$this->makePhoneOnlyCard(99)]);
+
+        $tester = $this->tester();
+        $exit = $tester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $exit);
+        $display = $tester->getDisplay();
+        self::assertStringContainsString('past their delivery date', $display);
+        self::assertStringContainsString('#99', $display);
+    }
+
     // -----------------------------------------------------------------
 
     private function tester(): CommandTester
@@ -204,6 +223,27 @@ final class DispatchScheduledGiftCardsCommandTest extends TestCase
             recipientPhotoUrl: null,
             scheduledDeliveryAt: null,
             recipientEmail: 'sara@example.com',
+        );
+        $ref = new \ReflectionProperty(GiftCard::class, 'id');
+        $ref->setAccessible(true);
+        $ref->setValue($card, $id);
+        return $card;
+    }
+
+    /** A phone-only gift card (no delivery email) for the undeliverable-warning path. */
+    private function makePhoneOnlyCard(int $id): GiftCard
+    {
+        $buyer = new User('buyer@example.com', '+971500000000', password_hash('p', PASSWORD_BCRYPT), 'AE');
+        $card = new GiftCard(
+            buyerUser: $buyer,
+            denomination: '500.00',
+            theme: 'birthday',
+            recipientName: 'Sara',
+            recipientMessage: null,
+            recipientPhotoUrl: null,
+            scheduledDeliveryAt: null,
+            recipientEmail: null,
+            recipientPhone: '+971501234567',
         );
         $ref = new \ReflectionProperty(GiftCard::class, 'id');
         $ref->setAccessible(true);

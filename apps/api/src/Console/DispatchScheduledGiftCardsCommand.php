@@ -99,10 +99,16 @@ final class DispatchScheduledGiftCardsCommand extends Command
 
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
 
-        $io->title(sprintf(
-            'Dispatching scheduled gift cards (batch %d)%s',
-            $batchSize,
+        // The cron APPENDS this command's output to a shared log file
+        // (>> var/logs/gift-cards-dispatch.log), so every run must be
+        // self-delimiting and carry its own UTC timestamp — otherwise the log
+        // is an undated wall of text and you cannot tell one run from the next
+        // (the very thing the operator hit: "the log just says it ran").
+        $io->writeln(sprintf(
+            '=== gift-cards:dispatch-scheduled @ %s%s (batch %d) ===',
+            $now->format(DateTimeImmutable::ATOM),
             $dryRun ? ' [DRY RUN]' : '',
+            $batchSize,
         ));
 
         /** @var GiftCardRepository $repo */
@@ -111,26 +117,31 @@ final class DispatchScheduledGiftCardsCommand extends Command
         // (or already-emailed two-channel) card would otherwise be re-fetched
         // as "due" on every run forever and never actually delivered.
         $smsEnabled = $this->deliveryService->isSmsEnabled();
-        $due = $repo->findDueForDelivery($now, $batchSize, $smsEnabled);
+        $io->writeln(sprintf('SMS channel: %s', $smsEnabled ? 'enabled' : 'disabled (email only)'));
 
+        $due = $repo->findDueForDelivery($now, $batchSize, $smsEnabled);
         $totalFound = count($due);
         $io->writeln(sprintf('Found <info>%d</info> gift card(s) due for delivery.', $totalFound));
 
-        if ($totalFound === 0) {
-            $io->success('Nothing to deliver.');
-            return Command::SUCCESS;
-        }
-
         if ($dryRun) {
-            $io->writeln('');
-            $io->writeln('Due gift card IDs (nothing delivered):');
-            $ids = array_map(static fn (GiftCard $c) => (string) $c->getId(), $due);
-            $io->writeln('  ' . implode(', ', $ids));
+            if ($totalFound > 0) {
+                $io->writeln('Due gift card IDs (nothing delivered):');
+                $ids = array_map(static fn (GiftCard $c) => (string) $c->getId(), $due);
+                $io->writeln('  ' . implode(', ', $ids));
+                foreach ($due as $card) {
+                    $io->writeln('  ' . $this->describeCard($card));
+                }
+            }
+            $this->reportUndeliverable($io, $repo, $now, $smsEnabled);
             $io->success(sprintf('[DRY RUN] %d gift card(s) would be processed.', $totalFound));
             return Command::SUCCESS;
         }
 
-        if (!$smsEnabled) {
+        if ($totalFound === 0) {
+            $io->success('Nothing to deliver.');
+        }
+
+        if (!$smsEnabled && $totalFound > 0) {
             $io->writeln('<comment>SMS is not configured; only email is delivered. Phone-only cards are skipped until an SMS provider is enabled.</comment>');
         }
 
@@ -155,6 +166,18 @@ final class DispatchScheduledGiftCardsCommand extends Command
                 if ($report['sms'] === 'skipped_not_configured') {
                     $smsSkipped++;
                 }
+
+                // One line per card, EVERY card (delivered or skipped), so the
+                // log answers "what happened to which card" at a glance.
+                $io->writeln(sprintf(
+                    '  #%d %s -> email:%s sms:%s%s',
+                    (int) $card->getId(),
+                    $card->formattedCode(),
+                    $report['email'],
+                    $report['sms'],
+                    $this->recipientHint($card),
+                ));
+
                 if ($report['email'] === 'failed' || $report['sms'] === 'failed') {
                     $sendFailures++;
                     $io->writeln(sprintf(
@@ -181,18 +204,26 @@ final class DispatchScheduledGiftCardsCommand extends Command
             }
         }
 
-        $io->section('Summary');
-        $io->table(
-            ['Outcome', 'Count'],
-            [
-                ['Found', (string) $totalFound],
-                ['Email sent', (string) $emailSent],
-                ['SMS sent', (string) $smsSent],
-                ['SMS skipped (not configured)', (string) $smsSkipped],
-                ['Send failures', (string) $sendFailures],
-                ['Errors (exceptions)', (string) $errors],
-            ],
-        );
+        if ($totalFound > 0) {
+            $io->section('Summary');
+            $io->table(
+                ['Outcome', 'Count'],
+                [
+                    ['Found', (string) $totalFound],
+                    ['Email sent', (string) $emailSent],
+                    ['SMS sent', (string) $smsSent],
+                    ['SMS skipped (not configured)', (string) $smsSkipped],
+                    ['Send failures', (string) $sendFailures],
+                    ['Errors (exceptions)', (string) $errors],
+                ],
+            );
+        }
+
+        // ALWAYS check for scheduled cards whose delivery moment has passed but
+        // that we cannot deliver on any channel — the exact silent failure the
+        // operator hit. They never appear in "Found N", so surface them as a
+        // warning so someone can reach out manually.
+        $undeliverable = $this->reportUndeliverable($io, $repo, $now, $smsEnabled);
 
         $this->logger->info('gift_card.dispatch.batch_complete', [
             'found' => $totalFound,
@@ -203,12 +234,77 @@ final class DispatchScheduledGiftCardsCommand extends Command
             'send_failures' => $sendFailures,
             'errors' => $errors,
             'sms_enabled' => $smsEnabled,
+            'undeliverable_scheduled' => count($undeliverable),
             'batch_size' => $batchSize,
         ]);
 
         // A card whose only pending channel is an unconfigured SMS leg is not
-        // a failure — it's expected until SMS is wired. Fail the run only when
-        // a real send errored or deliver() threw, so cron alerting is honest.
+        // a failure — it's expected until SMS is wired. Undeliverable scheduled
+        // cards are a WARNING, not a run failure (nothing the cron can do about
+        // them). Fail the run only when a real send errored or deliver() threw,
+        // so cron alerting stays honest.
         return ($errors === 0 && $sendFailures === 0) ? Command::SUCCESS : Command::FAILURE;
+    }
+
+    /**
+     * Report scheduled cards that are past due but undeliverable (no channel we
+     * can send on). Prints a warning + one line each and returns them so the
+     * caller can record the count. Empty result = nothing to warn about.
+     *
+     * @return list<GiftCard>
+     */
+    private function reportUndeliverable(SymfonyStyle $io, GiftCardRepository $repo, DateTimeImmutable $now, bool $smsEnabled): array
+    {
+        $stuck = $repo->findUndeliverableScheduled($now, $smsEnabled);
+        if ($stuck === []) {
+            return [];
+        }
+
+        $io->warning(sprintf(
+            '%d scheduled gift card(s) are past their delivery date but have NO deliverable channel. '
+            . 'Reach out manually (e.g. admin "Send to recipient" / WhatsApp) or wire the missing channel.',
+            count($stuck),
+        ));
+        foreach ($stuck as $card) {
+            $io->writeln(sprintf(
+                '  <comment>STUCK</comment> #%d %s — %s',
+                (int) $card->getId(),
+                $card->formattedCode(),
+                $this->undeliverableReason($card, $smsEnabled),
+            ));
+        }
+
+        return $stuck;
+    }
+
+    /** Compact recipient hint for a per-card log line (empty when unknown). */
+    private function recipientHint(GiftCard $card): string
+    {
+        $bits = [];
+        $email = $card->effectiveRecipientEmail();
+        if ($email !== null && $email !== '') {
+            $bits[] = $card->recipientEmailIsFromAccount() ? $email . ' (acct)' : $email;
+        }
+        $phone = $card->effectiveRecipientPhone();
+        if ($phone !== null && $phone !== '') {
+            $bits[] = $card->recipientPhoneIsFromAccount() ? $phone . ' (acct)' : $phone;
+        }
+        return $bits === [] ? '' : ' [to: ' . implode(', ', $bits) . ']';
+    }
+
+    /** Human-readable id + code + pending channels, for dry-run / warnings. */
+    private function describeCard(GiftCard $card): string
+    {
+        return sprintf('#%d %s%s', (int) $card->getId(), $card->formattedCode(), $this->recipientHint($card));
+    }
+
+    /** Why a stuck card can't be delivered, for the operator warning line. */
+    private function undeliverableReason(GiftCard $card, bool $smsEnabled): string
+    {
+        $hasPhone = $card->effectiveRecipientPhone() !== null && $card->effectiveRecipientPhone() !== '';
+        if ($hasPhone && !$smsEnabled) {
+            return 'phone-only, SMS not configured (no delivery email on file or via claimed account)';
+        }
+        return 'no reachable email or phone for the recipient';
     }
 }

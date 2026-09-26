@@ -192,6 +192,54 @@ final class GiftCardDeliveryServiceTest extends TestCase
     }
 
     #[Test]
+    public function deliverFallsBackToClaimedAccountEmailForPhoneOnlyGift(): void
+    {
+        // A gift bought with ONLY a phone (no delivery email), later claimed by
+        // a recipient whose account email we now know. The scheduled dispatcher
+        // must auto-deliver the email to that account email. Previously deliver()
+        // gated on needsEmailDelivery() (the buyer column only), so this card was
+        // skipped and sat undelivered until an admin sent it by hand.
+        $card = $this->makeCard(email: null, phone: '+971501234567');
+        $recipient = new User('claimed@example.com', '+971509999999', password_hash('p', PASSWORD_BCRYPT), 'AE');
+        $recipient->setName('Sara', 'M');
+        $card->assignRecipient($recipient);
+
+        self::assertTrue($card->needsEmailDeliveryToRecipient());
+
+        $report = $this->makeService()->deliver($card);
+
+        self::assertSame('sent', $report['email']);
+        self::assertSame('claimed@example.com', $this->mailer->sent()[0]['to']);
+        self::assertNotNull($card->getEmailDeliveredAt());
+    }
+
+    #[Test]
+    public function deliverNeverAutoEmailsASelfPurchaseTopUp(): void
+    {
+        // A top-up the buyer bought for THEMSELVES names no recipient, so it is
+        // not a "gift" and must never be auto-delivered — even though the buyer's
+        // own account carries an email. Guards the account-email fallback from
+        // spamming self-purchases.
+        $buyer = new User('buyer@example.com', '+971500000000', password_hash('p', PASSWORD_BCRYPT), 'AE');
+        $buyer->setName('Omar', 'Khan');
+        $card = new GiftCard(
+            buyerUser: $buyer,
+            denomination: '500.00',
+            theme: 'birthday',
+        );
+
+        self::assertFalse($card->isGiftForSomeoneElse());
+        self::assertFalse($card->needsEmailDeliveryToRecipient());
+        self::assertFalse($card->needsSmsDeliveryToRecipient());
+
+        $this->makeService()->deliver($card);
+
+        self::assertCount(0, $this->mailer->sent());
+        self::assertCount(0, $this->sms->sent());
+        self::assertNull($card->getEmailDeliveredAt());
+    }
+
+    #[Test]
     public function deliverReturnsPerChannelReport(): void
     {
         $card = $this->makeCard(email: 'sara@example.com', phone: '+971501234567');

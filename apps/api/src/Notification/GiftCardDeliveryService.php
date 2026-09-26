@@ -86,13 +86,18 @@ class GiftCardDeliveryService
         $report = ['email' => 'not_pending', 'sms' => 'not_pending'];
         $changed = false;
 
-        if ($card->needsEmailDelivery()) {
+        // needs*DeliveryToRecipient() (not the buyer-column-only needs*Delivery())
+        // so a gift bought with only a phone that the recipient has since claimed
+        // is auto-delivered to their account email — the case the cron used to
+        // silently skip. deliverEmail()/deliverSms() already target
+        // effectiveRecipient*(), so this just widens the gate to match.
+        if ($card->needsEmailDeliveryToRecipient()) {
             $ok = $this->deliverEmail($card);
             $report['email'] = $ok ? 'sent' : 'failed';
             $changed = $ok;
         }
 
-        if ($card->needsSmsDelivery()) {
+        if ($card->needsSmsDeliveryToRecipient()) {
             if (!$this->smsSender->isEnabled()) {
                 // No real SMS provider — record honestly instead of a silent
                 // no-op. deliverSms() would do the same skip; short-circuit to

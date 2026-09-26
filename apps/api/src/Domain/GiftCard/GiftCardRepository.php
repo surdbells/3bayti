@@ -152,17 +152,21 @@ class GiftCardRepository extends EntityRepository
     public function findDueForDelivery(DateTimeImmutable $now, int $limit = 100, bool $smsEnabled = true): array
     {
         $qb = $this->createQueryBuilder('g')
+            // Join the (optional) claimed recipient account so a card the buyer
+            // left without a delivery email/phone can still be reached at the
+            // contact the recipient registered when they claimed it. Mirrors
+            // GiftCard::needs*DeliveryToRecipient() + effectiveRecipient*().
+            ->leftJoin('g.recipientUser', 'r')
             ->where("g.status IN ('active', 'partially_used')");
 
         if ($smsEnabled) {
-            $qb->andWhere(
-                '(g.recipientEmail IS NOT NULL AND g.emailDeliveredAt IS NULL) '
-                . 'OR (g.recipientPhone IS NOT NULL AND g.smsDeliveredAt IS NULL)'
-            );
+            // Either channel being pending makes the card due.
+            $qb->andWhere('(' . $this->emailDuePredicate() . ') OR (' . $this->smsDuePredicate() . ')');
         } else {
-            // SMS is a no-op sender: only email can actually be delivered, so
-            // only a pending email channel makes a card due.
-            $qb->andWhere('g.recipientEmail IS NOT NULL AND g.emailDeliveredAt IS NULL');
+            // SMS is a no-op sender: only a pending email channel makes a card
+            // due (a phone-only card we cannot yet SMS is left for when SMS is
+            // configured, instead of churning the queue forever).
+            $qb->andWhere($this->emailDuePredicate());
         }
 
         /** @var list<GiftCard> $results */
@@ -174,6 +178,82 @@ class GiftCardRepository extends EntityRepository
             ->getQuery()
             ->getResult();
         return $results;
+    }
+
+    /**
+     * Scheduled cards whose delivery moment has PASSED but which we cannot
+     * deliver on any channel — the silent-casualty detector for the
+     * gift-cards:dispatch-scheduled cron's observability.
+     *
+     * These are active/partially_used gifts with a past scheduled_delivery_at,
+     * nothing delivered on either channel, and NO reachable contact for the
+     * channels we can actually send on (no email at all, and — when SMS is off
+     * or absent — no phone either). findDueForDelivery() excludes them by
+     * design (there is nothing to send), so without this they would vanish from
+     * every "Found N / delivered N" report and never be noticed. The dispatcher
+     * logs them as a WARNING so an operator can reach out manually (e.g. copy +
+     * WhatsApp) until the missing channel is wired.
+     *
+     * @return list<GiftCard>
+     */
+    public function findUndeliverableScheduled(DateTimeImmutable $now, bool $smsEnabled = true, int $limit = 100): array
+    {
+        $qb = $this->createQueryBuilder('g')
+            ->leftJoin('g.recipientUser', 'r')
+            ->where("g.status IN ('active', 'partially_used')")
+            ->andWhere('g.scheduledDeliveryAt IS NOT NULL AND g.scheduledDeliveryAt <= :now')
+            ->andWhere('g.emailDeliveredAt IS NULL AND g.smsDeliveredAt IS NULL')
+            ->setParameter('now', $now);
+
+        // Undeliverable = no reachable email, AND (SMS off OR no reachable phone).
+        if ($smsEnabled) {
+            $qb->andWhere('NOT (' . $this->reachableEmailPredicate() . ') AND NOT (' . $this->reachablePhonePredicate() . ')');
+        } else {
+            $qb->andWhere('NOT (' . $this->reachableEmailPredicate() . ')');
+        }
+
+        /** @var list<GiftCard> $results */
+        $results = $qb
+            ->orderBy('g.id', 'ASC')
+            ->setMaxResults(max(1, $limit))
+            ->getQuery()
+            ->getResult();
+        return $results;
+    }
+
+    /**
+     * DQL fragment: the card is a DESIGNATED gift (the buyer named any
+     * recipient detail), the precondition for falling back to the claimed
+     * account's contact. A self-purchase top-up names no recipient and so is
+     * never auto-delivered. Assumes the recipientUser is joined as `r`.
+     */
+    private function giftPredicate(): string
+    {
+        return '(g.recipientName IS NOT NULL OR g.recipientEmail IS NOT NULL OR g.recipientPhone IS NOT NULL)';
+    }
+
+    /** DQL: there is an email we can reach the recipient at (buyer-provided or claimed account). */
+    private function reachableEmailPredicate(): string
+    {
+        return '(g.recipientEmail IS NOT NULL OR (r.email IS NOT NULL AND ' . $this->giftPredicate() . '))';
+    }
+
+    /** DQL: there is a phone we can reach the recipient at (buyer-provided or claimed account). */
+    private function reachablePhonePredicate(): string
+    {
+        return '(g.recipientPhone IS NOT NULL OR (r.phone IS NOT NULL AND ' . $this->giftPredicate() . '))';
+    }
+
+    /** DQL: the email channel is pending AND reachable. */
+    private function emailDuePredicate(): string
+    {
+        return 'g.emailDeliveredAt IS NULL AND ' . $this->reachableEmailPredicate();
+    }
+
+    /** DQL: the SMS channel is pending AND reachable. */
+    private function smsDuePredicate(): string
+    {
+        return 'g.smsDeliveredAt IS NULL AND ' . $this->reachablePhonePredicate();
     }
 
     /**
