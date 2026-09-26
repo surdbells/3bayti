@@ -222,8 +222,8 @@ final class VendorCouponAnalyticsController
                 'discount_amount'    => round((float) $r['discount_amount'], 2),
                 'order_id'           => $r['order_id'] !== null ? (int) $r['order_id'] : null,
                 'order_reference'    => $r['order_reference'] ?? null,
-                'order_total_before' => $r['order_total_before'] !== null ? round((float) $r['order_total_before'], 2) : null,
-                'order_total_after'  => $r['order_total_after'] !== null ? round((float) $r['order_total_after'], 2) : null,
+                'order_total_before' => isset($r['order_total_before']) ? round((float) $r['order_total_before'], 2) : null,
+                'order_total_after'  => isset($r['order_total_after']) ? round((float) $r['order_total_after'], 2) : null,
             ], $rows),
             'pagination' => [
                 'page'        => $page,
