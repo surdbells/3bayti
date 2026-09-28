@@ -93,6 +93,14 @@ class OtaBundle
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $notes = null;
 
+    /**
+     * Set only on a row created by the one-click rollback: the version of the
+     * bundle whose file this row re-publishes (e.g. "1.6.3"). Shown in the
+     * portal so operators can tell a rollback from a fresh release.
+     */
+    #[ORM\Column(name: 'rollback_of_version', type: 'string', length: 64, nullable: true)]
+    private ?string $rollbackOfVersion = null;
+
     #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')]
     private DateTimeImmutable $createdAt;
 
@@ -121,6 +129,30 @@ class OtaBundle
         $this->notes = ($notes === null || trim($notes) === '') ? null : trim($notes);
         $this->isActive = true;
         $this->createdAt = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+    }
+
+    /**
+     * A new row that re-publishes $source's file (same url, checksum, session
+     * key and native gate) under $version, so devices that already moved past
+     * $source download it again. It carries no "what's new" notes: customers
+     * rolled back should not see an old release's summary a second time.
+     */
+    public static function rollbackOf(OtaBundle $source, string $version): self
+    {
+        $bundle = new self(
+            $source->getAppId(),
+            $source->getPlatform(),
+            $source->getChannel(),
+            $version,
+            $source->getUrl(),
+            $source->getChecksum(),
+            $source->getMinNativeVersion(),
+            $source->getSessionKey(),
+            null,
+        );
+        $bundle->rollbackOfVersion = $source->getRollbackOfVersion() ?? $source->getVersion();
+
+        return $bundle;
     }
 
     public function getId(): ?int
@@ -186,6 +218,11 @@ class OtaBundle
     public function setActive(bool $active): void
     {
         $this->isActive = $active;
+    }
+
+    public function getRollbackOfVersion(): ?string
+    {
+        return $this->rollbackOfVersion;
     }
 
     public function getCreatedAt(): DateTimeImmutable

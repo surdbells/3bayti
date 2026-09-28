@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { CommonModule } from '@angular/common';
@@ -37,6 +37,26 @@ export class OtaComponent implements OnInit {
   /** 0-100 upload progress for the bar shown while a bundle is uploading. */
   readonly uploadProgress = signal(0);
   readonly bundles = signal<OtaBundle[]>([]);
+  /** Id of the bundle whose rollback is in flight (disables its button). */
+  readonly rollingBackId = signal<number | null>(null);
+
+  /**
+   * Ids of the bundle each platform/channel is actually serving: the newest
+   * active row (the update endpoint orders by publish time). Every other row
+   * can be rolled back to.
+   */
+  readonly servedIds = computed(() => {
+    const newest = new Map<string, OtaBundle>();
+    for (const b of this.bundles()) {
+      if (!b.is_active) continue;
+      const key = `${b.app_id}|${b.platform}|${b.channel}`;
+      const current = newest.get(key);
+      if (!current || Date.parse(b.created_at) > Date.parse(current.created_at)) {
+        newest.set(key, b);
+      }
+    }
+    return new Set([...newest.values()].map((b) => b.id));
+  });
 
   /** Upload form model. */
   form: OtaUploadMeta & { channel: string; min_native: string } = {
@@ -133,7 +153,9 @@ export class OtaComponent implements OnInit {
     if (!next) {
       const ok = await this.confirm.confirm({
         title: 'Deactivate bundle',
-        message: `Stop serving ${bundle.platform} ${bundle.version}? Devices will fall back to the previous active bundle.`,
+        message:
+          `Stop offering ${bundle.platform} ${bundle.version} to devices that haven't downloaded it yet? ` +
+          `Devices that already installed it keep it. To move them back, use "Roll back to this" on the bundle you want them on.`,
         confirmLabel: 'Deactivate',
         cancelLabel: 'Cancel',
         variant: 'danger',
@@ -147,6 +169,51 @@ export class OtaComponent implements OnInit {
     } catch {
       this.toast.error('Unable to update the bundle.');
     }
+  }
+
+  /**
+   * One-click rollback to `bundle`. Previews the version the server will
+   * assign (next after the highest ever published for this platform/channel);
+   * the server computes the real one and the toast reports it.
+   */
+  async rollbackTo(bundle: OtaBundle): Promise<void> {
+    if (this.rollingBackId() !== null) return;
+    const nextVersion = this.previewRollbackVersion(bundle);
+    const content = bundle.rollback_of_version ?? bundle.version;
+    const ok = await this.confirm.confirm({
+      title: `Roll back ${bundle.platform} to ${content}`,
+      message:
+        `This republishes the ${content} bundle as version ${nextVersion} and deactivates every other ` +
+        `${bundle.platform} / ${bundle.channel} bundle. Devices download it the next time the app is opened ` +
+        `and switch to it after a restart. No upload needed.`,
+      confirmLabel: 'Roll back',
+      cancelLabel: 'Cancel',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    this.rollingBackId.set(bundle.id);
+    try {
+      const result = await this.ota.rollback(bundle.id);
+      this.toast.success(`Rolled back ${result.bundle.platform} to ${content} (served as ${result.bundle.version}).`);
+      await this.load();
+    } catch (e: any) {
+      this.toast.error(e?.error?.error?.message || e?.error?.message || 'Unable to roll back.');
+    } finally {
+      this.rollingBackId.set(null);
+    }
+  }
+
+  /** The next version after the highest published for the bundle's platform/channel. */
+  private previewRollbackVersion(bundle: OtaBundle): string {
+    const scoped = this.bundles().filter(
+      (b) => b.app_id === bundle.app_id && b.platform === bundle.platform && b.channel === bundle.channel,
+    );
+    const highest = scoped.reduce((max, b) => (compareVersions(b.version, max) > 0 ? b.version : max), bundle.version);
+    const parts = highest.split('-')[0].split('.').map((p) => parseInt(p, 10) || 0);
+    while (parts.length < 3) parts.push(0);
+    parts[parts.length - 1]++;
+    return parts.join('.');
   }
 
   async remove(bundle: OtaBundle): Promise<void> {
@@ -174,4 +241,15 @@ export class OtaComponent implements OnInit {
   goBack(): void {
     this.navHistory.back('/account');
   }
+}
+
+/** Numeric semver compare (mirrors the API's OtaVersion::compare). */
+function compareVersions(a: string, b: string): number {
+  const pa = a.split('-')[0].split('.').map((p) => parseInt(p, 10) || 0);
+  const pb = b.split('-')[0].split('.').map((p) => parseInt(p, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
 }

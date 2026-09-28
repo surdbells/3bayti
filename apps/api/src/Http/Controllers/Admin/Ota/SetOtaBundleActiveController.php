@@ -16,9 +16,11 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * PATCH /v3/admin/ota/bundles/{id}, activate/deactivate a bundle.
  *
- * Body: { "is_active": true|false }. Deactivating is the roll-back lever: the
- * update endpoint serves the newest ACTIVE bundle, so turning one off falls back
- * to the previously published one.
+ * Body: { "is_active": true|false }. Deactivating stops a bundle reaching
+ * devices that have not downloaded it yet; devices that already installed it
+ * keep it, because the update endpoint only serves strictly newer versions.
+ * To move those devices back, use the one-click rollback
+ * (POST /v3/admin/ota/bundles/{id}/rollback).
  *
  * @param array<string, string> $args
  */

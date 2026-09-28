@@ -14,7 +14,16 @@ export interface OtaBundle {
   min_native_version: string;
   signed: boolean;
   is_active: boolean;
+  /** Set on rollback rows: the version whose file this row re-publishes. */
+  rollback_of_version: string | null;
   created_at: string;
+}
+
+export interface OtaRollbackResult {
+  /** The new row now being served (the rolled-back content, new version). */
+  bundle: OtaBundle;
+  /** Rows that were deactivated so the rollback is the only active bundle. */
+  deactivated_ids: number[];
 }
 
 export interface OtaUploadMeta {
@@ -119,6 +128,18 @@ export class OtaAdminService {
       ),
     );
     return res?.bundle as OtaBundle;
+  }
+
+  /**
+   * One-click rollback: the server re-publishes this bundle's file under the
+   * next unused version and deactivates the other bundles for its platform,
+   * so devices that already installed a newer bundle download it again.
+   */
+  async rollback(id: number): Promise<OtaRollbackResult> {
+    const res: any = await firstValueFrom(
+      this.http.post(`${this.base()}/v3/admin/ota/bundles/${id}/rollback`, {}, { headers: this.headers() }),
+    );
+    return { bundle: res?.bundle as OtaBundle, deactivated_ids: (res?.deactivated_ids ?? []) as number[] };
   }
 
   async remove(id: number): Promise<void> {

@@ -42,13 +42,33 @@ final class OtaBundleStorageService
         ];
     }
 
-    /** Remove a stored bundle (no-op if the file isn't local / already gone). */
-    public function delete(string $platform, string $version): void
+    /**
+     * Remove the file behind a bundle URL, if we host it (a no-op for external
+     * URLs or a file that is already gone). Resolving by URL rather than by
+     * platform/version matters for rollback rows, which point at their source
+     * bundle's file.
+     */
+    public function deleteUrl(string $url): void
     {
-        $path = $this->pathFor($platform, $version);
-        if ($this->filesystem->fileExists($path)) {
+        $path = ImageStorageService::storagePathFromUrl($url);
+        if ($path !== null && $this->filesystem->fileExists($path)) {
             $this->filesystem->delete($path);
         }
+    }
+
+    /**
+     * Whether the file behind a bundle URL can still be downloaded. URLs we
+     * don't host (a CDN registered via `ota:publish`) are assumed available;
+     * a URL under our uploads root must still exist on disk.
+     */
+    public function isAvailable(string $url): bool
+    {
+        $path = ImageStorageService::storagePathFromUrl($url);
+        if ($path === null) {
+            return true;
+        }
+
+        return $this->filesystem->fileExists($path);
     }
 
     /**

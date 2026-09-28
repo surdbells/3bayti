@@ -6,6 +6,7 @@ namespace Bayti\Api\Http\Controllers\Ota;
 
 use Bayti\Api\Domain\Ota\OtaBundle;
 use Bayti\Api\Domain\Ota\OtaBundleRepository;
+use Bayti\Api\Domain\Ota\OtaVersion;
 use Bayti\Api\Http\Responder;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -75,12 +76,12 @@ final class CheckOtaUpdateController
 
         // Compatibility gate: never send a bundle that needs a newer native
         // shell than the device is running (OTA ships JS only).
-        if ($nativeBuild !== '' && self::compareSemver($nativeBuild, $bundle->getMinNativeVersion()) < 0) {
+        if ($nativeBuild !== '' && OtaVersion::compare($nativeBuild, $bundle->getMinNativeVersion()) < 0) {
             return $this->noUpdate();
         }
 
         // Only serve when the bundle is strictly newer than the device's.
-        if (self::compareSemver($bundle->getVersion(), $currentVersion) <= 0) {
+        if (OtaVersion::compare($bundle->getVersion(), $currentVersion) <= 0) {
             return $this->noUpdate();
         }
 
@@ -136,24 +137,5 @@ final class CheckOtaUpdateController
     {
         $value = $body[$key] ?? null;
         return is_string($value) ? $value : '';
-    }
-
-    /**
-     * Numeric semver comparison. Negative if a<b, positive if a>b, 0 if equal.
-     * Pre-release suffixes are ignored; missing/non-numeric segments count as 0.
-     */
-    private static function compareSemver(string $a, string $b): int
-    {
-        $pa = array_map('intval', explode('.', explode('-', $a)[0]));
-        $pb = array_map('intval', explode('.', explode('-', $b)[0]));
-        $len = max(count($pa), count($pb));
-        for ($i = 0; $i < $len; $i++) {
-            $va = $pa[$i] ?? 0;
-            $vb = $pb[$i] ?? 0;
-            if ($va !== $vb) {
-                return $va <=> $vb;
-            }
-        }
-        return 0;
     }
 }

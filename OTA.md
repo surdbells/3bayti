@@ -98,11 +98,21 @@ bump the version each release (`1.6.2`, `1.6.3`, …).
 - **`min_native_version`** — set it to the native build that introduced any
   capability the bundle relies on. A device on an older native shell is served
   *no* update rather than a bundle that would crash.
-- **Rollback** — in the portal, **Deactivate** (or delete) the bad bundle; the
-  endpoint then serves the previous active bundle for that platform/channel. Or:
-  ```sql
-  UPDATE ota_bundles SET is_active = false WHERE id = <id>;
-  ```
+- **Rollback (one click)** — in the portal, click **Roll back to this** on the
+  bundle you want devices on. The server re-publishes that bundle's existing
+  file under the next unused version (e.g. bad `1.6.8` → rollback served as
+  `1.6.9`, labelled "rollback of 1.6.3"), and deactivates every other bundle for
+  that platform/channel. No upload, no notes popup. Devices download it on the
+  next resume and apply it on the next cold start. Repeat per platform.
+  API: `POST /v3/admin/ota/bundles/{id}/rollback` (`settings.edit`).
+- **Why Deactivate alone is not a rollback** — the endpoint only serves a
+  version strictly newer than the device's current bundle. Deactivating a bad
+  bundle stops devices that have *not* downloaded it yet; devices that already
+  installed it keep it until something newer is published, which is exactly what
+  **Roll back to this** does.
+- The next real release must use a version above the rollback's (the upload
+  form rejects a duplicate version).
+- Deleting a bundle keeps its file while a rollback row still serves it.
 - **Auto-rollback** — a bundle that fails to boot (no `notifyAppReady()` within
   10s) reverts on-device automatically.
 - **Store updates win** — a new native release drops the OTA bundle

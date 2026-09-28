@@ -112,9 +112,11 @@ code/permissions still require a new store build + a `min_native` bump.
 (CI alternative, not the standard path: `npm run ota:release … --sign`.)
 
 ## Rollback
-- Portal → **Deactivate** the bad bundle (serves the previous active one), or:
-```bash
-/www/server/php/83/bin/php /www/wwwroot/3bayti/apps/api/bin/console dbal:run-sql "UPDATE ota_bundles SET is_active = false WHERE id = <id>"
-```
+- Portal → OTA updates → **Roll back to this** on the last good bundle (per
+  platform). It re-publishes that file under the next version and deactivates
+  the rest, so devices already on the bad bundle move back. See
+  [OTA.md → Compatibility & rollback](OTA.md#compatibility--rollback).
+- **Deactivate** alone only stops devices that have not downloaded the bad
+  bundle yet; it does not move installed devices back.
 - A bundle that fails to boot auto-reverts on-device (10s `appReadyTimeout`). A
   new store release always supersedes OTA.

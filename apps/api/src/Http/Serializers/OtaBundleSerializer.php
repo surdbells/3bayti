@@ -29,6 +29,7 @@ final class OtaBundleSerializer
             'signed' => $bundle->getSessionKey() !== null,
             'notes' => $bundle->getNotes(),
             'is_active' => $bundle->isActive(),
+            'rollback_of_version' => $bundle->getRollbackOfVersion(),
             'created_at' => $bundle->getCreatedAt()->format(\DateTimeInterface::ATOM),
         ];
     }

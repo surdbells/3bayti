@@ -810,6 +810,9 @@ return function (App $app): void {
         $group->post('/ota/bundles', \Bayti\Api\Http\Controllers\Admin\Ota\UploadOtaBundleController::class)->add($perm->for('settings.edit'));
         $group->patch('/ota/bundles/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Ota\SetOtaBundleActiveController::class)->add($perm->for('settings.edit'));
         $group->delete('/ota/bundles/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Ota\DeleteOtaBundleController::class)->add($perm->for('settings.edit'));
+        // One-click rollback: re-publish this bundle's file under the next
+        // version so devices that already moved past it download it again.
+        $group->post('/ota/bundles/{id:[0-9]+}/rollback', \Bayti\Api\Http\Controllers\Admin\Ota\RollbackOtaBundleController::class)->add($perm->for('settings.edit'));
 
         // Admin dashboards, "Top performers" carousels
         $group->get('/top-stores', \Bayti\Api\Http\Controllers\Admin\Analytics\ListTopStoresController::class)->add($perm->for('vendors.view'));

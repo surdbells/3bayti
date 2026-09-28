@@ -83,3 +83,9 @@
 .ota-danger {
   color: var(--ax-color-text-danger, #c0392b);
 }
+.ota-rollback-of {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--ax-color-text-tertiary);
+}

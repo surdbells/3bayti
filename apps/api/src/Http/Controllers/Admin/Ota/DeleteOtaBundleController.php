@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Admin\Ota;
 
 use Bayti\Api\Domain\Ota\OtaBundle;
+use Bayti\Api\Domain\Ota\OtaBundleRepository;
 use Bayti\Api\Domain\Ota\OtaBundleStorageService;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Responder;
@@ -14,7 +15,8 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * DELETE /v3/admin/ota/bundles/{id}, remove a bundle row and its stored .zip.
+ * DELETE /v3/admin/ota/bundles/{id}, remove a bundle row and its stored .zip
+ * (the file is kept while another row, e.g. a rollback, still serves it).
  *
  * @param array<string, string> $args
  */
@@ -48,8 +50,15 @@ final class DeleteOtaBundleController
             throw HttpException::notFound('OTA bundle not found.');
         }
 
-        // Best-effort file removal (no-op if the file isn't local / already gone).
-        $this->storage->delete($bundle->getPlatform(), $bundle->getVersion());
+        // Best-effort file removal (no-op if the file isn't local / already
+        // gone), but only when no other row still points at the same file: a
+        // rollback re-publishes its source bundle's file, so deleting either
+        // row must not break the other's download.
+        /** @var OtaBundleRepository $repo */
+        $repo = $this->em->getRepository(OtaBundle::class);
+        if ($repo->countByUrl($bundle->getUrl()) <= 1) {
+            $this->storage->deleteUrl($bundle->getUrl());
+        }
 
         $this->em->remove($bundle);
         $this->em->flush();

@@ -109,7 +109,10 @@
             <tr *ngFor="let b of bundles()">
               <td class="ax-font-medium">{{ b.platform }}</td>
               <td>{{ b.channel }}</td>
-              <td class="ax-font-medium">{{ b.version }}</td>
+              <td class="ax-font-medium">
+                {{ b.version }}
+                <span *ngIf="b.rollback_of_version" class="ota-rollback-of">rollback of {{ b.rollback_of_version }}</span>
+              </td>
               <td class="ax-text-tertiary">{{ b.min_native_version }}</td>
               <td><code class="ax-text-2xs" [title]="b.checksum">{{ shortChecksum(b.checksum) }}</code></td>
               <td>
@@ -118,12 +121,22 @@
                 </span>
               </td>
               <td>
-                <span [ngClass]="b.is_active ? 'ax-badge ax-badge-success' : 'ax-badge ax-badge-neutral'">
-                  {{ b.is_active ? 'active' : 'inactive' }}
-                </span>
+                <span *ngIf="servedIds().has(b.id); else notServed" class="ax-badge ax-badge-success"
+                      title="The bundle devices are being offered right now">live</span>
+                <ng-template #notServed>
+                  <span [ngClass]="b.is_active ? 'ax-badge ax-badge-warning' : 'ax-badge ax-badge-neutral'"
+                        [title]="b.is_active ? 'Active, but a newer active bundle is served instead' : ''">
+                    {{ b.is_active ? 'active' : 'inactive' }}
+                  </span>
+                </ng-template>
               </td>
               <td class="ax-text-2xs ax-text-tertiary">{{ b.created_at | date:'medium' }}</td>
               <td class="ota-actions-col">
+                <button *ngIf="!servedIds().has(b.id)" type="button" class="ax-btn ax-btn-secondary ax-btn-sm"
+                        [disabled]="rollingBackId() !== null" (click)="rollbackTo(b)"
+                        [attr.aria-label]="'Roll back ' + b.platform + ' to ' + (b.rollback_of_version ?? b.version)">
+                  {{ rollingBackId() === b.id ? 'Rolling back…' : 'Roll back to this' }}
+                </button>
                 <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="toggleActive(b)">
                   {{ b.is_active ? 'Deactivate' : 'Activate' }}
                 </button>
