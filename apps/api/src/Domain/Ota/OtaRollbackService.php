@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Domain\Ota;
 
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -30,6 +31,8 @@ final class OtaRollbackService
      * @return array{bundle: OtaBundle, deactivated: list<OtaBundle>}
      *
      * @throws OtaRollbackException when the source bundle's file is gone
+     * @throws UniqueConstraintViolationException when a concurrent publish
+     *         claimed the same next version first (uniq_ota_bundle_version)
      */
     public function rollbackTo(OtaBundle $source): array
     {
