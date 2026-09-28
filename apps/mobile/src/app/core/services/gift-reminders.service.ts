@@ -45,24 +45,34 @@ export class GiftRemindersService {
     }
   }
 
-  async create(token: string, input: GiftReminderInput): Promise<GiftReminder | null> {
+  /**
+   * Create a reminder. Throws when the API rejects it: the adapter surfaces
+   * HTTP errors (422/401/5xx) as an error envelope on the success channel, so
+   * without this check a failed save would look like a silent no-op.
+   */
+  async create(token: string, input: GiftReminderInput): Promise<GiftReminder> {
     const res: any = await firstValueFrom(
       this.adapter.post_v3('POST /me/gift-reminders', input, { authToken: token }),
     );
-    if ((res?.response_code === 201 || res?.response_code === 200) && res?.status === 'success') {
-      return res.data?.gift_reminder ?? null;
+    const saved = (res?.response_code === 201 || res?.response_code === 200) && res?.status === 'success'
+      ? res.data?.gift_reminder
+      : null;
+    if (!saved) {
+      throw new Error(res?.message || 'Gift reminder could not be saved.');
     }
-    return null;
+    return saved;
   }
 
-  async update(token: string, id: number, input: GiftReminderInput): Promise<GiftReminder | null> {
+  /** Update a reminder. Throws when the API rejects it (see create()). */
+  async update(token: string, id: number, input: GiftReminderInput): Promise<GiftReminder> {
     const res: any = await firstValueFrom(
       this.adapter.put_v3('PUT /me/gift-reminders/:id', input, { authToken: token, pathParams: { id: String(id) } }),
     );
-    if (res?.response_code === 200 && res?.status === 'success') {
-      return res.data?.gift_reminder ?? null;
+    const saved = res?.response_code === 200 && res?.status === 'success' ? res.data?.gift_reminder : null;
+    if (!saved) {
+      throw new Error(res?.message || 'Gift reminder could not be updated.');
     }
-    return null;
+    return saved;
   }
 
   async remove(token: string, id: number): Promise<boolean> {

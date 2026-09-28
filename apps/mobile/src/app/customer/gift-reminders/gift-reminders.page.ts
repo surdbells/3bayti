@@ -29,8 +29,22 @@ interface ReminderForm {
   recipient_name: string;
   occasion: string;
   remind_date: string;
-  budget_max: string;
+  // <input type="number"> + ngModel writes a number (or null when cleared),
+  // so the budget is not always a string at runtime.
+  budget_max: string | number | null;
   note: string;
+}
+
+/** Trim a form value that may arrive as a number or null from ngModel. */
+function textOf(value: unknown): string {
+  return value === null || value === undefined ? '' : String(value).trim();
+}
+
+/** Today's date as YYYY-MM-DD in the device's local timezone (not UTC). */
+function localDateStr(d: Date = new Date()): string {
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
 /**
@@ -64,7 +78,7 @@ export class GiftRemindersPage implements OnInit {
   editingId: number | null = null;
 
   form: ReminderForm = this.blankForm();
-  readonly todayStr = new Date().toISOString().slice(0, 10);
+  readonly todayStr = localDateStr();
 
   private user: StoredUser | null = null;
   private sessionId = '';
@@ -102,7 +116,7 @@ export class GiftRemindersPage implements OnInit {
   }
 
   get formValid(): boolean {
-    return !!this.form.recipient_name.trim() && !!this.form.occasion.trim() && !!this.form.remind_date;
+    return !!textOf(this.form.recipient_name) && !!textOf(this.form.occasion) && !!this.form.remind_date;
   }
 
   private async load(): Promise<void> {
@@ -141,11 +155,11 @@ export class GiftRemindersPage implements OnInit {
       return;
     }
     const input: GiftReminderInput = {
-      recipient_name: this.form.recipient_name.trim(),
-      occasion: this.form.occasion.trim(),
+      recipient_name: textOf(this.form.recipient_name),
+      occasion: textOf(this.form.occasion),
       remind_date: this.form.remind_date,
-      budget_max: this.form.budget_max.trim() || null,
-      note: this.form.note.trim() || null,
+      budget_max: textOf(this.form.budget_max) || null,
+      note: textOf(this.form.note) || null,
     };
     this.saving = true;
     try {
@@ -153,9 +167,7 @@ export class GiftRemindersPage implements OnInit {
         await this.service.update(this.user.token, this.editingId, input);
       } else {
         const created = await this.service.create(this.user.token, input);
-        if (created) {
-          this.beacon('gift_reminder_created', { gift_reminder_id: created.id });
-        }
+        this.beacon('gift_reminder_created', { gift_reminder_id: created.id });
       }
       this.showForm = false;
       await this.load();

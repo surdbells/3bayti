@@ -173,6 +173,7 @@
     "notePlaceholder": "e.g. Loves gold, size M",
     "save": "Save",
     "saving": "Saving…",
+    "saveError": "Couldn't save your reminder. Please check the details and try again.",
     "cancel": "Cancel",
     "edit": "Edit",
     "delete": "Delete",
