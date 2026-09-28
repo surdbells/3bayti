@@ -245,6 +245,14 @@ export class AccountPage implements OnInit, OnDestroy {
   }
 
 
+  /**
+   * The search bar fades in once, on first mount. Ionic hides a backgrounded
+   * page with display:none, and re-showing it restarts CSS animations, so
+   * without this latch the bar blinks out and back in every time the customer
+   * returns to the dashboard. Cleared after the first animationend.
+   */
+  searchFadedIn = false;
+
   // ── Gift card balance widget ──────────────────────────────────────
   activeGiftCards: any[] = [];
 

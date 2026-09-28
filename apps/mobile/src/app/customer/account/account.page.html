@@ -32,7 +32,7 @@
     <ion-grid>
       <ion-row>
         <ion-col>
-          <div class="m6-search app-fade-in" (click)="user_search()">
+          <div class="m6-search" [class.app-fade-in]="!searchFadedIn" (animationend)="searchFadedIn = true" (click)="user_search()">
             <ax-icon name="search" class="m6-search-icon"/>
             <span class="m6-search-placeholder">{{ 'account_search_placeholder' | translate }}</span>
           </div>
