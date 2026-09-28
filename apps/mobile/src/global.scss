@@ -1534,6 +1534,13 @@ ion-header.md ion-toolbar {
   animation: shimmer 1.5s infinite;
 }
 
+/* A skeleton that has faded out once its image loaded (.hidden, opacity 0)
+   stays in the DOM; stop its shimmer so dozens of finished cards don't keep
+   an infinite animation running for the life of the page. */
+.hidden .skeleton-shimmer {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .skeleton-shimmer {
     animation: none;

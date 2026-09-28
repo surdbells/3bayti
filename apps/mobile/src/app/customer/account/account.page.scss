@@ -1154,3 +1154,14 @@ ion-modal ion-content {
 .ain-card--gift .ain-card__orb { background: linear-gradient(135deg, #c98a6a, #a8563a); }
 .ain-card--style .ain-card__orb { background: linear-gradient(135deg, #b18f5f, #8a6a3a); }
 .ain-card--photo .ain-card__orb { background: linear-gradient(135deg, #8a9a86, #5f7a63); }
+
+/* "For You" placeholder rail shown while the personalised rails load. */
+.fy-placeholder__title,
+.fy-placeholder__line {
+  display: block;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--ax-color-bg-placeholder);
+}
+.fy-placeholder__title { width: 40%; height: 18px; }
+.fy-placeholder__line { width: 70%; margin: 10px 0; }

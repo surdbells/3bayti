@@ -39,6 +39,9 @@ import { PendingOrdersService } from '../../core/services/pending-orders.service
 import { ChatService } from '../../service/chat.service';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import {Products} from "../../class/products";
+
+/** A For-You rail card with its template values precomputed (see forYouCard). */
+type ForYouCard = Products & { imgKey: string; imgSrc: string; onSale: boolean };
 import {Labels} from "../../class/labels";
 import {CartIconComponent} from "../../cart-icon.component";
 import {BlockerService} from "../../blocker.service";
@@ -90,7 +93,14 @@ export class AccountPage implements OnInit, OnDestroy {
   new_arrivals: Products[] = [];
   vendor_featured: Store[] = [];
   /** Ain Personal Style Profile — personalised "For You" rails (signed-in). */
-  forYouRails: Array<{ key: string; title: string; products: Products[] }> = [];
+  forYouRails: Array<{ key: string; title: string; products: ForYouCard[] }> = [];
+  /**
+   * True while GET /me/ai/for-you is in flight for a signed-in customer. The
+   * template shows one placeholder rail so the personalised rails replace it
+   * in place instead of dropping in above Best Sellers and shoving the page
+   * down mid-scroll.
+   */
+  forYouLoading = false;
   /** Total on-sale products, shown as a badge on the Discounted category chip. */
   discountedCount = 0;
   // GET /v3/vendors (the PAGINATED public store directory) honours
@@ -628,24 +638,32 @@ export class AccountPage implements OnInit, OnDestroy {
     if (!this.single_user?.token) {
       return;
     }
+    this.forYouLoading = true;
     this.networkAdapter.get_v3('GET /me/ai/for-you', { authToken: this.single_user.token, queryParams: { limit: 10 } })
       .subscribe({
         next: (response: any) => {
+          this.forYouLoading = false;
           const rails = response?.data?.rails;
           if (response?.response_code === 200 && Array.isArray(rails)) {
             this.forYouRails = rails
-              .map((r: any) => ({
-                key: String(r?.key ?? ''),
-                title: this.forYouTitle(String(r?.key ?? ''), typeof r?.seed_name === 'string' ? r.seed_name : ''),
-                products: Array.isArray(r?.products) ? r.products.map((p: any) => this.forYouCard(p)) : [],
-              }))
-              .filter((r: { key: string; products: Products[] }) => r.key !== '' && r.products.length > 0);
+              .map((r: any) => {
+                const key = String(r?.key ?? '');
+                return {
+                  key,
+                  title: this.forYouTitle(key, typeof r?.seed_name === 'string' ? r.seed_name : ''),
+                  products: Array.isArray(r?.products) ? r.products.map((p: any) => this.forYouCard(p, key)) : [],
+                };
+              })
+              .filter((r: { key: string; products: ForYouCard[] }) => r.key !== '' && r.products.length > 0);
             if (this.forYouRails.length > 0) {
               this.recordAiEvent('for_you_shown', { rails: this.forYouRails.length });
             }
           }
         },
-        error: () => { /* best-effort; leave the rails hidden */ },
+        error: () => {
+          // best-effort; leave the rails hidden
+          this.forYouLoading = false;
+        },
       });
   }
 
@@ -661,9 +679,13 @@ export class AccountPage implements OnInit, OnDestroy {
   open_outfit() { this.router.navigate(['/outfit']); }
   open_visual_search() { this.router.navigate(['/visual-search']); }
 
-  /** Map a v3 listShape product to the legacy card shape the rails render. */
-  private forYouCard(p: any): Products {
-    return {
+  /**
+   * Map a v3 listShape product to the legacy card shape the rails render, plus
+   * the per-card values the template needs (image key, resized src, on-sale
+   * flag) computed once here instead of on every change-detection pass.
+   */
+  private forYouCard(p: any, railKey: string): ForYouCard {
+    const card = {
       id: p?.id ?? 0,
       token: '',
       product_id: p?.id ?? 0,
@@ -679,6 +701,14 @@ export class AccountPage implements OnInit, OnDestroy {
       sale_price: p?.sale_price?.amount != null ? String(p.sale_price.amount) : '',
       vendor_slug: p?.vendor?.slug ?? '',
     } as Products;
+    const price = Number(card.price);
+    const sale = Number(card.sale_price);
+    return {
+      ...card,
+      imgKey: `fy-${railKey}-${card.product_id}`,
+      imgSrc: cfImage(card.image_1, 'card'),
+      onSale: sale > 0 && sale < price,
+    };
   }
 
   private forYouTitle(key: string, seedName: string): string {
@@ -693,33 +723,40 @@ export class AccountPage implements OnInit, OnDestroy {
     }
   }
 
-  private ainSessionId = '';
+  /** Resolved once per page; shared by every analytics beacon. */
+  private ainSession?: Promise<string>;
 
-  private async ensureAinSession(): Promise<void> {
-    if (this.ainSessionId) {
-      return;
-    }
-    const got = await Preferences.get({ key: 'ain_session' });
-    if (got.value) {
-      this.ainSessionId = got.value;
-      return;
-    }
-    const id =
-      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
-        : 'm-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e9).toString(36);
-    await Preferences.set({ key: 'ain_session', value: id });
-    this.ainSessionId = id;
+  private ensureAinSession(): Promise<string> {
+    this.ainSession ??= (async () => {
+      const got = await Preferences.get({ key: 'ain_session' });
+      if (got.value) {
+        return got.value;
+      }
+      const id =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : 'm-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e9).toString(36);
+      await Preferences.set({ key: 'ain_session', value: id });
+      return id;
+    })().catch(() => '');
+    return this.ainSession;
   }
 
+  /**
+   * Fire an Ain analytics beacon. Waits for the session id so an event raised
+   * before the Preferences read finishes (e.g. for_you_shown on a fast
+   * response) is not sent with an empty session_id.
+   */
   private recordAiEvent(event: string, extra: Record<string, unknown> = {}): void {
-    try {
-      const body: Record<string, unknown> = { event, session_id: this.ainSessionId, ...extra };
-      const opts = this.single_user?.token ? { authToken: this.single_user.token } : {};
-      this.networkAdapter.post_v3('POST /ai/events', body, opts).subscribe({ next: () => {}, error: () => {} });
-    } catch {
-      // analytics must never break the page
-    }
+    void this.ensureAinSession().then((sessionId) => {
+      try {
+        const body: Record<string, unknown> = { event, session_id: sessionId, ...extra };
+        const opts = this.single_user?.token ? { authToken: this.single_user.token } : {};
+        this.networkAdapter.post_v3('POST /ai/events', body, opts).subscribe({ next: () => {}, error: () => {} });
+      } catch {
+        // analytics must never break the page
+      }
+    });
   }
 
   get_featured_products() {

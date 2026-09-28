@@ -154,6 +154,8 @@
                         (load)="onImageLoad(card.id)"
                         (error)="onImageError(card.id)"
                         [src]="cfImage(card.primary_image?.url || '', 'card')"
+                        loading="lazy"
+                        decoding="async"
                         alt="{{ card.name }}" />
                       @if (card.vendor?.name) {
                         <button (click)="open_vendor(card); $event.stopPropagation()" class="m6d-vendor-badge vendor-badge--tappable" type="button">&#64;{{ card.vendor?.name }}</button>

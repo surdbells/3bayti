@@ -237,7 +237,21 @@
     </article>
   </section>
 
-  <!-- Ain "For You" personalised rails (signed-in only) -->
+  <!-- Ain "For You" personalised rails (signed-in only). While they load, one
+       placeholder rail holds their place so they don't push the page down. -->
+  @if (single_user.token && forYouLoading && forYouRails.length === 0) {
+    <section class="section ion-padding-horizontal fy-placeholder" aria-hidden="true">
+      <div class="m6d-section-head"><span class="fy-placeholder__title"></span></div>
+      <div class="h-scroll">
+        @for (i of [0, 1, 2]; track i) {
+          <article class="m6d-product-card">
+            <div class="m6d-img-wrap"><div class="m6d-img-skeleton"><div class="skeleton-shimmer"></div></div></div>
+            <div class="m6d-info"><span class="fy-placeholder__line"></span></div>
+          </article>
+        }
+      </div>
+    </section>
+  }
   @if (single_user.token && forYouRails.length > 0) {
     @for (rail of forYouRails; track rail.key) {
       <section class="section ion-padding-horizontal">
@@ -248,17 +262,19 @@
           @for (card of rail.products; track card.product_id) {
             <article class="m6d-product-card">
               <div class="m6d-img-wrap">
-                <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['fy-' + rail.key + '-' + card.product_id]">
+                <div class="m6d-img-skeleton" [class.hidden]="imageLoaded[card.imgKey]">
                   <div class="skeleton-shimmer"></div>
                 </div>
                 <img
                   (click)="open_for_you(card.product_id)"
-                  [class.loaded]="imageLoaded['fy-' + rail.key + '-' + card.product_id]"
-                  (load)="onImageLoad('fy-' + rail.key + '-' + card.product_id)"
-                  (error)="onImageError('fy-' + rail.key + '-' + card.product_id)"
-                  [src]="cfImage(card.image_1, 'card')"
+                  [class.loaded]="imageLoaded[card.imgKey]"
+                  (load)="onImageLoad(card.imgKey)"
+                  (error)="onImageError(card.imgKey)"
+                  [src]="card.imgSrc"
+                  loading="lazy"
+                  decoding="async"
                   alt="{{card.product_name}}" />
-                @if(card.sale_price && +card.sale_price > 0 && +card.sale_price < +card.price){
+                @if(card.onSale){
                   <span class="m6d-flag-badge m6d-flag-badge--sale">{{ 'badge_sale' | translate }}</span>
                 }
                 <button (click)="startAddToCloset(card.product_id, card.product_name, card.image_1)" class="m6d-like" type="button" [attr.aria-label]="'account_add_to_closet' | translate">
@@ -269,7 +285,7 @@
               <div (click)="open_for_you(card.product_id)" class="m6d-info">
                 <p class="m6d-name">{{card.product_name}}</p>
                 <div class="m6d-price-row">
-                  @if(card.sale_price && +card.sale_price > 0 && +card.sale_price < +card.price){
+                  @if(card.onSale){
                     <span class="m6d-price-sale-group">
                       <span class="m6d-price m6d-price--sale">Ð{{card.sale_price}}</span>
                       <span class="m6d-price-original">Ð{{card.price}}</span>
@@ -311,6 +327,8 @@
                 (load)="onImageLoad('best-' + best_seller.product_id)"
                 (error)="onImageError('best-' + best_seller.product_id)"
                 [src]="cfImage(best_seller.image_1, 'card')"
+                loading="lazy"
+                decoding="async"
                 alt="{{best_seller.product_name}}" />
               <!-- SALE flag (top-left), only when genuinely discounted -->
               @if(best_seller.sale_price && +best_seller.sale_price > 0 && +best_seller.sale_price < +best_seller.price){
@@ -365,6 +383,8 @@
                 (load)="onImageLoad('new-' + new_arrival.product_id)"
                 (error)="onImageError('new-' + new_arrival.product_id)"
                 [src]="cfImage(new_arrival.image_1, 'card')"
+                loading="lazy"
+                decoding="async"
                 alt="{{new_arrival.product_name}}" />
               <!-- SALE flag (top-left), only when genuinely discounted -->
               @if(new_arrival.sale_price && +new_arrival.sale_price > 0 && +new_arrival.sale_price < +new_arrival.price){
@@ -413,6 +433,8 @@
                 (load)="onImageLoad('vendor-hero-' + vendor_feature.store_id)"
                 (error)="onImageError('vendor-hero-' + vendor_feature.store_id)"
                 [src]="cfImage(vendor_feature.products[0].image, 'card')"
+                loading="lazy"
+                decoding="async"
                 alt="{{ vendor_feature.store_name }}" />
               <div class="m6e-featured-hero-overlay">
                 <h3 class="m6e-featured-store-name">{{ vendor_feature.store_name }}</h3>
@@ -441,6 +463,8 @@
                           (load)="onImageLoad('vendor-' + vendor_feature.store_id + '-' + vendor_products.product_id)"
                           (error)="onImageError('vendor-' + vendor_feature.store_id + '-' + vendor_products.product_id)"
                           [src]="cfImage(vendor_products.image, 'card')"
+                          loading="lazy"
+                          decoding="async"
                           alt="product" />
                         <span class="m6e-featured-thumb-price">Ð{{ vendor_products.price }}</span>
                       </div>

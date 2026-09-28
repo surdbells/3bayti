@@ -66,6 +66,8 @@
                       (load)="onImageLoad(card.id)"
                       (error)="onImageError(card.id)"
                       [src]="cfImage(card.primary_image?.url || '', 'card')"
+                      loading="lazy"
+                      decoding="async"
                       alt="{{ card.name }}" />
                     <button (click)="startAddToCloset(card); $event.stopPropagation()" class="m6d-like" type="button" aria-label="Add to closet">
                       <ax-icon name="heart-plus" />
