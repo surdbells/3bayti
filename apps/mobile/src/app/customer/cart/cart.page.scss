@@ -199,8 +199,8 @@ ion-content.page-bg {
   column-gap: 0.8rem;
   row-gap: 0.6rem;
   text-align: start;
-  border: 1px solid #ece3dc;
-  background: linear-gradient(135deg, #fbf7f4, #f4ece6);
+  border: 1px solid var(--ax-ain-border-warm);
+  background: linear-gradient(135deg, var(--ax-ain-cream-1), var(--ax-ain-cream-2));
   border-radius: 1.1rem;
   padding: 0.85rem 1rem;
   margin-top: 16px;
@@ -221,12 +221,12 @@ ion-content.page-bg {
 .gc-nudge__title {
   font-size: 0.9rem;
   font-weight: 700;
-  color: var(--ax-color-bg-brand, #906952);
+  color: var(--ax-ain-accent);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.gc-nudge__sub { font-size: 0.78rem; color: #6a5648; }
+.gc-nudge__sub { font-size: 0.78rem; color: var(--ax-ain-ink-muted); }
 .gc-nudge__cta {
   grid-area: cta;
   justify-self: end;

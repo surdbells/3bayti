@@ -1087,13 +1087,13 @@ ion-modal ion-content {
   margin: 0 0 8px;
   font-size: 12px;
   font-weight: 600;
-  color: #906952;
+  color: var(--ax-ain-accent);
 }
 .ain-concierge__eyebrow ax-icon {
   --ax-icon-size: 1rem;
   width: 1rem;
   height: 1rem;
-  color: #b18f1f;
+  color: var(--ax-ain-gold);
 }
 /* Compact 2×2 grid of horizontal cards (orb + one-line title/subtitle). */
 .ain-concierge__row {
@@ -1108,14 +1108,14 @@ ion-modal ion-content {
   align-items: center;
   gap: 8px;
   padding: 7px 9px;
-  border: 1px solid #ece3dc;
+  border: 1px solid var(--ax-ain-border-warm);
   border-radius: 0.9rem;
-  background: linear-gradient(135deg, #fbf7f4, #f2e8e1);
+  background: linear-gradient(135deg, var(--ax-ain-cream-1), var(--ax-ain-cream-2));
   text-align: start;
   cursor: pointer;
   min-width: 0;
 }
-.ain-card:active { background: #efe4dc; }
+.ain-card:active { background: var(--ax-ain-cream-pressed); }
 .ain-card__orb {
   flex: 0 0 auto;
   width: 1.85rem;

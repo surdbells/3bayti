@@ -178,6 +178,31 @@
   --ax-color-ring:        rgba(144, 105, 82, 0.35);
   --ax-color-ring-strong: rgba(144, 105, 82, 0.6);
 
+  /* Ain concierge surfaces (Ask Ain, Gift Finder, Style me, Search by photo,
+     Gift reminders, Restyle, the home concierge cards). Light values are the
+     warm palette those screens were designed with; each is re-pointed in
+     ax-dark-tokens so the screens follow dark mode. */
+  --ax-ain-surface:        #ffffff;               /* chips, cards, bars */
+  --ax-ain-field:          #f6f7f9;               /* text inputs */
+  --ax-ain-field-focus:    #ffffff;
+  --ax-ain-border:         #e2e5e9;               /* neutral hairline */
+  --ax-ain-border-warm:    #ece3dc;               /* warm hairline */
+  --ax-ain-border-sand:    #e4d0b1;               /* sand outline (outfit, gift) */
+  --ax-ain-pressed:        #f6f7f9;               /* :active fill */
+  --ax-ain-pressed-border: #d7d2ca;
+  --ax-ain-cream-1:        #fbf7f4;               /* cream gradient start */
+  --ax-ain-cream-2:        #f2e8e1;               /* cream gradient end */
+  --ax-ain-cream-pressed:  #efe4dc;
+  --ax-ain-placeholder:    #f0e9df;               /* image skeletons */
+  --ax-ain-pill:           #efe2cf;               /* role / tag pills */
+  --ax-ain-ink:            #2e241c;               /* headings, names, prices */
+  --ax-ain-ink-muted:      #6a5648;               /* body copy */
+  --ax-ain-ink-subtle:     #8a7a6c;               /* meta */
+  --ax-ain-ink-faint:      #9a938a;               /* strikethrough / hints */
+  --ax-ain-accent:         #906952;               /* brand text accent */
+  --ax-ain-sale:           #9a5613;               /* sale price / warm highlight */
+  --ax-ain-gold:           #b18f1f;               /* gold icon accent */
+
 
   /* -----------------------------------------------------------------------
      TYPOGRAPHY
@@ -412,6 +437,28 @@
   --ax-color-ring:        rgba(201, 174, 133, 0.3);
   --ax-color-ring-strong: rgba(201, 174, 133, 0.55);
   --ax-shadow-focus: 0 0 0 3px var(--ax-color-ring);
+
+  /* Ain concierge surfaces, dark (see the light block for roles). */
+  --ax-ain-surface:        var(--ax-palette-espresso-700);
+  --ax-ain-field:          var(--ax-palette-espresso-900);
+  --ax-ain-field-focus:    var(--ax-palette-espresso-800);
+  --ax-ain-border:         var(--ax-palette-espresso-600);
+  --ax-ain-border-warm:    var(--ax-palette-espresso-600);
+  --ax-ain-border-sand:    var(--ax-palette-espresso-500);
+  --ax-ain-pressed:        var(--ax-palette-espresso-600);
+  --ax-ain-pressed-border: var(--ax-palette-espresso-500);
+  --ax-ain-cream-1:        var(--ax-palette-espresso-700);
+  --ax-ain-cream-2:        var(--ax-palette-espresso-600);
+  --ax-ain-cream-pressed:  var(--ax-palette-espresso-500);
+  --ax-ain-placeholder:    var(--ax-palette-espresso-600);
+  --ax-ain-pill:           var(--ax-palette-brown-700);
+  --ax-ain-ink:            var(--ax-palette-neutral-100);
+  --ax-ain-ink-muted:      var(--ax-palette-neutral-300);
+  --ax-ain-ink-subtle:     var(--ax-palette-neutral-400);
+  --ax-ain-ink-faint:      var(--ax-palette-neutral-400);
+  --ax-ain-accent:         var(--ax-palette-beige-300);
+  --ax-ain-sale:           #e0a066;
+  --ax-ain-gold:           var(--ax-palette-gold-300);
 
   --ax-shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.3);
   --ax-shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.25);
