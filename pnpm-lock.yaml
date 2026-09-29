@@ -522,6 +522,9 @@ importers:
       '@3bayti/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig-3bayti
+      '@angular/core':
+        specifier: ^19.2.0
+        version: 19.2.21(rxjs@7.8.2)(zone.js@0.15.1)
       '@storybook/addon-a11y':
         specifier: 8.4.7
         version: 8.4.7(storybook@8.4.7(prettier@3.8.3))
