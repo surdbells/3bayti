@@ -1,4 +1,4 @@
-import { Pipe, PipeTransform } from '@angular/core';
+import { Pipe, type PipeTransform } from '@angular/core';
 import { cfImage, CF_PRESETS, type CfImageOptions } from '../image-transform';
 
 export type CfPresetName = keyof typeof CF_PRESETS;

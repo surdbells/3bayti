@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@3bayti/tsconfig": "workspace:*",
+    "@angular/core": "^19.2.0",
     "@storybook/addon-a11y": "8.4.7",
     "@storybook/addon-essentials": "8.4.7",
     "@storybook/html": "8.4.7",
@@ -38,5 +39,8 @@
     "storybook": "8.4.7",
     "typescript": "5.9.2",
     "vite": "5.4.11"
+  },
+  "peerDependencies": {
+    "@angular/core": "^19.2.0 || ^21.0.0"
   }
 }
