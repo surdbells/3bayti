@@ -21,3 +21,4 @@ export { ShareButtonsComponent } from './share-buttons';
  * features/catalog (ProductCard) and we don't want to introduce a
  * shared → features dependency through the barrel. Consumers import
  * it directly from './product-strip'. */
+export { PriceChangeNoteComponent } from './price-change-note';

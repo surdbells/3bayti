@@ -16,6 +16,7 @@ import { ToastService } from '../../shared/forms';
 import { AuthService } from '../../core/auth/auth.service';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { GiftCardNudgeComponent } from '../gift-cards/gift-card-nudge';
+import { PriceChangeNoteComponent } from '../../shared/ui/price-change-note';
 
 /**
  * Cart page, `/cart`.
@@ -60,7 +61,7 @@ import { GiftCardNudgeComponent } from '../gift-cards/gift-card-nudge';
 @Component({
   selector: 'app-cart-page',
   standalone: true,
-  imports: [CfImagePipe, NgIf, NgFor, ReactiveFormsModule, RouterLink, TranslatePipe, GiftCardNudgeComponent],
+  imports: [CfImagePipe, NgIf, NgFor, ReactiveFormsModule, RouterLink, TranslatePipe, GiftCardNudgeComponent, PriceChangeNoteComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="cart-page" data-testid="cart-page">
@@ -78,6 +79,15 @@ import { GiftCardNudgeComponent } from '../gift-cards/gift-card-nudge';
               <h2 id="cart-items-heading" class="visually-hidden">
                 {{ 'cart.page.itemsHeading' | translate }}
               </h2>
+              <div
+                *ngIf="hasPriceChanges()"
+                class="cart-page__price-notice"
+                role="status"
+                data-testid="cart-price-notice"
+              >
+                <p class="cart-page__price-notice-title">{{ 'cart.priceChange.noticeTitle' | translate }}</p>
+                <p class="cart-page__price-notice-body">{{ 'cart.priceChange.noticeBody' | translate }}</p>
+              </div>
               <ul class="cart-page__item-list" role="list">
                 <li
                   *ngFor="let item of items(); trackBy: trackById"
@@ -115,6 +125,11 @@ import { GiftCardNudgeComponent } from '../gift-cards/gift-card-nudge';
                     <p *ngIf="item.is_custom" class="cart-page__item-custom">
                       {{ 'cart.page.customMade' | translate }}
                     </p>
+                    <ui-price-change-note
+                      *ngIf="item.price_changed"
+                      [previousPrice]="item.previous_unit_price"
+                      [currency]="currency()"
+                    />
 
                     <div class="cart-page__item-controls">
                       <div class="qty-stepper" role="group" [attr.aria-label]="('cart.page.qtyAriaFor' | translate) + ' ' + item.product_name">
@@ -316,6 +331,8 @@ export class CartPageComponent implements OnInit {
 
   protected readonly items = computed<CartItem[]>(() => this.cart.cart().items);
   protected readonly itemCount = this.cart.itemCount;
+  /** Any line re-priced by the vendor since it was added (badge + notice). */
+  protected readonly hasPriceChanges = computed<boolean>(() => this.cart.cart().has_price_changes === true);
   protected readonly currency = this.cart.currency;
   protected readonly subtotal = this.cart.subtotal;
   protected readonly isLoading = this.cart.isLoading;

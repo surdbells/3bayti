@@ -18,6 +18,7 @@ import { CartService, CartDrawerService } from '../../core/cart';
 import type { CartItem } from '../../core/cart';
 import { ToastService } from '../../shared/forms';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
+import { PriceChangeNoteComponent } from '../../shared/ui/price-change-note';
 
 /**
  * CartDrawerComponent, slide-out panel showing the user's cart.
@@ -52,7 +53,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 @Component({
   selector: 'app-cart-drawer',
   standalone: true,
-  imports: [CfImagePipe, NgIf, NgFor, RouterLink, TranslatePipe],
+  imports: [CfImagePipe, NgIf, NgFor, RouterLink, TranslatePipe, PriceChangeNoteComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ng-container *ngIf="isBrowser">
@@ -117,6 +118,11 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
                     <ng-container *ngIf="item.size !== null && item.color !== null"> · </ng-container>
                     <ng-container *ngIf="item.color !== null">{{ item.color }}</ng-container>
                   </p>
+                  <ui-price-change-note
+                    *ngIf="item.price_changed"
+                    [previousPrice]="item.previous_unit_price"
+                    [currency]="currency()"
+                  />
                   <div class="cart-drawer__item-row">
                     <span class="cart-drawer__item-qty">
                       {{ 'cart.drawer.qtyLabel' | translate }}: {{ item.quantity }}

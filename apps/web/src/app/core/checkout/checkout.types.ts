@@ -97,6 +97,33 @@ export interface InitiateCheckoutInput {
    * gift_card_code is also supplied (an explicit code wins).
    */
   use_gift_wallet?: boolean;
+  /**
+   * The cart's `price_signature` as last shown to the customer. The API
+   * re-prices the cart to current catalog prices and answers 409
+   * CART_PRICES_CHANGED (details: CartPricesChangedDetails) when they no
+   * longer match, so nobody is charged a price they didn't see.
+   */
+  expected_price_signature?: string | null;
+}
+
+/** Error code: prices changed since the customer last saw the cart (HTTP 409). */
+export const CART_PRICES_CHANGED = 'CART_PRICES_CHANGED';
+
+/** One re-priced line in a CART_PRICES_CHANGED error. */
+export interface CartPriceChange {
+  item_id: number | null;
+  product_id: number;
+  name: string;
+  previous_unit_price: string | null;
+  unit_price: string;
+  quantity: number;
+}
+
+/** `error.details` of a 409 CART_PRICES_CHANGED response. */
+export interface CartPricesChangedDetails {
+  items: CartPriceChange[];
+  subtotal: string;
+  price_signature: string;
 }
 
 /**

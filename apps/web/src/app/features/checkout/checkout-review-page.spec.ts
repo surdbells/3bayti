@@ -74,6 +74,15 @@ class StubCartService {
    *  in the nested proxy envelope, simulating the API's 422. */
   promoRejectCode: string | null = null;
 
+  refreshCalls = 0;
+  /** When set, refresh() swaps in this cart (the API's re-priced view). */
+  nextCart: Cart | null = null;
+  async refresh(): Promise<Cart> {
+    this.refreshCalls++;
+    if (this.nextCart !== null) this.setCart(this.nextCart);
+    return this.cart();
+  }
+
   setCart(c: Cart): void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (this as any).cart = signal<Cart>(c).asReadonly();
@@ -168,7 +177,8 @@ class StubToastService {
   error(m: string): string { this.errors.push(m); return m; }
   success(m: string): string { this.successes.push(m); return m; }
   show(): string { return ''; }
-  warning(): string { return ''; }
+  warnings: string[] = [];
+  warning(m: string): string { this.warnings.push(m); return m; }
   info(): string { return ''; }
   dismiss(): void { /* no-op */ }
   clearAll(): void { /* no-op */ }
@@ -603,6 +613,101 @@ describe('CheckoutReviewPageComponent', () => {
       });
       /* Did NOT show the generic failure toast. */
       expect(toast.errors).not.toContain('checkout.errors.initiateFailed');
+    });
+  });
+
+  describe('live prices', () => {
+    const changedItem = makeItem({
+      id: 7, product_name: 'Silk Abaya', quantity: 1,
+      unit_price: '349.00', line_subtotal: '349.00',
+      previous_unit_price: '299.00', price_changed: true,
+    });
+
+    it('reloads the cart on entry so the review shows current prices', async () => {
+      const { cart } = setup();
+      await flush();
+      expect(cart.refreshCalls).toBe(1);
+    });
+
+    it('shows a price-updated note on re-priced lines', async () => {
+      const { fixture } = setup({ cart: { ...makeCart([changedItem]), has_price_changes: true } });
+      await flush();
+      fixture.detectChanges();
+
+      const note = fixture.nativeElement.querySelector('[data-testid="price-change-note"]') as HTMLElement;
+      expect(note).not.toBeNull();
+      expect(note.textContent).toContain('299.00');
+    });
+
+    it('sends the displayed price signature with the order', async () => {
+      const { fixture, checkout } = setup({ cart: { ...makeCart(), price_signature: 'sig-shown' } });
+      await flush();
+      fixture.detectChanges();
+
+      (fixture.nativeElement.querySelector('[data-testid="review-place-order"]') as HTMLButtonElement).click();
+      await flush();
+
+      const payload = checkout.initiateCalls[0] as Record<string, unknown>;
+      expect(payload['expected_price_signature']).toBe('sig-shown');
+    });
+
+    it('on 409 CART_PRICES_CHANGED shows the changes, reloads prices and asks to confirm', async () => {
+      const { fixture, cart, checkout, toast, navigateSpy } = setup({
+        cart: { ...makeCart(), price_signature: 'sig-old' },
+      });
+      await flush();
+      fixture.detectChanges();
+
+      checkout.initiateError = new HttpErrorResponse({
+        status: 409,
+        error: {
+          error: {
+            code: 'CART_PRICES_CHANGED',
+            message: 'Some prices in your cart have changed.',
+            details: {
+              items: [{
+                item_id: 7, product_id: 100, name: 'Silk Abaya',
+                previous_unit_price: '299.00', unit_price: '349.00', quantity: 1,
+              }],
+              subtotal: '349.00',
+              price_signature: 'sig-new',
+            },
+          },
+        },
+      });
+      cart.nextCart = { ...makeCart([changedItem]), subtotal: '349.00', price_signature: 'sig-new', has_price_changes: true };
+      const refreshesBefore = cart.refreshCalls;
+      const quotesBefore = cart.quoteCalls.length;
+
+      const btn = fixture.nativeElement.querySelector('[data-testid="review-place-order"]') as HTMLButtonElement;
+      btn.click();
+      await flush();
+      fixture.detectChanges();
+
+      /* Nothing placed; cart + totals reloaded; customer told. */
+      expect(navigateSpy).not.toHaveBeenCalledWith(['/checkout/payment'], expect.anything());
+      expect(cart.refreshCalls).toBe(refreshesBefore + 1);
+      expect(cart.quoteCalls.length).toBe(quotesBefore + 1);
+      expect(toast.warnings).toContain('checkout.priceChanges.toast');
+      expect(toast.errors).not.toContain('checkout.errors.initiateFailed');
+
+      const panel = fixture.nativeElement.querySelector('[data-testid="review-price-changes"]') as HTMLElement;
+      expect(panel).not.toBeNull();
+      expect(panel.textContent).toContain('Silk Abaya');
+      expect(panel.textContent).toContain('299.00');
+      expect(panel.textContent).toContain('349.00');
+      /* The button is now in "confirm new total" mode (label via translate,
+         which renders empty in tests, so assert the driving state). */
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((fixture.componentInstance as any).priceChanges()).toHaveLength(1);
+
+      /* Confirming retries with the NEW signature. */
+      checkout.initiateError = null;
+      btn.click();
+      await flush();
+      expect(checkout.initiateCalls).toHaveLength(2);
+      expect((checkout.initiateCalls[1] as Record<string, unknown>)['expected_price_signature']).toBe('sig-new');
+      expect(navigateSpy).toHaveBeenCalledWith(['/checkout/payment'], expect.anything());
     });
   });
 
