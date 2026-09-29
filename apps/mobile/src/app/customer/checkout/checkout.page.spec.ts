@@ -6,6 +6,7 @@ import { CheckoutPage } from './checkout.page';
 import { AddressService, SavedAddress } from '../../core/services/address.service';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
 import { NetworkService } from '../../service/network.service';
+import { AlertController } from '@ionic/angular';
 
 function addr(id: number, over: Partial<SavedAddress> = {}): SavedAddress {
   return {
@@ -117,5 +118,98 @@ describe('CheckoutPage — saved-address picker (Z.2)', () => {
     await component.loadSavedAddresses();
     expect(component.savedAddresses).toEqual([]);
     expect(component.isLoadingAddresses).toBeFalse();
+  });
+});
+
+describe('CheckoutPage — live prices (CART_PRICES_CHANGED)', () => {
+  const pricesChanged = {
+    response_code: 409,
+    status: 'error',
+    message: 'Some prices in your cart have changed.',
+    error_code: 'CART_PRICES_CHANGED',
+    error_details: {
+      items: [{ item_id: 7, product_id: 100, name: 'Silk Abaya', previous_unit_price: '299.00', unit_price: '349.00', quantity: 1 }],
+      subtotal: '349.00',
+      price_signature: 'sig-new',
+    },
+    data: null,
+  };
+
+  class AlertStub {
+    role = 'confirm';
+    created: any[] = [];
+    async create(opts: any) {
+      this.created.push(opts);
+      return {
+        present: async () => undefined,
+        onDidDismiss: async () => ({ role: this.role }),
+      };
+    }
+  }
+
+  function setupWithAlert(): { component: CheckoutPage; adapter: AdapterStub; alert: AlertStub } {
+    const adapter = new AdapterStub();
+    const alert = new AlertStub();
+    TestBed.configureTestingModule({
+      imports: [CheckoutPage],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        { provide: AddressService, useValue: new AddressServiceStub() },
+        { provide: NetworkService, useValue: new NetworkStub() },
+        { provide: MobileNetworkAdapter, useValue: adapter },
+        { provide: AlertController, useValue: alert },
+      ],
+    });
+    const fixture = TestBed.createComponent(CheckoutPage);
+    return { component: fixture.componentInstance, adapter, alert };
+  }
+
+  it('sends the displayed price signature with checkout', () => {
+    const { component, adapter } = setupWithAlert();
+    const c = component as any;
+    c.isConfirmBilling = true;
+    c.single_user = { ...c.single_user, token: 't', first_name: 'A', last_name: 'B', email: 'a@b.c' };
+    c.priceSignature = 'sig-shown';
+    const spy = spyOn(adapter, 'post_v3').and.callThrough();
+
+    c.checkout_initiate();
+
+    const [route, body] = spy.calls.mostRecent().args as unknown as [string, any];
+    expect(route).toBe('POST /checkout/initiate');
+    expect(body.expected_price_signature).toBe('sig-shown');
+  });
+
+  it('on 409 adopts the new signature, re-quotes and retries once confirmed', async () => {
+    const { component, adapter, alert } = setupWithAlert();
+    const c = component as any;
+    c.single_user = { ...c.single_user, token: 't' };
+    const postSpy = spyOn(adapter, 'post_v3').and.callThrough();
+    const retrySpy = spyOn(c, 'checkout_initiate');
+
+    await c.handlePricesChanged(pricesChanged.error_details);
+
+    expect(c.priceSignature).toBe('sig-new');
+    expect(c.hasPriceChanges).toBeTrue();
+    expect(c.bill.subtotal).toBe('349.00');
+    expect(postSpy.calls.allArgs().some((a: any[]) => a[0] === 'POST /cart/quote')).toBeTrue();
+    expect(alert.created.length).toBe(1);
+    expect(alert.created[0].message).toContain('Silk Abaya');
+    expect(alert.created[0].message).toContain('299.00');
+    expect(alert.created[0].message).toContain('349.00');
+    expect(retrySpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('on 409 stays on the page when the customer chooses to review', async () => {
+    const { component, alert } = setupWithAlert();
+    const c = component as any;
+    c.single_user = { ...c.single_user, token: 't' };
+    alert.role = 'cancel';
+    const retrySpy = spyOn(c, 'checkout_initiate');
+
+    await c.handlePricesChanged(pricesChanged.error_details);
+
+    expect(retrySpy).not.toHaveBeenCalled();
+    expect(c.priceSignature).toBe('sig-new');
   });
 });

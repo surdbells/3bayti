@@ -168,6 +168,11 @@ export function transformCartListResponse(data: unknown): unknown {
       note: it['note'] ?? '',
       in_stock: it['in_stock'] ?? true,
       available_quantity: it['available_quantity'] ?? 0,
+      // Live pricing: the API re-syncs unit_price to the product's current
+      // price on every read; when that changed the price, the price the
+      // customer saw before is kept here for the "price updated" badge.
+      price_changed: it['price_changed'] === true,
+      previous_unit_price: typeof it['previous_unit_price'] === 'string' ? it['previous_unit_price'] : null,
     };
   });
 
@@ -189,6 +194,10 @@ export function transformCartListResponse(data: unknown): unknown {
     },
     cart_id: v3['id'] ?? 0,
     status: v3['status'] ?? 'active',
+    // Echo back at checkout as expected_price_signature; the API answers
+    // 409 CART_PRICES_CHANGED if prices moved after this cart was shown.
+    price_signature: typeof v3['price_signature'] === 'string' ? v3['price_signature'] : '',
+    has_price_changes: v3['has_price_changes'] === true,
   };
 }
 

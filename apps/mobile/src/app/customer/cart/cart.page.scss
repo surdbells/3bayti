@@ -134,6 +134,54 @@ ion-content.page-bg {
   }
 }
 
+// Live pricing: a vendor changed the price after the item was added. The
+// line already shows (and will be charged) the current price; this says so.
+.price-notice {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--ax-color-bg-warning-subtle);
+  border: 1px solid var(--ax-palette-warning-300);
+}
+
+.price-notice__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ax-color-text-primary);
+}
+
+.price-notice__body {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ax-color-text-secondary);
+}
+
+.price-change {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--ax-color-text-secondary);
+}
+
+.price-change__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ax-palette-warning-400);
+  flex-shrink: 0;
+}
+
+.price-change__label {
+  font-weight: 600;
+  color: var(--ax-color-text-primary);
+}
+
 .left-meta .price {
   font-family: inherit;
   font-size: 14px;

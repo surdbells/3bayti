@@ -18,4 +18,9 @@ export class Cart {
     public status: string,
     public is_custom: boolean
   ){  }
+
+  /** Live pricing: true while the line shows a "price updated" badge. */
+  price_changed?: boolean;
+  /** The price the customer saw before the vendor changed it, or null. */
+  previous_unit_price?: string | null;
 }

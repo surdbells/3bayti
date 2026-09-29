@@ -69,6 +69,8 @@ import { WishlistService } from '../../core/services/wishlist.service';
 })
 export class CartPage implements OnInit, OnDestroy {
   carts: Cart[] = [];
+  /** Any line re-priced by the vendor since it was added (shows the notice). */
+  hasPriceChanges = false;
   categories: Labels[] = [];
   isOnline = true;
   isWishOpen = false; // or control this as you like
@@ -247,10 +249,12 @@ export class CartPage implements OnInit, OnDestroy {
             if (Array.isArray(data)) {
               // Legacy shape
               this.carts = data;
+              this.hasPriceChanges = false;
               this.bill = response.message;
             } else if (data && typeof data === 'object' && Array.isArray(data.items)) {
               // v3 shape (post-transform)
               this.carts = data.items;
+              this.hasPriceChanges = data.has_price_changes === true;
               // Merge transform's {count, subtotal, currency} over the
               // default bill so the strongly-typed shape remains intact.
               // v3 doesn't compute delivery/discount/total breakdowns

@@ -21,6 +21,12 @@
 
   @if (!ui_controls.is_loading && !ui_controls.is_empty) {
     <p class="cart-count">{{ bill.count }} {{ 'label_item' | translate }}</p>
+    @if (hasPriceChanges) {
+      <div class="price-notice" role="status">
+        <p class="price-notice__title">{{ 'cart_price_notice_title' | translate }}</p>
+        <p class="price-notice__body">{{ 'cart_price_notice_body' | translate }}</p>
+      </div>
+    }
   }
 
   @for (cart of carts; track cart.id) {
@@ -50,6 +56,13 @@
                 <div (click)="open_product(cart.product)" class="price">
                   Ð{{ cart.price_formatted }}
                 </div>
+                @if (cart.price_changed && cart.previous_unit_price) {
+                  <div class="price-change">
+                    <span class="price-change__dot" aria-hidden="true"></span>
+                    <span class="price-change__label">{{ 'cart_price_updated' | translate }}</span>
+                    <span class="price-change__was">{{ 'cart_price_was' | translate }} <s>Ð{{ cart.previous_unit_price }}</s></span>
+                  </div>
+                }
               </div>
               <div class="size"><strong>{{ cart.size }}</strong></div>
               <div class="qty-controls">
