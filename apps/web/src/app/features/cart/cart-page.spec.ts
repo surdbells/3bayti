@@ -40,6 +40,7 @@ function makeCart(items: CartItem[] = []): Cart {
     cart_code: 'PND',
     subtotal,
     item_count,
+    has_price_changes: items.some((it) => it.price_changed === true),
     items,
   };
 }
@@ -189,6 +190,25 @@ describe('CartPageComponent', () => {
       const rows = fixture.nativeElement.querySelectorAll('[data-testid="cart-page-item"]');
       expect(rows).toHaveLength(2);
       expect(fixture.nativeElement.querySelector('[data-testid="cart-page-empty"]')).toBeNull();
+    });
+
+    it('flags re-priced lines with the previous price and a cart notice', () => {
+      const { fixture } = setup({
+        items: [
+          makeItem({ id: 1, unit_price: '349.00', line_subtotal: '698.00', previous_unit_price: '299.00', price_changed: true }),
+          makeItem({ id: 2, product_name: 'Unchanged' }),
+        ],
+      });
+      const notes = fixture.nativeElement.querySelectorAll('[data-testid="price-change-note"]');
+      expect(notes).toHaveLength(1);
+      expect((notes[0] as HTMLElement).textContent).toContain('299.00');
+      expect(fixture.nativeElement.querySelector('[data-testid="cart-price-notice"]')).not.toBeNull();
+    });
+
+    it('shows no price notice when nothing changed', () => {
+      const { fixture } = setup({ items: [makeItem()] });
+      expect(fixture.nativeElement.querySelector('[data-testid="price-change-note"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="cart-price-notice"]')).toBeNull();
     });
 
     it('shows the guest promo nudge when not authenticated', () => {

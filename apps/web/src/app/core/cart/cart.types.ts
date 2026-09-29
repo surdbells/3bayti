@@ -22,8 +22,19 @@ export interface CartItem {
   product_image: string;
   /** Quantity in the cart. */
   quantity: number;
-  /** Unit price snapshot, string decimal. */
+  /**
+   * Unit price the line is charged at, string decimal. The API re-syncs it
+   * to the product's current (sale-aware) price on every cart read.
+   */
   unit_price: string;
+  /**
+   * The price the customer saw before a vendor price change, or null when
+   * the price hasn't changed since the item was added. Present on server
+   * carts; absent on guest carts (always priced fresh).
+   */
+  previous_unit_price?: string | null;
+  /** True while this line shows a "price updated" badge. */
+  price_changed?: boolean;
   /** quantity × unit_price, precomputed by the API. */
   line_subtotal: string;
   /** Selected size (variant axis). null when product has no size axis. */
@@ -53,6 +64,14 @@ export interface Cart {
   subtotal: string;
   /** Total quantity across all items. NOT items.length, multi-quantity lines count their qty. */
   item_count: number;
+  /**
+   * Fingerprint of the prices currently shown. Sent back at checkout as
+   * `expected_price_signature`; the API answers 409 CART_PRICES_CHANGED
+   * if prices moved since. Empty/absent for guest carts.
+   */
+  price_signature?: string;
+  /** True when any line carries a price change the customer hasn't checked out yet. */
+  has_price_changes?: boolean;
   /** Line items. */
   items: CartItem[];
 }

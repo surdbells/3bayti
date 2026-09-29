@@ -316,6 +316,12 @@
     "sell": "Sell on 3bayti"
   },
   "cart": {
+    "priceChange": {
+      "updated": "Price updated",
+      "was": "was",
+      "noticeTitle": "Some prices have changed",
+      "noticeBody": "A seller updated the price of an item since you added it. Your cart shows the current price, which is what you’ll pay."
+    },
     "drawer": {
       "title": "Your bag",
       "subtotal": "Subtotal",
@@ -601,6 +607,12 @@
     }
   },
   "checkout": {
+    "priceChanges": {
+      "title": "Prices have changed",
+      "body": "A seller updated the price of an item in your cart. Please review the new total before placing your order. You haven’t been charged.",
+      "confirm": "Confirm new total and place order",
+      "toast": "Prices in your cart have changed. Please review the new total."
+    },
     "progressAria": "Checkout progress",
     "steps": {
       "shipping": "Shipping",

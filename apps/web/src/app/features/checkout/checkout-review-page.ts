@@ -24,6 +24,9 @@ import type { Address } from '../../core/addresses';
 import { ToastService } from '../../shared/forms';
 import { CurrencyService } from '../../core/currency/currency.service';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
+import { PriceChangeNoteComponent } from '../../shared/ui/price-change-note';
+import { CART_PRICES_CHANGED } from '../../core/checkout/checkout.types';
+import type { CartPriceChange, CartPricesChangedDetails } from '../../core/checkout/checkout.types';
 
 /** Where verify-phone returns the user after they verify mid-checkout. */
 const CHECKOUT_REVIEW_PATH = '/checkout/review';
@@ -79,13 +82,17 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
  *     (the inputs here are server-derived; user can't fix from form)
  *   - PROMO_INVALID → clear local promo, re-quote without it,
  *     show the invalid status
+ *   - 409 CART_PRICES_CHANGED → a vendor changed a price after the
+ *     customer loaded this page. Reload the cart + quote, show the
+ *     old → new prices in a panel and turn the button into "Confirm new
+ *     total and place order"; the next click sends the new signature.
  *   - Network errors → toast checkout.errors.networkError
  *   - Any other → toast checkout.errors.initiateFailed
  */
 @Component({
   selector: 'app-checkout-review',
   standalone: true,
-  imports: [CfImagePipe, DecimalPipe, NgIf, NgFor, ReactiveFormsModule, TranslatePipe, CheckoutStepperComponent],
+  imports: [CfImagePipe, DecimalPipe, NgIf, NgFor, ReactiveFormsModule, TranslatePipe, CheckoutStepperComponent, PriceChangeNoteComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="checkout-page checkout-page--review" data-testid="checkout-review-page">
@@ -167,6 +174,11 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
                 <p class="review-item__qty">
                   {{ 'cart.drawer.qtyLabel' | translate }}: {{ item.quantity }}
                 </p>
+                <ui-price-change-note
+                  *ngIf="item.price_changed"
+                  [previousPrice]="item.previous_unit_price"
+                  [currency]="currency()"
+                />
               </div>
               <p class="review-item__price">
                 {{ currency() }} {{ item.line_subtotal }}
@@ -440,6 +452,26 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
           </button>
         </p>
 
+        <section
+          *ngIf="priceChanges() !== null"
+          class="review-price-changes"
+          role="alert"
+          data-testid="review-price-changes"
+        >
+          <h2 class="review-price-changes__title">{{ 'checkout.priceChanges.title' | translate }}</h2>
+          <p class="review-price-changes__body">{{ 'checkout.priceChanges.body' | translate }}</p>
+          <ul *ngIf="priceChanges()!.length > 0" class="review-price-changes__list" role="list">
+            <li *ngFor="let change of priceChanges()" class="review-price-changes__item">
+              <span class="review-price-changes__name">{{ change.name }}</span>
+              <span class="review-price-changes__prices">
+                <s *ngIf="change.previous_unit_price">{{ currency() }} {{ change.previous_unit_price }}</s>
+                <span aria-hidden="true">→</span>
+                <strong>{{ currency() }} {{ change.unit_price }}</strong>
+              </span>
+            </li>
+          </ul>
+        </section>
+
         <div class="review-actions">
           <div class="review-actions__recap" aria-hidden="true">
             <span class="review-actions__recap-label">{{ 'checkout.review.total' | translate }}</span>
@@ -463,7 +495,7 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
               (click)="onPlaceOrder()"
               data-testid="review-place-order"
             >
-              {{ (isInitiating() ? 'common.loading' : 'checkout.review.placeOrder') | translate }}
+              {{ (isInitiating() ? 'common.loading' : (priceChanges() !== null ? 'checkout.priceChanges.confirm' : 'checkout.review.placeOrder')) | translate }}
             </button>
           </div>
         </div>
@@ -497,6 +529,14 @@ export class CheckoutReviewPageComponent implements OnInit {
   );
 
   protected readonly items = computed<CartItem[]>(() => this.cart.cart().items ?? []);
+
+  /**
+   * Set when checkout answered 409 CART_PRICES_CHANGED: the re-priced lines
+   * to show before the customer confirms. While set, the place-order button
+   * reads "Confirm new total and place order".
+   */
+  private readonly _priceChanges = signal<CartPriceChange[] | null>(null);
+  protected readonly priceChanges = this._priceChanges.asReadonly();
   protected readonly currency = this.cart.currency;
   protected readonly subtotal = this.cart.subtotal;
   protected readonly isInitiating = this.checkout.isInitiating;
@@ -619,6 +659,15 @@ export class CheckoutReviewPageComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    /* Load the cart fresh: the API re-prices every line to today's price,
+       so the review shows (and the signature covers) exactly what will be
+       charged. A failed refresh keeps the cart already in memory. */
+    try {
+      await this.cart.refresh();
+    } catch {
+      /* Non-fatal: the place-order price gate still protects the customer. */
+    }
+
     /* Bounce guards. */
     if ((this.cart.cart().items ?? []).length === 0) {
       await this.router.navigateByUrl('/cart');
@@ -788,6 +837,8 @@ export class CheckoutReviewPageComponent implements OnInit {
         shipping_address_id: shippingId,
         gift_card_code: this.appliedGiftCode(),
         use_gift_wallet: this.walletApplied() ? true : undefined,
+        /* The prices this page shows; the API refuses (409) if they moved. */
+        expected_price_signature: this.cart.cart().price_signature || undefined,
       });
 
       /* Some lines may have been auto-removed at checkout (their store is no
@@ -829,8 +880,48 @@ export class CheckoutReviewPageComponent implements OnInit {
         await this.goToPhoneVerification();
         return;
       }
+      if (this.extractApiErrorCode(err) === CART_PRICES_CHANGED) {
+        await this.handlePricesChanged(err as HttpErrorResponse);
+        return;
+      }
       this.toast.error('checkout.errors.initiateFailed');
     }
+  }
+
+  /**
+   * A vendor changed a price after this page loaded. The API has already
+   * re-priced the cart; reload it (new prices + signature), re-quote the
+   * totals (promo, delivery) and re-size any gift card / wallet preview so
+   * everything on screen matches the new total, then ask the customer to
+   * confirm. Nothing was charged.
+   */
+  private async handlePricesChanged(err: HttpErrorResponse): Promise<void> {
+    const details = (err.error as { error?: { details?: CartPricesChangedDetails } } | null)
+      ?.error?.details;
+    this._priceChanges.set(Array.isArray(details?.items) ? details!.items : []);
+
+    try {
+      await this.cart.refresh();
+    } catch {
+      /* Keep going: the next attempt re-checks prices server-side anyway. */
+    }
+    if (this.items().length === 0) {
+      await this.router.navigateByUrl('/cart');
+      return;
+    }
+    await this.refreshQuote(this.appliedPromo());
+
+    const giftCode = this.appliedGiftCode();
+    if (giftCode !== null) {
+      try {
+        this._giftPreview.set(await this.giftCards.previewCartApply(giftCode));
+      } catch {
+        this._giftPreview.set(null);
+      }
+    }
+    await this.loadWalletPreview();
+
+    this.toast.warning('checkout.priceChanges.toast');
   }
 
   /** Route to phone verification, returning to checkout review after. */

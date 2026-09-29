@@ -137,6 +137,27 @@
   color: var(--color-text-muted, #6b6056);
 }
 
+.cart-page__price-notice {
+  margin: 0 0 var(--space-md, 16px);
+  padding: var(--space-sm, 12px) var(--space-md, 16px);
+  border: 1px solid var(--color-warning-border, #fcd34d);
+  border-radius: var(--radius-md, 12px);
+  background: var(--color-warning-bg, #fef3c7);
+  color: var(--color-warning-text, #92400e);
+}
+
+.cart-page__price-notice-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cart-page__price-notice-body {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .cart-page__item-custom {
   margin: 0;
   font-size: 12px;
