@@ -837,6 +837,10 @@ return function (App $app): void {
         // owner tagged with the admin's id (imp_by claim).
         $group->post('/vendors/{id:[0-9]+}/impersonate',
             \Bayti\Api\Http\Controllers\Admin\Vendor\ImpersonateVendorController::class)->add($perm->for('vendors.impersonate'));
+        // Reset the vendor owner's password (generated + emailed, or admin-set).
+        // Revokes every session and forces a change on next sign-in.
+        $group->post('/vendors/{id:[0-9]+}/reset-password',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\ResetVendorPasswordController::class)->add($perm->for('vendors.reset_password'));
 
         // M3.2.X.6-C, Vendor lifecycle state transitions
         $group->post('/vendors/{id:[0-9]+}/approve',

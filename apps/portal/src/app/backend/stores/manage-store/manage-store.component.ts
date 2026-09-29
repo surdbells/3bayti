@@ -12,7 +12,7 @@ import { AccountSetupComponent } from '../account-setup/account-setup.component'
 
 // Ax design system
 import { AxRichEditorComponent } from '../../../shared/rich/ax-rich-editor.component';
-import { AxTabsComponent, AxTabComponent, AxConfirmService } from '../../../shared/overlays';
+import { AxTabsComponent, AxTabComponent, AxConfirmService, AxModalService } from '../../../shared/overlays';
 
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -22,6 +22,13 @@ import type { PlaceDetails } from '../../../core/places/places.service';
 import { AxCanDirective } from '../../../shared/security/ax-can.directive';
 import { ImpersonationService } from '../../../services/impersonation.service';
 import { apiErrorMessage } from '../../../shared/http/api-error';
+import { I18nService } from '../../../i18n.service';
+import { TranslatePipe } from '../../../translate.pipe';
+import {
+  ResetVendorPasswordDialogComponent,
+  ResetVendorPasswordDialogData,
+  ResetVendorPasswordResult,
+} from './reset-vendor-password-dialog.component';
 @Component({
   selector: 'app-manage-store',
   standalone: true,
@@ -32,7 +39,7 @@ import { apiErrorMessage } from '../../../shared/http/api-error';
     AccountSetupComponent,
     AxRichEditorComponent,
     AxTabsComponent,
-    AxTabComponent, IconComponent, AxComboboxComponent, AxPlaceAutocompleteComponent, AxCanDirective],
+    AxTabComponent, IconComponent, AxComboboxComponent, AxPlaceAutocompleteComponent, AxCanDirective, TranslatePipe],
   templateUrl: './manage-store.component.html',
   styleUrl: './manage-store.component.css',
 })
@@ -40,6 +47,8 @@ export class ManageStoreComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
   private readonly impersonation = inject(ImpersonationService);
   private readonly navHistory = inject(NavigationHistoryService);
+  private readonly modal = inject(AxModalService);
+  private readonly i18n = inject(I18nService);
 
   ui_controls = {
     is_loading: false,
@@ -552,6 +561,47 @@ export class ManageStoreComponent implements OnInit {
 
   get isActive(): boolean {
     return this.store.store_status === true || String(this.store.is_active) === 'true' || String(this.store.is_active) === '1';
+  }
+
+  // ── Vendor password reset ──────────────────────────────────────────
+  /** True while the reset dialog is open, so the trigger can't stack dialogs. */
+  resetPasswordOpen = false;
+
+  /**
+   * Reset the store owner's password (generated + emailed, or admin-set).
+   * The dialog runs the request itself; here we only report the outcome.
+   */
+  resetVendorPassword() {
+    if (this.resetPasswordOpen || !this.storeId) return;
+    const data: ResetVendorPasswordDialogData = {
+      vendorId: this.storeId,
+      storeName: this.store.store_name || this.store_name || '',
+      ownerName: `${this.store.first_name || ''} ${this.store.last_name || ''}`.trim(),
+      ownerEmail: this.store.email || '',
+    };
+    this.resetPasswordOpen = true;
+    this.modal
+      .open<ResetVendorPasswordDialogComponent, ResetVendorPasswordResult, ResetVendorPasswordDialogData>(
+        ResetVendorPasswordDialogComponent,
+        { size: 'md', data, ariaLabel: this.i18n.t('vendor_reset_password.title') },
+      )
+      .afterClosed()
+      .subscribe((result) => {
+        this.resetPasswordOpen = false;
+        if (!result) return;
+        const email = result.email || data.ownerEmail;
+        if (result.email_sent) {
+          this.toast.success(this.i18n.t(
+            result.mode === 'generate' ? 'vendor_reset_password.success_generate' : 'vendor_reset_password.success_manual',
+            { email },
+          ));
+        } else {
+          this.toast.error(this.i18n.t(
+            result.mode === 'generate' ? 'vendor_reset_password.email_failed_generate' : 'vendor_reset_password.email_failed_manual',
+            { email },
+          ));
+        }
+      });
   }
 
   // ── Impersonation (admin "sign in as vendor") ──────────────────────

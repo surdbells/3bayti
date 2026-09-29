@@ -39,6 +39,11 @@
             title="Sign in as this vendor to act on their behalf">
             <app-icon name="visibility" aria-hidden="true"></app-icon> Sign in as vendor
           </button>
+          <button *axCan="'vendors.reset_password'" type="button" class="ax-btn ax-btn-outline ax-btn-sm"
+            (click)="resetVendorPassword()" [disabled]="resetPasswordOpen || ui_controls.is_loading"
+            [title]="'vendor_reset_password.button_title' | translate">
+            <app-icon name="key" aria-hidden="true"></app-icon> {{ 'vendor_reset_password.button' | translate }}
+          </button>
           <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm"
             (click)="get_store()" [disabled]="ui_controls.is_loading" aria-label="Refresh">
             <app-icon name="refresh" aria-hidden="true"></app-icon>

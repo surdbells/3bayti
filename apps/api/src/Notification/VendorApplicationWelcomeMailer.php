@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Notification;
 
 use Bayti\Api\Domain\Catalog\VendorApplication;
+use Bayti\Api\Domain\User\TemporaryPassword;
 use Bayti\Api\Domain\User\User;
 use Psr\Log\LoggerInterface;
 
@@ -33,13 +34,7 @@ final class VendorApplicationWelcomeMailer
      */
     public function generateTempPassword(int $length = 12): string
     {
-        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-        $max = strlen($alphabet) - 1;
-        $password = '';
-        for ($i = 0; $i < $length; $i++) {
-            $password .= $alphabet[random_int(0, $max)];
-        }
-        return $password;
+        return TemporaryPassword::generate($length);
     }
 
     /**
