@@ -23,6 +23,64 @@ use PHPUnit\Framework\Attributes\Test;
 final class MergeAnonCartControllerTest extends HttpTestCase
 {
     #[Test]
+    public function mergeUsesSalePricesAndRefreshesTheExistingLine(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $p1 = $this->makeProduct(id: 100, name: 'Silk Abaya', price: '349.00');
+        $p2 = $this->makeProduct(id: 200, name: 'Kaftan', price: '199.00');
+        $this->setEntityProp($p2, 'salePrice', '149.00');
+
+        // The customer's server cart already holds p1 at the old 299.00.
+        $cart = new Cart(user: $user);
+        $this->setEntityId($cart, 42);
+        $existing = new CartItem(product: $p1, quantity: 1, unitPriceSnapshot: '299.00');
+        $this->setEntityId($existing, 555);
+        $cart->addItem($existing);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('find')->willReturnMap([[100, $p1], [200, $p2]]);
+        $cartRepo = $this->createMock(CartRepository::class);
+        $cartRepo->method('findActiveForUser')->with($user)->willReturn($cart);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $cartRepo, $productRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Cart::class, $cartRepo],
+                [Product::class, $productRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $pair = $this->app->getContainer()->get(JwtService::class)->issueTokenPair($user);
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/cart/merge', [
+                'items' => [
+                    ['product_id' => 100, 'quantity' => 1],
+                    ['product_id' => 200, 'quantity' => 1],
+                ],
+            ], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        $items = $this->jsonBody($response)['cart']['items'];
+        $byProduct = array_column($items, null, 'product_id');
+
+        // Existing line: quantities merged AND re-priced (was stuck at 299).
+        self::assertSame(2, $byProduct[100]['quantity']);
+        self::assertSame('349.00', $byProduct[100]['unit_price']);
+        self::assertSame('299.00', $byProduct[100]['previous_unit_price']);
+        self::assertTrue($byProduct[100]['price_changed']);
+        // New line: charged at the sale price, not the regular price.
+        self::assertSame('149.00', $byProduct[200]['unit_price']);
+        self::assertFalse($byProduct[200]['price_changed']);
+        self::assertTrue($this->jsonBody($response)['cart']['has_price_changes']);
+    }
+
+    #[Test]
     public function mergesGuestItemsIntoFreshServerCart(): void
     {
         $user = $this->makeUser(id: 7);

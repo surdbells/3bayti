@@ -75,6 +75,35 @@ final class ResolveCartControllerTest extends HttpTestCase
     }
 
     #[Test]
+    public function resolvesAtTheSalePriceWhenAProductIsOnSale(): void
+    {
+        $product = $this->makeProduct(id: 100, name: 'Silk Abaya', price: '299.00', image: null);
+        $this->setEntityProp($product, 'salePrice', '249.00');
+
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('find')->willReturnMap([[100, $product]]);
+
+        $em = $this->stubEm(function ($em) use ($productRepo): void {
+            $em->method('getRepository')->willReturnMap([
+                [Product::class, $productRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/cart/resolve', [
+                'items' => [['product_id' => 100, 'quantity' => 2]],
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        $body = $this->jsonBody($response);
+        self::assertSame('249.00', $body['cart']['items'][0]['unit_price']);
+        self::assertSame('498.00', $body['cart']['subtotal']);
+        self::assertFalse($body['cart']['items'][0]['price_changed']);
+    }
+
+    #[Test]
     public function dropsUnknownProductsAndReportsThem(): void
     {
         $p1 = $this->makeProduct(id: 100, name: 'Silk Abaya', price: '299.00', image: null);

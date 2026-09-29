@@ -4,7 +4,7 @@ namespace Bayti\Api\Http\Controllers\GiftCard;
 
 
 use Bayti\Api\Domain\Cart\Cart;
-use Bayti\Api\Domain\Cart\CartItem;
+use Bayti\Api\Domain\Cart\CartPriceRefresher;
 use Bayti\Api\Domain\Cart\CartRepository;
 use Bayti\Api\Domain\Cart\DeliveryFeeCalculator;
 use Bayti\Api\Domain\GiftCard\GiftCard;
@@ -46,6 +46,7 @@ final class ApplyGiftCardToCartController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly DeliveryFeeCalculator $delivery,
+        private readonly CartPriceRefresher $prices,
     ) {}
     protected function getResponseFactory(): ResponseFactoryInterface { return $this->responseFactory; }
 
@@ -92,12 +93,9 @@ final class ApplyGiftCardToCartController
         // (Order::computeTotal). Sizing the card against the item subtotal
         // alone left the delivery fee uncovered even when the card could pay
         // for the whole order.
-        $subtotal = '0.00';
-        /** @var CartItem $item */
-        foreach ($cart->getItems() as $item) {
-            $line     = bcmul($item->getUnitPriceSnapshot(), (string) $item->getQuantity(), 2);
-            $subtotal = bcadd($subtotal, $line, 2);
-        }
+        // Current prices first, so the preview matches what checkout charges.
+        $this->prices->refresh($cart);
+        $subtotal = $cart->computeSubtotal();
         $deliveryFee = $this->delivery->forCart($cart);
         $cartTotal   = bcadd($subtotal, $deliveryFee, 2);
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Cart;
 
 use Bayti\Api\Domain\Cart\Cart;
+use Bayti\Api\Domain\Cart\CartPriceRefresher;
 use Bayti\Api\Domain\Cart\CartRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\ErrorCodes;
@@ -37,6 +38,7 @@ final class GetCartController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly CartSerializer $serializer,
+        private readonly CartPriceRefresher $prices,
     ) {
     }
 
@@ -61,17 +63,12 @@ final class GetCartController
 
         if ($cart === null) {
             return $this->ok([
-                'cart' => [
-                    'id' => 0,
-                    'status' => 'active',
-                    'currency' => 'AED',
-                    'cart_code' => 'PND',
-                    'subtotal' => '0.00',
-                    'item_count' => 0,
-                    'items' => [],
-                ],
+                'cart' => $this->serializer->emptyShape(),
             ]);
         }
+
+        // Re-sync every line to the product's current price before showing it.
+        $this->prices->refresh($cart);
 
         return $this->ok([
             'cart' => $this->serializer->listShape($cart),

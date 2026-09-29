@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Cart;
 
 use Bayti\Api\Domain\Cart\Cart;
+use Bayti\Api\Domain\Cart\CartPriceRefresher;
 use Bayti\Api\Domain\Cart\CartRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Controllers\Cart\Dto\UpdateCartItemInput;
@@ -47,6 +48,7 @@ final class UpdateCartItemController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly CartSerializer $serializer,
+        private readonly CartPriceRefresher $prices,
     ) {
     }
 
@@ -99,6 +101,9 @@ final class UpdateCartItemController
         $item->setQuantity($input->quantity ?? 1);
 
         $carts->saveWithItems($cart);
+
+        // Every line (including ones already in the cart) at today's price.
+        $this->prices->refresh($cart);
 
         return $this->ok([
             'cart' => $this->serializer->listShape($cart),

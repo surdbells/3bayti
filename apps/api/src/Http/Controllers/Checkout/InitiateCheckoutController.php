@@ -54,7 +54,8 @@ use Psr\Log\NullLogger;
  *      - Create Order(status=pending_payment, subtotal/total computed
  *        server-side from cart items + delivery_fee + discount)
  *      - Snapshot each CartItem → OrderItem with unit_price_snapshot
- *        carried over (already snapshotted at add-to-cart time)
+ *        carried over (re-synced to the current price just before, see
+ *        the price gate below)
  *      - Snapshot User's selected billing+shipping Address → two
  *        OrderAddress records (decouples Order from later
  *        address-book edits)
@@ -84,10 +85,13 @@ use Psr\Log\NullLogger;
  *   end up paying less
  * - Server-derived order_reference: client cannot collide with
  *   another user's order (also, DB UNIQUE constraint backs us up)
- * - Server-derived unit_prices: snapshot from cart, which was
- *   snapshot from product at add-time. Cart contains the price
- *   the user saw when they added the item; that's what they pay,
- *   not a possibly-changed current product.price.
+ * - Server-derived unit_prices at TODAY's price: every line is
+ *   re-synced to the product's current effectivePrice() before the
+ *   order is built (CartPriceRefresher). If the client sends
+ *   expected_price_signature and the re-priced cart no longer
+ *   matches it, checkout stops with 409 CART_PRICES_CHANGED so the
+ *   customer confirms the new total; the client never supplies a
+ *   price, and nobody pays a price they weren't shown.
  *
  * What's NOT in this controller
  * ------------------------------
@@ -118,6 +122,7 @@ final class InitiateCheckoutController
         private readonly \Bayti\Api\Domain\Chat\OrderChatProvisioner $chatProvisioner,
         private readonly \Bayti\Api\Domain\Catalog\FlashCampaignStockReducer $flashStock,
         private readonly \Bayti\Api\Domain\Cart\DeliveryFeeCalculator $delivery,
+        private readonly \Bayti\Api\Domain\Cart\CartPriceRefresher $prices,
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
@@ -195,6 +200,15 @@ final class InitiateCheckoutController
                 'Cart is empty.',
             );
         }
+
+        // Price gate: charge today's prices, never a stale add-to-cart
+        // snapshot. Re-price every line first, then compare against what the
+        // client last showed the customer. This runs before the auto-drop
+        // below (the client's signature covers the whole cart it displayed)
+        // and before the idempotency key, promo and gift-card sizing, so
+        // everything downstream sees the current prices.
+        $this->prices->refresh($cart);
+        $this->assertPricesUnchanged($cart, $input->expected_price_signature);
 
         // Vendor gate — the authoritative order-time check. A line whose store
         // is not approved + active (or whose product went inactive) must never
@@ -1322,6 +1336,48 @@ final class InitiateCheckoutController
      * line isn't forced to carry a measurement. Keyed on the bare category
      * name (the slug's trailing "-<id>" stripped).
      */
+    /**
+     * Stop checkout when the prices the customer saw differ from what they'd
+     * be charged. No expected signature (older clients) means no prompt: they
+     * are charged the refreshed prices, which their cart screen already shows.
+     *
+     * The cart is already re-priced and flushed by the time this throws, so
+     * the client just reloads the cart, shows the change and retries with the
+     * new signature.
+     */
+    private function assertPricesUnchanged(Cart $cart, ?string $expectedSignature): void
+    {
+        if ($expectedSignature === null) {
+            return;
+        }
+        $current = $cart->priceSignature();
+        if (hash_equals($current, $expectedSignature)) {
+            return;
+        }
+
+        $changed = [];
+        foreach ($cart->getItems() as $item) {
+            if (!$item->hasPriceChanged()) {
+                continue;
+            }
+            $changed[] = [
+                'item_id' => $item->getId(),
+                'product_id' => $item->getProduct()->getId(),
+                'name' => $item->getProduct()->getName(),
+                'previous_unit_price' => $item->getPreviousUnitPrice(),
+                'unit_price' => $item->getUnitPriceSnapshot(),
+                'quantity' => $item->getQuantity(),
+            ];
+        }
+
+        $this->logger->info('checkout.initiate: prices changed since the cart was shown', [
+            'cart_id' => $cart->getId(),
+            'changed' => $changed,
+        ]);
+
+        throw HttpException::cartPricesChanged($changed, $cart->computeSubtotal(), $current);
+    }
+
     private function isSizeOptionalCategory(\Bayti\Api\Domain\Catalog\Product $product): bool
     {
         $slug = $product->getCategory()?->getSlug() ?? '';

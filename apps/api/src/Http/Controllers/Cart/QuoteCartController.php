@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Cart;
 
 use Bayti\Api\Domain\Cart\Cart;
+use Bayti\Api\Domain\Cart\CartPriceRefresher;
 use Bayti\Api\Domain\Cart\CartRepository;
 use Bayti\Api\Domain\Promo\Exception\PromoNotApplicableException;
 use Bayti\Api\Domain\Promo\PromoCodeResolverService;
@@ -99,6 +100,7 @@ final class QuoteCartController
         private readonly EntityManagerInterface $em,
         private readonly PromoCodeResolverService $promoResolver,
         private readonly CartQuoteSerializer $serializer,
+        private readonly CartPriceRefresher $prices,
     ) {
     }
 
@@ -131,6 +133,9 @@ final class QuoteCartController
                 'Cart is empty — add items before requesting a quote.',
             );
         }
+
+        // Quote at today's prices (promo minimums and discounts included).
+        $this->prices->refresh($cart);
 
         $resolution = $this->resolvePromoOrThrow($cart, $user, $input);
 

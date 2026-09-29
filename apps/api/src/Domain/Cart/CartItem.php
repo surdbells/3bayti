@@ -11,17 +11,21 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * Line item within a Cart.
  *
- * Snapshotting pattern
- * =====================
- * The `unit_price_snapshot` column captures `products.price` at the
- * moment the item was added to the cart. If the vendor later changes
- * the price, existing cart items retain the old price until the user
- * removes and re-adds the item. This matches legacy behaviour and
- * the customer's reasonable expectation ("I saw it at 199, I expect
- * to pay 199").
+ * Pricing: live, with change tracking
+ * ====================================
+ * `unit_price_snapshot` holds the price the line is currently charged
+ * at: the product's effective price (sale price when genuinely on sale).
+ * It is set when the item is added and re-synced to the product's
+ * current effective price on every cart read and again at checkout
+ * (CartPriceRefresher), so a vendor price change always reaches the
+ * cart before the customer can pay.
  *
- * At checkout, the snapshot is carried forward into order_items so
- * the order amount is immutable regardless of later product edits.
+ * When a re-sync changes the price, `previous_unit_price` keeps the price
+ * the customer last saw before the change(s), so the apps can show a
+ * "price updated: was X, now Y" badge until the order is placed. If the
+ * price later returns to that value the badge clears. At checkout the
+ * snapshot is carried into order_items, so the order amount is immutable
+ * regardless of later product edits.
  *
  * Variant attributes
  * ===================
@@ -70,6 +74,14 @@ class CartItem
 
     #[ORM\Column(name: 'unit_price_snapshot', type: 'decimal', precision: 10, scale: 2)]
     private string $unitPriceSnapshot;
+
+    /**
+     * The price the customer saw before the most recent re-pricing(s), or
+     * null when the line's price hasn't changed since it was added (or has
+     * since returned to that price). Drives the "price updated" badge.
+     */
+    #[ORM\Column(name: 'previous_unit_price', type: 'decimal', precision: 10, scale: 2, nullable: true)]
+    private ?string $previousUnitPrice = null;
 
     #[ORM\Column(type: 'string', length: 50, nullable: true)]
     private ?string $size = null;
@@ -172,6 +184,44 @@ class CartItem
     public function getUnitPriceSnapshot(): string
     {
         return $this->unitPriceSnapshot;
+    }
+
+    public function getPreviousUnitPrice(): ?string
+    {
+        return $this->previousUnitPrice;
+    }
+
+    /** True while the line carries an unacknowledged price change. */
+    public function hasPriceChanged(): bool
+    {
+        return $this->previousUnitPrice !== null;
+    }
+
+    /**
+     * Re-sync the line to the product's current price.
+     *
+     * Returns true when the charged price actually changed. The first price
+     * the customer saw is kept in previous_unit_price across successive
+     * changes (199 -> 249 -> 279 shows "was 199"); returning to it clears
+     * the change entirely.
+     */
+    public function repriceTo(string $currentPrice): bool
+    {
+        if (bccomp($currentPrice, '0.00', 2) < 0) {
+            throw new \InvalidArgumentException("CartItem price must be >= 0, got '{$currentPrice}'");
+        }
+        if (bccomp($currentPrice, $this->unitPriceSnapshot, 2) === 0) {
+            return false;
+        }
+
+        $seenPrice = $this->previousUnitPrice ?? $this->unitPriceSnapshot;
+        $this->unitPriceSnapshot = bcadd($currentPrice, '0', 2);
+        $this->previousUnitPrice = bccomp($seenPrice, $currentPrice, 2) === 0
+            ? null
+            : bcadd($seenPrice, '0', 2);
+        $this->touchUpdatedAt();
+
+        return true;
     }
 
     public function getSize(): ?string

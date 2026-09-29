@@ -85,12 +85,13 @@ final class ResolveCartController
                 continue;
             }
 
-            // Price is read live from the product, so a price change since
-            // the item was added locally is reflected here.
+            // Price is read live from the product (the effective price, so an
+            // active sale is honoured), so a price change since the item was
+            // added locally is reflected here.
             $cart->addItem(new CartItem(
                 product: $product,
                 quantity: $quantity,
-                unitPriceSnapshot: $product->getPrice(),
+                unitPriceSnapshot: $product->effectivePrice(),
                 size: isset($incoming['size']) && is_string($incoming['size']) ? $incoming['size'] : null,
                 color: isset($incoming['color']) && is_string($incoming['color']) ? $incoming['color'] : null,
                 isCustom: (bool) ($incoming['is_custom'] ?? false),
