@@ -168,6 +168,22 @@ final class InitiateCheckoutInput
      */
     public readonly bool $use_gift_wallet;
 
+    /**
+     * The cart's price_signature as the client last displayed it (from
+     * GET /v3/cart or any cart mutation). The server re-prices the cart to
+     * current catalog prices before creating the order; if the result no
+     * longer matches this signature, checkout stops with 409
+     * CART_PRICES_CHANGED so the customer confirms the new total first.
+     *
+     * Optional for back-compat: clients that predate it (older mobile store
+     * builds) are charged the refreshed prices without the confirm step.
+     */
+    #[Assert\Length(
+        max: 64,
+        maxMessage: 'expected_price_signature is too long (max {{ limit }} chars).',
+    )]
+    public readonly ?string $expected_price_signature;
+
     public function __construct(
         ?string $channel = 'MOBILE',
         ?string $delivery_fee = '0.00',
@@ -180,6 +196,7 @@ final class InitiateCheckoutInput
         ?bool $use_gift_wallet = false,
         ?string $order_reference = null,
         ?int $customization_request_id = null,
+        ?string $expected_price_signature = null,
     ) {
         /* Accept any casing from clients (the web app sends 'web'); the
            Choice + Noon gateway require uppercase. Normalising here means
@@ -205,6 +222,9 @@ final class InitiateCheckoutInput
         $this->use_gift_wallet = $use_gift_wallet ?? false;
         $this->order_reference = ($order_reference !== null && trim($order_reference) !== '')
             ? trim($order_reference)
+            : null;
+        $this->expected_price_signature = ($expected_price_signature !== null && trim($expected_price_signature) !== '')
+            ? trim($expected_price_signature)
             : null;
     }
 }

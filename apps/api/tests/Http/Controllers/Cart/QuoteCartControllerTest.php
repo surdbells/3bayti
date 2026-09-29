@@ -200,6 +200,27 @@ final class QuoteCartControllerTest extends HttpTestCase
     }
 
     #[Test]
+    public function quotesAtTheCurrentPriceAfterAVendorPriceChange(): void
+    {
+        // Line added at 100.00; the product now costs 150.00. The quote (and
+        // the percentage promo computed off it) must use 150.00.
+        $cart = $this->makeCartWithSubtotal($this->makeUser(id: 7), '100.00');
+        $this->setEntityProp($cart->getItems()->first()->getProduct(), 'price', '150.00');
+        $promo = $this->makePromoCode('WELCOME10', PromoCode::DISCOUNT_TYPE_PERCENTAGE, '10.00');
+        $env = $this->bindEnv(promo: $promo, cart: $cart);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/cart/quote', ['promo_code' => 'WELCOME10'], $this->bearerHeader($env['user'])),
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        $body = $this->jsonBody($response);
+        self::assertSame('150.00', $body['data']['subtotal']);
+        self::assertSame('15.00', $body['data']['discount']);
+        self::assertSame('155.00', $body['data']['total']);
+    }
+
+    #[Test]
     public function returns200WithoutPromoWhenPromoCodeOmitted(): void
     {
         $env = $this->bindEnv(cartSubtotal: '50.00');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Cart;
 
 use Bayti\Api\Domain\Cart\Cart;
+use Bayti\Api\Domain\Cart\CartPriceRefresher;
 use Bayti\Api\Domain\Cart\CartItem;
 use Bayti\Api\Domain\Cart\CartRepository;
 use Bayti\Api\Domain\Catalog\Product;
@@ -31,7 +32,8 @@ use Psr\Http\Message\ServerRequestInterface;
  * client with all this; v3 derives server-side):
  *
  *   - Resolve the product; reject if not found / inactive
- *   - Snapshot the current product.price into cart_items.unit_price_snapshot
+ *   - Snapshot the product's current effective price into
+ *     cart_items.unit_price_snapshot (re-synced on every later read)
  *   - If an equivalent line exists in the cart (same product +
  *     variant attributes), increment its quantity instead of
  *     creating a duplicate row
@@ -52,6 +54,7 @@ final class AddCartItemController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly CartSerializer $serializer,
+        private readonly CartPriceRefresher $prices,
     ) {
     }
 
@@ -149,6 +152,9 @@ final class AddCartItemController
         }
 
         $carts->saveWithItems($cart);
+
+        // Every line (including ones already in the cart) at today's price.
+        $this->prices->refresh($cart);
 
         return $this->created([
             'cart' => $this->serializer->listShape($cart),

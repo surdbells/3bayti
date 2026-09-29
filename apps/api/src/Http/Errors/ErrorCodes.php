@@ -194,4 +194,18 @@ final class ErrorCodes
      * nothing. Rejected rather than silently applying a 0 discount.
      */
     public const PROMO_NOT_APPLICABLE_TO_CART = 'PROMO_NOT_APPLICABLE_TO_CART';
+
+    // -------------------------------------------------------------------
+    // Cart
+    // -------------------------------------------------------------------
+
+    /**
+     * Checkout was attempted with an expected_price_signature that no longer
+     * matches the cart: one or more prices changed after the customer last
+     * saw the cart (HTTP 409). The cart has already been re-priced; details
+     * carry {items:[{item_id, product_id, name, previous_unit_price,
+     * unit_price}], subtotal, price_signature} so the client can show the
+     * change, ask the customer to confirm, and retry with the new signature.
+     */
+    public const CART_PRICES_CHANGED = 'CART_PRICES_CHANGED';
 }

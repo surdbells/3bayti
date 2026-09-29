@@ -59,6 +59,8 @@ final class GetCartControllerTest extends HttpTestCase
         self::assertSame('PND', $body['cart']['cart_code']);
         self::assertSame('0.00', $body['cart']['subtotal']);
         self::assertSame(0, $body['cart']['item_count']);
+        self::assertSame('', $body['cart']['price_signature']);
+        self::assertFalse($body['cart']['has_price_changes']);
         self::assertSame([], $body['cart']['items']);
     }
 
@@ -119,10 +121,60 @@ final class GetCartControllerTest extends HttpTestCase
         self::assertSame('Silk Abaya', $line['product_name']);
         self::assertSame(2, $line['quantity']);
         self::assertSame('299.00', $line['unit_price']);
+        self::assertNull($line['previous_unit_price']);
+        self::assertFalse($line['price_changed']);
         self::assertSame('598.00', $line['line_subtotal']);
         self::assertSame('M', $line['size']);
         self::assertSame('Black', $line['color']);
         self::assertFalse($line['is_custom']);
+    }
+
+    #[Test]
+    public function repricesAStaleLineToTheCurrentPriceAndFlagsIt(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $cart = new Cart(user: $user);
+        $this->setEntityId($cart, 42);
+        // Added at 299.00; the vendor has since raised the price to 349.00.
+        $product = $this->makeProduct(id: 100, name: 'Silk Abaya', price: '349.00');
+        $item = new CartItem(product: $product, quantity: 2, unitPriceSnapshot: '299.00');
+        $this->setEntityId($item, 555);
+        $cart->addItem($item);
+        $signatureBefore = $cart->priceSignature();
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+        $cartRepo = $this->createMock(CartRepository::class);
+        $cartRepo->method('findActiveForUser')->with($user)->willReturn($cart);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $cartRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Cart::class, $cartRepo],
+            ]);
+            $em->expects(self::once())->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $pair = $this->app->getContainer()->get(JwtService::class)->issueTokenPair($user);
+        $response = $this->handle(
+            $this->jsonRequest('GET', '/v3/cart', [], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        $body = $this->jsonBody($response)['cart'];
+        self::assertSame('698.00', $body['subtotal']);
+        self::assertTrue($body['has_price_changes']);
+        self::assertNotSame($signatureBefore, $body['price_signature']);
+        self::assertSame($cart->priceSignature(), $body['price_signature']);
+
+        $line = $body['items'][0];
+        self::assertSame('349.00', $line['unit_price']);
+        self::assertSame('698.00', $line['line_subtotal']);
+        self::assertSame('299.00', $line['previous_unit_price']);
+        self::assertTrue($line['price_changed']);
     }
 
     #[Test]

@@ -98,6 +98,27 @@ final class HttpException extends \RuntimeException
     }
 
     /**
+     * 409, the cart's prices changed since the customer last saw them.
+     * Carries the re-priced lines, the new subtotal and the new
+     * price_signature under details (see ErrorCodes::CART_PRICES_CHANGED).
+     *
+     * @param list<array<string, mixed>> $changedItems
+     */
+    public static function cartPricesChanged(array $changedItems, string $subtotal, string $priceSignature): self
+    {
+        return new self(
+            409,
+            ErrorCodes::CART_PRICES_CHANGED,
+            'Some prices in your cart have changed. Please review your cart and confirm the new total.',
+            [
+                'items' => $changedItems,
+                'subtotal' => $subtotal,
+                'price_signature' => $priceSignature,
+            ],
+        );
+    }
+
+    /**
      * 422, a chat message was withheld by PII moderation. `flagTypes`
      * (e.g. ['phone','email']) is surfaced under details.flag_types so the
      * client can warn the sender precisely.

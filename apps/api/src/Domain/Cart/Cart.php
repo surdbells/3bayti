@@ -216,7 +216,7 @@ class Cart
 
     /**
      * Add a CartItem. Caller is responsible for snapshotting the
-     * unit price from products.price BEFORE construction.
+     * unit price from the product's effectivePrice() BEFORE construction.
      */
     public function addItem(CartItem $item): void
     {
@@ -286,6 +286,52 @@ class Cart
             $sum = bcadd($sum, $lineTotal, 2);
         }
         return $sum;
+    }
+
+    /**
+     * Record that one or more lines were re-priced. Bumps updated_at so the
+     * change persists on the cart row too: checkout derives its idempotency
+     * key from the cart's updated_at, and a price change must never let a
+     * retry return a payment session created at the old prices.
+     */
+    public function notePricesRefreshed(): void
+    {
+        $this->touchUpdatedAt();
+    }
+
+    /** True when any line carries an unacknowledged price change. */
+    public function hasPriceChanges(): bool
+    {
+        foreach ($this->items as $item) {
+            if ($item->hasPriceChanged()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Fingerprint of what the customer is being charged per line: each
+     * line's id and unit price (order-independent), plus the currency.
+     *
+     * Clients echo it back as `expected_price_signature` at checkout; a
+     * mismatch means the prices changed after the customer last saw the
+     * cart. Quantity is deliberately excluded, so a quantity edit on another
+     * device isn't reported as a price change. Unsaved lines (the transient
+     * guest-resolve cart) fall back to their product id.
+     */
+    public function priceSignature(): string
+    {
+        $parts = [];
+        foreach ($this->items as $item) {
+            $key = $item->getId() !== null
+                ? 'i' . $item->getId()
+                : 'p' . ($item->getProduct()->getId() ?? 0);
+            $parts[] = $key . '=' . bcadd($item->getUnitPriceSnapshot(), '0', 2);
+        }
+        sort($parts, SORT_STRING);
+
+        return substr(hash('sha256', $this->currency . '|' . implode(',', $parts)), 0, 32);
     }
 
     public function itemCount(): int
