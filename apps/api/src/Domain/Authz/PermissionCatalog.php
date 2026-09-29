@@ -70,6 +70,7 @@ final class PermissionCatalog
                     'vendors.view_compliance' => 'View compliance documents',
                     'vendors.review_compliance' => 'Approve / reject compliance',
                     'vendors.impersonate' => 'Sign in as a vendor (impersonate)',
+                    'vendors.reset_password' => 'Reset vendor passwords',
                     'vendors.export' => 'Export vendors',
                 ],
             ],
