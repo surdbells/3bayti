@@ -135,6 +135,12 @@
         @if (!ui_controls.is_loading){
           <ion-card class="cart-card">
             <ion-title class="cart-card__title">{{ 'order_summary' | translate }}</ion-title>
+            @if (hasPriceChanges) {
+              <div class="price-notice" role="status">
+                <p class="price-notice__title">{{ 'cart_price_notice_title' | translate }}</p>
+                <p class="price-notice__body">{{ 'cart_price_notice_body' | translate }}</p>
+              </div>
+            }
             <!-- Single server-authoritative summary, driven by promo.quote
                  (POST /v3/cart/quote). The v3 cart endpoint doesn't compute
                  delivery/discount/total, so the old this.bill.f_* fields were

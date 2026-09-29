@@ -273,6 +273,11 @@ ion-alert {
   --color: var(--ax-color-text-primary);
 }
 
+/* Checkout "prices have changed" alert: one old → new line per item. */
+ion-alert.price-changed-alert .alert-message {
+  white-space: pre-line;
+}
+
 /* End M2c overrides
    ========================================================================= */
 

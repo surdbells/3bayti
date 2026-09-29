@@ -66,6 +66,46 @@ describe('transformCartListResponse', () => {
     });
   });
 
+  it('forwards live-pricing fields (price signature + per-line change)', () => {
+    const result = transformCartListResponse({
+      cart: {
+        id: 5,
+        status: 'active',
+        items: [
+          { id: 1, product_id: 100, quantity: 1, unit_price: '349.00', line_subtotal: '349.00',
+            price_changed: true, previous_unit_price: '299.00' },
+          { id: 2, product_id: 200, quantity: 1, unit_price: '50.00', line_subtotal: '50.00',
+            price_changed: false, previous_unit_price: null },
+        ],
+        subtotal: '399.00',
+        item_count: 2,
+        currency: 'AED',
+        price_signature: 'abc123',
+        has_price_changes: true,
+      },
+    }) as { items: Array<Record<string, unknown>>; price_signature: string; has_price_changes: boolean };
+
+    expect(result.price_signature).toBe('abc123');
+    expect(result.has_price_changes).toBe(true);
+    expect(result.items[0]?.['price_changed']).toBe(true);
+    expect(result.items[0]?.['previous_unit_price']).toBe('299.00');
+    expect(result.items[0]?.['price_formatted']).toBe('349.00');
+    expect(result.items[1]?.['price_changed']).toBe(false);
+    expect(result.items[1]?.['previous_unit_price']).toBeNull();
+  });
+
+  it('defaults live-pricing fields for older API responses', () => {
+    const result = transformCartListResponse({
+      items: [{ id: 1, product_id: 100, quantity: 1, unit_price: '10.00' }],
+      subtotal: '10.00', item_count: 1,
+    }) as { items: Array<Record<string, unknown>>; price_signature: string; has_price_changes: boolean };
+
+    expect(result.price_signature).toBe('');
+    expect(result.has_price_changes).toBe(false);
+    expect(result.items[0]?.['price_changed']).toBe(false);
+    expect(result.items[0]?.['previous_unit_price']).toBeNull();
+  });
+
   it('handles empty cart', () => {
     const result = transformCartListResponse({
       id: 0,

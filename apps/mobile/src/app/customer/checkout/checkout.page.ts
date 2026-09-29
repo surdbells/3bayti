@@ -49,6 +49,9 @@ import { AxPlaceAutocompleteComponent, PlaceDetails } from '../../shared/ax-mobi
 import { AddressService, SavedAddress, NewAddress } from '../../core/services/address.service';
 import { ClipboardService } from '../../core/services/clipboard.service';
 import { CheckoutActivityService } from '../../core/services/checkout-activity.service';
+
+/** API error code: prices changed since the customer last saw the cart (HTTP 409). */
+const CART_PRICES_CHANGED = 'CART_PRICES_CHANGED';
 @Component({
   selector: 'app-checkout',
   templateUrl: './checkout.page.html',
@@ -86,6 +89,14 @@ import { CheckoutActivityService } from '../../core/services/checkout-activity.s
 })
 export class CheckoutPage implements OnInit, OnDestroy {
   carts: Cart[] = [];
+  /**
+   * The cart's price_signature as last displayed (GET /v3/cart). Sent back as
+   * expected_price_signature so the API answers 409 CART_PRICES_CHANGED
+   * instead of charging prices the customer hasn't seen.
+   */
+  priceSignature = '';
+  /** A line was re-priced since it was added (shows the summary notice). */
+  hasPriceChanges = false;
   billing: Billing[] = [];
   categories: Labels[] = [];
   isOnline = true;
@@ -565,6 +576,8 @@ export class CheckoutPage implements OnInit, OnDestroy {
                   : (data.bill?.subtotal ?? 0),
               };
               this.checkout.order.items = this.bill.count as any;
+              this.priceSignature = typeof data.price_signature === 'string' ? data.price_signature : '';
+              this.hasPriceChanges = data.has_price_changes === true;
             } else {
               this.carts = [];
               this.bill = { ...this.bill, count: 0, subtotal: 0 };
@@ -707,11 +720,20 @@ export class CheckoutPage implements OnInit, OnDestroy {
       // user's pick. v3 InitiateCheckoutInput accepts both as optional.
       shipping_address_id: this.selectedAddressId ?? undefined,
       billing_address_id: this.selectedAddressId ?? undefined,
+      // The prices this page showed; the API refuses (409) if they moved.
+      expected_price_signature: this.priceSignature || undefined,
     };
     this.networkAdapter.post_v3('POST /checkout/initiate', initiateBody, { authToken: this.single_user.token })
       .subscribe({
         next: async (response: any) => {
           this.ui_controls.checking_out = false;
+
+          // A vendor changed a price after this page loaded. The adapter
+          // surfaces the 409 as an error envelope on the success channel.
+          if ((response?.error_code ?? response?.error?.code) === CART_PRICES_CHANGED) {
+            await this.handlePricesChanged(response?.error_details ?? response?.error?.details);
+            return;
+          }
 
           // Some cart lines may have been auto-removed at checkout because
           // their store is no longer available. Tell the customer WHICH items
@@ -889,8 +911,13 @@ export class CheckoutPage implements OnInit, OnDestroy {
             });
 
         },
-        error: (e) => {
+        error: async (e: any) => {
           this.ui_controls.checking_out = false;
+          // Defensive: a 409 that reaches the error channel instead.
+          if ((e?.error?.error?.code ?? e?.error?.code) === CART_PRICES_CHANGED) {
+            await this.handlePricesChanged(e?.error?.error?.details ?? e?.error?.details);
+            return;
+          }
           console.error('initiatePayment error', e.toString());
           return;
         },
@@ -1112,6 +1139,53 @@ export class CheckoutPage implements OnInit, OnDestroy {
    * why the total dropped and that they aren't charged for them. Resolves when
    * the customer acknowledges, so payment only opens after they've seen it.
    */
+  /**
+   * 409 CART_PRICES_CHANGED: nothing was charged and the API has already
+   * re-priced the cart. Adopt the new signature, refresh the totals (keeping
+   * any applied promo, gift card or wallet) and show the customer each
+   * old -> new price. "Confirm and pay" retries straight away with the new
+   * signature; "Review new total" leaves them on the updated summary.
+   */
+  private async handlePricesChanged(details: any): Promise<void> {
+    if (typeof details?.price_signature === 'string') {
+      this.priceSignature = details.price_signature;
+    }
+    if (typeof details?.subtotal === 'string') {
+      this.bill = { ...this.bill, subtotal: details.subtotal };
+    }
+    this.hasPriceChanges = true;
+    this.quoteCart(this.promo.applied ? this.promo.code : null);
+    if (this.giftCard.applied) {
+      this.previewGiftCard();
+    }
+    this.loadGiftWallet();
+    this.cdr.markForCheck();
+
+    const changes: any[] = Array.isArray(details?.items) ? details.items : [];
+    const lines = changes
+      .filter((c) => c && typeof c.name === 'string')
+      .map((c) => {
+        const was = typeof c.previous_unit_price === 'string' ? `Ð${c.previous_unit_price} → ` : '';
+        return `${c.name}: ${was}Ð${c.unit_price}`;
+      });
+
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('checkout_price_changed_title'),
+      message: [this.i18n.t('checkout_price_changed_message'), ...lines].join('\n'),
+      cssClass: 'price-changed-alert',
+      buttons: [
+        { text: this.i18n.t('checkout_price_changed_review'), role: 'cancel' },
+        { text: this.i18n.t('checkout_price_changed_confirm'), role: 'confirm' },
+      ],
+      backdropDismiss: false,
+    });
+    await alert.present();
+    const { role } = await alert.onDidDismiss();
+    if (role === 'confirm') {
+      this.checkout_initiate();
+    }
+  }
+
   private async showDroppedItemsAlert(dropped: any[]): Promise<void> {
     const names = dropped
       .map((d) => (d && typeof d.name === 'string' ? d.name : ''))

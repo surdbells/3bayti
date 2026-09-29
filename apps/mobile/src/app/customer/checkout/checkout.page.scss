@@ -766,3 +766,27 @@
     padding: 14px 14px;
   }
 }
+
+// Live pricing: a vendor changed a price since the item was added. The
+// summary already shows (and checkout charges) the current price.
+.price-notice {
+  margin: 8px 16px 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--ax-color-bg-warning-subtle);
+  border: 1px solid var(--ax-palette-warning-300);
+}
+
+.price-notice__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ax-color-text-primary);
+}
+
+.price-notice__body {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ax-color-text-secondary);
+}
