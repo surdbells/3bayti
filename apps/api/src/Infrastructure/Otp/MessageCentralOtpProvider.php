@@ -82,6 +82,13 @@ final class MessageCentralOtpProvider implements OtpProvider
         private readonly string $apiKey,
         private readonly string $email,
         private readonly string $country = '971',
+        // MessageCentral's send `flowType` is the DELIVERY CHANNEL for the OTP.
+        // Per the VerifyNow API it accepts SMS / WHATSAPP / RCS / SAUTH only
+        // (there is no "OTP" value — OTP is the product/endpoint, not a channel).
+        // The chosen channel must have pricing on the account, or the send fails
+        // with HTTP 400 "Pricing not found" (the recorded prod outage on the SMS
+        // channel). Override via MESSAGECENTRAL_OTP_FLOW_TYPE (DI factory) to
+        // e.g. WHATSAPP without a deploy.
         private readonly string $flowType = 'SMS',
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {

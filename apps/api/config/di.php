@@ -1084,6 +1084,11 @@ return [
             apiKey: $apiKey,
             email: $email,
             country: $_ENV['MESSAGECENTRAL_COUNTRY'] ?? '971',
+            // OTP delivery CHANNEL (SMS | WHATSAPP | RCS | SAUTH — per the
+            // VerifyNow API; there is no "OTP" channel). The chosen channel must
+            // be priced on the account or the send returns "Pricing not found".
+            // Override per account without a deploy.
+            flowType: $_ENV['MESSAGECENTRAL_OTP_FLOW_TYPE'] ?? 'SMS',
         );
     },
 
