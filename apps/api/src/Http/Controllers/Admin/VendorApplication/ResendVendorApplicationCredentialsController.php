@@ -86,17 +86,43 @@ final class ResendVendorApplicationCredentialsController
             );
         }
 
-        // Resolve the seller's user account: the vendor owner if linked, else
-        // by the application email (older approvals may predate the link).
-        $user = $application->getVendor()?->getOwnerUser();
+        /** @var UserRepository $userRepo */
+        $userRepo = $this->em->getRepository(User::class);
+
+        // Resolve the account a LOGIN for this application's email actually
+        // authenticates against. Login uses findByEmail() (non-deleted,
+        // case-insensitive); the vendor->owner link is NOT guaranteed to point at
+        // that same row — a linked owner can be soft-deleted, shadowed by a newer
+        // account with the same email, or stored under a non-normalised email.
+        // Resetting anything other than the login row emails a password that can
+        // never work (the exact failure reported: a resend email's password 401s
+        // at /auth/login while the store showed the account "active").
+        $appEmail = $application->getEmail();
+        $user = $userRepo->findByEmail($appEmail);
+
         if (!$user instanceof User) {
-            /** @var UserRepository $userRepo */
-            $userRepo = $this->em->getRepository(User::class);
-            $user = $userRepo->findByEmail($application->getEmail());
+            // No live account for the application email. Fall back to the linked
+            // owner ONLY when login can still reach it via its own (possibly
+            // changed) email — otherwise resetting it hands out a dead credential.
+            $owner = $application->getVendor()?->getOwnerUser();
+            if (
+                $owner instanceof User
+                && !$owner->isDeleted()
+                && $userRepo->findByEmail($owner->getEmail())?->getId() === $owner->getId()
+            ) {
+                $user = $owner;
+            }
         }
+
         if (!$user instanceof User) {
+            // The seller account can't be signed in to — deleted, or registered
+            // under a different/non-normalised email. Surface it instead of
+            // silently emailing a credential that will 401, so the operator
+            // repairs the account (restore/de-duplicate/fix the email) first.
             throw HttpException::businessRuleViolation(
-                message: 'No seller account is linked to this application.',
+                message: 'No active seller account can be signed in to for '
+                    . $appEmail . '. The account may have been deleted or registered '
+                    . 'under a different email; repair the account, then resend.',
             );
         }
 
@@ -112,11 +138,16 @@ final class ResendVendorApplicationCredentialsController
         $this->logger->info('vendor-application credentials resent', [
             'application_id' => $application->getId(),
             'user_id' => $user->getId(),
+            'sent_to' => $user->getEmail(),
+            'application_email' => $appEmail,
             'by_admin_id' => $admin->getId(),
         ]);
 
         return $this->ok([
             'application' => $this->serializer->adminShape($application),
+            // Surface WHERE the credentials landed so a stale/mismatched owner
+            // link is visible to the operator instead of silently misdelivered.
+            'sent_to' => $user->getEmail(),
         ]);
     }
 }
