@@ -175,15 +175,53 @@ final class DeliveryReadinessCalculator
     }
 
     /**
-     * Parse the UPPER bound (in days) out of a Product.delivery_info payload
-     * ({ time, custom_time, note }). `time` is either a range like "4-7",
-     * a single number, or the literal "custom" (then the largest number in
-     * `custom_time` free text is used). Returns null when nothing usable is
-     * found, so the caller applies the vendor fallback.
+     * Resolve the full delivery-window RANGE (min..max days) for a product,
+     * preferring its per-product window (Product.delivery_info) and falling
+     * back to the vendor's store-wide min..max_delivery_days.
+     *
+     * The customer-facing order estimate (OrderSerializer::deliveryEstimate)
+     * uses this so an order is quoted the SAME window the customer saw on the
+     * product ("1-3 days"), instead of the vendor's store-wide default (7-14)
+     * which most stores never customise.
+     *
+     * @return array{min: int, max: int}
+     */
+    public static function deliveryRangeFor(Product $product, Vendor $vendor): array
+    {
+        $window = self::deliveryWindowFromInfo($product->getDeliveryInfo());
+        if ($window !== null) {
+            return $window;
+        }
+        return [
+            'min' => max(0, $vendor->getMinDeliveryDays()),
+            'max' => max(0, $vendor->getMaxDeliveryDays()),
+        ];
+    }
+
+    /**
+     * Parse the UPPER bound (in days) out of a Product.delivery_info payload.
+     * Kept for the readiness board, which only needs the lead (max) days.
+     * Delegates to deliveryWindowFromInfo() so the two never drift.
      *
      * @param array<string, mixed>|null $deliveryInfo
      */
     public static function leadDaysFromDeliveryInfo(?array $deliveryInfo): ?int
+    {
+        $window = self::deliveryWindowFromInfo($deliveryInfo);
+        return $window === null ? null : $window['max'];
+    }
+
+    /**
+     * Parse BOTH bounds (min..max, in days) out of a Product.delivery_info
+     * payload ({ time, custom_time, note }). `time` is a range like "1-3", a
+     * single number, or the literal "custom" (then the numbers in `custom_time`
+     * free text are used). A single number yields min == max. Returns null when
+     * nothing usable is found, so the caller applies the vendor fallback.
+     *
+     * @param array<string, mixed>|null $deliveryInfo
+     * @return array{min: int, max: int}|null
+     */
+    public static function deliveryWindowFromInfo(?array $deliveryInfo): ?array
     {
         if ($deliveryInfo === null) {
             return null;
@@ -193,32 +231,31 @@ final class DeliveryReadinessCalculator
             ? trim((string) $deliveryInfo['time'])
             : '';
 
-        if ($time !== '' && strtolower($time) !== 'custom') {
-            $days = self::maxIntIn($time);
-            if ($days !== null) {
-                return $days;
-            }
+        if ($time === '') {
+            return null;
         }
 
         if (strtolower($time) === 'custom') {
             $custom = isset($deliveryInfo['custom_time']) && is_scalar($deliveryInfo['custom_time'])
                 ? (string) $deliveryInfo['custom_time']
                 : '';
-            $days = self::maxIntIn($custom);
-            if ($days !== null) {
-                return $days;
-            }
+            return self::intRangeIn($custom);
         }
 
-        return null;
+        return self::intRangeIn($time);
     }
 
-    /** Largest non-negative integer appearing in a string, or null if none. */
-    private static function maxIntIn(string $s): ?int
+    /**
+     * Smallest + largest non-negative integers appearing in a string, or null
+     * if none. "1-3" → {min:1, max:3}; "5" → {min:5, max:5}; "soon" → null.
+     *
+     * @return array{min: int, max: int}|null
+     */
+    private static function intRangeIn(string $s): ?array
     {
         if (preg_match_all('/\d+/', $s, $m) && $m[0] !== []) {
             $nums = array_map('intval', $m[0]);
-            return max($nums);
+            return ['min' => min($nums), 'max' => max($nums)];
         }
         return null;
     }

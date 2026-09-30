@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Serializers;
 
 use Bayti\Api\Domain\GiftCard\GiftCard;
+use Bayti\Api\Domain\Order\DeliveryReadinessCalculator;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderAddress;
 use Bayti\Api\Domain\Order\OrderItem;
@@ -197,29 +198,45 @@ final class OrderSerializer
     }
 
     /**
-     * Customer-facing delivery estimate for the whole order: the lead-time
-     * range of the SLOWEST store in it (the one with the highest
-     * max_delivery_days), so the order is never quoted sooner than its
-     * slowest item can arrive. Null for orders with no real items (e.g.
-     * gift-card purchases).
+     * Customer-facing delivery estimate for the whole order.
+     *
+     * Each item's window is resolved the SAME way the customer saw it on the
+     * product: the per-product delivery window (Product.delivery_info, e.g.
+     * "1-3") when set, else the vendor's store-wide min..max_delivery_days.
+     * (Previously this used ONLY the vendor default, so a product quoted as
+     * "1-3 days" showed the store default "7-14" on the order.)
+     *
+     * The order needs every item delivered, so the combined window is:
+     *   max_days = the latest of all items' max  (never sooner than the slowest)
+     *   min_days = the latest of all items' min  (the whole order can't complete
+     *              before its slowest-to-start item's earliest)
+     * min_days <= max_days always holds (each min <= its own max <= max_days).
+     * Null for orders with no real items (e.g. gift-card purchases).
      *
      * @return array{min_days: int, max_days: int}|null
      */
     private function deliveryEstimate(Order $order): ?array
     {
-        $slowest = null;
+        $minDays = 0;
+        $maxDays = 0;
+        $hasItems = false;
         foreach ($order->getItems() as $item) {
-            $vendor = $item->getVendor();
-            if ($slowest === null || $vendor->getMaxDeliveryDays() > $slowest->getMaxDeliveryDays()) {
-                $slowest = $vendor;
+            $range = DeliveryReadinessCalculator::deliveryRangeFor($item->getProduct(), $item->getVendor());
+            if (!$hasItems) {
+                $minDays = $range['min'];
+                $maxDays = $range['max'];
+                $hasItems = true;
+            } else {
+                $minDays = max($minDays, $range['min']);
+                $maxDays = max($maxDays, $range['max']);
             }
         }
-        if ($slowest === null) {
+        if (!$hasItems) {
             return null;
         }
         return [
-            'min_days' => $slowest->getMinDeliveryDays(),
-            'max_days' => $slowest->getMaxDeliveryDays(),
+            'min_days' => $minDays,
+            'max_days' => $maxDays,
         ];
     }
 

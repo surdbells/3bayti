@@ -119,6 +119,52 @@ final class OrderSerializerReturnsEmbeddingTest extends TestCase
     }
 
     #[Test]
+    public function deliveryEstimateUsesTheProductWindowNotJustTheVendorDefault(): void
+    {
+        // The reported bug: a single item whose product quotes "1-3 days" showed
+        // the vendor's store-wide default (7-14) on the order. The estimate must
+        // now reflect the per-product window the customer actually saw.
+        $order = $this->makeOrder();
+        $vendor = $this->makeVendor(id: 301); // uncustomised → 7-14 default
+        $this->addItem($order, $vendor, 'Fast product', ['time' => '1-3']);
+
+        $shape = $this->serializer->detailShape($order);
+
+        self::assertSame(['min_days' => 1, 'max_days' => 3], $shape['delivery_estimate']);
+    }
+
+    #[Test]
+    public function deliveryEstimateFallsBackToVendorWhenTheProductHasNoWindow(): void
+    {
+        $order = $this->makeOrder();
+        $vendor = $this->makeVendor(id: 302);
+        $vendor->setDeliveryDays(4, 9);
+        $this->addItem($order, $vendor, 'No window', null);
+
+        $shape = $this->serializer->detailShape($order);
+
+        self::assertSame(['min_days' => 4, 'max_days' => 9], $shape['delivery_estimate']);
+    }
+
+    #[Test]
+    public function deliveryEstimateCombinesProductWindowAndVendorFallbackAcrossItems(): void
+    {
+        // Item A: product window 1-3. Item B: no window → vendor 7-14. The order
+        // needs both, so min = max(1,7)=7 and max = max(3,14)=14.
+        $order = $this->makeOrder();
+        $fast = $this->makeVendor(id: 303);
+        $fast->setDeliveryDays(2, 5);
+        $slow = $this->makeVendor(id: 304);
+        $slow->setDeliveryDays(7, 14);
+        $this->addItem($order, $fast, 'Fast', ['time' => '1-3']);
+        $this->addItem($order, $slow, 'Slow', null);
+
+        $shape = $this->serializer->detailShape($order);
+
+        self::assertSame(['min_days' => 7, 'max_days' => 14], $shape['delivery_estimate']);
+    }
+
+    #[Test]
     public function deliveryEstimateIsNullWithoutItems(): void
     {
         // Gift-card purchase orders carry no items → no estimate.
@@ -247,12 +293,16 @@ final class OrderSerializerReturnsEmbeddingTest extends TestCase
         return $v;
     }
 
-    private function addItem(Order $order, Vendor $vendor, string $name): OrderItem
+    /**
+     * @param array<string, mixed>|null $deliveryInfo per-product delivery window
+     */
+    private function addItem(Order $order, Vendor $vendor, string $name, ?array $deliveryInfo = null): OrderItem
     {
         $product = (new \ReflectionClass(Product::class))->newInstanceWithoutConstructor();
         $this->setProp($product, 'id', random_int(200, 999));
         $this->setProp($product, 'name', $name);
         $this->setProp($product, 'vendor', $vendor);
+        $product->setDeliveryInfo($deliveryInfo);
 
         $item = new OrderItem(
             product: $product, vendor: $vendor,
