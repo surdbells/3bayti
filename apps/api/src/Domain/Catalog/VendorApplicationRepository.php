@@ -54,7 +54,12 @@ class VendorApplicationRepository extends EntityRepository
      */
     public function findPaginatedForAdmin(int $limit, int $offset, ?string $status = null): array
     {
-        $qb = $this->createQueryBuilder('a');
+        $qb = $this->createQueryBuilder('a')
+            // Eager-load the linked vendor + its owner account so the admin
+            // serializer can surface the true store status + owner-account state
+            // (approved/suspended, active/deleted) without an N+1 per row.
+            ->leftJoin('a.vendor', 'v')->addSelect('v')
+            ->leftJoin('v.ownerUser', 'o')->addSelect('o');
         if ($status !== null && in_array($status, VendorApplication::ALL_STATUSES, true)) {
             $qb->andWhere('a.status = :status')->setParameter('status', $status);
         }

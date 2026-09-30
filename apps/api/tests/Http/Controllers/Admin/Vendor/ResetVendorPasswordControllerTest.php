@@ -290,6 +290,26 @@ final class ResetVendorPasswordControllerTest extends HttpTestCase
         self::assertSame(0, $this->revokeAllCalls);
     }
 
+    #[Test]
+    public function softDeletedOwnerReturns422AndResetsNothing(): void
+    {
+        // A soft-deleted owner is invisible to login (findByEmail filters
+        // deleted_at IS NULL), so resetting its password would just email a
+        // credential that 401s. Refuse instead of handing out a dead password.
+        $admin = $this->makeAdminUser(99);
+        $owner = $this->makeOwner(55, 'seller@bayti.example', 'oldPass!');
+        $oldHash = $owner->getPasswordHash();
+        $ref = new \ReflectionProperty(User::class, 'deletedAt');
+        $ref->setAccessible(true);
+        $ref->setValue($owner, new \DateTimeImmutable());
+        $this->bindEm($admin, $this->makeVendor(42, $owner), $owner);
+
+        self::assertSame(422, $this->post($admin, 42, ['mode' => 'generate'])->getStatusCode());
+        self::assertSame($oldHash, $owner->getPasswordHash());
+        self::assertSame(0, $this->revokeAllCalls);
+        self::assertSame([], $this->mailer->sent());
+    }
+
     // -----------------------------------------------------------------
     // RBAC
     // -----------------------------------------------------------------

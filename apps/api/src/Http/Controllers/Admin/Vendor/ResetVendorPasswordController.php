@@ -192,6 +192,16 @@ final class ResetVendorPasswordController
         if ($owner->isAdmin() || $owner->isFinance() || $owner->isSupport() || $owner->isSubAdmin()) {
             throw HttpException::forbidden('Staff account passwords cannot be reset from a vendor.');
         }
+        // A soft-deleted owner is excluded by login's findByEmail (deleted_at IS
+        // NULL), so resetting its password just emails a credential that will
+        // 401. Refuse instead — the account must be restored first. (Same class
+        // of bug fixed in the vendor-application resend flow.)
+        if ($owner->isDeleted()) {
+            throw HttpException::businessRuleViolation(
+                message: 'This seller account has been deleted and cannot be signed in to. '
+                    . 'Restore the account before resetting its password.',
+            );
+        }
         if (!$owner->isActive()) {
             throw HttpException::businessRuleViolation(
                 message: 'This account is inactive. Reactivate it before resetting the password.',

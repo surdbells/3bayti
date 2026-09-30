@@ -28,6 +28,13 @@ interface VendorApplicationRow {
   message: string;
   reject_reason: string;
   reviewed_at: string;
+  // True state of the provisioned store + login account (present once approved),
+  // so the modal shows reality and the resend button can be guarded.
+  store_status: string;                 // '' | 'pending' | 'approved' | 'suspended'
+  owner_email: string;
+  account_active: boolean | null;
+  account_deleted: boolean | null;
+  credentials_resendable: boolean;      // API says a login can actually reach it
 }
 
 @Component({
@@ -88,6 +95,11 @@ export class VendorApplicationsComponent implements OnInit {
           message: a.message ?? '',
           reject_reason: a.reject_reason ?? '',
           reviewed_at: a.reviewed_at ?? '',
+          store_status: a.store_status ?? '',
+          owner_email: a.owner_email ?? '',
+          account_active: a.account_active ?? null,
+          account_deleted: a.account_deleted ?? null,
+          credentials_resendable: a.credentials_resendable === true,
         } as VendorApplicationRow));
         // Keep the open modal in sync with refreshed data (status/reject reason).
         if (this.selected) {
@@ -152,13 +164,27 @@ export class VendorApplicationsComponent implements OnInit {
   /** Re-issue login credentials + resend the welcome email for an approved app. */
   resend(row: VendorApplicationRow) {
     if (this.busyId !== null) return;
+    // Guard: resetting a deleted/inactive account's password only emails a
+    // credential login can never accept (the API refuses this too). Block it
+    // up front with the reason instead of letting it fail server-side.
+    if (!this.canResend(row)) {
+      this.toast.error(
+        this.resendBlockedReason(row)
+        || 'Credentials can only be resent for an approved, active seller account.',
+      );
+      return;
+    }
     // Close the review modal first: it's a full-screen overlay above the CDK
     // confirm layer, so the confirm would otherwise render beneath it.
     this.selected = null;
+    const suspended = (row.store_status || '').toLowerCase() === 'suspended';
     this.confirmDialog.confirm({
       title: 'Resend login credentials?',
-      message: `This resets ${row.business || 'this vendor'}'s password and emails ${row.email} `
-        + `fresh login details. Any password they have already set will stop working.`,
+      message: `This resets ${row.business || 'this vendor'}'s password and emails ${row.owner_email || row.email} `
+        + `fresh login details. Any password they have already set will stop working.`
+        + (suspended
+          ? ` Note: this store is currently SUSPENDED — the seller can sign in but cannot sell until it is reactivated.`
+          : ``),
       confirmLabel: 'Resend credentials',
       cancelLabel: 'Cancel',
       variant: 'danger',
@@ -187,6 +213,45 @@ export class VendorApplicationsComponent implements OnInit {
 
   isApproved(row: VendorApplicationRow): boolean {
     return (row.status || '').toLowerCase() === 'approved';
+  }
+
+  /** Whether resending credentials will actually reach a login. */
+  canResend(row: VendorApplicationRow): boolean {
+    return this.isApproved(row) && row.credentials_resendable;
+  }
+
+  /** Why resend is disabled (for the button hint), or '' when it's allowed. */
+  resendBlockedReason(row: VendorApplicationRow): string {
+    if (!this.isApproved(row)) return '';
+    if (row.account_deleted) return 'The seller account has been deleted — restore it before resending.';
+    if (row.account_active === false) return 'The seller account is inactive — reactivate it before resending.';
+    return '';
+  }
+
+  /** Human label for the linked store's status, or '' when not provisioned yet. */
+  storeStatusLabel(row: VendorApplicationRow): string {
+    const s = (row.store_status || '').toLowerCase();
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+  }
+
+  storeStatusClass(status: string): string {
+    switch ((status || '').toLowerCase()) {
+      case 'approved': return 'ax-badge-success';
+      case 'suspended': return 'ax-badge-danger';
+      default: return 'ax-badge-warning';
+    }
+  }
+
+  /** Human label for the login account's state (Active / Inactive / Deleted). */
+  accountStateLabel(row: VendorApplicationRow): string {
+    if (row.account_deleted) return 'Deleted';
+    if (row.account_active === false) return 'Inactive';
+    if (row.account_active === true) return 'Active';
+    return '';
+  }
+
+  accountStateClass(row: VendorApplicationRow): string {
+    return (row.account_deleted || row.account_active === false) ? 'ax-badge-danger' : 'ax-badge-success';
   }
 
   /** First field-level validation message, else top-level message, else fallback. */

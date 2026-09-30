@@ -91,9 +91,24 @@
           <div *ngIf="selected.license_number"><dt>Trade licence</dt><dd>{{ selected.license_number }}</dd></div>
           <div><dt>Submitted</dt><dd>{{ formatDate(selected.submitted_at) }}</dd></div>
           <div *ngIf="selected.reviewed_at"><dt>Reviewed</dt><dd>{{ formatDate(selected.reviewed_at) }}</dd></div>
+          <div *ngIf="isApproved(selected) && selected.store_status">
+            <dt>Store status</dt>
+            <dd><span class="ax-badge" [ngClass]="storeStatusClass(selected.store_status)">{{ storeStatusLabel(selected) }}</span></dd>
+          </div>
+          <div *ngIf="isApproved(selected) && accountStateLabel(selected)">
+            <dt>Login account</dt>
+            <dd>
+              <span class="ax-badge" [ngClass]="accountStateClass(selected)">{{ accountStateLabel(selected) }}</span>
+              <span *ngIf="selected.owner_email" class="ax-text-secondary" style="margin-left:.45rem;">{{ selected.owner_email }}</span>
+            </dd>
+          </div>
           <div *ngIf="selected.reject_reason" class="va-detail-full"><dt>Reject reason</dt><dd>{{ selected.reject_reason }}</dd></div>
           <div *ngIf="selected.message" class="va-detail-full"><dt>Applicant message</dt><dd>{{ selected.message }}</dd></div>
         </dl>
+
+        <p *ngIf="isApproved(selected) && !canResend(selected)" class="ax-text-danger ax-mt-2" style="font-size:.85rem;display:flex;align-items:center;gap:.35rem;">
+          <app-icon name="warning" aria-hidden="true"></app-icon> {{ resendBlockedReason(selected) }}
+        </p>
 
         <div *ngIf="rejecting" class="va-reject-box">
           <label for="va-reject-reason" class="ax-label ax-label-required">Reason for rejection</label>
@@ -115,7 +130,8 @@
             type="button"
             class="ax-btn ax-btn-secondary"
             (click)="resend(selected)"
-            [disabled]="busyId !== null">
+            [disabled]="busyId !== null || !canResend(selected)"
+            [attr.title]="resendBlockedReason(selected) || null">
             <app-icon name="mail" aria-hidden="true"></app-icon> Resend credentials
           </button>
           <ng-container *ngIf="isPending(selected)">
