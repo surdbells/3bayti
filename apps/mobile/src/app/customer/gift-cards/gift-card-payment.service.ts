@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { InAppBrowser } from '@capgo/inappbrowser';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { apiErrorMessage } from '../../core/http/api-error';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { I18nService } from '../../i18n.service';
 
@@ -85,13 +86,10 @@ export class GiftCardPaymentService {
         this.openPaymentWebview(checkoutUrl, orderReference, giftCardId, authToken, handlers);
       },
       error: (err: any) => {
-        // Only transport-level errors (status 0) reach this channel. Still
-        // try the structured error paths before falling back to the generic
-        // "add a delivery address" hint, since that's the most common cause.
-        const msg = err?.error?.error?.message
-          ?? err?.error?.message
-          ?? err?.message;
-        this.notify.error(msg || this.i18n.t('gc_error_start_payment_add_address'));
+        // Only transport-level errors (status 0) reach this channel. The shared
+        // helper reads the v3 envelope and returns the generic "add a delivery
+        // address" hint on a network failure instead of the raw HTTP string.
+        this.notify.error(apiErrorMessage(err, this.i18n.t('gc_error_start_payment_add_address')));
         handlers.onFailed?.();
       },
     });

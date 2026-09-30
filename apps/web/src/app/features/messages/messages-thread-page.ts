@@ -325,9 +325,16 @@ export class MessagesThreadPageComponent implements OnInit, OnDestroy {
    */
   private blockedMessage(err: unknown): string | null {
     if (err instanceof HttpErrorResponse && err.status === 422) {
-      const body = err.error as { code?: string; message?: string } | null;
-      if (body?.code === 'CHAT_MESSAGE_BLOCKED' && typeof body.message === 'string') {
-        return body.message;
+      // The v3 envelope nests code+message under `error` ({ error: { code,
+      // message } }); some proxies pass the flat shape. Read both so the
+      // moderation reason surfaces either way instead of a generic toast.
+      const body = err.error as
+        | { code?: string; message?: string; error?: { code?: string; message?: string } }
+        | null;
+      const code = body?.error?.code ?? body?.code;
+      const message = body?.error?.message ?? body?.message;
+      if (code === 'CHAT_MESSAGE_BLOCKED' && typeof message === 'string') {
+        return message;
       }
     }
     return null;

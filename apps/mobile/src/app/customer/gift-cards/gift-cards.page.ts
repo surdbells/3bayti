@@ -563,7 +563,7 @@ export class GiftCardsPage implements OnInit {
       },
       error: (err: any) => {
         this.ui.purchasing = false;
-        this.notify.error(err?.error?.message ?? this.i18n.t('gc_error_purchase_failed'));
+        this.notify.error(apiErrorMessage(err, this.i18n.t('gc_error_purchase_failed')));
       },
     });
   }

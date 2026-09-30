@@ -13,6 +13,7 @@ import { Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import {Router} from "@angular/router";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { apiErrorMessage } from '../../core/http/api-error';
 import {transformV3LoginResponse} from "./login-response.transform";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {GlobalComponent} from "../../global-component";
@@ -386,7 +387,11 @@ export class LoginPage implements OnInit, OnDestroy {
           error: (e) => {
             this.ui_controls.logged_in = false;
             this.ui_controls.login_loading = false;
-            this.show_error(e.toString());
+            // Only transport (status-0) errors reach here — a bad-credentials
+            // 401 arrives via `next` as response.message. e.toString() would
+            // render the raw "Http failure response…" string, so fall back to
+            // the offline hint via the shared envelope-aware helper.
+            this.show_error(apiErrorMessage(e, this.i18n.t('text_offline_check_connection')));
             return;
           },
           complete: () => {

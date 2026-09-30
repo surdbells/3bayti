@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { InAppBrowser } from '@capgo/inappbrowser';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { apiErrorMessage } from '../../core/http/api-error';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { I18nService } from '../../i18n.service';
 
@@ -73,9 +74,10 @@ export class OrderPaymentService {
         this.openPaymentWebview(checkoutUrl, ref, authToken, handlers);
       },
       error: (err: any) => {
-        // Only transport-level errors (status 0) reach this channel.
-        const msg = err?.error?.error?.message ?? err?.error?.message ?? err?.message;
-        this.notify.error(msg || this.i18n.t('gc_error_start_payment'));
+        // Only transport-level errors (status 0) reach this channel; the shared
+        // helper reads the v3 envelope and returns the localized fallback on a
+        // network failure instead of the raw "Http failure response…" string.
+        this.notify.error(apiErrorMessage(err, this.i18n.t('gc_error_start_payment')));
         handlers.onFailed?.();
       },
     });

@@ -10,6 +10,7 @@ import { LanguageSwitcherComponent } from '../../language-switcher.component';
 import { TranslatePipe } from '../../translate.pipe';
 
 import { IconComponent } from '../../shared/icon/icon.component';
+import { apiErrorMessage } from '../../shared/http/api-error';
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -121,8 +122,10 @@ export class LoginComponent implements OnInit {
       },
       error: (e) => {
         this.loading = false;
-        const msg = e?.error?.message ?? e?.message ?? 'Invalid credentials.';
-        this.error_notification(msg);
+        // Read the v3 error envelope ({ error: { code, message } }) via the
+        // shared helper — a bare e?.error?.message is one level too shallow and
+        // falls through to e.message, the raw "Http failure response…" string.
+        this.error_notification(apiErrorMessage(e, 'Invalid credentials.'));
       },
       complete: () => {
         console.info('login complete');
