@@ -119,7 +119,7 @@ export class HomeComponent {
   /* ----- "For you" discovery below the fold.
      GUESTS (no style profile) get a single "Trending now" strip sourced from
      the editorial `featured` ranking (HomeDataService.trending$, deliberately
-     distinct from Top Sellers' `popular` and New Arrivals' `newest`).
+     distinct from Top Sellers' `best_seller` and New Arrivals' `newest`).
      SIGNED-IN shoppers get the Ain Personal Style Profile rails (Your Style /
      From Stores You Love / Because You Liked… / New Arrivals For You), each
      built from real, in-stock products; a brand-new account with no profile

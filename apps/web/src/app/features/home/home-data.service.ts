@@ -52,13 +52,18 @@ export class HomeDataService {
   }
 
   /**
-   * Best sellers, backed by /products?sort=popular (v3 counts
-   * cart-add events per product as a popularity proxy).
+   * Best sellers, backed by /products?sort=best_seller — the same real
+   * 30-day-sales ranking the /best-sellers page and the mobile app use.
+   *
+   * NB: `sort=popular` was used here previously, but the v3 API never had a
+   * `popular` sort (VALID_SORTS excludes it), so it silently coerced to
+   * `newest` — this rail showed the SAME newest products as New Arrivals, and
+   * disagreed with the mobile "best sellers". `best_seller` fixes both.
    */
   bestSellers$(): Observable<Product[]> {
     return this.withFallback(
       this.routed
-        .get<Product[]>('GET /products', { query: { sort: 'popular', limit: this.STRIP_LIMIT } })
+        .get<Product[]>('GET /products', { query: { sort: 'best_seller', limit: this.STRIP_LIMIT } })
         .pipe(map(env => env.data)),
     );
   }
@@ -85,7 +90,7 @@ export class HomeDataService {
    *
    * This source is deliberately DISTINCT from the two nearby strips so the
    * page doesn't repeat itself:
-   *   - Top Sellers uses `sort=popular` (cart-add popularity proxy)
+   *   - Top Sellers uses `sort=best_seller` (real 30-day sales)
    *   - New Arrivals uses `sort=newest` (chronological)
    *   - Trending uses `sort=featured` (curated: top-rated vendors + recency)
    *
