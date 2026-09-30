@@ -192,7 +192,7 @@
           </ul>
         </div>
 
-        <div class="mega-col mega-col--feature">
+<!--         <div class="mega-col mega-col--feature">
           <span class="mega-feature__eyebrow">{{ 'header.mega.conciergeEyebrow' | translate }}</span>
           <p class="mega-feature__title">{{ 'header.mega.conciergeTitle' | translate }}</p>
           <ul class="mega-concierge" role="list">
@@ -208,7 +208,7 @@
               </li>
             }
           </ul>
-        </div>
+        </div> -->
       </div>
     </div>
   }
@@ -253,7 +253,7 @@
     </div>
 
     <!-- Ain concierge block, pinned at the top of the drawer. -->
-    <div class="drawer-ai">
+<!--     <div class="drawer-ai">
       <p class="drawer-ai__title">{{ 'header.mega.conciergeTitle' | translate }}</p>
       <div class="drawer-ai__grid">
         @for (c of conciergeItems; track c.path) {
@@ -270,7 +270,7 @@
         }
       </div>
     </div>
-
+ -->
     <nav class="nav-drawer__nav" [attr.aria-label]="'nav.primary' | translate">
       @for (item of browseItems; track item.path) {
         @if (item.key === 'categories') {
