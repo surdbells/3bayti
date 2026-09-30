@@ -146,6 +146,10 @@ final class ApproveVendorApplicationController
         $slug = SlugHelper::generateUnique(
             $application->getBusinessName(),
             static fn (string $candidate): bool => $vendorRepo->slugExists($candidate),
+            // An Arabic-only business name with no intl transliterator slugifies
+            // to '' — this deterministic, non-empty fallback keeps approval from
+            // 500-ing (Sentry PHP-2H) while staying unique per application.
+            'store-' . $application->getId(),
         );
 
         $vendor = new Vendor(

@@ -18,9 +18,10 @@ namespace Bayti\Api\Domain\Common;
  *
  * Why we don't use cocur/slugify or similar
  * ------------------------------------------
- * Our rules are simple ASCII-only kebab-case. A 30-line implementation
- * beats a 30KB dependency for this. If we add Arabic / Unicode-rich
- * slugs later (M2.x i18n), reconsider.
+ * Our rules are simple ASCII kebab-case. A 30-line implementation beats a
+ * 30KB dependency for this. Non-Latin names (Arabic, etc.) are transliterated
+ * to Latin via intl when available; when they still can't be slugified,
+ * generateUnique() falls back to a caller-supplied base instead of failing.
  */
 final class SlugHelper
 {
@@ -34,10 +35,26 @@ final class SlugHelper
      */
     public static function slugify(string $input): string
     {
-        // 1. Normalise unicode and strip combining marks (café → cafe)
         $normalised = $input;
+
+        // 0. Transliterate non-Latin scripts (Arabic, Cyrillic, …) to Latin when
+        //    the intl extension is available, so a fully non-Latin name like
+        //    "لمعة الدجى" yields a readable slug instead of an empty one. Falls
+        //    through harmlessly (leaves $normalised unchanged) when intl is
+        //    missing or produces nothing — generateUnique() then uses a fallback.
+        if (class_exists(\Transliterator::class)) {
+            $tr = \Transliterator::create('Any-Latin; Latin-ASCII');
+            if ($tr !== null) {
+                $t = $tr->transliterate($input);
+                if (is_string($t) && $t !== '') {
+                    $normalised = $t;
+                }
+            }
+        }
+
+        // 1. Normalise unicode and strip combining marks (café → cafe)
         if (function_exists('iconv')) {
-            $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $input);
+            $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $normalised);
             if ($converted !== false) {
                 $normalised = $converted;
             }
@@ -59,19 +76,27 @@ final class SlugHelper
      *
      * Cap at 100 attempts so a buggy existsCheck doesn't infinite-loop.
      *
+     * Never throws on an unslugifiable name. A fully non-Latin name with no
+     * intl transliterator (e.g. an Arabic-only store name) slugifies to '' —
+     * we then fall back to `$fallback` (e.g. "store-<id>"), then a generic
+     * non-empty default, instead of throwing a 500 as before.
+     *
      * @param callable(string): bool $existsCheck
      *   Returns true if the slug is already taken.
+     * @param string $fallback
+     *   A latin base to slugify when the primary input produces nothing.
      */
     public static function generateUnique(
         string $base,
         callable $existsCheck,
+        string $fallback = '',
     ): string {
         $slug = self::slugify($base);
-
         if ($slug === '') {
-            throw new \InvalidArgumentException(
-                "Cannot generate slug: input '{$base}' produces empty slug after normalisation",
-            );
+            $slug = self::slugify($fallback);
+        }
+        if ($slug === '') {
+            $slug = 'item';
         }
 
         if (!$existsCheck($slug)) {
