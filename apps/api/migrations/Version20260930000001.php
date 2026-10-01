@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Align audit_logs.ip_address with its entity mapping (INET -> VARCHAR(45)).
+ * Align audit_log.ip_address with its entity mapping (INET -> VARCHAR(45)).
  *
  * The column was created as INET (Version20260510000001) but AuditLog maps it
  * as string(45). Reads/writes work (PDO coerces string<->inet), but the admin
@@ -25,7 +25,7 @@ final class Version20260930000001 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'audit_logs.ip_address INET -> VARCHAR(45) to match the entity mapping and fix the LOWER() search (PHP-2J).';
+        return 'audit_log.ip_address INET -> VARCHAR(45) to match the entity mapping and fix the LOWER() search (PHP-2J).';
     }
 
     public function up(Schema $schema): void
@@ -36,7 +36,7 @@ final class Version20260930000001 extends AbstractMigration
         );
 
         $this->addSql(
-            'ALTER TABLE audit_logs ALTER COLUMN ip_address TYPE VARCHAR(45) USING host(ip_address)'
+            'ALTER TABLE audit_log ALTER COLUMN ip_address TYPE VARCHAR(45) USING host(ip_address)'
         );
     }
 
@@ -48,7 +48,7 @@ final class Version20260930000001 extends AbstractMigration
         );
 
         $this->addSql(
-            "ALTER TABLE audit_logs ALTER COLUMN ip_address TYPE INET USING NULLIF(ip_address, '')::inet"
+            "ALTER TABLE audit_log ALTER COLUMN ip_address TYPE INET USING NULLIF(ip_address, '')::inet"
         );
     }
 }
