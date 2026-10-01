@@ -114,13 +114,18 @@ class NotificationLog
      * Captured at attempt time; preserved even if the user's email
      * later changes, this is the audit record of what we tried, not
      * a live link to the current user state.
+     *
+     * NULLABLE because not every channel has a single email recipient: the
+     * push logger (PushNotificationLogger) INSERTs rows with recipient = NULL
+     * (a push has a device token, not an email). The mapping MUST allow null —
+     * the DB column already does. Declaring it non-null `string` with a `= ''`
+     * default did NOT work (PHP-22): Doctrine's instantiator bypasses property
+     * defaults, so a NULL-recipient row hydrates the typed property as
+     * *uninitialized* and getRecipient() fatals with "accessed before
+     * initialization". The getter coalesces null → '' ("no/unknown recipient").
      */
-    // Defaulted to '' so a row hydrated without a recipient value (e.g. a
-    // broadcast/feed row that has no single recipient, or a legacy NULL) never
-    // fatals with "typed property accessed before initialization" when the feed
-    // reads getRecipient() (PHP-22). '' reads as "no/unknown recipient".
-    #[ORM\Column(name: 'recipient', type: 'string', length: 255)]
-    private string $recipient = '';
+    #[ORM\Column(name: 'recipient', type: 'string', length: 255, nullable: true)]
+    private ?string $recipient = null;
 
     /** One of STATUS_* constants. */
     #[ORM\Column(name: 'status', type: 'string', length: 16)]
@@ -276,9 +281,13 @@ class NotificationLog
     public function getOrderId(): ?int { return $this->orderId; }
     public function getCartId(): ?int { return $this->cartId; }
     public function getTemplate(): string { return $this->template; }
-    public function getRecipient(): string { return $this->recipient; }
+    // Coalesce null (push rows carry no email recipient) AND the uninitialized
+    // state (Doctrine's instantiator bypasses the property default) → '', so the
+    // public contract stays a plain string. See the $recipient docblock (PHP-22).
+    public function getRecipient(): string { return $this->recipient ?? ''; }
     public function getStatus(): string { return $this->status; }
-    public function getSentAt(): DateTimeImmutable { return $this->sentAt; }    public function getErrorKind(): ?string { return $this->errorKind; }
+    public function getSentAt(): DateTimeImmutable { return $this->sentAt; }
+    public function getErrorKind(): ?string { return $this->errorKind; }
     public function getErrorMessage(): ?string { return $this->errorMessage; }
 
     /**
