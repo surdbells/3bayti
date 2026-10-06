@@ -61,15 +61,16 @@ final class CollectionCrudController
         $body = (array) ($request->getParsedBody() ?? []);
         $name = trim((string) ($body['name'] ?? $body['collection'] ?? ''));
         if ($name === '') throw HttpException::badRequest('name is required.');
+        $this->assertNameLength($name);
 
         $slug = strtolower(trim(preg_replace('/[^a-z0-9]+/i', '-', $name) ?? '', '-'));
         $slug = ($slug !== '' ? $slug : 'collection') . '-' . substr(bin2hex(random_bytes(4)), 0, 8);
 
         $col = new ProductCollection($name, $slug);
-        if (isset($body['description']))     $col->setDescription((string) $body['description']);
-        if (isset($body['cover_image_url'])) $col->setCoverImageUrl((string) $body['cover_image_url']);
-        if (isset($body['is_active']))       $col->setActive((bool) $body['is_active']);
-        if (isset($body['display_order']))   $col->setDisplayOrder((int) $body['display_order']);
+        if (array_key_exists('description', $body))   $col->setDescription($this->normaliseDescription($body['description']));
+        if (isset($body['cover_image_url']))           $col->setCoverImageUrl((string) $body['cover_image_url']);
+        if (isset($body['is_active']))                 $col->setActive((bool) $body['is_active']);
+        if (array_key_exists('display_order', $body)) $col->setDisplayOrder($this->normaliseDisplayOrder($body['display_order']));
 
         /** @var ProductCollectionRepository $repo */
         $repo = $this->em->getRepository(ProductCollection::class);
@@ -82,11 +83,15 @@ final class CollectionCrudController
         $col  = $this->findOrFail((int) $request->getAttribute('id'));
         $body = (array) ($request->getParsedBody() ?? []);
 
-        if (isset($body['name']) && $body['name'] !== '')   $col->setName((string) $body['name']);
-        if (array_key_exists('description', $body))         $col->setDescription($body['description'] !== '' ? (string) $body['description'] : null);
+        if (isset($body['name']) && trim((string) $body['name']) !== '') {
+            $name = trim((string) $body['name']);
+            $this->assertNameLength($name);
+            $col->setName($name);
+        }
+        if (array_key_exists('description', $body))         $col->setDescription($this->normaliseDescription($body['description']));
         if (array_key_exists('cover_image_url', $body))     $col->setCoverImageUrl($body['cover_image_url'] !== '' ? (string) $body['cover_image_url'] : null);
         if (array_key_exists('is_active', $body))           $col->setActive((bool) $body['is_active']);
-        if (array_key_exists('display_order', $body))       $col->setDisplayOrder($body['display_order'] !== null ? (int) $body['display_order'] : null);
+        if (array_key_exists('display_order', $body))       $col->setDisplayOrder($this->normaliseDisplayOrder($body['display_order']));
 
         /** @var ProductCollectionRepository $repo */
         $repo = $this->em->getRepository(ProductCollection::class);
@@ -183,6 +188,36 @@ final class CollectionCrudController
     }
 
     // ── helpers ─────────────────────────────────────────────────────
+
+    /** name is VARCHAR(200); reject longer input as 422 instead of a DB 500. */
+    private function assertNameLength(string $name): void
+    {
+        if (mb_strlen($name) > 200) {
+            throw HttpException::validation(['name' => ['Name must be 200 characters or fewer.']]);
+        }
+    }
+
+    /** Blank/null description is stored as NULL (not ''), so the storefront gets null. */
+    private function normaliseDescription(mixed $raw): ?string
+    {
+        if ($raw === null) {
+            return null;
+        }
+        $d = trim((string) $raw);
+        return $d === '' ? null : $d;
+    }
+
+    /** display_order is SMALLINT; accept null/'' (unset) or a whole number 0..32767. */
+    private function normaliseDisplayOrder(mixed $raw): ?int
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+        if ((is_int($raw) || (is_string($raw) && ctype_digit($raw))) && (int) $raw >= 0 && (int) $raw <= 32767) {
+            return (int) $raw;
+        }
+        throw HttpException::validation(['display_order' => ['Display order must be a whole number from 0 to 32767.']]);
+    }
 
     /**
      * Load products for the given ids, preserving the id-list order (findBy

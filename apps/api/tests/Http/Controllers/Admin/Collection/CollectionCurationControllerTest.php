@@ -137,6 +137,43 @@ final class CollectionCurationControllerTest extends HttpTestCase
         self::assertSame(['p-seven', 'p-three'], array_column($body['data'], 'slug'));
     }
 
+    #[Test]
+    public function updateRejectsAnOverlongNameWith422(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $this->bindEnv($admin, $this->makeCollection(5, 'summer-edit', 'Summer Edit'), []);
+
+        $response = $this->makePut($admin, '/v3/admin/collections/5', ['name' => str_repeat('a', 201)]);
+
+        self::assertSame(422, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function updateRejectsAnOutOfRangeDisplayOrderWith422(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $this->bindEnv($admin, $this->makeCollection(5, 'summer-edit', 'Summer Edit'), []);
+
+        self::assertSame(422, $this->makePut($admin, '/v3/admin/collections/5', ['display_order' => 40000])->getStatusCode());
+        self::assertSame(422, $this->makePut($admin, '/v3/admin/collections/5', ['display_order' => -1])->getStatusCode());
+    }
+
+    #[Test]
+    public function updateStoresABlankOrNullDescriptionAsNull(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $col = $this->makeCollection(5, 'summer-edit', 'Summer Edit');
+        $col->setDescription('Old copy');
+        $this->bindEnv($admin, $col, []);
+
+        self::assertSame(200, $this->makePut($admin, '/v3/admin/collections/5', ['description' => null])->getStatusCode());
+        self::assertNull($col->getDescription());
+
+        $col->setDescription('Old copy');
+        self::assertSame(200, $this->makePut($admin, '/v3/admin/collections/5', ['description' => '   '])->getStatusCode());
+        self::assertNull($col->getDescription());
+    }
+
     // ===== Helpers =====
 
     /**

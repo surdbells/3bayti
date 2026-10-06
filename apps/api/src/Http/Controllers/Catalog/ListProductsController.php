@@ -101,10 +101,20 @@ final class ListProductsController
             return $this->ok(PaginatedEnvelope::build([], 0, $limit, $offset));
         }
 
+        // Admin-curated collection (?collection=<slug>, active collections
+        // only). Resolved by the shared ProductFilterParser so this listing
+        // and GET /v3/products/facets scope identically; an unknown/inactive
+        // collection is an empty 200, like the other axes.
+        $collectionId = $this->filterParser->resolveCollectionId($query);
+        if ($collectionId === false) {
+            return $this->ok(PaginatedEnvelope::build([], 0, $limit, $offset));
+        }
+
         $filters = [
             'vendorId' => $vendorId,
             'categoryId' => $categoryId,
             'labelId' => $labelId,
+            'collectionId' => $collectionId,
             'minPrice' => $this->parsePrice($query['min_price'] ?? null),
             'maxPrice' => $this->parsePrice($query['max_price'] ?? null),
             'isFeatured' => $this->parseBool($query['featured'] ?? null),
