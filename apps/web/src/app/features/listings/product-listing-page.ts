@@ -1,8 +1,10 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  ElementRef,
   inject,
   signal,
+  viewChild,
   OnInit,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -77,55 +79,69 @@ export interface ProductListingRouteData {
           (filterChange)="onFilterChange($event)"
         />
 
-        @if (isLoading() && products().length === 0) {
-          <ul class="listing-page__grid" aria-hidden="true">
-            @for (s of skeletons; track $index) {
-              <li class="listing-skeleton"></li>
-            }
-          </ul>
-        } @else if (listFailed() && products().length === 0) {
-          <div class="listing-page__error" role="alert" data-testid="listing-error">
-            <p class="listing-page__error-title">{{ 'listing.listError.title' | translate }}</p>
-            <p class="listing-page__error-body">{{ 'listing.listError.body' | translate }}</p>
-            <button
-              type="button"
-              class="listing-page__more-btn"
-              (click)="retryListing()"
-              data-testid="listing-retry"
-            >
-              {{ 'listing.retry' | translate }}
-            </button>
-          </div>
-        } @else if (products().length === 0) {
-          <p class="listing-page__empty" data-testid="listing-empty">
-            {{ emptyKey() | translate }}
-          </p>
-        } @else {
-          <ul class="listing-page__grid" role="list" data-testid="listing-grid">
-            @for (p of products(); track p.id) {
-              <li><ui-product-card [product]="p" /></li>
-            }
-          </ul>
-
-          @if (hasMore()) {
-            <div class="listing-page__more">
-              @if (loadMoreFailed()) {
-                <p class="listing-page__more-error" role="alert" data-testid="listing-load-more-error">
-                  {{ 'listing.loadMoreError' | translate }}
-                </p>
+        <!-- tabindex="-1": a listing retry moves focus here (the Retry
+             button itself is replaced by the skeleton). -->
+        <section
+          #results
+          class="listing-page__results"
+          tabindex="-1"
+          [attr.aria-label]="'listing.gridAria' | translate"
+          data-testid="listing-results"
+        >
+          @if (isLoading() && products().length === 0) {
+            <ul class="listing-page__grid" aria-hidden="true">
+              @for (s of skeletons; track $index) {
+                <li class="listing-skeleton"></li>
               }
+            </ul>
+          } @else if (listFailed() && products().length === 0) {
+            <div class="listing-page__error" role="alert" data-testid="listing-error">
+              <p class="listing-page__error-title">{{ 'listing.listError.title' | translate }}</p>
+              <p class="listing-page__error-body">{{ 'listing.listError.body' | translate }}</p>
               <button
                 type="button"
                 class="listing-page__more-btn"
-                (click)="loadMore()"
-                [disabled]="isLoading()"
-                [attr.data-testid]="loadMoreFailed() ? 'listing-load-more-retry' : 'listing-load-more'"
+                (click)="retryListing()"
+                data-testid="listing-retry"
               >
-                {{ (isLoading() ? 'common.loading' : loadMoreFailed() ? 'listing.retry' : 'listing.loadMore') | translate }}
+                {{ 'listing.retry' | translate }}
               </button>
             </div>
+          } @else if (products().length === 0) {
+            <p class="listing-page__empty" data-testid="listing-empty">
+              {{ emptyKey() | translate }}
+            </p>
+          } @else {
+            <ul class="listing-page__grid" role="list" data-testid="listing-grid">
+              @for (p of products(); track p.id) {
+                <li><ui-product-card [product]="p" /></li>
+              }
+            </ul>
+
+            @if (hasMore()) {
+              <div class="listing-page__more">
+                @if (loadMoreFailed()) {
+                  <p class="listing-page__more-error" role="alert" data-testid="listing-load-more-error">
+                    {{ 'listing.loadMoreError' | translate }}
+                  </p>
+                }
+                <!-- ONE button for "Load more" and its retry: only the label and
+                     test id change, and it is aria-disabled (not [disabled])
+                     while loading, so keyboard focus stays on it throughout.
+                     loadMore() ignores clicks while a page is loading. -->
+                <button
+                  type="button"
+                  class="listing-page__more-btn"
+                  (click)="loadMore()"
+                  [attr.aria-disabled]="isLoading() ? 'true' : null"
+                  [attr.data-testid]="loadMoreFailed() ? 'listing-load-more-retry' : 'listing-load-more'"
+                >
+                  {{ (isLoading() ? 'common.loading' : loadMoreFailed() ? 'listing.retry' : 'listing.loadMore') | translate }}
+                </button>
+              </div>
+            }
           }
-        }
+        </section>
       </div>
     </main>
   `,
@@ -165,6 +181,9 @@ export class ProductListingPageComponent implements OnInit {
   protected readonly listFailed = signal(false);
   /** The last "load more" failed; the button turns into a retry. */
   protected readonly loadMoreFailed = signal(false);
+
+  /** The results region (tabindex="-1"), focus target for a listing retry. */
+  private readonly results = viewChild<ElementRef<HTMLElement>>('results');
 
   ngOnInit(): void {
     const data = this.route.snapshot.data as Partial<ProductListingRouteData>;
@@ -220,9 +239,14 @@ export class ProductListingPageComponent implements OnInit {
     this.loadFirstPage();
   }
 
-  /** Re-run the page-0 listing (+ facets) after a failure. */
+  /**
+   * Re-run the page-0 listing (+ facets) after a failure. The Retry button
+   * that triggered this is replaced by the skeleton, so focus moves to the
+   * stable results region rather than dropping to <body>.
+   */
   protected retryListing(): void {
     this.loadFirstPage();
+    this.results()?.nativeElement.focus({ preventScroll: true });
   }
 
   /**

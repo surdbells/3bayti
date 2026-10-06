@@ -285,7 +285,14 @@ describe('CollectionDetailComponent', () => {
       catalog.failLoads = false;
       catalog.nextItems = [makeProduct({ id: 9, slug: 'gold-9' })];
       catalog.nextTotal = 1;
-      (el.querySelector('[data-testid="collection-list-retry"]') as HTMLButtonElement).click();
+      const retry = el.querySelector('[data-testid="collection-list-retry"]') as HTMLButtonElement;
+      retry.focus();
+      retry.click();
+      // The Retry button gives way to the shimmer: focus moves to the stable
+      // grid region instead of dropping to <body>.
+      const region = el.querySelector('[data-testid="collection-grid-region"]');
+      expect(region?.getAttribute('tabindex')).toBe('-1');
+      expect(document.activeElement).toBe(region);
       fixture.detectChanges(); // the retry re-runs the catalog effect
       expect(catalog.loadCalls).toHaveLength(2);
       expect(catalog.loadCalls[1]).toMatchObject({ page: 0, append: false });
@@ -344,6 +351,44 @@ describe('CollectionDetailComponent', () => {
       expect(el.querySelector('[data-testid="collection-load-more-error"]')).toBeNull();
       expect(cmp.products().map((p) => p.id)).toEqual([9, 10]);
     });
+
+    it('keeps keyboard focus on the one load-more button across a failure and its retry', async () => {
+      const { fixture, catalog } = setup({ catalogItems: [makeProduct({ id: 9 })] });
+      await fixture.whenStable();
+      catalog.hasMore.set(true);
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      const btn = el.querySelector('[data-testid="collection-load-more"]') as HTMLButtonElement;
+      expect(btn.getAttribute('aria-label')).not.toBeNull();
+      btn.focus();
+
+      catalog.failLoads = true;
+      btn.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      // Same element (only its label / test id changed), still focused.
+      expect(el.querySelector('[data-testid="collection-load-more-retry"]')).toBe(btn);
+      expect(document.activeElement).toBe(btn);
+
+      // While the retry loads it is aria-disabled, never natively disabled
+      // (that would drop focus), and has no aria-label (name = "Loading…").
+      catalog.isLoadingList.set(true);
+      fixture.detectChanges();
+      expect(btn.getAttribute('aria-disabled')).toBe('true');
+      expect(btn.disabled).toBe(false);
+      expect(btn.hasAttribute('aria-label')).toBe(false);
+      catalog.isLoadingList.set(false);
+      fixture.detectChanges();
+
+      catalog.failLoads = false;
+      catalog.nextItems = [makeProduct({ id: 10, slug: 'abaya-10' })];
+      btn.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="collection-load-more"]')).toBe(btn);
+      expect(document.activeElement).toBe(btn);
+      expect(btn.hasAttribute('aria-disabled')).toBe(false);
+    });
   });
 
   it('renders an image banner as a blurred backdrop plus the uncropped photo', () => {
@@ -359,5 +404,10 @@ describe('CollectionDetailComponent', () => {
     // Same transformed URL for both, so the browser fetches it once.
     expect(backdrop.getAttribute('src')).toBe(photo.getAttribute('src'));
     expect(backdrop.getAttribute('aria-hidden')).toBe('true');
+    expect(backdrop.getAttribute('alt')).toBe('');
+    // The backdrop comes first in the DOM and issues that shared request, so
+    // it carries the high priority too (else the photo's hint is lost).
+    expect(backdrop.getAttribute('fetchpriority')).toBe('high');
+    expect(photo.getAttribute('fetchpriority')).toBe('high');
   });
 });

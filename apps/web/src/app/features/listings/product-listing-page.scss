@@ -154,15 +154,34 @@
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.listing-page__more-btn:hover:not(:disabled),
-.listing-page__more-btn:focus-visible:not(:disabled) {
+.listing-page__more-btn:hover:not(:disabled):not([aria-disabled='true']),
+.listing-page__more-btn:focus-visible {
   background: var(--color-bg-subtle, #f4f1ec);
   border-color: var(--color-brand-500, #b18f1f);
 }
 
-.listing-page__more-btn:disabled {
+/* aria-disabled: "Load more" stays focusable while a page is loading (a
+   natively disabled button would drop keyboard focus). */
+.listing-page__more-btn:disabled,
+.listing-page__more-btn[aria-disabled='true'] {
   opacity: 0.6;
   cursor: default;
+}
+
+/* Results region: a programmatic focus target (tabindex="-1") for a
+   listing retry. No ring for pointer users; keyboard users get one. */
+.listing-page__results {
+  display: block;
+  border-radius: 12px;
+}
+
+.listing-page__results:focus {
+  outline: none;
+}
+
+.listing-page__results:focus-visible {
+  outline: 2px solid var(--color-brand-500, #b18f1f);
+  outline-offset: 6px;
 }
 
 /* Shared FilterBar sits between the header and the grid (web-uplift #2/#3). */

@@ -81,7 +81,10 @@
   height: 100%;
   object-fit: cover;
   object-position: center;
-  filter: blur(28px) saturate(1.15) brightness(0.62);
+  /* brightness(0.5): product photos are usually shot on WHITE, so the
+     backdrop's worst case is a flat white field; halving it (plus the scrim
+     below) keeps the 12px eyebrow / count text above 4.5:1 (WCAG AA). */
+  filter: blur(28px) saturate(1.15) brightness(0.5);
   transform: scale(1.2);
   pointer-events: none;
 }
@@ -127,18 +130,25 @@
     linear-gradient(180deg, rgba(20, 14, 10, 0.3) 0%, rgba(20, 14, 10, 0.5) 55%, rgba(20, 14, 10, 0.68) 100%);
 }
 
-/* The backdrop is already darkened by its filter; a lighter, even scrim
-   keeps the white text legible without muddying the photo's colours. */
+/* Contrast budget (small text = 4.5:1, WCAG AA). The banner is always dark
+   with white text and uses no theme tokens, so it is identical in the light
+   and dark themes. Worst cases, with the eyebrow / count at 95% white and
+   the description at 92%:
+     - image: a white photo under brightness(0.5) + this 0.32-0.55 scrim
+       → >= 6:1 anywhere in the band;
+     - no image: the brightest corner of the brand gradient under the
+       0.40-0.52 wash (+ the faint highlight and texture) → >= 4.5:1 even
+       at the very top edge, ~5:1 where the text actually sits. */
 .collection-hero--with-image .collection-hero__scrim {
   background:
-    linear-gradient(180deg, rgba(20, 14, 10, 0.18) 0%, rgba(20, 14, 10, 0.42) 100%);
+    linear-gradient(180deg, rgba(20, 14, 10, 0.32) 0%, rgba(20, 14, 10, 0.55) 100%);
 }
 
 .collection-hero--no-image .collection-hero__scrim {
   background:
-    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 14px),
-    radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, 0.2), transparent 55%),
-    linear-gradient(180deg, transparent 40%, rgba(46, 36, 28, 0.35) 100%);
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 14px),
+    radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, 0.06), transparent 55%),
+    linear-gradient(180deg, rgba(20, 14, 10, 0.4) 0%, rgba(20, 14, 10, 0.52) 100%);
 }
 
 .collection-hero__content {
@@ -156,7 +166,8 @@
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
 }
 
 .collection-hero__title {
@@ -186,5 +197,6 @@
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.86);
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
 }

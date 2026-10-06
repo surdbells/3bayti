@@ -2,10 +2,12 @@ import {
   Component,
   ChangeDetectionStrategy,
   DestroyRef,
+  ElementRef,
   inject,
   computed,
   signal,
   effect,
+  viewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -212,6 +214,9 @@ export class CollectionDetailComponent {
   private _page = signal(0);
   readonly page = this._page.asReadonly();
 
+  /** The product-grid region (tabindex="-1"), focus target for a listing retry. */
+  private readonly gridRegion = viewChild<ElementRef<HTMLElement>>('gridRegion');
+
   constructor() {
     // SEO
     effect(() => {
@@ -306,9 +311,15 @@ export class CollectionDetailComponent {
     });
   }
 
-  /** Re-run the page-0 listing (+ facets) after a failure. */
+  /**
+   * Re-run the page-0 listing (+ facets) after a failure. The Retry button
+   * that triggered this disappears (the error / fallback state gives way to
+   * the shimmer or the reloading grid), so focus moves to the stable grid
+   * region rather than dropping to <body>.
+   */
   retryListing(): void {
     this.reloadTick.update((n) => n + 1);
+    this.gridRegion()?.nativeElement.focus({ preventScroll: true });
   }
 
   /** Called by the filter bar; writes the new filter state to the URL. */

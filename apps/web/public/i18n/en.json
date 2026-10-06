@@ -1204,6 +1204,7 @@
   },
   "listing": {
     "breadcrumbAria": "Breadcrumb",
+    "gridAria": "Products in this list",
     "loadMore": "Load more",
     "loadMoreError": "Couldn't load more products.",
     "retry": "Retry",
@@ -1833,6 +1834,10 @@
       "body": "The category you're looking for doesn't exist. Browse all categories below.",
       "back": "← All categories"
     },
+    "loadError": {
+      "title": "We couldn't load this category",
+      "body": "Something went wrong on our side. Please refresh the page or try again in a moment."
+    },
     "eyebrow": "Category",
     "piece": "piece",
     "pieces": "pieces",
@@ -1849,6 +1854,7 @@
     "retry": "Retry",
     "showing": "Showing {{shown}} of {{total}}",
     "loadMoreAria": "Load more products",
+    "loadMoreRetryAria": "Retry loading more products",
     "loadMore": "Load more",
     "indexEyebrow": "Browse",
     "indexTitle": "Shop by Category",
@@ -1919,6 +1925,7 @@
     "retry": "Retry",
     "showing": "Showing {{shown}} of {{total}}",
     "loadMoreAria": "Load more products",
+    "loadMoreRetryAria": "Retry loading more products",
     "loadMore": "Load more",
     "indexEyebrow": "Curated",
     "indexTitle": "Shop by Collection",

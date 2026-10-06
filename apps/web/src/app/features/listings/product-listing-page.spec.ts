@@ -213,7 +213,14 @@ describe('ProductListingPageComponent', () => {
     expect(el.querySelector('[data-testid="listing-empty"]')).toBeNull();
 
     catalog.failLoads = false;
-    (el.querySelector('[data-testid="listing-retry"]') as HTMLButtonElement).click();
+    const retry = el.querySelector('[data-testid="listing-retry"]') as HTMLButtonElement;
+    retry.focus();
+    retry.click();
+    // The Retry button gives way to the skeleton: focus moves to the stable
+    // results region instead of dropping to <body>.
+    const results = el.querySelector('[data-testid="listing-results"]');
+    expect(results?.getAttribute('tabindex')).toBe('-1');
+    expect(document.activeElement).toBe(results);
     expect(catalog.loadCalls).toHaveLength(2);
     expect(catalog.loadCalls[1]).toEqual({ filters: { sort: 'best_seller' }, page: 0, append: false });
     await fixture.whenStable();
@@ -231,18 +238,41 @@ describe('ProductListingPageComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
 
     catalog.failLoads = true;
-    (el.querySelector('[data-testid="listing-load-more"]') as HTMLButtonElement).click();
+    const btn = el.querySelector('[data-testid="listing-load-more"]') as HTMLButtonElement;
+    btn.focus();
+    btn.click();
     await fixture.whenStable();
     fixture.detectChanges();
     expect(catalog.loadCalls[1]).toMatchObject({ page: 1, append: true });
     expect(el.querySelector('[data-testid="listing-load-more-error"]')).not.toBeNull();
+    // The same button turned into the retry, so keyboard focus stayed on it.
+    expect(el.querySelector('[data-testid="listing-load-more-retry"]')).toBe(btn);
+    expect(document.activeElement).toBe(btn);
 
     catalog.failLoads = false;
-    (el.querySelector('[data-testid="listing-load-more-retry"]') as HTMLButtonElement).click();
+    btn.click();
     expect(catalog.loadCalls[2]).toMatchObject({ page: 1, append: true }); // page 1 again, not 2
     await fixture.whenStable();
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="listing-load-more-error"]')).toBeNull();
+    expect(document.activeElement).toBe(btn);
+  });
+
+  it('keeps "load more" focusable (aria-disabled, not disabled) and ignores clicks while a page loads', () => {
+    const { fixture, catalog } = setup();
+    catalog.isLoadingList.set(false);
+    catalog.products.set([makeProduct()]);
+    catalog.hasMore.set(true);
+    fixture.detectChanges();
+    const btn = fixture.nativeElement.querySelector('[data-testid="listing-load-more"]') as HTMLButtonElement;
+    expect(btn.hasAttribute('aria-disabled')).toBe(false);
+
+    catalog.isLoadingList.set(true);
+    fixture.detectChanges();
+    expect(btn.getAttribute('aria-disabled')).toBe('true');
+    expect(btn.disabled).toBe(false);
+    btn.click();
+    expect(catalog.loadCalls).toHaveLength(1); // only the initial page-0 load
   });
 
   it('hides "load more" when there are no further pages', () => {

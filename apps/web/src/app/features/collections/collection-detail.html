@@ -46,11 +46,15 @@
           data-testid="collection-hero"
         >
           @if (col.image_url) {
+            <!-- Same URL as the photo below and first in the DOM, so it is the
+                 element that issues the (single, shared) request: it carries
+                 the high fetch priority too, or the photo's hint is lost. -->
             <img
               class="collection-hero__backdrop"
               [src]="col.image_url | cfImage:'detail'"
               alt=""
               aria-hidden="true"
+              fetchpriority="high"
               decoding="async"
               data-testid="collection-hero-backdrop"
             />
@@ -92,7 +96,14 @@
             (filterChange)="onFilterChange($event)"
           />
 
-          <section class="catalog-layout__grid" [attr.aria-label]="'collections.gridAria' | translate">
+          <!-- tabindex="-1": a listing retry moves focus here (the Retry
+               button itself is replaced by the shimmer). -->
+          <section
+            #gridRegion
+            class="catalog-layout__grid"
+            tabindex="-1"
+            [attr.aria-label]="'collections.gridAria' | translate"
+            data-testid="collection-grid-region">
 
             @if (showSkeleton()) {
               <div class="grid-loading" aria-live="polite" [attr.aria-label]="'collections.loadingProducts' | translate">
@@ -143,33 +154,33 @@
                   {{ 'collections.showing' | translate:{ shown: products().length, total: totalProducts() } }}
                 </p>
                 @if (hasMore()) {
-                  @if (loadMoreFailed()) {
-                    <div class="load-more-error" role="alert" data-testid="collection-load-more-error">
-                      <p class="load-more-error__text">{{ 'collections.loadMoreError' | translate }}</p>
-                      <button
-                        class="load-more-btn"
-                        type="button"
-                        (click)="loadMore()"
-                        [disabled]="isLoadingGrid()"
-                        [attr.aria-label]="'collections.loadMoreAria' | translate"
-                        data-testid="collection-load-more-retry">
-                        {{ isLoadingGrid() ? ('collections.loading' | translate) : ('collections.retry' | translate) }}
-                      </button>
-                    </div>
-                  } @else {
+                  <div class="load-more">
+                    @if (loadMoreFailed()) {
+                      <p class="load-more__error" role="alert" data-testid="collection-load-more-error">
+                        {{ 'collections.loadMoreError' | translate }}
+                      </p>
+                    }
+                    <!-- ONE button for "Load more" and its retry: only the label
+                         and test id change, so keyboard focus stays on it across
+                         a failure and a retry. aria-disabled (not [disabled])
+                         while loading keeps it focusable; loadMore() ignores
+                         clicks meanwhile. The accessible name always contains
+                         the visible text (WCAG 2.5.3). -->
                     <button
                       class="load-more-btn"
                       type="button"
                       (click)="loadMore()"
-                      [disabled]="isLoadingGrid()"
-                      [attr.aria-label]="'collections.loadMoreAria' | translate"
-                      data-testid="collection-load-more">
-                      {{ isLoadingGrid() ? ('collections.loading' | translate) : ('collections.loadMore' | translate) }}
+                      [attr.aria-disabled]="isLoadingGrid() ? 'true' : null"
+                      [attr.aria-label]="isLoadingGrid() ? null : ((loadMoreFailed() ? 'collections.loadMoreRetryAria' : 'collections.loadMoreAria') | translate)"
+                      [attr.data-testid]="loadMoreFailed() ? 'collection-load-more-retry' : 'collection-load-more'">
+                      {{ (isLoadingGrid() ? 'collections.loading' : loadMoreFailed() ? 'collections.retry' : 'collections.loadMore') | translate }}
                     </button>
-                  }
+                  </div>
                 } @else if (showFallbackRetry()) {
-                  <div class="load-more-error" role="alert" data-testid="collection-fallback-error">
-                    <p class="load-more-error__text">{{ 'collections.loadMoreError' | translate }}</p>
+                  <div class="load-more">
+                    <p class="load-more__error" role="alert" data-testid="collection-fallback-error">
+                      {{ 'collections.loadMoreError' | translate }}
+                    </p>
                     <button
                       class="load-more-btn"
                       type="button"
