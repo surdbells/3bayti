@@ -1736,9 +1736,16 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       .join(' ');
   }
 
-  /** URL for the vendor breadcrumb link. */
+  /** URL of the seller's storefront (/stores/:slug, slug only, never an id).
+   *  Used by the vendor line above the title and the "Sold by" store card. */
   vendorUrl(): string | null {
     const slug = this.product()?.vendor?.slug;
     return slug ? `/stores/${slug}` : null;
+  }
+
+  /** Store-name initial for the "Sold by" card's avatar. */
+  vendorInitial(): string {
+    const name = (this.product()?.vendor?.name ?? '').trim();
+    return (name[0] || '?').toUpperCase();
   }
 }

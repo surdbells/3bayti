@@ -938,6 +938,39 @@
 }
 @media (prefers-reduced-motion: reduce) { .cat-tile:hover { transform: none; } }
 
+/* =====================================================================
+   SHOP BY COLLECTION, image-backed tiles (CollectionCardComponent).
+   One horizontal row like .cat-tiles: ~200-240px wide 4:5 cards that
+   scroll sideways (with snap) when they can't all fit. The card itself is
+   styled in collections/collection-card.scss; the row only sizes tracks.
+   The padding leaves room for the hover lift, shadow and focus ring, which
+   the scroll container would otherwise clip; the matching negative inline
+   margin keeps the first card flush with the section header.
+   ===================================================================== */
+.collection-tiles {
+  max-width: var(--page-max-width); margin: 0 -6px; padding: 8px 6px 20px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(200px, 240px);
+  gap: 16px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 6px;
+  scrollbar-width: none;
+}
+.collection-tiles::-webkit-scrollbar { display: none; }
+.collection-tiles__item { scroll-snap-align: start; }
+.collection-tiles__skeleton {
+  border-radius: var(--radius-lg, 20px);
+  overflow: hidden;
+  pointer-events: none;
+}
+@media (min-width: 1280px) {
+  .collection-tiles { gap: 20px; }
+}
+:host-context([dir='rtl']) .home-section__view-all svg { transform: scaleX(-1); }
+
 
 /* =====================================================================
    QUICK ACTION CARDS, Stores / Gift Cards / Styles.

@@ -1,0 +1,115 @@
+/* Collection detail page, `/collection/:slug`.
+   Breadcrumb, filter layout, product grid, shimmer, empty state and
+   load-more come from ../categories/category-detail.scss (shared via
+   styleUrls); this file adds the page frame and the banner header, which
+   echoes the CollectionCard (image background, dark scrim, centred white
+   display-serif title). */
+
+.collection-detail-page {
+  padding-block: 32px 96px;
+}
+
+/* ----- Banner header --------------------------------------------- */
+
+.collection-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  padding: 40px 24px;
+  border-radius: var(--radius-lg, 20px);
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(150deg, #c98a2a 0%, #b26a1b 48%, #7a4512 100%);
+  box-shadow: 0 10px 26px -14px rgba(46, 36, 28, 0.5);
+}
+
+@media (min-width: 768px) {
+  .collection-hero {
+    min-height: 300px;
+    padding: 56px 48px;
+  }
+}
+
+.collection-hero--loading {
+  background: var(--color-bg-muted);
+  box-shadow: none;
+}
+
+.collection-hero__bg {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.collection-hero__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 70% at 50% 50%, rgba(20, 14, 10, 0.3), transparent 80%),
+    linear-gradient(180deg, rgba(20, 14, 10, 0.3) 0%, rgba(20, 14, 10, 0.5) 55%, rgba(20, 14, 10, 0.68) 100%);
+}
+
+.collection-hero--no-image .collection-hero__scrim {
+  background:
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 14px),
+    radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, 0.2), transparent 55%),
+    linear-gradient(180deg, transparent 40%, rgba(46, 36, 28, 0.35) 100%);
+}
+
+.collection-hero__content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 720px;
+}
+
+.collection-hero__eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.collection-hero__title {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-weight: 600;
+  font-size: clamp(2rem, 1.4rem + 2.6vw, 3.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
+}
+
+.collection-hero__description {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+}
+
+.collection-hero__count {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.86);
+}

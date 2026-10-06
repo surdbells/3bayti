@@ -466,7 +466,13 @@ export class FilterBarComponent {
   }
 
   clearAll(): void {
-    this.filterChange.emit({ category: this.filters().category, sort: 'newest' });
+    const f = this.filters();
+    // Keep the page-fixed scope (category / collection); clear everything else.
+    this.filterChange.emit({
+      category: f.category,
+      ...(f.collection ? { collection: f.collection } : {}),
+      sort: 'newest',
+    });
     this.closeChips();
   }
 }

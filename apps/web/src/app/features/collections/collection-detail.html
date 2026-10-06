@@ -1,0 +1,134 @@
+<main class="collection-detail-page" data-testid="collection-detail-page">
+  <ui-container size="default">
+    <ui-stack gap="2xl">
+
+      <!-- Breadcrumb -->
+      <nav class="breadcrumb" [attr.aria-label]="'collections.breadcrumb.aria' | translate">
+        <a href="/" class="breadcrumb-link">{{ 'collections.breadcrumb.home' | translate }}</a>
+        <span class="breadcrumb-sep" aria-hidden="true">›</span>
+        <a href="/collection" class="breadcrumb-link">{{ 'collections.breadcrumb.collections' | translate }}</a>
+        @if (collection(); as col) {
+          <span class="breadcrumb-sep" aria-hidden="true">›</span>
+          <span class="breadcrumb-current" aria-current="page">{{ col.name }}</span>
+        }
+      </nav>
+
+      @if (loading()) {
+        <div class="collection-hero collection-hero--loading" aria-hidden="true"></div>
+        <ui-text tone="secondary">{{ 'collections.loading' | translate }}</ui-text>
+      } @else if (notFound()) {
+        <header class="category-header" data-testid="collection-not-found">
+          <ui-stack gap="md">
+            <p class="eyebrow">{{ 'collections.notFound.eyebrow' | translate }}</p>
+            <ui-heading level="h1" size="xl">{{ 'collections.notFound.title' | translate }}</ui-heading>
+            <ui-text size="lg" tone="secondary">{{ 'collections.notFound.body' | translate }}</ui-text>
+            <p><a href="/collection" class="back-link">{{ 'collections.notFound.back' | translate }}</a></p>
+          </ui-stack>
+        </header>
+      } @else if (loadError()) {
+        <header class="category-header" data-testid="collection-load-error">
+          <ui-stack gap="md">
+            <ui-heading level="h1" size="xl">{{ 'collections.loadError.title' | translate }}</ui-heading>
+            <ui-text size="lg" tone="secondary">{{ 'collections.loadError.body' | translate }}</ui-text>
+            <p><a href="/collection" class="back-link">{{ 'collections.notFound.back' | translate }}</a></p>
+          </ui-stack>
+        </header>
+      } @else if (collection(); as col) {
+
+        <!-- Banner header: collection image as the background (brand
+             gradient without one), dark scrim, centred white title. -->
+        <header
+          class="collection-hero"
+          [class.collection-hero--no-image]="!col.image_url"
+          data-testid="collection-hero"
+        >
+          @if (col.image_url) {
+            <img
+              class="collection-hero__bg"
+              [src]="col.image_url | cfImage:'cover'"
+              alt=""
+              fetchpriority="high"
+              decoding="async"
+            />
+          }
+          <span class="collection-hero__scrim" aria-hidden="true"></span>
+          <div class="collection-hero__content">
+            <p class="collection-hero__eyebrow">{{ 'collections.eyebrow' | translate }}</p>
+            <h1 class="collection-hero__title">{{ col.name }}</h1>
+            @if (col.description) {
+              <p class="collection-hero__description">{{ col.description }}</p>
+            }
+            @if (collectionTotal() > 0) {
+              <p class="collection-hero__count" data-testid="collection-count">
+                {{ collectionTotal() }} {{ (collectionTotal() === 1 ? 'collections.piece' : 'collections.pieces') | translate }}
+              </p>
+            }
+          </div>
+        </header>
+
+        <!-- Filter bar + grid layout -->
+        <div class="catalog-layout">
+
+          <app-filter-bar
+            class="catalog-layout__filters"
+            [filters]="currentFilters()"
+            [facets]="facets()"
+            (filterChange)="onFilterChange($event)"
+          />
+
+          <section class="catalog-layout__grid" [attr.aria-label]="'collections.gridAria' | translate">
+
+            @if (showSkeleton()) {
+              <div class="grid-loading" aria-live="polite" [attr.aria-label]="'collections.loadingProducts' | translate">
+                @for (_ of [1,2,3,4,5,6]; track _) {
+                  <div class="grid-loading__card"></div>
+                }
+              </div>
+            }
+
+            @if (showEmpty()) {
+              <div class="grid-empty" data-testid="collection-empty">
+                @if (hasUserFilters()) {
+                  <p class="grid-empty__title">{{ 'collections.emptyTitle' | translate }}</p>
+                  <p class="grid-empty__hint">{{ 'collections.emptyHint' | translate }}</p>
+                } @else {
+                  <p class="grid-empty__title">{{ 'collections.emptyCollectionTitle' | translate }}</p>
+                  <p class="grid-empty__hint">
+                    <a href="/collection" class="back-link">{{ 'collections.emptyCollectionHint' | translate }}</a>
+                  </p>
+                }
+              </div>
+            }
+
+            @if (products().length > 0) {
+              <div class="product-grid" data-testid="collection-grid">
+                @for (p of products(); track p.id) {
+                  <ui-product-card [product]="p" />
+                }
+              </div>
+
+              <div class="grid-footer">
+                <p class="grid-count">
+                  {{ 'collections.showing' | translate:{ shown: products().length, total: totalProducts() } }}
+                </p>
+                @if (hasMore()) {
+                  <button
+                    class="load-more-btn"
+                    type="button"
+                    (click)="loadMore()"
+                    [disabled]="isLoadingGrid()"
+                    [attr.aria-label]="'collections.loadMoreAria' | translate"
+                    data-testid="collection-load-more">
+                    {{ isLoadingGrid() ? ('collections.loading' | translate) : ('collections.loadMore' | translate) }}
+                  </button>
+                }
+              </div>
+            }
+
+          </section>
+        </div>
+
+      }
+    </ui-stack>
+  </ui-container>
+</main>

@@ -61,6 +61,8 @@ const OUT_DIR  = process.env.OUTPUT_DIR || join(__dirname, '..', 'dist', '3bayti
 const STATIC_PAGES = [
   { loc: '/',          changefreq: 'weekly',  priority: '1.0' },
   { loc: '/category',  changefreq: 'weekly',  priority: '0.9' },
+  // Admin-curated collections index (/collection/:slug pages are linked from it).
+  { loc: '/collection', changefreq: 'weekly', priority: '0.8' },
   // /stores directory index (formerly /designer). Per-store
   // (/stores/:slug) entries come from the vendors loop below.
   { loc: '/stores',    changefreq: 'weekly',  priority: '0.8' },

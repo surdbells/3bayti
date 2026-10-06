@@ -84,6 +84,23 @@ export const routes: Routes = [
     title: 'routeTitles.categories',
   },
   {
+    /* Collections index, `/collection`. Every shoppable admin-curated
+       collection as image-backed cards (GET /v3/collections). */
+    path: 'collection',
+    loadComponent: () =>
+      import('./features/collections/collections').then(m => m.CollectionsComponent),
+    title: 'routeTitles.collections',
+  },
+  {
+    /* Collection detail, `/collection/:slug`. Banner header + a filterable
+       product grid scoped by ?collection=<slug>. Like category detail, the
+       real title is set via SeoService once the data loads. */
+    path: 'collection/:slug',
+    loadComponent: () =>
+      import('./features/collections/collection-detail').then(m => m.CollectionDetailComponent),
+    title: 'routeTitles.collections',
+  },
+  {
     /* Product detail, `/product/:slug`. The PDP. Renders the product
        with Product + Breadcrumb JSON-LD; data is fetched client-side
        for the current slug. */

@@ -1484,6 +1484,12 @@
       "piece": "piece",
       "pieces": "pieces"
     },
+    "collections": {
+      "eyebrow": "Curated",
+      "title": "Shop by collection",
+      "viewAll": "View all",
+      "viewAllAria": "View all collections"
+    },
     "campaigns": {
       "anniversary": "Anniversary Deals",
       "flash": "Flash Sale",
@@ -1596,6 +1602,11 @@
       "aria": "Breadcrumb",
       "home": "Home",
       "categories": "Categories"
+    },
+    "store": {
+      "soldBy": "Sold by",
+      "visit": "Visit store",
+      "visitAria": "Visit {{name}}'s store"
     },
     "gallery": {
       "aria": "Product images",
@@ -1860,6 +1871,43 @@
     "priceBandAria": "{{label}} ({{count}} products)",
     "clearAll": "Clear all filters"
   },
+  "collections": {
+    "breadcrumb": {
+      "aria": "Breadcrumb",
+      "home": "Home",
+      "collections": "Collections"
+    },
+    "loading": "Loading…",
+    "notFound": {
+      "eyebrow": "Collection not found",
+      "title": "No such collection",
+      "body": "This collection doesn't exist or is no longer available. Browse all collections instead.",
+      "back": "← All collections"
+    },
+    "loadError": {
+      "title": "We couldn't load this collection",
+      "body": "Something went wrong on our side. Please refresh the page or try again in a moment."
+    },
+    "eyebrow": "Collection",
+    "piece": "piece",
+    "pieces": "pieces",
+    "cardAria": "{{name}} collection, {{count}} pieces",
+    "cardAriaOne": "{{name}} collection, 1 piece",
+    "gridAria": "Products in this collection",
+    "loadingProducts": "Loading products…",
+    "emptyTitle": "No products match your filters",
+    "emptyHint": "Try adjusting or clearing your filters.",
+    "emptyCollectionTitle": "No pieces in this collection yet",
+    "emptyCollectionHint": "Browse other collections",
+    "showing": "Showing {{shown}} of {{total}}",
+    "loadMoreAria": "Load more products",
+    "loadMore": "Load more",
+    "indexEyebrow": "Curated",
+    "indexTitle": "Shop by Collection",
+    "indexLede": "Hand-picked edits of abayas, kaftans and modest wear from independent UAE designers.",
+    "loadingIndex": "Loading collections…",
+    "emptyIndex": "No collections available right now. Please check back soon."
+  },
   "notFound": {
     "eyebrow": "Page not found",
     "title": "We can't find that page",
@@ -1902,6 +1950,7 @@
     "giftReminders": "Gift Reminders · 3bayti",
     "home": "3bayti: Premium Abayas, Kaftans & Modest Wear",
     "categories": "Shop by Category · 3bayti",
+    "collections": "Shop by Collection · 3bayti",
     "product": "Product · 3bayti",
     "stores": "Stores · 3bayti",
     "storeDetail": "Store · 3bayti",

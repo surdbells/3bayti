@@ -1,0 +1,36 @@
+<main class="collections-page" data-testid="collections-page">
+  <ui-container size="default">
+    <ui-stack gap="2xl">
+
+      <header class="collections-header">
+        <ui-stack gap="md">
+          <p class="eyebrow">{{ 'collections.indexEyebrow' | translate }}</p>
+          <ui-heading level="h1" size="xl">{{ 'collections.indexTitle' | translate }}</ui-heading>
+          <ui-text size="lg" tone="secondary">{{ 'collections.indexLede' | translate }}</ui-text>
+        </ui-stack>
+      </header>
+
+      @if (loading()) {
+        <div class="collection-grid" aria-hidden="true">
+          @for (i of skeletons; track i) {
+            <div class="collection-grid__skeleton">
+              <ui-skeleton-shimmer [rounded]="true" height="auto" aspectRatio="4 / 5" />
+            </div>
+          }
+        </div>
+        <span class="visually-hidden" role="status">{{ 'collections.loadingIndex' | translate }}</span>
+      } @else if (collections(); as cols) {
+        @if (cols.length === 0) {
+          <ui-text tone="secondary">{{ 'collections.emptyIndex' | translate }}</ui-text>
+        } @else {
+          <div class="collection-grid" role="list" data-testid="collections-grid">
+            @for (col of cols; track col.id) {
+              <app-collection-card role="listitem" [collection]="col" />
+            }
+          </div>
+        }
+      }
+
+    </ui-stack>
+  </ui-container>
+</main>

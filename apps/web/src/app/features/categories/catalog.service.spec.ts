@@ -75,6 +75,14 @@ describe('CatalogService', () => {
       const { service } = setup();
       expect(service.toQuery({ sort: 'price_asc' })['sort']).toBe('price_asc');
     });
+
+    it('sends the collection slug when set and omits it when empty', () => {
+      const { service } = setup();
+      expect(service.toQuery({ collection: 'eid-edit', sizes: ['M'] }))
+        .toEqual({ collection: 'eid-edit', sizes: 'M' });
+      expect(service.toQuery({ collection: null })).toEqual({});
+      expect(service.toQuery({ collection: '' })).toEqual({});
+    });
   });
 
   describe('loadProducts', () => {
@@ -94,6 +102,18 @@ describe('CatalogService', () => {
       expect(page.hasMore).toBe(true);
       expect(service.products()).toHaveLength(2);
       expect(service.hasMore()).toBe(true);
+    });
+
+    it('scopes the listing to a collection via ?collection=<slug>', async () => {
+      const { service, controller } = setup();
+      const promise = service.loadProducts({ collection: 'eid-edit', sort: 'price_asc' }, 0);
+      const req = controller.expectOne(r => r.url === `${V3}/v3/products`);
+      expect(req.request.params.get('collection')).toBe('eid-edit');
+      expect(req.request.params.get('category')).toBeNull();
+      expect(req.request.params.get('sort')).toBe('price_asc');
+      req.flush({ data: [makeProduct()], meta: { total: 1, has_more: false } });
+      await promise;
+      expect(service.products()).toHaveLength(1);
     });
 
     it('appends on load-more and advances the offset', async () => {

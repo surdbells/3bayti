@@ -200,6 +200,45 @@
   </section>
 
   <!-- ===========================================================
+       SHOP BY COLLECTION, admin-curated edits (GET /collections).
+       Image-backed tiles in a horizontal row (scrolls like the
+       category tiles on narrow screens). Skeletons while loading;
+       the whole section hides once loaded if there are none.
+       =========================================================== -->
+  @if (showCollections()) {
+    <section class="home-section" aria-labelledby="home-collections-title" data-testid="home-collections">
+      <div class="home-section__header">
+        <div>
+          <p class="home-section__eyebrow">{{ 'home.collections.eyebrow' | translate }}</p>
+          <h2 class="home-section__title" id="home-collections-title">{{ 'home.collections.title' | translate }}</h2>
+        </div>
+        <a href="/collection" class="home-section__view-all" [attr.aria-label]="'home.collections.viewAllAria' | translate">
+          {{ 'home.collections.viewAll' | translate }}
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+
+      @if (collections(); as cols) {
+        <div class="collection-tiles" role="list">
+          @for (col of cols; track col.id) {
+            <app-collection-card class="collection-tiles__item" role="listitem" [collection]="col" />
+          }
+        </div>
+      } @else {
+        <div class="collection-tiles" aria-hidden="true">
+          @for (i of [0, 1, 2, 3, 4]; track i) {
+            <div class="collection-tiles__item collection-tiles__skeleton">
+              <ui-skeleton-shimmer [rounded]="true" height="auto" aspectRatio="4 / 5" />
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  <!-- ===========================================================
        ANNIVERSARY DEALS (campaign, hidden unless one is live)
        =========================================================== -->
   @if (anniversary(); as anniv) {

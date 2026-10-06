@@ -21,6 +21,9 @@ export const CATALOG_SORTS: readonly CatalogSort[] = [
  */
 export interface CatalogFilters {
   category?: string | null;
+  /** Admin-curated collection slug (GET /v3/products?collection=<slug>);
+   *  fixed by the route on the collection listing page. */
+  collection?: string | null;
   vendor?: string | null;
   sizes?: string[];
   colors?: string[];
@@ -183,6 +186,7 @@ export class CatalogService {
   toQuery(filters: CatalogFilters): Record<string, string | number> {
     const q: Record<string, string | number> = {};
     if (filters.category) q['category'] = filters.category;
+    if (filters.collection) q['collection'] = filters.collection;
     if (filters.vendor) q['vendor'] = filters.vendor;
     if (filters.sizes && filters.sizes.length > 0) q['sizes'] = filters.sizes.join(',');
     if (filters.colors && filters.colors.length > 0) q['colors'] = filters.colors.join(',');

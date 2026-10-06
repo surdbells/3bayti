@@ -114,7 +114,19 @@
           @if (p.vendor && p.vendor.name) {
             <p class="pdp-vendor">
               @if (vendorUrl(); as vUrl) {
-                <a [href]="vUrl">{{ p.vendor.name }}</a>
+                <a
+                  [href]="vUrl"
+                  class="pdp-vendor__link"
+                  [attr.aria-label]="'product.store.visitAria' | translate:{ name: p.vendor.name }"
+                  data-testid="pdp-vendor-link"
+                >
+                  <svg class="pdp-vendor__icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" />
+                    <path d="M2 9l2-5h16l2 5a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0z" />
+                    <path d="M9 20v-5h6v5" />
+                  </svg>
+                  <span>{{ p.vendor.name }}</span>
+                </a>
               } @else {
                 {{ p.vendor.name }}
               }
@@ -478,6 +490,35 @@
           }
           @if (addError(); as err) {
             <p class="pdp-buybox__error" role="alert">{{ err | translate }}</p>
+          }
+
+          <!-- Sold-by store card: one tap from the product to the seller's
+               storefront (/stores/:slug, slug-based). Hidden when the API
+               returns no vendor (or a vendor without a slug). Plain [href]
+               (like the vendor line above, StoreCard and ProductCard), not
+               routerLink: the router has no scroll restoration, so a
+               routerLink from this far down the PDP would open the store
+               mid-grid instead of at its header. -->
+          @if (p.vendor && p.vendor.name && vendorUrl(); as vUrl) {
+            <!-- No aria-label: the visible "Sold by <store> · Visit store"
+                 text is the accessible name (avatar initial is hidden). -->
+            <a
+              class="pdp-store"
+              [href]="vUrl"
+              data-testid="pdp-store-card"
+            >
+              <span class="pdp-store__avatar" aria-hidden="true">{{ vendorInitial() }}</span>
+              <span class="pdp-store__text">
+                <span class="pdp-store__label">{{ 'product.store.soldBy' | translate }}</span>
+                <span class="pdp-store__name">{{ p.vendor.name }}</span>
+              </span>
+              <span class="pdp-store__cta">
+                {{ 'product.store.visit' | translate }}
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </a>
           }
 
           <!-- Gift-card nudge: buying for someone else / unsure of size. -->

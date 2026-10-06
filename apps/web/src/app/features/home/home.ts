@@ -30,6 +30,8 @@ import { categoryIconUrl } from '../categories/category-icons';
 import { HomeDataService } from './home-data.service';
 import { ForYouService, type ForYouRails } from './for-you.service';
 import { AppShowcaseComponent } from './app-showcase';
+import { CollectionCardComponent } from '../collections/collection-card';
+import { CollectionsService } from '../collections/collections.service';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
@@ -68,6 +70,7 @@ import { TranslatePipe } from '@ngx-translate/core';
     AddPhonePromptComponent,
     UpdateEmailPromptComponent,
     AppShowcaseComponent,
+    CollectionCardComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.html',
@@ -80,6 +83,7 @@ export class HomeComponent {
   private auth = inject(AuthService);
   private forYouService = inject(ForYouService);
   private saleCount = inject(SaleCountService);
+  private collectionsService = inject(CollectionsService);
 
   /* ----- Categories (one extra fetch beyond the 4 home-page endpoints)
    *
@@ -96,6 +100,17 @@ export class HomeComponent {
    * two surfaces stay in sync and the request fires at most once.
    */
   readonly discountedCount = this.saleCount.count;
+
+  /* ----- Shop by collection: admin-curated collections (GET /collections),
+   * kept in the API's display order, only those with shoppable products.
+   * null = loading (skeleton tiles); [] = none, so the whole section hides. */
+  readonly collections = toSignal(this.collectionsService.list$(), { initialValue: null });
+
+  /** Render the section while loading, or once loaded with at least one. */
+  readonly showCollections = computed(() => {
+    const cols = this.collections();
+    return cols === null || cols.length > 0;
+  });
 
   /* ----- Product strips: each is a signal that becomes data when the
    * Observable emits. null = loading state (renders skeletons), [] =
