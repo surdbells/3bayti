@@ -885,6 +885,27 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     this.router.navigate(['/', 'cart']);
   }
 
+  /**
+   * "Sold by" row: open this product's vendor storefront BY SLUG (vendor_slug
+   * from the v3 detail payload's vendor block; legacy ids are never used),
+   * the same route + params as the home featured-vendor card. The storefront
+   * is sign-in only, so a guest gets the sign-up prompt the public home uses.
+   */
+  open_store() {
+    const slug = String(this.single.vendor_slug ?? '').trim();
+    if (!slug) {
+      return;
+    }
+    if (this.isGuest) {
+      this.error_notification(this.i18n.t('text_signup_to_continue'));
+      return;
+    }
+    this.router.navigate(
+      ['/', 'vendors'],
+      { queryParams: { slug, name: this.single.store_name || '' } }
+    );
+  }
+
   onDismiss() {
     this.isMeasureOpen = false;
   }

@@ -1,0 +1,187 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="triggerBack()" class="m7-header-back" [attr.aria-label]="'button_back' | translate">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ initial.name || ('title_collection' | translate) }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="openFilter()" class="m7-header-back" [attr.aria-label]="'filter_title' | translate">
+        <ax-icon name="sliders-horizontal" />
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <div class="m7-subtitle">{{ 'subtitle_collection' | translate }}</div>
+  <div class="m7-filter-chips">
+    <button
+      type="button"
+      class="m7-filter-chip"
+      [class.m7-filter-chip--active]="selectedFilter === 'all'"
+      (click)="selectFilter('all'); loadCollection()">
+      {{ 'button_all' | translate }}
+    </button>
+    @for(price of priceFilters; track price){
+      <button
+        type="button"
+        class="m7-filter-chip"
+        [class.m7-filter-chip--active]="selectedFilter === price"
+        (click)="selectFilter(price); filterByPrice(price)">
+        {{ 'label_under' | translate }} Ð{{price}}
+      </button>
+    }
+  </div>
+</ion-header>
+
+<ion-content fullscreen="true" class="page-bg ion-padding-horizontal ion-padding-vertical">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+
+  <!-- Results count -->
+  @if(!ui_controls.is_loading && collection_listing.length > 0){
+    <div class="results-info">
+      <span class="count">{{collection_listing.length}} {{ 'label_products' | translate }}</span>
+    </div>
+  }
+
+  <!-- Loading Skeleton Grid -->
+  @if(ui_controls.is_loading){
+    <ion-grid class="product-grid">
+      <ion-row>
+        @for(skeleton of [1,2,3,4,5,6]; track skeleton){
+          <ion-col size="6">
+            <article class="m6d-product-card">
+              <div class="m6d-img-wrap">
+                <div class="m6d-img-skeleton">
+                  <div class="skeleton-shimmer"></div>
+                </div>
+              </div>
+              <div class="m6d-info">
+                <div class="skeleton-text title-skeleton">
+                  <div class="skeleton-shimmer"></div>
+                </div>
+                <div class="skeleton-text title-skeleton short">
+                  <div class="skeleton-shimmer"></div>
+                </div>
+                <div class="skeleton-text price-skeleton">
+                  <div class="skeleton-shimmer"></div>
+                </div>
+              </div>
+            </article>
+          </ion-col>
+        }
+      </ion-row>
+    </ion-grid>
+  }
+
+  <!-- Product Grid -->
+  @if(!ui_controls.is_loading){
+    <ion-grid class="product-grid">
+      <ion-row>
+        @for(product of collection_listing; track product.product_id){
+          <ion-col size="6">
+            <article class="m6d-product-card" [class.loading]="ui_controls.is_creating">
+              <div class="m6d-img-wrap">
+                <!-- Image skeleton -->
+                <div class="m6d-img-skeleton" [class.hidden]="imageLoaded[product.product_id]">
+                  <div class="skeleton-shimmer"></div>
+                </div>
+                <!-- Actual image -->
+                <img
+                  loading="lazy"
+                  decoding="async"
+                  [src]="cfImage(product.image_1, 'card')"
+                  [alt]="product.product_name"
+                  [class.loaded]="imageLoaded[product.product_id]"
+                  (load)="onImageLoad(product.product_id)"
+                  (error)="onImageError(product.product_id)"
+                  (click)="open_product(product.product_id, product.product_name)" />
+                <!-- SALE flag (top-left), only when genuinely discounted -->
+                @if(product.sale_price && +product.sale_price > 0 && +product.sale_price < +product.price){
+                  <span class="m6d-flag-badge m6d-flag-badge--sale">{{ 'badge_sale' | translate }}</span>
+                }
+                <button
+                  type="button"
+                  class="m6d-like"
+                  (click)="startAddToCloset(product.product_id, product.product_name, product.image_1); $event.stopPropagation()"
+                  aria-label="Add to closet">
+                  <ax-icon name="heart-plus" />
+                </button>
+                <span class="m6d-vendor-badge">{{ product.store_name }}</span>
+              </div>
+              <div (click)="open_product(product.product_id, product.product_name)" class="m6d-info">
+                <p class="m6d-name">{{ product.product_name }}</p>
+                <div class="m6d-price-row">
+                  @if(product.sale_price && +product.sale_price > 0 && +product.sale_price < +product.price){
+                    <span class="m6d-price-sale-group">
+                      <span class="m6d-price m6d-price--sale">Ð{{ product.sale_price }}</span>
+                      <span class="m6d-price-original">Ð{{ product.price }}</span>
+                    </span>
+                  } @else {
+                    <span class="m6d-price">Ð{{ product.price }}</span>
+                  }
+                  <button
+                    type="button"
+                    class="m6d-add-to-cart"
+                    (click)="open_product(product.product_id, product.product_name); $event.stopPropagation()"
+                    aria-label="View product">
+                    <ax-icon name="plus" />
+                  </button>
+                </div>
+              </div>
+            </article>
+          </ion-col>
+        }
+      </ion-row>
+    </ion-grid>
+  }
+
+  <!-- Empty State -->
+  @if(ui_controls.is_empty && !ui_controls.is_loading){
+    <div class="empty-state">
+      <div class="empty-icon-wrap">
+        <ax-icon name="package-x"></ax-icon>
+      </div>
+      <h3>{{ 'text_no_products_in_collection' | translate }}</h3>
+      @if(hasActiveFilters){
+        <p>{{ 'text_try_adjusting_filter' | translate }}</p>
+        <ion-button type="button" fill="outline" size="small" class="reset-btn-ion" (click)="resetFilters()">
+          {{ 'button_view_all_products' | translate }}
+        </ion-button>
+      } @else {
+        <p>{{ 'text_collection_check_back' | translate }}</p>
+      }
+    </div>
+  }
+
+  <!-- Infinite Scroll -->
+  @if(!ui_controls.is_empty && !ui_controls.is_loading && collection_listing.length > 0){
+    <ion-infinite-scroll (ionInfinite)="onIonInfinite($event)" threshold="150px">
+      <ion-infinite-scroll-content loadingSpinner="dots"></ion-infinite-scroll-content>
+    </ion-infinite-scroll>
+  }
+
+  <!-- Wishlist sheet (shared component; supports inline label creation) -->
+  <ax-wishlist-sheet
+    [isOpen]="isWishOpen"
+    [productName]="addCloset.product_name"
+    [labels]="wishlistLabels"
+    [loading]="ui_controls.is_loading_labels"
+    [creating]="isCreatingLabel"
+    (dismiss)="onDismiss(); isWishOpen = false"
+    (select)="addToCloset($event)"
+    (createLabel)="onCreateLabel($event)">
+  </ax-wishlist-sheet>
+
+  <!-- Web-parity filter sheet (sort / size / colour / price) -->
+  <ax-product-filter-sheet
+    [isOpen]="isFilterOpen"
+    [facets]="facets"
+    [state]="filterState"
+    [defaultSort]="defaultSort"
+    (apply)="onFilterApply($event)"
+    (didDismiss)="isFilterOpen = false">
+  </ax-product-filter-sheet>
+</ion-content>

@@ -768,6 +768,9 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
   'GET /mobile/stores': transformFeaturedVendorsResponse,
   'GET /mobile/explore-listing': transformProductListResponse,
   'GET /mobile/category-listing': transformProductListResponse,
+  // Admin-curated collection PLP: same /v3/products listing (filtered by
+  // ?collection=<slug>), so the same product-card mapper.
+  'GET /mobile/collection-listing': transformProductListResponse,
   'GET /mobile/vendors-products': transformProductListResponse,
   'GET /mobile/store-latest': transformProductListResponse,
 

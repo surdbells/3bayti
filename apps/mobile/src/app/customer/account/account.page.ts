@@ -78,6 +78,18 @@ export interface Store {
   products: Product[];
 }
 
+/** An admin-curated collection chip (GET /v3/collections item). */
+export interface HomeCollection {
+  id: number;
+  slug: string;
+  name: string;
+  description: string | null;
+  /** Image of the first curated live product (or the cover), null if none. */
+  image_url: string | null;
+  product_count: number;
+  display_order: number | null;
+}
+
 @Component({
   selector: 'app-account',
   templateUrl: './account.page.html',
@@ -103,6 +115,12 @@ export class AccountPage implements OnInit, OnDestroy {
   forYouLoading = false;
   /** Total on-sale products, shown as a badge on the Discounted category chip. */
   discountedCount = 0;
+  /**
+   * Admin-curated collections (GET /v3/collections, display order) rendered as
+   * a second chip row under the category chips. Only collections with
+   * storefront-visible products; empty (row hidden) until / unless loaded.
+   */
+  collections: HomeCollection[] = [];
   // GET /v3/vendors (the PAGINATED public store directory) honours
   // limit/offset, so the "Popular stores" section supports real infinite
   // scroll. hasMoreStores stays true while the last page came back full
@@ -320,6 +338,7 @@ export class AccountPage implements OnInit, OnDestroy {
       this.get_new_arrivals();
       this.get_featured_products();
       this.get_discounted_count();
+      this.get_collections();
       this.load_cart();
       void this.ensureAinSession();
       this.get_for_you();
@@ -379,6 +398,7 @@ export class AccountPage implements OnInit, OnDestroy {
     this.get_new_arrivals();
     this.get_featured_products();
     this.get_discounted_count();
+    this.get_collections();
     this.load_cart();
     this.get_for_you();
     void this.cartCount.refresh();
@@ -604,6 +624,31 @@ export class AccountPage implements OnInit, OnDestroy {
         this.discountedCount = 0;
       },
     });
+  }
+
+  /**
+   * Admin-curated collections for the second chip row. Public catalog read
+   * (GET /v3/collections, active only, display order). Keeps only collections
+   * that have a slug and storefront-visible products. Best-effort: on any
+   * failure the current list is kept (initially [] so the row stays hidden).
+   */
+  get_collections() {
+    this.networkAdapter.get_v3('GET /collections').subscribe({
+      next: (response: any) => {
+        if (response?.response_code !== 200 || !Array.isArray(response?.data)) {
+          return;
+        }
+        this.collections = (response.data as HomeCollection[]).filter(
+          (c) => !!c && typeof c.slug === 'string' && c.slug !== '' && Number(c.product_count) > 0,
+        );
+      },
+      error: () => { /* best-effort; keep the current (initially empty) row */ },
+    });
+  }
+
+  /** A collection chip thumbnail failed to load, fall back to the icon. */
+  onCollectionImageError(collection: HomeCollection) {
+    collection.image_url = null;
   }
 
   get_new_arrivals() {
@@ -889,6 +934,15 @@ export class AccountPage implements OnInit, OnDestroy {
     this.router.navigate(
       ['/', 'category'],
       { queryParams: { id, name } }
+    );
+  }
+
+  /** Open an admin-curated collection PLP by its SLUG. */
+  open_collection(slug: string, name: string) {
+    if (!slug) { return; }
+    this.router.navigate(
+      ['/', 'collection'],
+      { queryParams: { slug, name } }
     );
   }
 

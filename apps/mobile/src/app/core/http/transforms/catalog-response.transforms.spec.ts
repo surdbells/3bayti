@@ -206,12 +206,16 @@ describe('transformProductDetailResponse', () => {
     expect(r['require_extra_msmt']).toBe(false);
   });
 
-  it('falls back to the v3 vendor id when legacy_id is absent', () => {
+  it('keeps store 0 (never the v3 vendor id) when legacy_id is absent, but still exposes the slug + name', () => {
+    // `store` feeds the by-legacy-id size-chart route, so a v3 id there would
+    // 404; the PDP "Sold by" link opens the storefront by vendor_slug instead.
     const r = transformProductDetailResponse({
       ...sampleV3Detail,
       vendor: { slug: 'almas-fashion', name: 'Almas Fashion', id: 9 },
     }) as Record<string, unknown>;
-    expect(r['store']).toBe(9);
+    expect(r['store']).toBe(0);
+    expect(r['vendor_slug']).toBe('almas-fashion');
+    expect(r['store_name']).toBe('Almas Fashion');
   });
 
   it('emits store 0 when the vendor block has no id at all', () => {
@@ -428,8 +432,8 @@ describe('transformStylesListResponse', () => {
 });
 
 describe('CATALOG_RESPONSE_TRANSFORMS registry', () => {
-  it('contains exactly 22 entries', () => {
-    expect(Object.keys(CATALOG_RESPONSE_TRANSFORMS).length).toBe(22);
+  it('contains exactly 24 entries', () => {
+    expect(Object.keys(CATALOG_RESPONSE_TRANSFORMS).length).toBe(24);
   });
 
   it('every entry is callable and safely handles minimal input', () => {
@@ -454,6 +458,8 @@ describe('CATALOG_RESPONSE_TRANSFORMS registry', () => {
       'GET /mobile/best-sellers-listing',
       'GET /mobile/explore-listing',
       'GET /mobile/category-listing',
+      // Admin-curated collection PLP (/v3/products?collection=<slug>):
+      'GET /mobile/collection-listing',
       'GET /mobile/vendors-products',
       'GET /mobile/store-latest',
       // M3.1.5.5, search + products-by-labels reuse the list mapper:

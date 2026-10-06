@@ -1,0 +1,82 @@
+/* ============================================================================
+   Collection page, clone of the category PLP (M2 redesign, M21 Tier 3)
+   ============================================================================ */
+
+ion-content.page-bg {
+  --background: var(--ax-color-bg-canvas);
+}
+
+/* ----- Results info row --------------------------------------- */
+
+.results-info {
+  margin-bottom: 12px;
+  padding: 0 4px;
+
+  .count {
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ax-color-text-secondary);
+    font-weight: 500;
+  }
+}
+
+/* ----- Products grid ------------------------------------------ */
+
+.product-grid {
+  --ion-grid-padding: 0;
+
+  ion-row {
+    --ion-grid-column-padding: 6px;
+  }
+
+  contain: layout style;
+}
+
+/* ----- Empty state -------------------------------------------- */
+
+/* Layout, icon-wrap, h3, p covered by global .empty-state.
+   This page keeps the .reset-btn-ion child + small margin overrides. */
+.empty-state {
+
+  .empty-icon-wrap ax-icon {
+    font-size: 36px;
+  }
+
+  h3 {
+    margin: 0 0 8px;
+  }
+
+  p {
+    margin: 0 0 20px;
+  }
+
+  .reset-btn-ion {
+    --color: var(--ax-color-text-brand);
+    --border-color: var(--ax-color-text-brand);
+    --border-radius: 999px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+}
+
+/* ----- Skeleton text placeholders ----------------------------- */
+
+.skeleton-text {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* ----- Responsive --------------------------------------------- */
+
+@media (min-width: 768px) {
+  .product-grid {
+    ion-col {
+      flex: 0 0 33.333%;
+      max-width: 33.333%;
+    }
+  }
+}

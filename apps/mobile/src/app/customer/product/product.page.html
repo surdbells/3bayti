@@ -99,6 +99,28 @@
           </div>
         </div>
 
+        <!-- Sold by: opens the vendor's storefront BY SLUG (never a legacy id).
+             Hidden when the product carries no vendor slug / name. -->
+        @if(single.vendor_slug && single.store_name){
+          <button
+            type="button"
+            class="store-row"
+            (click)="open_store()"
+            [attr.aria-label]="('pdp_sold_by' | translate) + ' ' + single.store_name + '. ' + ('pdp_visit_store' | translate)">
+            <span class="store-row__icon" aria-hidden="true">
+              <ax-icon name="store"></ax-icon>
+            </span>
+            <span class="store-row__text">
+              <span class="store-row__label">{{ 'pdp_sold_by' | translate }}</span>
+              <span class="store-row__name">{{ single.store_name }}</span>
+            </span>
+            <span class="store-row__cta" aria-hidden="true">
+              {{ 'pdp_visit_store' | translate }}
+              <ax-icon name="chevron-right"></ax-icon>
+            </span>
+          </button>
+        }
+
         <!-- Description / Reviews, premium pill toggle -->
         <div class="info-tabs" role="tablist">
           <button

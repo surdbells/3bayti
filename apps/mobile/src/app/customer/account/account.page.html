@@ -85,6 +85,25 @@
                 <span class="m6-chip-text">{{ 'pyjamas' | translate }}</span>
               </button>
             </div>
+            <!-- Admin-curated collections (GET /v3/collections), opened by slug.
+                 Hidden until at least one collection has visible products. -->
+            @if (collections.length > 0) {
+              <div class="h-scroll categories categories--collections" role="group" [attr.aria-label]="'home_shop_by_collection' | translate">
+                @for (c of collections; track c.slug) {
+                  <button class="m6-chip m6-chip--collection" type="button" (click)="open_collection(c.slug, c.name)">
+                    <span class="m6-chip-thumb">
+                      @if (c.image_url) {
+                        <img [src]="cfImage(c.image_url, 'thumb')" alt="" loading="lazy" decoding="async"
+                             (error)="onCollectionImageError(c)" />
+                      } @else {
+                        <ax-icon name="sparkles" [size]="14" />
+                      }
+                    </span>
+                    <span class="m6-chip-text">{{ c.name }}</span>
+                  </button>
+                }
+              </div>
+            }
           </section>
         </ion-col>
       </ion-row>

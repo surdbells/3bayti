@@ -185,6 +185,11 @@ export const routes: Routes = [
     loadComponent: () => import('./customer/category/category.page').then( m => m.CategoryPage)
   },
   {
+    // Admin-curated collection PLP, keyed by collection SLUG (?slug=&name=).
+    path: 'collection',
+    loadComponent: () => import('./customer/collection/collection.page').then( m => m.CollectionPage)
+  },
+  {
     path: 'discounted',
     loadComponent: () => import('./customer/discounted/discounted.page').then( m => m.DiscountedPage)
   },

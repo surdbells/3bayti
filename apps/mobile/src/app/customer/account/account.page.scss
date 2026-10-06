@@ -206,6 +206,40 @@
   }
 }
 
+/* Collection chips, second row directly under the category chips. Same
+   outlined .m6-chip pill; the icon slot is a small round thumbnail of the
+   collection's lead product (sparkles icon fallback). */
+.categories--collections {
+  padding-top: 0;
+
+  /* Hug the 24px thumbnail (4px block padding keeps the 32px category-chip
+     height); logical inline padding so the thumb side stays tight in RTL. */
+  .m6-chip--collection {
+    padding-block: 4px;
+    padding-inline: 4px 14px;
+  }
+
+  .m6-chip-thumb {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--ax-palette-beige-100);
+    color: var(--ax-color-text-brand);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  }
+}
+
 /* Search wrap container, beige bg flows under it from header */
 .search-wrap {
   background: transparent;
