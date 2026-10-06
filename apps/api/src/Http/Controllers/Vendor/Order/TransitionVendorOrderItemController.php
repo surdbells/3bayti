@@ -10,6 +10,8 @@ use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderItem;
 use Bayti\Api\Domain\Order\OrderRepository;
+use Bayti\Api\Domain\Setting\NotificationSettings;
+use Bayti\Api\Domain\Setting\SettingsService;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Controllers\Vendor\Order\Dto\TransitionOrderItemInput;
 use Bayti\Api\Http\Errors\ErrorCodes;
@@ -66,6 +68,7 @@ final class TransitionVendorOrderItemController
         private readonly \Bayti\Api\Notification\Push\PushNotificationService $pushNotifications,
         private readonly LoggerInterface $logger,
         private readonly AuditEmitter $audit,
+        private readonly SettingsService $settings,
     ) {
     }
 
@@ -222,21 +225,31 @@ final class TransitionVendorOrderItemController
         // Notify the customer of every line-item state change (email +
         // push). Per-item: the customer wants to know as each piece moves
         //, confirmed, preparing, shipped, delivered, or rejected.
-        if ($newStatus === OrderItem::ITEM_STATUS_ACCEPTED) {
-            $this->notifications->itemAccepted($order, $item);
-            $this->pushNotifications->itemAccepted($order);
-        } elseif ($newStatus === OrderItem::ITEM_STATUS_PREPARING) {
-            $this->notifications->itemPreparing($order, $item);
-            $this->pushNotifications->itemPreparing($order);
-        } elseif ($newStatus === OrderItem::ITEM_STATUS_REJECTED) {
-            $this->notifications->itemRejected($order, $item);
-            $this->pushNotifications->itemRejected($order);
-        } elseif ($newStatus === OrderItem::ITEM_STATUS_SHIPPED) {
-            $this->notifications->itemShipped($order, $item);
-            $this->pushNotifications->itemShipped($order);
-        } elseif ($newStatus === OrderItem::ITEM_STATUS_DELIVERED) {
-            $this->notifications->itemDelivered($order, $item);
-            $this->pushNotifications->itemDelivered($order);
+        //
+        // Admin-gated: when the "suppress vendor item-status to customer"
+        // setting is on, we SKIP these per-item customer notifications to
+        // avoid flooding a customer with ~20 updates on a many-item,
+        // many-vendor order. Order-level + admin-driven notifications are
+        // unaffected (they don't run through this block). Default off, so
+        // behaviour is unchanged until an admin opts in. The read is a
+        // cheap cached SettingsService lookup; it fails safe to "send".
+        if (!$this->customerItemStatusSuppressed()) {
+            if ($newStatus === OrderItem::ITEM_STATUS_ACCEPTED) {
+                $this->notifications->itemAccepted($order, $item);
+                $this->pushNotifications->itemAccepted($order);
+            } elseif ($newStatus === OrderItem::ITEM_STATUS_PREPARING) {
+                $this->notifications->itemPreparing($order, $item);
+                $this->pushNotifications->itemPreparing($order);
+            } elseif ($newStatus === OrderItem::ITEM_STATUS_REJECTED) {
+                $this->notifications->itemRejected($order, $item);
+                $this->pushNotifications->itemRejected($order);
+            } elseif ($newStatus === OrderItem::ITEM_STATUS_SHIPPED) {
+                $this->notifications->itemShipped($order, $item);
+                $this->pushNotifications->itemShipped($order);
+            } elseif ($newStatus === OrderItem::ITEM_STATUS_DELIVERED) {
+                $this->notifications->itemDelivered($order, $item);
+                $this->pushNotifications->itemDelivered($order);
+            }
         }
 
         // Return the updated order, scoped to the vendor's items + money.
@@ -246,5 +259,24 @@ final class TransitionVendorOrderItemController
         );
 
         return $this->ok(['order' => $shape]);
+    }
+
+    /**
+     * Whether an admin has turned off per-item vendor status updates to the
+     * customer. Fails safe to false (not suppressed) on any read error, so a
+     * settings/DB hiccup never silently drops customer notifications.
+     */
+    private function customerItemStatusSuppressed(): bool
+    {
+        try {
+            return NotificationSettings::fromArray(
+                $this->settings->get(NotificationSettings::KEY),
+            )->suppressVendorItemStatus;
+        } catch (\Throwable $e) {
+            $this->logger->warning('notifications.suppress_setting_read_failed', [
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 }

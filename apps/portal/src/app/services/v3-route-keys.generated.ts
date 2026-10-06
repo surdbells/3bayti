@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 370 route keys.
+ * 377 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -46,6 +46,7 @@ export type V3RouteKey =
   | 'GET /admin/categories'
   | 'GET /admin/collections'
   | 'GET /admin/collections/:id'
+  | 'GET /admin/collections/:id/products'
   | 'GET /admin/commissions'
   | 'GET /admin/customers'
   | 'GET /admin/delivery-readiness'
@@ -80,6 +81,7 @@ export type V3RouteKey =
   | 'GET /admin/returns'
   | 'GET /admin/roles'
   | 'GET /admin/roles/:id'
+  | 'GET /admin/settings/notifications'
   | 'GET /admin/shipments'
   | 'GET /admin/shipping/pickup-locations'
   | 'GET /admin/top-customers'
@@ -111,6 +113,8 @@ export type V3RouteKey =
   | 'GET /chat/prompts'
   | 'GET /chat/unread-count'
   | 'GET /checkout/status/:order_reference'
+  | 'GET /collections'
+  | 'GET /collections/:slug'
   | 'GET /featured-vendors'
   | 'GET /following'
   | 'GET /gift-cards/balance'
@@ -137,6 +141,7 @@ export type V3RouteKey =
   | 'GET /mobile/best-sellers'
   | 'GET /mobile/best-sellers-listing'
   | 'GET /mobile/category-listing'
+  | 'GET /mobile/collection-listing'
   | 'GET /mobile/explore-listing'
   | 'GET /mobile/featured'
   | 'GET /mobile/my-styles'
@@ -361,12 +366,14 @@ export type V3RouteKey =
   | 'PUT /admin/campaigns/:id'
   | 'PUT /admin/categories/:id'
   | 'PUT /admin/collections/:id'
+  | 'PUT /admin/collections/:id/products'
   | 'PUT /admin/notification-schedules/:id'
   | 'PUT /admin/notification-templates/:id'
   | 'PUT /admin/otp/providers'
   | 'PUT /admin/products/:id'
   | 'PUT /admin/promo-codes/:id'
   | 'PUT /admin/roles/:id'
+  | 'PUT /admin/settings/notifications'
   | 'PUT /admin/users/:id'
   | 'PUT /admin/vendors/:id'
   | 'PUT /me/addresses/:id'
@@ -419,6 +426,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/categories',
   'GET /admin/collections',
   'GET /admin/collections/:id',
+  'GET /admin/collections/:id/products',
   'GET /admin/commissions',
   'GET /admin/customers',
   'GET /admin/delivery-readiness',
@@ -453,6 +461,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/returns',
   'GET /admin/roles',
   'GET /admin/roles/:id',
+  'GET /admin/settings/notifications',
   'GET /admin/shipments',
   'GET /admin/shipping/pickup-locations',
   'GET /admin/top-customers',
@@ -484,6 +493,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /chat/prompts',
   'GET /chat/unread-count',
   'GET /checkout/status/:order_reference',
+  'GET /collections',
+  'GET /collections/:slug',
   'GET /featured-vendors',
   'GET /following',
   'GET /gift-cards/balance',
@@ -510,6 +521,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /mobile/best-sellers',
   'GET /mobile/best-sellers-listing',
   'GET /mobile/category-listing',
+  'GET /mobile/collection-listing',
   'GET /mobile/explore-listing',
   'GET /mobile/featured',
   'GET /mobile/my-styles',
@@ -734,12 +746,14 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PUT /admin/campaigns/:id',
   'PUT /admin/categories/:id',
   'PUT /admin/collections/:id',
+  'PUT /admin/collections/:id/products',
   'PUT /admin/notification-schedules/:id',
   'PUT /admin/notification-templates/:id',
   'PUT /admin/otp/providers',
   'PUT /admin/products/:id',
   'PUT /admin/promo-codes/:id',
   'PUT /admin/roles/:id',
+  'PUT /admin/settings/notifications',
   'PUT /admin/users/:id',
   'PUT /admin/vendors/:id',
   'PUT /me/addresses/:id',

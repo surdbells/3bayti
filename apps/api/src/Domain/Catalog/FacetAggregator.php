@@ -417,6 +417,13 @@ class FacetAggregator
             $where[] = 'p.label_id = :labelId';
             $params['labelId'] = $filters['labelId'];
         }
+        if (!empty($filters['collectionId'])) {
+            // Scope facets to an admin-curated collection (collection_products
+            // join), so the collection PLP's refinement counts agree with its
+            // listing. Mirrors the ProductRepository collectionId branch.
+            $where[] = 'p.id IN (SELECT cp.product_id FROM collection_products cp WHERE cp.collection_id = :collectionId)';
+            $params['collectionId'] = $filters['collectionId'];
+        }
         if (!empty($filters['minPrice'])) {
             $where[] = 'p.price >= :minPrice';
             $params['minPrice'] = $filters['minPrice'];

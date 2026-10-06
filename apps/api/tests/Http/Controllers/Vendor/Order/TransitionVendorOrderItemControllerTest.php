@@ -12,10 +12,16 @@ use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderItem;
 use Bayti\Api\Domain\Order\OrderRepository;
+use Bayti\Api\Domain\Setting\AppSetting;
+use Bayti\Api\Domain\Setting\AppSettingRepository;
+use Bayti\Api\Domain\Setting\NotificationSettings;
+use Bayti\Api\Domain\Setting\SettingsService;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Vendor\Order\TransitionVendorOrderItemController;
 use Bayti\Api\Infrastructure\Auth\JwtService;
+use Bayti\Api\Infrastructure\Cache\InMemoryKeyValueStore;
+use Bayti\Api\Notification\Push\PushNotificationService;
 use Bayti\Api\Tests\Http\HttpTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -369,6 +375,97 @@ final class TransitionVendorOrderItemControllerTest extends HttpTestCase
 
         self::assertSame(422, $response->getStatusCode());
         self::assertCount(0, $this->recordedAuditLogs);
+    }
+
+    // =================================================================
+    // Admin toggle: suppress per-item status updates to the customer
+    // =================================================================
+
+    #[Test]
+    public function suppressionSettingSkipsCustomerNotifications(): void
+    {
+        $user = $this->makeVendorUser(7);
+        $myVendor = $this->makeVendor(id: 5);
+        $product = $this->makeProduct(id: 200);
+        $order = $this->makeOrder($user, id: 100, reference: 'V3-001', subtotal: '299.00');
+        $this->setEntityProp($order, 'status', Order::STATUS_PAID);
+        $item = $this->makeItem($myVendor, $product, id: 501, status: OrderItem::ITEM_STATUS_PENDING);
+        $order->addItem($item);
+
+        $vendorRepo = $this->createMock(VendorRepository::class);
+        $vendorRepo->method('findIdsByOwnerUser')->willReturn([5]);
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findForVendorIds')->willReturn($order);
+        $this->bindEm($user, $orderRepo, $vendorRepo);
+
+        // Suppression ON → the push (and its sibling email) must NOT fire.
+        $this->bindSuppression(true);
+        $push = $this->createMock(PushNotificationService::class);
+        $push->expects(self::never())->method('itemAccepted');
+        $this->bind(PushNotificationService::class, $push);
+
+        $response = $this->makePatch(
+            $user,
+            '/v3/vendor/orders/100/items/501/status',
+            ['status' => OrderItem::ITEM_STATUS_ACCEPTED],
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        // The transition itself still happens; only the customer ping is gated.
+        self::assertSame(OrderItem::ITEM_STATUS_ACCEPTED, $item->getItemStatus());
+    }
+
+    #[Test]
+    public function withoutSuppressionCustomerNotificationsFire(): void
+    {
+        $user = $this->makeVendorUser(7);
+        $myVendor = $this->makeVendor(id: 5);
+        $product = $this->makeProduct(id: 200);
+        $order = $this->makeOrder($user, id: 100, reference: 'V3-001', subtotal: '299.00');
+        $this->setEntityProp($order, 'status', Order::STATUS_PAID);
+        $item = $this->makeItem($myVendor, $product, id: 501, status: OrderItem::ITEM_STATUS_PENDING);
+        $order->addItem($item);
+
+        $vendorRepo = $this->createMock(VendorRepository::class);
+        $vendorRepo->method('findIdsByOwnerUser')->willReturn([5]);
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findForVendorIds')->willReturn($order);
+        $this->bindEm($user, $orderRepo, $vendorRepo);
+
+        // Suppression OFF (explicit) → the push fires exactly once.
+        $this->bindSuppression(false);
+        $push = $this->createMock(PushNotificationService::class);
+        $push->expects(self::once())->method('itemAccepted');
+        $this->bind(PushNotificationService::class, $push);
+
+        $response = $this->makePatch(
+            $user,
+            '/v3/vendor/orders/100/items/501/status',
+            ['status' => OrderItem::ITEM_STATUS_ACCEPTED],
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+    }
+
+    /** Bind a real SettingsService seeded with the suppression flag. */
+    private function bindSuppression(bool $suppress): void
+    {
+        $setting = new AppSetting(NotificationSettings::KEY, ['suppress_vendor_item_status' => $suppress]);
+        $settingRepo = new class($setting) extends AppSettingRepository {
+            public function __construct(private AppSetting $seed)
+            {
+            }
+            public function findByKey(string $key): ?AppSetting
+            {
+                return $key === $this->seed->getKey() ? $this->seed : null;
+            }
+            public function save(AppSetting $setting): void
+            {
+            }
+        };
+        $settingsEm = $this->createMock(EntityManagerInterface::class);
+        $settingsEm->method('getRepository')->willReturn($settingRepo);
+        $this->bind(SettingsService::class, new SettingsService($settingsEm, new InMemoryKeyValueStore(), new NullLogger()));
     }
 
     // ===== Helpers =====

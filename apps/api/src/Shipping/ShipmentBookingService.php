@@ -10,6 +10,8 @@ use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderItem;
 use Bayti\Api\Domain\Order\OrderShipment;
 use Bayti\Api\Domain\Order\OrderShipmentRepository;
+use Bayti\Api\Domain\Setting\NotificationSettings;
+use Bayti\Api\Domain\Setting\SettingsService;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Notification\OrderNotificationService;
 use Bayti\Api\Notification\Push\PushNotificationService;
@@ -39,6 +41,7 @@ final class ShipmentBookingService
         private readonly OrderNotificationService $notifications,
         private readonly PushNotificationService $push,
         ?LoggerInterface $logger = null,
+        private readonly ?SettingsService $settings = null,
     ) {
         $this->logger = $logger ?? new NullLogger();
     }
@@ -186,6 +189,13 @@ final class ShipmentBookingService
     /** Best-effort "shipped" notification; never blocks the booking. */
     private function notifyShipped(Order $order, OrderItem $item): void
     {
+        // Same admin gate as the vendor item-status controller: when an admin
+        // has turned off per-item customer status updates, a courier booking
+        // (which marks the item shipped) must not notify the customer either,
+        // or the suppression would leak through this path. Fails safe to "send".
+        if ($this->customerItemStatusSuppressed()) {
+            return;
+        }
         try {
             $this->notifications->itemShipped($order, $item);
             $this->push->itemShipped($order);
@@ -194,6 +204,23 @@ final class ShipmentBookingService
                 'order_reference' => $order->getOrderReference(),
                 'error' => $e->getMessage(),
             ]);
+        }
+    }
+
+    private function customerItemStatusSuppressed(): bool
+    {
+        if ($this->settings === null) {
+            return false;
+        }
+        try {
+            return NotificationSettings::fromArray(
+                $this->settings->get(NotificationSettings::KEY),
+            )->suppressVendorItemStatus;
+        } catch (\Throwable $e) {
+            $this->logger->warning('notifications.suppress_setting_read_failed', [
+                'error' => $e->getMessage(),
+            ]);
+            return false;
         }
     }
 }

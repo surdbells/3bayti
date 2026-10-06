@@ -86,12 +86,17 @@ class ProductFilterParser
         if ($labelId === false) {
             return ['filters' => [], 'filterNotFound' => true];
         }
+        $collectionId = $this->resolveCollectionId($query);
+        if ($collectionId === false) {
+            return ['filters' => [], 'filterNotFound' => true];
+        }
 
         return [
             'filters' => [
                 'vendorId'    => $vendorId,
                 'categoryId'  => $categoryId,
                 'labelId'     => $labelId,
+                'collectionId' => $collectionId,
                 'minPrice'    => $this->parsePrice($query['min_price'] ?? null),
                 'maxPrice'    => $this->parsePrice($query['max_price'] ?? null),
                 'isFeatured'  => $this->parseBool($query['featured'] ?? null),
@@ -155,6 +160,34 @@ class ProductFilterParser
             $repo = $this->em->getRepository(Category::class);
             $cat = $repo->findByLegacyId((int) $rawId);
             return $cat === null ? false : $cat->getId();
+        }
+        return null;
+    }
+
+    /**
+     * Slug-or-legacy-id resolution for an admin-curated collection. The slug
+     * form resolves only ACTIVE collections (an inactive collection must read
+     * as "not found" → empty result, same soft-fail as the other axes).
+     *
+     * @param array<string, mixed> $query
+     */
+    public function resolveCollectionId(array $query): int|null|false
+    {
+        if (!empty($query['collection'])) {
+            /** @var ProductCollectionRepository $repo */
+            $repo = $this->em->getRepository(ProductCollection::class);
+            $col = $repo->findBySlug((string) $query['collection'], activeOnly: true);
+            return $col === null ? false : $col->getId();
+        }
+        if (!empty($query['collection_id'])) {
+            $rawId = (string) $query['collection_id'];
+            if (!ctype_digit($rawId)) {
+                return false;
+            }
+            /** @var ProductCollectionRepository $repo */
+            $repo = $this->em->getRepository(ProductCollection::class);
+            $col = $repo->findByLegacyId((int) $rawId);
+            return $col === null ? false : $col->getId();
         }
         return null;
     }
@@ -291,7 +324,7 @@ class ProductFilterParser
     public function buildAppliedFiltersBlock(array $query): array
     {
         $applied = [];
-        foreach (['vendor', 'category', 'label', 'min_price', 'max_price', 'q'] as $key) {
+        foreach (['vendor', 'category', 'label', 'collection', 'min_price', 'max_price', 'q'] as $key) {
             if (!empty($query[$key])) {
                 $applied[$key] = (string) $query[$key];
             }

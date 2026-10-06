@@ -6,6 +6,8 @@ namespace Bayti\Api\Tests\Domain\Catalog;
 
 use Bayti\Api\Domain\Catalog\Category;
 use Bayti\Api\Domain\Catalog\CategoryRepository;
+use Bayti\Api\Domain\Catalog\ProductCollection;
+use Bayti\Api\Domain\Catalog\ProductCollectionRepository;
 use Bayti\Api\Domain\Catalog\ProductFilterParser;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorLabel;
@@ -92,6 +94,48 @@ final class ProductFilterParserTest extends TestCase
         $parser = $this->parserWith(categoryBySlug: ['abayas' => $cat]);
 
         self::assertSame(5, $parser->resolveCategoryId(['category' => 'abayas']));
+    }
+
+    #[Test]
+    public function collectionSlugResolvesToActiveId(): void
+    {
+        $col = $this->makeCollection(31, 'summer-edit');
+        $collectionRepo = $this->createMock(ProductCollectionRepository::class);
+        $collectionRepo->method('findBySlug')->with('summer-edit', true)->willReturn($col);
+        $em = $this->emWithRepos(collectionRepo: $collectionRepo);
+        $parser = new ProductFilterParser($em);
+
+        self::assertSame(31, $parser->resolveCollectionId(['collection' => 'summer-edit']));
+    }
+
+    #[Test]
+    public function collectionNotFoundReturnsFalse(): void
+    {
+        $collectionRepo = $this->createMock(ProductCollectionRepository::class);
+        $collectionRepo->method('findBySlug')->willReturn(null);
+        $em = $this->emWithRepos(collectionRepo: $collectionRepo);
+        $parser = new ProductFilterParser($em);
+
+        self::assertFalse($parser->resolveCollectionId(['collection' => 'nope']));
+    }
+
+    #[Test]
+    public function collectionMissingReturnsNull(): void
+    {
+        $parser = $this->parserWith();
+        self::assertNull($parser->resolveCollectionId([]));
+    }
+
+    #[Test]
+    public function parseShortCircuitsOnUnknownCollection(): void
+    {
+        $collectionRepo = $this->createMock(ProductCollectionRepository::class);
+        $collectionRepo->method('findBySlug')->willReturn(null);
+        $em = $this->emWithRepos(collectionRepo: $collectionRepo);
+        $parser = new ProductFilterParser($em);
+
+        $result = $parser->parse(['collection' => 'does-not-exist']);
+        self::assertTrue($result['filterNotFound']);
     }
 
     #[Test]
@@ -376,19 +420,30 @@ final class ProductFilterParserTest extends TestCase
         ?VendorRepository $vendorRepo = null,
         ?CategoryRepository $categoryRepo = null,
         ?VendorLabelRepository $labelRepo = null,
+        ?ProductCollectionRepository $collectionRepo = null,
     ): EntityManagerInterface {
         $em = $this->createMock(EntityManagerInterface::class);
         $em->method('getRepository')->willReturnCallback(function (string $class) use (
-            $vendorRepo, $categoryRepo, $labelRepo,
+            $vendorRepo, $categoryRepo, $labelRepo, $collectionRepo,
         ) {
             return match ($class) {
                 Vendor::class      => $vendorRepo ?? $this->createMock(VendorRepository::class),
                 Category::class    => $categoryRepo ?? $this->createMock(CategoryRepository::class),
                 VendorLabel::class => $labelRepo ?? $this->createMock(VendorLabelRepository::class),
+                ProductCollection::class => $collectionRepo ?? $this->createMock(ProductCollectionRepository::class),
                 default => $this->fail("Unexpected getRepository call for {$class}"),
             };
         });
         return $em;
+    }
+
+    private function makeCollection(int $id, string $slug): ProductCollection
+    {
+        $c = (new \ReflectionClass(ProductCollection::class))->newInstanceWithoutConstructor();
+        $this->setProp($c, 'id', $id);
+        $this->setProp($c, 'slug', $slug);
+        $this->setProp($c, 'name', ucfirst(str_replace('-', ' ', $slug)));
+        return $c;
     }
 
     private function makeVendor(int $id, string $slug): Vendor

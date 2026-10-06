@@ -568,6 +568,12 @@ return function (App $app): void {
     $app->get('/v3/categories', \Bayti\Api\Http\Controllers\Catalog\ListCategoriesController::class);
     $app->get('/v3/categories/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetCategoryController::class);
 
+    // Collections (admin-curated), public "shop by collection" list + per-slug
+    // detail with embedded products. Products-by-collection filtering is served
+    // by GET /v3/products?collection={slug} (+ /v3/products/facets).
+    $app->get('/v3/collections', \Bayti\Api\Http\Controllers\Catalog\ListCollectionsController::class);
+    $app->get('/v3/collections/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetCollectionController::class);
+
     // Brands, public list + per-slug detail
     $app->get('/v3/brands', \Bayti\Api\Http\Controllers\Catalog\ListBrandsController::class);
     $app->get('/v3/brands/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetBrandController::class);
@@ -963,6 +969,13 @@ return function (App $app): void {
         $group->put('/otp/providers',
             \Bayti\Api\Http\Controllers\Admin\Otp\UpdateOtpProvidersController::class)->add($perm->for('settings.edit'));
 
+        // Customer-notification toggles (e.g. suppress per-item vendor status
+        // updates to the customer). Takes effect on the next send, no redeploy.
+        $group->get('/settings/notifications',
+            \Bayti\Api\Http\Controllers\Admin\Notifications\GetNotificationSettingsController::class)->add($perm->for('settings.view'));
+        $group->put('/settings/notifications',
+            \Bayti\Api\Http\Controllers\Admin\Notifications\UpdateNotificationSettingsController::class)->add($perm->for('settings.edit'));
+
         // M3.3.2-C, Admin user list, detail, activate, deactivate.
         $group->get('/users',
             \Bayti\Api\Http\Controllers\Admin\User\ListUsersController::class)->add($perm->for('users.view'));
@@ -997,6 +1010,12 @@ return function (App $app): void {
             [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'update'])->add($perm->for('catalog.collections_manage'));
         $group->delete('/collections/{id:[0-9]+}',
             [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'delete'])->add($perm->for('catalog.collections_manage'));
+        // Product curation: list + replace the collection's curated products
+        // (array order = curation order; index 0 fronts the storefront card).
+        $group->get('/collections/{id:[0-9]+}/products',
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'listProducts'])->add($perm->for('catalog.collections_view'));
+        $group->put('/collections/{id:[0-9]+}/products',
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'setProducts'])->add($perm->for('catalog.collections_manage'));
 
         // HP-BE3, Campaigns CRUD (homepage Anniversary Deals + Flash Sale).
         $group->get('/campaigns',

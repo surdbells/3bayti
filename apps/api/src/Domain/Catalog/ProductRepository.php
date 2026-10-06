@@ -293,6 +293,20 @@ class ProductRepository extends EntityRepository
             // before passing through.
             $qb->andWhere('p.labelId = :labelId')->setParameter('labelId', $filters['labelId']);
         }
+        if (!empty($filters['collectionId'])) {
+            // ADMIN-curated collection membership (the collection_products
+            // join). Intentionally NOT the legacy products.collection_id
+            // scalar (a vendor self-tag) — the storefront "shop by collection"
+            // reflects what admins curate. Subquery IN keeps it compatible
+            // with the best_seller groupBy branch below.
+            $memberSub = $this->getEntityManager()->createQueryBuilder()
+                ->select('IDENTITY(cp.product)')
+                ->from(CollectionProduct::class, 'cp')
+                ->where('cp.collection = :collectionId')
+                ->getDQL();
+            $qb->andWhere($qb->expr()->in('p.id', $memberSub))
+               ->setParameter('collectionId', $filters['collectionId']);
+        }
         if (!empty($filters['minPrice'])) {
             $qb->andWhere('p.price >= :minPrice')->setParameter('minPrice', $filters['minPrice']);
         }

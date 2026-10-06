@@ -787,6 +787,7 @@ return [
             notifications: $c->get(\Bayti\Api\Notification\OrderNotificationService::class),
             push: $c->get(\Bayti\Api\Notification\Push\PushNotificationService::class),
             logger: $c->get(\Psr\Log\LoggerInterface::class),
+            settings: $c->get(SettingsService::class),
         );
     },
 
@@ -1021,6 +1022,11 @@ return [
     \Bayti\Api\Http\Controllers\Catalog\ListCategoriesController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\GetCategoryController::class => \DI\autowire(),
 
+    // Collections, public "shop by collection" + per-slug detail.
+    \Bayti\Api\Http\Serializers\CollectionSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\ListCollectionsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\GetCollectionController::class => \DI\autowire(),
+
     // M2.2, Product endpoints (Day 2 of 10-day rollout)
     \Bayti\Api\Http\Serializers\ProductSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\CartSerializer::class => \DI\autowire(),
@@ -1169,6 +1175,10 @@ return [
     \Bayti\Api\Http\Serializers\OtpProviderSettingsSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Otp\GetOtpProvidersController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Otp\UpdateOtpProvidersController::class => \DI\autowire(),
+
+    // Admin customer-notification settings (settings.view / settings.edit).
+    \Bayti\Api\Http\Controllers\Admin\Notifications\GetNotificationSettingsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Notifications\UpdateNotificationSettingsController::class => \DI\autowire(),
 
     /**
      * Local email-OTP provider, generates + emails + persists the

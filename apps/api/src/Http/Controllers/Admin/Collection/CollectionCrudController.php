@@ -1,10 +1,15 @@
 <?php declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Admin\Collection;
 
+use Bayti\Api\Domain\Catalog\CollectionProduct;
+use Bayti\Api\Domain\Catalog\CollectionProductRepository;
+use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\ProductCollection;
 use Bayti\Api\Domain\Catalog\ProductCollectionRepository;
+use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Responder;
+use Bayti\Api\Http\Serializers\ProductSerializer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -26,6 +31,7 @@ final class CollectionCrudController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
+        private readonly ProductSerializer $productSerializer,
     ) {}
 
     protected function getResponseFactory(): ResponseFactoryInterface { return $this->responseFactory; }
@@ -97,7 +103,116 @@ final class CollectionCrudController
         return $this->noContent();
     }
 
+    /**
+     * GET /v3/admin/collections/{id}/products
+     *
+     * The products curated into this collection, in curation order. Returns
+     * admin product cards so the portal picker can render current members.
+     */
+    public function listProducts(ServerRequestInterface $request): ResponseInterface
+    {
+        $col = $this->findOrFail((int) $request->getAttribute('id'));
+
+        /** @var CollectionProductRepository $joinRepo */
+        $joinRepo = $this->em->getRepository(CollectionProduct::class);
+        $ids = $joinRepo->productIdsForCollection((int) $col->getId());
+
+        $products = $this->loadProductsInOrder($ids);
+
+        return $this->ok([
+            'data' => $this->productSerializer->configureFromRequest($request)->listShapeMany($products),
+            'meta' => ['total' => count($products)],
+        ]);
+    }
+
+    /**
+     * PUT /v3/admin/collections/{id}/products
+     *
+     * Replace the collection's curated product set. Body:
+     *   { "product_ids": [12, 7, 44] }
+     * Array ORDER is the curation order (index 0 = the "first product", whose
+     * image fronts the collection on storefront cards). An empty array clears
+     * the collection. Unknown product ids → 422.
+     */
+    public function setProducts(ServerRequestInterface $request): ResponseInterface
+    {
+        $col = $this->findOrFail((int) $request->getAttribute('id'));
+        $body = (array) ($request->getParsedBody() ?? []);
+        $raw = $body['product_ids'] ?? null;
+        if (!is_array($raw)) {
+            throw HttpException::badRequest('product_ids must be an array.');
+        }
+
+        // Normalise to a de-duplicated, order-preserving list of positive ints.
+        $ids = [];
+        foreach ($raw as $v) {
+            if ((is_int($v) || (is_string($v) && ctype_digit($v))) && (int) $v > 0) {
+                $id = (int) $v;
+                if (!in_array($id, $ids, true)) {
+                    $ids[] = $id;
+                }
+            } else {
+                throw HttpException::validation(['product_ids' => ['Each product id must be a positive integer.']]);
+            }
+        }
+
+        // Every id must resolve to a real product (the FK would reject
+        // otherwise, but we want a clean 422 listing the offenders).
+        $products = $this->loadProductsInOrder($ids);
+        if (count($products) !== count($ids)) {
+            $found = array_map(static fn (Product $p): int => (int) $p->getId(), $products);
+            $missing = array_values(array_diff($ids, $found));
+            throw HttpException::validation([
+                'product_ids' => ['Unknown product id(s): ' . implode(', ', $missing)],
+            ]);
+        }
+
+        /** @var CollectionProductRepository $joinRepo */
+        $joinRepo = $this->em->getRepository(CollectionProduct::class);
+        // Full re-set: clear, then re-insert in the supplied order.
+        $joinRepo->deleteForCollection((int) $col->getId());
+        foreach ($products as $i => $product) {
+            $this->em->persist(new CollectionProduct($col, $product, $i));
+        }
+        $this->em->flush();
+
+        return $this->ok([
+            'data' => $this->productSerializer->configureFromRequest($request)->listShapeMany($products),
+            'meta' => ['total' => count($products)],
+        ]);
+    }
+
     // ── helpers ─────────────────────────────────────────────────────
+
+    /**
+     * Load products for the given ids, preserving the id-list order (findBy
+     * returns DB order, which would lose the admin's curation sequence).
+     *
+     * @param list<int> $ids
+     * @return list<Product>
+     */
+    private function loadProductsInOrder(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+        /** @var ProductRepository $productRepo */
+        $productRepo = $this->em->getRepository(Product::class);
+        /** @var list<Product> $found */
+        $found = $productRepo->findBy(['id' => $ids]);
+
+        $byId = [];
+        foreach ($found as $p) {
+            $byId[(int) $p->getId()] = $p;
+        }
+        $ordered = [];
+        foreach ($ids as $id) {
+            if (isset($byId[$id])) {
+                $ordered[] = $byId[$id];
+            }
+        }
+        return $ordered;
+    }
 
     private function findOrFail(int $id): ProductCollection
     {

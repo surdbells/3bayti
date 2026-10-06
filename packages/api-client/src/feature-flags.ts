@@ -314,6 +314,28 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/categories/:slug',
     shape: 'v3-envelope',
   },
+  // Collections (admin-curated): public "shop by collection" list + per-slug
+  // detail with embedded products. v3-only.
+  'GET /collections': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/collections',
+    shape: 'v3-envelope',
+  },
+  'GET /collections/:slug': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/collections/:slug',
+    shape: 'v3-envelope',
+  },
+  // Mobile products-by-collection listing: resolves to /v3/products with a
+  // ?collection=<slug> query (mirrors GET /mobile/category-listing).
+  'GET /mobile/collection-listing': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/products',
+    shape: 'v3-envelope',
+  },
   'GET /vendors': {
     target: 'new',
     oldPath: '/customer/vendors_list',
@@ -1840,6 +1862,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/collections/:id': {
     target: 'new', oldPath: '/admin/collections/read-collection', newPath: '/v3/admin/collections/:id', shape: 'v3-envelope',
   },
+  // Admin product curation for a collection (list + replace members in order).
+  'GET /admin/collections/:id/products': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/collections/:id/products', shape: 'v3-envelope',
+  },
+  'PUT /admin/collections/:id/products': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/collections/:id/products', shape: 'v3-envelope',
+  },
   'GET /admin/commissions': {
     target: 'new', oldPath: '/admin/common/commissions', newPath: '/v3/admin/commissions', shape: 'v3-envelope',
   },
@@ -1928,6 +1957,14 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
   'PUT /admin/otp/providers': {
     target: 'new', oldPath: '', newPath: '/v3/admin/otp/providers', shape: 'v3-envelope',
+  },
+  // Customer-notification toggles (e.g. suppress per-item vendor status updates
+  // to the customer). v3-only.
+  'GET /admin/settings/notifications': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/settings/notifications', shape: 'v3-envelope',
+  },
+  'PUT /admin/settings/notifications': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/settings/notifications', shape: 'v3-envelope',
   },
   'GET /admin/orders': {
     target: 'new', oldPath: '/admin/common/get-store-orders', newPath: '/v3/admin/orders', shape: 'v3-envelope',
