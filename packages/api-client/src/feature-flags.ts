@@ -1921,6 +1921,14 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/audit-logs': {
     target: 'new', oldPath: '', newPath: '/v3/admin/audit-logs', shape: 'v3-envelope',
   },
+  // OTP provider config: which SMS-OTP providers are enabled + priority order
+  // (automatic failover). Read + set from the admin. v3-only.
+  'GET /admin/otp/providers': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/otp/providers', shape: 'v3-envelope',
+  },
+  'PUT /admin/otp/providers': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/otp/providers', shape: 'v3-envelope',
+  },
   'GET /admin/orders': {
     target: 'new', oldPath: '/admin/common/get-store-orders', newPath: '/v3/admin/orders', shape: 'v3-envelope',
   },

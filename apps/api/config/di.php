@@ -13,9 +13,13 @@ use Bayti\Api\Infrastructure\Auth\JwtSettings;
 use Bayti\Api\Infrastructure\Cache\InMemoryKeyValueStore;
 use Bayti\Api\Infrastructure\Cache\KeyValueStore;
 use Bayti\Api\Infrastructure\Cache\RedisKeyValueStore;
+use Bayti\Api\Domain\Setting\OtpProviderSettings;
+use Bayti\Api\Domain\Setting\SettingsService;
+use Bayti\Api\Infrastructure\Otp\CequensOtpProvider;
 use Bayti\Api\Infrastructure\Otp\InMemoryOtpProvider;
 use Bayti\Api\Infrastructure\Otp\MessageCentralOtpProvider;
 use Bayti\Api\Infrastructure\Otp\OtpProvider;
+use Bayti\Api\Infrastructure\Otp\RoutingOtpProvider;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\Configuration;
 use Doctrine\ORM\EntityManager;
@@ -1042,29 +1046,43 @@ return [
     /**
      * OTP provider selection.
      *
-     * APP_ENV=prod  → MessageCentralOtpProvider (real CPaaS)
+     * APP_ENV=prod  → RoutingOtpProvider (priority + automatic failover across
+     *                 the real CPaaS providers that have credentials)
      * APP_ENV=*     → InMemoryOtpProvider (no network; tests + dev)
      *
-     * Override via SMS_PROVIDER=messagecentral if a developer wants
-     * to test against the real CPaaS from their machine. NOT a way
-     * to use in-memory in prod, production refuses if creds are
-     * missing.
+     * Override via SMS_PROVIDER=messagecentral if a developer wants to test
+     * against the real CPaaS from their machine. NOT a way to use in-memory in
+     * prod, production refuses if MessageCentral creds are missing.
+     *
+     * Multi-provider (MessageCentral + Cequens)
+     * -----------------------------------------
+     * In the routing branch we build a NAMED map of every provider that has
+     * credentials, then hand it to RoutingOtpProvider together with a resolver
+     * that reads the admin-configured enabled set + priority order (DB-backed,
+     * cached) LIVE on each send. So an admin can re-order providers or disable
+     * one for failover with NO redeploy. MessageCentral stays the default
+     * (validates legacy / unprefixed verification ids). Cequens is included
+     * only when its creds are set, and is enabled per the admin config (ships
+     * disabled — see OtpProviderSettings — until validated on staging).
      */
-    OtpProvider::class => static function (): OtpProvider {
+    OtpProvider::class => static function (ContainerInterface $c): OtpProvider {
         $env = $_ENV['APP_ENV'] ?? 'dev';
         $override = $_ENV['SMS_PROVIDER'] ?? null;
 
-        $useMessageCentral = $env === 'prod' || $override === 'messagecentral';
+        $useRealProviders = $env === 'prod' || $override === 'messagecentral';
 
-        if (!$useMessageCentral) {
+        if (!$useRealProviders) {
             return new InMemoryOtpProvider();
         }
 
-        $customerId = $_ENV['MESSAGECENTRAL_CUSTOMER_ID'] ?? '';
-        $apiKey = $_ENV['MESSAGECENTRAL_KEY'] ?? '';
-        $email = $_ENV['MESSAGECENTRAL_EMAIL'] ?? '';
+        $logger = $c->get(\Psr\Log\LoggerInterface::class);
 
-        if ($customerId === '' || $apiKey === '' || $email === '') {
+        // --- MessageCentral (required; the default provider) ---
+        $customerId = $_ENV['MESSAGECENTRAL_CUSTOMER_ID'] ?? '';
+        $mcKey = $_ENV['MESSAGECENTRAL_KEY'] ?? '';
+        $mcEmail = $_ENV['MESSAGECENTRAL_EMAIL'] ?? '';
+
+        if ($customerId === '' || $mcKey === '' || $mcEmail === '') {
             throw new \RuntimeException(
                 'MessageCentralOtpProvider requires env vars: MESSAGECENTRAL_CUSTOMER_ID, ' .
                 'MESSAGECENTRAL_KEY, MESSAGECENTRAL_EMAIL. ' .
@@ -1072,25 +1090,85 @@ return [
             );
         }
 
-        $http = new GuzzleClient([
-            'base_uri' => $_ENV['MESSAGECENTRAL_BASE_URL'] ?? 'https://cpaas.messagecentral.com',
-            'timeout' => 10,
-            'connect_timeout' => 5,
-        ]);
+        $providers = [
+            'messagecentral' => new MessageCentralOtpProvider(
+                http: new GuzzleClient([
+                    'base_uri' => $_ENV['MESSAGECENTRAL_BASE_URL'] ?? 'https://cpaas.messagecentral.com',
+                    'timeout' => 10,
+                    'connect_timeout' => 5,
+                ]),
+                customerId: $customerId,
+                apiKey: $mcKey,
+                email: $mcEmail,
+                country: $_ENV['MESSAGECENTRAL_COUNTRY'] ?? '971',
+                // OTP delivery CHANNEL (SMS | WHATSAPP | RCS | SAUTH — per the
+                // VerifyNow API; there is no "OTP" channel). The chosen channel
+                // must be priced on the account or the send returns "Pricing
+                // not found". Override per account without a deploy.
+                flowType: $_ENV['MESSAGECENTRAL_OTP_FLOW_TYPE'] ?? 'SMS',
+                logger: $logger,
+            ),
+        ];
 
-        return new MessageCentralOtpProvider(
-            http: $http,
-            customerId: $customerId,
-            apiKey: $apiKey,
-            email: $email,
-            country: $_ENV['MESSAGECENTRAL_COUNTRY'] ?? '971',
-            // OTP delivery CHANNEL (SMS | WHATSAPP | RCS | SAUTH — per the
-            // VerifyNow API; there is no "OTP" channel). The chosen channel must
-            // be priced on the account or the send returns "Pricing not found".
-            // Override per account without a deploy.
-            flowType: $_ENV['MESSAGECENTRAL_OTP_FLOW_TYPE'] ?? 'SMS',
+        // --- Cequens (optional; wired only when creds are present) ---
+        $cequensApiKey = $_ENV['CEQUENS_API_KEY'] ?? '';
+        $cequensUser = $_ENV['CEQUENS_USERNAME'] ?? '';
+        if ($cequensApiKey !== '' && $cequensUser !== '') {
+            $providers['cequens'] = new CequensOtpProvider(
+                http: new GuzzleClient([
+                    'base_uri' => $_ENV['CEQUENS_BASE_URL'] ?? 'https://apis.cequens.com',
+                    'timeout' => 10,
+                    'connect_timeout' => 5,
+                ]),
+                apiKey: $cequensApiKey,
+                userName: $cequensUser,
+                channel: $_ENV['CEQUENS_CHANNEL'] ?? 'sms',
+                templateId: ($_ENV['CEQUENS_TEMPLATE_ID'] ?? '') !== '' ? $_ENV['CEQUENS_TEMPLATE_ID'] : null,
+                senderId: ($_ENV['CEQUENS_SENDER_ID'] ?? '') !== '' ? $_ENV['CEQUENS_SENDER_ID'] : null,
+                // Paths are env-overridable so the MFA create/verify wire format
+                // can be corrected without a deploy (see CequensOtpProvider).
+                createPath: $_ENV['CEQUENS_CREATE_PATH'] ?? CequensOtpProvider::DEFAULT_CREATE_PATH,
+                verifyPathTemplate: $_ENV['CEQUENS_VERIFY_PATH'] ?? CequensOtpProvider::DEFAULT_VERIFY_PATH_TEMPLATE,
+                logger: $logger,
+            );
+        }
+
+        // Live, cached read of the admin-set enabled providers + priority order.
+        // Defensive: a settings/DB read failure must NOT block OTP — return []
+        // so the router falls back to every wired provider in default order
+        // (MessageCentral first). That keeps a settings outage from doing
+        // exactly what this feature exists to prevent.
+        $settings = $c->get(SettingsService::class);
+        $resolver = static function () use ($settings, $logger): array {
+            try {
+                return OtpProviderSettings::fromArray($settings->get(OtpProviderSettings::KEY))->enabledInOrder();
+            } catch (\Throwable $e) {
+                $logger->warning('otp.providers.resolve_failed', ['error' => $e->getMessage()]);
+                return [];
+            }
+        };
+
+        return new RoutingOtpProvider(
+            providers: $providers,
+            enabledOrderResolver: $resolver,
+            defaultProvider: 'messagecentral',
+            logger: $logger,
         );
     },
+
+    /**
+     * SettingsService, the durable+cached JSON settings store (app_settings
+     * table, KeyValueStore in front). Autowires EntityManagerInterface +
+     * KeyValueStore; logger bound explicitly (the constructor's nullable
+     * default would otherwise inject null and lose Monolog).
+     */
+    SettingsService::class => \DI\autowire()
+        ->constructorParameter('logger', \DI\get(\Psr\Log\LoggerInterface::class)),
+
+    // Admin OTP-provider config (settings.view / settings.edit).
+    \Bayti\Api\Http\Serializers\OtpProviderSettingsSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Otp\GetOtpProvidersController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Otp\UpdateOtpProvidersController::class => \DI\autowire(),
 
     /**
      * Local email-OTP provider, generates + emails + persists the

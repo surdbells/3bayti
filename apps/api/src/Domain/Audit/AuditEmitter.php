@@ -294,6 +294,61 @@ final class AuditEmitter
     }
 
     /**
+     * Record a change to an app-level SETTING (not a Doctrine entity).
+     *
+     * Settings (e.g. the OTP-provider routing config) have no integer id, so
+     * they don't fit the entity-subject model the other record* methods use.
+     * We log a 'Setting' subject keyed by its string setting-key in the changes
+     * payload, subject_id 0 as the "not an entity" sentinel. Uses the same
+     * fail-safe write (audit failures are logged + swallowed, never break the
+     * user's request).
+     *
+     * @param array<string, mixed> $before
+     * @param array<string, mixed> $after
+     */
+    public function recordSettingChange(
+        ?ServerRequestInterface $request,
+        ?User $actor,
+        string $settingKey,
+        array $before,
+        array $after,
+    ): void {
+        try {
+            $log = new AuditLog(
+                userId: $actor?->getId(),
+                subjectType: 'Setting',
+                subjectId: 0,
+                action: AuditLog::ACTION_OVERRIDDEN,
+                changes: [
+                    'setting' => $settingKey,
+                    'before' => $this->redact($before),
+                    'after' => $this->redact($after),
+                ],
+                ipAddress: $request !== null ? self::extractIp($request) : null,
+                userAgent: $request !== null ? self::extractUserAgent($request) : null,
+                requestId: RequestIdContext::get(),
+            );
+
+            /** @var AuditLogRepository $repo */
+            $repo = $this->em->getRepository(AuditLog::class);
+            $repo->save($log);
+        } catch (Throwable $e) {
+            $this->logger->error('Audit log write failed', [
+                'subject_type' => 'Setting',
+                'setting' => $settingKey,
+                'action' => AuditLog::ACTION_OVERRIDDEN,
+                'error' => $e->getMessage(),
+                'exception' => $e::class,
+            ]);
+            try {
+                \Sentry\captureException($e);
+            } catch (Throwable) {
+                // Sentry is also down, give up silently.
+            }
+        }
+    }
+
+    /**
      * Core record method, writes the AuditLog row.
      *
      * @param array<string, mixed> $changes

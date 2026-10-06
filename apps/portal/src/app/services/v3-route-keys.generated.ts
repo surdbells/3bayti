@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 368 route keys.
+ * 370 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -69,6 +69,7 @@ export type V3RouteKey =
   | 'GET /admin/orders/:id'
   | 'GET /admin/orders/:id/timeline'
   | 'GET /admin/orders/:orderId/vendors/:vendorId/delivery-options'
+  | 'GET /admin/otp/providers'
   | 'GET /admin/permission-catalog'
   | 'GET /admin/products'
   | 'GET /admin/products/:id'
@@ -362,6 +363,7 @@ export type V3RouteKey =
   | 'PUT /admin/collections/:id'
   | 'PUT /admin/notification-schedules/:id'
   | 'PUT /admin/notification-templates/:id'
+  | 'PUT /admin/otp/providers'
   | 'PUT /admin/products/:id'
   | 'PUT /admin/promo-codes/:id'
   | 'PUT /admin/roles/:id'
@@ -440,6 +442,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/orders/:id',
   'GET /admin/orders/:id/timeline',
   'GET /admin/orders/:orderId/vendors/:vendorId/delivery-options',
+  'GET /admin/otp/providers',
   'GET /admin/permission-catalog',
   'GET /admin/products',
   'GET /admin/products/:id',
@@ -733,6 +736,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PUT /admin/collections/:id',
   'PUT /admin/notification-schedules/:id',
   'PUT /admin/notification-templates/:id',
+  'PUT /admin/otp/providers',
   'PUT /admin/products/:id',
   'PUT /admin/promo-codes/:id',
   'PUT /admin/roles/:id',

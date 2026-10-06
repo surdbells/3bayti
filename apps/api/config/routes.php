@@ -956,6 +956,13 @@ return function (App $app): void {
         $group->get('/audit-logs',
             \Bayti\Api\Http\Controllers\Admin\Audit\ListAuditLogsController::class)->add($perm->for('audit.view'));
 
+        // OTP providers, read + set which providers are enabled and their
+        // priority order (automatic failover). Takes effect on the next send.
+        $group->get('/otp/providers',
+            \Bayti\Api\Http\Controllers\Admin\Otp\GetOtpProvidersController::class)->add($perm->for('settings.view'));
+        $group->put('/otp/providers',
+            \Bayti\Api\Http\Controllers\Admin\Otp\UpdateOtpProvidersController::class)->add($perm->for('settings.edit'));
+
         // M3.3.2-C, Admin user list, detail, activate, deactivate.
         $group->get('/users',
             \Bayti\Api\Http\Controllers\Admin\User\ListUsersController::class)->add($perm->for('users.view'));

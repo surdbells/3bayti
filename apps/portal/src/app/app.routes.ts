@@ -199,6 +199,14 @@ export const routes: Routes = [
     title: 'OTA updates'
   },
   {
+    // OTP provider priority + failover config. Viewable with settings.view;
+    // the Save action is gated to settings.edit inside the page.
+    path: 'admin/otp-providers',
+    loadComponent: () => import('./backend/admin-otp-providers/admin-otp-providers.component').then(m => m.AdminOtpProvidersComponent),
+    canActivate: [adminGuard, requirePermission('settings.view')],
+    title: 'OTP providers'
+  },
+  {
     path: 'admin/audit-logs',
     loadComponent: () => import('./backend/audit-logs/audit-logs.component').then(m => m.AuditLogsComponent),
     canActivate: [adminGuard, requirePermission('audit.view')],

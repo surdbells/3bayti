@@ -1,0 +1,82 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to dashboard
+        </button>
+        <span class="ax-page-header-eyebrow">System</span>
+        <h1 class="ax-page-title">OTP providers</h1>
+        <p class="ax-page-subtitle">
+          Choose which SMS one-time-password providers are active and the order they're tried.
+          The top enabled provider sends the code; if it fails, the next one is tried automatically.
+          Changes apply to the next code sent — no redeploy. Email OTP is unaffected.
+        </p>
+      </div>
+      <div class="ax-page-header-actions" *axCan="'settings.edit'">
+        <button type="button" class="ax-btn ax-btn-primary" [disabled]="saving() || loading() || !hasEnabled()" (click)="save()">
+          <app-icon name="save" aria-hidden="true"></app-icon>
+          {{ saving() ? 'Saving…' : 'Save changes' }}
+        </button>
+      </div>
+    </header>
+
+    <div *ngIf="loading()" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner" aria-label="Loading"></span>
+    </div>
+
+    <section *ngIf="!loading()" class="ax-card ax-p-0">
+      <div class="ax-p-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+        <h2 class="ax-h6 ax-m-0">Priority &amp; failover order</h2>
+        <p class="ax-text-2xs ax-text-tertiary ax-m-0 ax-mt-1">
+          Tried top to bottom. Disabled providers are skipped.
+        </p>
+      </div>
+
+      <ul class="otp-list">
+        <li *ngFor="let p of rows(); let i = index; let first = first; let last = last"
+            class="otp-row" [class.otp-row--off]="!p.enabled">
+          <div class="otp-rank" aria-hidden="true">{{ i + 1 }}</div>
+
+          <div class="otp-reorder">
+            <button type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm"
+                    [disabled]="!canEdit() || first" (click)="moveUp(i)"
+                    [attr.aria-label]="'Move ' + p.label + ' up'">
+              <app-icon name="keyboard_arrow_up" aria-hidden="true"></app-icon>
+            </button>
+            <button type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm"
+                    [disabled]="!canEdit() || last" (click)="moveDown(i)"
+                    [attr.aria-label]="'Move ' + p.label + ' down'">
+              <app-icon name="keyboard_arrow_down" aria-hidden="true"></app-icon>
+            </button>
+          </div>
+
+          <div class="otp-meta">
+            <div class="otp-name">
+              <span class="ax-font-medium">{{ p.label }}</span>
+              <span *ngIf="isDefault(p.key)" class="ax-badge ax-badge-info" title="Validates older codes issued before a provider prefix existed">default</span>
+            </div>
+            <div class="otp-badges">
+              <span *ngIf="p.configured; else notConfigured" class="ax-badge ax-badge-success">credentials set</span>
+              <ng-template #notConfigured>
+                <span class="ax-badge ax-badge-warning" title="No server credentials for this provider; enabling it has no effect until they're set">credentials not set</span>
+              </ng-template>
+            </div>
+          </div>
+
+          <label class="otp-switch" [class.otp-switch--disabled]="!canEdit()">
+            <input type="checkbox" [checked]="p.enabled" [disabled]="!canEdit()" (change)="toggle(i)"
+                   [attr.aria-label]="(p.enabled ? 'Disable ' : 'Enable ') + p.label" />
+            <span class="otp-switch-track" aria-hidden="true"><span class="otp-switch-thumb"></span></span>
+            <span class="otp-switch-text">{{ p.enabled ? 'Enabled' : 'Disabled' }}</span>
+          </label>
+        </li>
+      </ul>
+
+      <div *ngIf="!hasEnabled()" class="ax-p-4 ax-text-2xs otp-warn">
+        <app-icon name="info" aria-hidden="true"></app-icon>
+        At least one provider must be enabled, or OTP delivery stops. Enable one before saving.
+      </div>
+    </section>
+  </div>
+</app-admin-shell>
