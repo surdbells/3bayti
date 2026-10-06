@@ -1,5 +1,6 @@
 /* Most styling comes from the ax-* design system; these cover the details
-   grid, the product search and the curated (ordered) product list. */
+   grid, the "Add products" tabs (search + paged browse) and the curated
+   (ordered) product list. */
 
 .ax-textarea {
   resize: vertical;
@@ -113,6 +114,124 @@
   display: inline-block;
   background: var(--ax-color-bg-muted);
   border: 1px dashed var(--ax-color-border-subtle);
+}
+
+/* ── Sale-aware price ────────────────────────────────────────────── */
+.ec-price-sale {
+  color: var(--ax-color-text-danger);
+  font-weight: 600;
+}
+.ec-price-was {
+  margin-left: 0.375rem;
+  color: var(--ax-color-text-tertiary);
+  font-size: 0.9em;
+}
+
+/* ── Add products: tabs ──────────────────────────────────────────── */
+.ec-add__tabs {
+  margin-top: 0.375rem;
+}
+.ec-add__panel {
+  padding-top: 1rem;
+}
+
+/* ── Browse (category / best sellers / new arrivals) ─────────────── */
+.ec-browse__picker {
+  margin-bottom: 0.75rem;
+}
+.ec-browse__inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.8125rem;
+  color: var(--ax-color-text-secondary);
+}
+.ec-browse__inline--error {
+  color: var(--ax-color-text-danger);
+}
+
+.ec-browse__bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.ec-browse__heading {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ec-browse__title {
+  font-weight: 600;
+}
+.ec-browse__hint {
+  font-size: 0.75rem;
+  color: var(--ax-color-text-tertiary);
+}
+.ec-browse__count {
+  color: var(--ax-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ec-browse__state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 10rem;
+}
+
+.ec-browse__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: 0.625rem;
+  max-height: 28rem;
+  overflow-y: auto;
+}
+.ec-browse__row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid var(--ax-color-border-subtle);
+}
+.ec-browse__row:last-child {
+  border-bottom: none;
+}
+.ec-browse__row--added .ec-results__text,
+.ec-browse__row--added .ec-results__img,
+.ec-browse__row--added .ec-results__price {
+  opacity: 0.65;
+}
+.ec-browse__stock {
+  margin-left: 0.375rem;
+}
+.ec-browse__add {
+  flex-shrink: 0;
+  min-width: 5.5rem;
+  justify-content: center;
+}
+
+.ec-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.ec-pager__summary {
+  font-size: 0.8125rem;
+  color: var(--ax-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.ec-empty--compact {
+  padding: 1.5rem 1rem;
 }
 
 /* ── Curated list ────────────────────────────────────────────────── */
@@ -231,5 +350,13 @@
   .ec-item__actions {
     width: 100%;
     justify-content: flex-end;
+  }
+  .ec-browse__row {
+    flex-wrap: wrap;
+  }
+  .ec-browse__row .ec-results__price {
+    order: 3;
+    width: 100%;
+    padding-left: 2.875rem;
   }
 }

@@ -17,10 +17,6 @@ import { CfImagePipe } from '../../shared/cf-image.pipe';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
 import {
-  AxMultiselectComponent,
-  AxMultiselectOption,
-} from '../../shared/forms/ax-multiselect.component';
-import {
   AxAccordionComponent,
   AxAccordionItemComponent,
 } from '../../shared/overlays';
@@ -63,7 +59,6 @@ const HISTORY_PREVIEW_ROWS = 5;
     CommonModule,
     FormsModule,
     AxRichEditorComponent,
-    AxMultiselectComponent,
     AxAccordionComponent,
     AxAccordionItemComponent, IconComponent, AxComboboxComponent],
   templateUrl: './admin-view-product.component.html',
@@ -78,20 +73,6 @@ export class AdminViewProductComponent implements OnInit {
   ];
   category?: Category[];
   labels?: Labels[];
-
-  /** Server list of collections. */
-  dropdownList: { id: number; collection: string }[] = [];
-  /** Ids selected by the AxMultiselect. */
-  selectedCollectionIds: (string | number)[] = [];
-
-  get collectionOptions(): AxMultiselectOption[] {
-    return this.dropdownList.map(c => ({ id: c.id, label: c.collection }));
-  }
-
-  get selectedItemsForPayload(): { id: number; collection: string }[] {
-    const ids = new Set(this.selectedCollectionIds.map(String));
-    return this.dropdownList.filter(c => ids.has(String(c.id)));
-  }
 
   private readonly confirm = inject(AxConfirmService);
   colorOptions: ColorOption[] = [];
@@ -123,7 +104,6 @@ export class AdminViewProductComponent implements OnInit {
     description: '',
     image_1: 'assets/img/placeholder-1.png',
     images: [] as string[],
-    collection: {},
     quantity: 0,
     allow_checkout_when_out_of_stock: false,
     with_storehouse_management: false,
@@ -223,7 +203,6 @@ export class AdminViewProductComponent implements OnInit {
 
     this.get_product_by_id();
     this.get_category();
-    this.get_collections();
     this.get_vendor_labels();
 
     this.colorOptions = [
@@ -287,7 +266,6 @@ export class AdminViewProductComponent implements OnInit {
 
   updateProduct() {
     this.update.colors = this.getSelectedIdsCsv();
-    this.update.collection = this.selectedItemsForPayload;
     this.ui_controls.is_loading = true;
     const avp2Id = this.update.product_id ?? this.update.id;
     this.adapter.put_v3('PUT /admin/products/:id', this.update, { params: { id: String(avp2Id) } }).subscribe({
@@ -344,7 +322,8 @@ export class AdminViewProductComponent implements OnInit {
   }
 
   get_category() {
-    this.ui_controls.page_loading = true;
+    // Deliberately doesn't set ui_controls.page_loading: categories load in
+    // the background and must never hold the page behind the spinner.
     this.adapter.get_v3('GET /utility/categories').subscribe({
       next: (response: any) => {
         if (response) {
@@ -365,15 +344,6 @@ export class AdminViewProductComponent implements OnInit {
     });
   }
 
-  get_collections() {
-    this.adapter.get_v3('GET /admin/collections', { query: { limit: 100, offset: 0 } }).subscribe({
-      next: (res: any) => {
-        this.dropdownList = (Array.isArray(res?.data) ? res.data : res?.data?.items ?? []).map((col: any) => ({ id: col.id, collection: col.collection ?? col.name }));
-      },
-    });
-    this.ui_controls.page_loading = false;
-  }
-
   get_product_by_id() {
     const avp2GId = this.single_product.product ?? this.single_product.id;
     this.adapter.get_v3('GET /products/by-legacy-id/:id', { params: { id: String(avp2GId) } }).subscribe({
@@ -385,12 +355,6 @@ export class AdminViewProductComponent implements OnInit {
           // (number); the radio binds [value]="c.id" / [(ngModel)]="update.category",
           // so map it back onto `update.category` (Number-coerced) to pre-select.
           this.update.category = Number(response.data.category_id ?? response.data.category?.id ?? response.data.category ?? 0) || 0;
-
-          // Seed multiselect from server shape [{id, collection}]
-          const serverCollection = response.data.collection ?? [];
-          this.selectedCollectionIds = Array.isArray(serverCollection)
-            ? serverCollection.map((c: any) => c.id)
-            : [];
 
           // Restore colours CSV into Set
           for (const item of (this.update.colors || '').split(',').map((s: string) => s.trim()).filter(Boolean)) {

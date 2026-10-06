@@ -111,40 +111,198 @@
               </div>
             </div>
 
-            <!-- Product search -->
-            <div *ngIf="!ui.products_loading && !ui.products_error" class="ec-search ax-form-field ax-mt-4">
-              <label class="ax-label" for="ec_search">Add a product</label>
-              <div class="ec-search__box">
-                <app-icon name="search" aria-hidden="true"></app-icon>
-                <input
-                  id="ec_search"
-                  type="text"
-                  class="ax-input"
-                  autocomplete="off"
-                  [ngModel]="productQuery"
-                  (ngModelChange)="onSearchChange($event)"
-                  placeholder="Search products by name (2+ characters)…" />
-                <span *ngIf="ui.searching" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+            <!-- Sale-aware price, shared by search hits, browse rows and the curated list. -->
+            <ng-template #priceTpl let-p>
+              <ng-container *ngIf="p.sale_price != null; else regularPrice">
+                <span class="ec-price-sale">AED {{ p.sale_price | number:'1.0-2' }}</span>
+                <s class="ec-price-was"><span class="ax-sr-only">was </span>AED {{ p.price | number:'1.0-2' }}</s>
+              </ng-container>
+              <ng-template #regularPrice>AED {{ p.price | number:'1.0-2' }}</ng-template>
+            </ng-template>
+
+            <!-- Add products: search, or browse by category / best sellers / new arrivals -->
+            <div *ngIf="!ui.products_loading && !ui.products_error" class="ec-add ax-mt-4">
+              <span class="ax-label" id="ec_add_label">Add products</span>
+              <div class="ax-tabs-list ec-add__tabs" role="tablist" aria-labelledby="ec_add_label">
+                <button
+                  *ngFor="let t of addTabs; let i = index"
+                  #addTabBtn
+                  type="button"
+                  role="tab"
+                  class="ax-tab"
+                  [id]="'ec_add_tab_' + t.id"
+                  [attr.aria-selected]="addTab === t.id"
+                  aria-controls="ec_add_panel"
+                  [attr.tabindex]="addTab === t.id ? 0 : -1"
+                  (click)="selectAddTab(t.id)"
+                  (keydown)="onAddTabKeydown($event, i)">
+                  <app-icon [name]="t.icon" aria-hidden="true"></app-icon>
+                  {{ t.label }}
+                </button>
               </div>
 
-              <ul *ngIf="searchResults.length" class="ec-results" aria-label="Matching products">
-                <li *ngFor="let p of searchResults">
-                  <button type="button" class="ec-results__item" [class.ec-results__item--added]="isAdded(p.id)" (click)="addProduct(p)">
-                    <img *ngIf="p.image; else noResultImg" [src]="p.image" alt="" class="ec-results__img" />
-                    <ng-template #noResultImg><span class="ec-results__img ec-thumb-empty" aria-hidden="true"></span></ng-template>
-                    <span class="ec-results__text">
-                      <span class="ec-results__name">{{ p.name }}</span>
-                      <span class="ec-results__sub" *ngIf="p.vendor_name">{{ p.vendor_name }}</span>
-                    </span>
-                    <span class="ec-results__price" *ngIf="p.price != null">AED {{ p.price | number:'1.0-2' }}</span>
-                    <span *ngIf="isAdded(p.id); else addIcon" class="ax-badge ax-badge-neutral">added</span>
-                    <ng-template #addIcon><app-icon name="add" aria-hidden="true"></app-icon></ng-template>
-                  </button>
-                </li>
-              </ul>
-              <p *ngIf="!ui.searching && productQuery.trim().length >= 2 && !searchResults.length" class="ax-text-2xs ax-text-tertiary ax-m-0 ax-mt-1">
-                No matching products.
-              </p>
+              <div id="ec_add_panel" role="tabpanel" class="ec-add__panel" [attr.aria-labelledby]="'ec_add_tab_' + addTab">
+                <!-- Search -->
+                <div *ngIf="addTab === 'search'" class="ec-search ax-form-field">
+                  <label class="ax-label" for="ec_search">Search products</label>
+                  <div class="ec-search__box">
+                    <app-icon name="search" aria-hidden="true"></app-icon>
+                    <input
+                      id="ec_search"
+                      type="text"
+                      class="ax-input"
+                      autocomplete="off"
+                      [ngModel]="productQuery"
+                      (ngModelChange)="onSearchChange($event)"
+                      placeholder="Search products by name (2+ characters)…" />
+                    <span *ngIf="ui.searching" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                  </div>
+
+                  <ul *ngIf="searchResults.length" class="ec-results" aria-label="Matching products">
+                    <li *ngFor="let p of searchResults">
+                      <button type="button" class="ec-results__item" [class.ec-results__item--added]="isAdded(p.id)" (click)="addProduct(p)">
+                        <img *ngIf="p.image; else noResultImg" [src]="p.image" alt="" class="ec-results__img" />
+                        <ng-template #noResultImg><span class="ec-results__img ec-thumb-empty" aria-hidden="true"></span></ng-template>
+                        <span class="ec-results__text">
+                          <span class="ec-results__name">{{ p.name }}</span>
+                          <span class="ec-results__sub" *ngIf="p.vendor_name">{{ p.vendor_name }}</span>
+                        </span>
+                        <span class="ec-results__price" *ngIf="p.price != null"><ng-container *ngTemplateOutlet="priceTpl; context: { $implicit: p }"></ng-container></span>
+                        <span *ngIf="isAdded(p.id); else addIcon" class="ax-badge ax-badge-neutral">added</span>
+                        <ng-template #addIcon><app-icon name="add" aria-hidden="true"></app-icon></ng-template>
+                      </button>
+                    </li>
+                  </ul>
+                  <p *ngIf="!ui.searching && productQuery.trim().length >= 2 && !searchResults.length" class="ax-text-2xs ax-text-tertiary ax-m-0 ax-mt-1">
+                    No matching products.
+                  </p>
+                </div>
+
+                <!-- Browse: By category / Best sellers / New arrivals -->
+                <div *ngIf="addTab !== 'search'" class="ec-browse">
+                  <!-- Category picker -->
+                  <div *ngIf="addTab === 'category'" class="ax-form-field ec-browse__picker">
+                    <span class="ax-label" aria-hidden="true">Category</span>
+                    <div *ngIf="categories.loading" class="ec-browse__inline">
+                      <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                      <span>Loading categories…</span>
+                    </div>
+                    <div *ngIf="!categories.loading && categories.error" class="ec-browse__inline ec-browse__inline--error" role="alert">
+                      <app-icon name="error" aria-hidden="true"></app-icon>
+                      <span>{{ categories.error }}</span>
+                      <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="loadCategories()">
+                        <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+                      </button>
+                    </div>
+                    <app-ax-combobox
+                      *ngIf="categories.loaded"
+                      [options]="categoryOptions"
+                      [ngModel]="selectedCategory"
+                      (ngModelChange)="onCategoryChange($event)"
+                      placeholder="Choose a category"
+                      searchPlaceholder="Search categories"
+                      ariaLabel="Category">
+                    </app-ax-combobox>
+                  </div>
+
+                  <div *ngIf="addTab === 'category' && categories.loaded && !selectedCategory" class="ec-empty ec-empty--compact">
+                    <app-icon name="category" aria-hidden="true"></app-icon>
+                    <p>{{ categoryOptions.length ? 'Choose a category to list its products.' : 'No categories found.' }}</p>
+                  </div>
+
+                  <ng-container *ngIf="browseRequest">
+                    <div class="ec-browse__bar">
+                      <div class="ec-browse__heading">
+                        <span class="ec-browse__title">{{ browseTitle }}</span>
+                        <span class="ec-browse__hint">{{ browseHint }}</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="ax-btn ax-btn-outline ax-btn-sm"
+                        (click)="addAllOnPage()"
+                        [disabled]="browse.loading || !browse.items.length">
+                        <app-icon name="done_all" aria-hidden="true"></app-icon>
+                        Add all on this page
+                        <span *ngIf="!browse.loading && browse.items.length" class="ec-browse__count">({{ browseAddableCount }} new)</span>
+                      </button>
+                    </div>
+
+                    <!-- Loading -->
+                    <div *ngIf="browse.loading" class="ec-browse__state">
+                      <span class="ax-spinner" aria-label="Loading products"></span>
+                    </div>
+
+                    <!-- Error -->
+                    <div *ngIf="!browse.loading && browse.error" class="ec-empty ec-empty--compact" role="alert">
+                      <app-icon name="error" aria-hidden="true"></app-icon>
+                      <p>{{ browse.error }}</p>
+                      <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="retryBrowse()">
+                        <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+                      </button>
+                    </div>
+
+                    <!-- Empty -->
+                    <div *ngIf="!browse.loading && !browse.error && !browse.items.length" class="ec-empty ec-empty--compact">
+                      <app-icon name="inventory_2" aria-hidden="true"></app-icon>
+                      <ng-container [ngSwitch]="browse.page > 1 ? 'page' : browseRequest.mode">
+                        <p *ngSwitchCase="'page'">No products on this page. Go back a page.</p>
+                        <p *ngSwitchCase="'category'">
+                          No products in this category.
+                          <ng-container *ngIf="selectedCategoryHasChildren">Products are listed under their exact category, so try one of its sub-categories.</ng-container>
+                        </p>
+                        <p *ngSwitchCase="'best_sellers'">No best sellers to show yet.</p>
+                        <p *ngSwitchCase="'new_arrivals'">No new arrivals to show yet.</p>
+                      </ng-container>
+                    </div>
+
+                    <!-- Results -->
+                    <ul *ngIf="!browse.loading && !browse.error && browse.items.length" class="ec-browse__list" [attr.aria-label]="browseTitle + ', page ' + browse.page">
+                      <li *ngFor="let p of browse.items; trackBy: trackProductById" class="ec-browse__row" [class.ec-browse__row--added]="isAdded(p.id)">
+                        <img *ngIf="p.image; else noBrowseImg" [src]="p.image" alt="" class="ec-results__img" />
+                        <ng-template #noBrowseImg><span class="ec-results__img ec-thumb-empty" aria-hidden="true"></span></ng-template>
+                        <span class="ec-results__text">
+                          <span class="ec-results__name">{{ p.name }}</span>
+                          <span class="ec-results__sub">
+                            <ng-container *ngIf="p.vendor_name">{{ p.vendor_name }}</ng-container>
+                            <span *ngIf="p.in_stock === false" class="ax-badge ax-badge-warning ec-browse__stock" title="Out-of-stock products are not shown on the storefront">out of stock</span>
+                          </span>
+                        </span>
+                        <span class="ec-results__price" *ngIf="p.price != null"><ng-container *ngTemplateOutlet="priceTpl; context: { $implicit: p }"></ng-container></span>
+                        <button
+                          *ngIf="!isAdded(p.id); else addedBtn"
+                          type="button"
+                          class="ax-btn ax-btn-outline ax-btn-sm ec-browse__add"
+                          (click)="addProduct(p, 'browse')"
+                          [attr.aria-label]="'Add ' + p.name + ' to the collection'">
+                          <app-icon name="add" aria-hidden="true"></app-icon> Add
+                        </button>
+                        <ng-template #addedBtn>
+                          <button
+                            type="button"
+                            class="ax-btn ax-btn-ghost ax-btn-sm ec-browse__add"
+                            disabled
+                            [attr.aria-label]="p.name + ' is already in this collection'">
+                            <app-icon name="check" aria-hidden="true"></app-icon> Added
+                          </button>
+                        </ng-template>
+                      </li>
+                    </ul>
+
+                    <!-- Pager -->
+                    <nav *ngIf="browse.total > 0 || browse.page > 1" class="ec-pager" aria-label="Product pages">
+                      <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="prevBrowsePage()" [disabled]="browsePrevDisabled">
+                        <app-icon name="chevron_left" aria-hidden="true"></app-icon> Prev
+                      </button>
+                      <span class="ec-pager__summary" aria-live="polite">
+                        Page {{ browse.page }} of {{ browseLastPage }}<ng-container *ngIf="browse.total > 0"> · {{ browse.total | number }} {{ browse.total === 1 ? 'product' : 'products' }}</ng-container>
+                      </span>
+                      <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="nextBrowsePage()" [disabled]="browseNextDisabled">
+                        Next <app-icon name="chevron_right" aria-hidden="true"></app-icon>
+                      </button>
+                    </nav>
+                  </ng-container>
+                </div>
+              </div>
             </div>
 
             <!-- Curated list -->
@@ -162,7 +320,7 @@
 
             <div *ngIf="!ui.products_loading && !ui.products_error && items.length === 0" class="ec-empty">
               <app-icon name="inventory_2" aria-hidden="true"></app-icon>
-              <p>No products yet. Search above to add some — the collection stays empty on the storefront until you do.</p>
+              <p>No products yet. Search or browse above to add some — the collection stays empty on the storefront until you do.</p>
             </div>
 
             <ol *ngIf="!ui.products_loading && items.length" class="ec-items">
@@ -183,7 +341,7 @@
                   <div class="ec-item__sub">
                     <span *ngIf="it.vendor_name">{{ it.vendor_name }}</span>
                     <span *ngIf="it.vendor_name && it.price != null" aria-hidden="true"> · </span>
-                    <span *ngIf="it.price != null">AED {{ it.price | number:'1.0-2' }}</span>
+                    <span *ngIf="it.price != null"><ng-container *ngTemplateOutlet="priceTpl; context: { $implicit: it }"></ng-container></span>
                   </div>
                 </div>
 

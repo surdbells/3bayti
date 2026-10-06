@@ -316,18 +316,6 @@
               </div>
             </app-ax-accordion-item>
 
-            <!-- Collections -->
-            <app-ax-accordion-item title="Collections">
-              <app-ax-multiselect
-                [options]="collectionOptions"
-                [(ngModel)]="selectedCollectionIds"
-                [ngModelOptions]="{ standalone: true }"
-                placeholder="Select collections"
-                searchPlaceholder="Search collections"
-                [chipLimit]="3">
-              </app-ax-multiselect>
-            </app-ax-accordion-item>
-
             <!-- Labels -->
             <app-ax-accordion-item title="Product labels">
               <div class="ax-flex ax-flex-col ax-gap-3">
