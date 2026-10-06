@@ -18,10 +18,6 @@ import {
   AxFileUploadComponent,
   AxUploadFile,
 } from '../rich/ax-file-upload.component';
-import {
-  AxMultiselectComponent,
-  AxMultiselectOption,
-} from '../forms/ax-multiselect.component';
 import { AxComboboxComponent, AxComboboxOption } from '../forms/ax-combobox.component';
 import {
   AxAccordionComponent,
@@ -110,9 +106,15 @@ const SIZE_MAP: Record<string, string> = {
  *   - productId              , when editing, the product to load.
  *
  * The component owns the entire form (fields, images, colors, sizes,
- * collections, labels), self-loads on edit, self-submits to the correct
- * endpoint, and navigates back on success. The host page only supplies
- * the shell + these inputs, so the form stays shell-agnostic.
+ * labels), self-loads on edit, self-submits to the correct endpoint, and
+ * navigates back on success. The host page only supplies the shell + these
+ * inputs, so the form stays shell-agnostic.
+ *
+ * There is deliberately NO collection picker: storefront collections are
+ * admin-curated (Collections admin page → collection_products join table).
+ * The legacy single products.collection_id the old picker wrote is never
+ * read by the storefront, so the form neither shows nor sends it (omitting
+ * it leaves any existing value untouched server-side).
  */
 @Component({
   selector: 'app-product-form',
@@ -122,7 +124,6 @@ const SIZE_MAP: Record<string, string> = {
     FormsModule,
     AxRichEditorComponent,
     AxFileUploadComponent,
-    AxMultiselectComponent,
     AxAccordionComponent,
     AxAccordionItemComponent,
     IconComponent,
@@ -165,17 +166,6 @@ export class ProductFormComponent implements OnInit {
     { id: '14-21', label: '14 – 21 days' },
     { id: 'custom', label: 'Custom' },
   ];
-
-  dropdownList: { id: number; collection: string }[] = [];
-  selectedCollectionIds: (string | number)[] = [];
-
-  get collectionOptions(): AxMultiselectOption[] {
-    return this.dropdownList.map((c) => ({ id: c.id, label: c.collection }));
-  }
-  get selectedItemsForPayload(): { id: number; collection: string }[] {
-    const ids = new Set(this.selectedCollectionIds.map(String));
-    return this.dropdownList.filter((c) => ids.has(String(c.id)));
-  }
 
   // ── Images ────────────────────────────────────────────────────
   featuredFiles: AxUploadFile[] = [];
@@ -245,7 +235,6 @@ export class ProductFormComponent implements OnInit {
     this.vendor_label_create.token = this.user_session.token;
 
     this.fetchCategory();
-    this.fetchCollections();
     this.fetchVendorLabels();
     if (this.adminMode) this.fetchVendors();
     // Pre-select the store when an admin creates from a specific store's page.
@@ -268,15 +257,6 @@ export class ProductFormComponent implements OnInit {
       next: (response: any) => {
         if (response) this.category = response.data;
         if (this.mode !== 'edit') this.ui.page_loading = false;
-      },
-    });
-  }
-
-  fetchCollections(): void {
-    this.adapter.get_v3('GET /vendor/collections', { query: { limit: 100, offset: 0 } }).subscribe({
-      next: (res: any) => {
-        this.dropdownList = (Array.isArray(res?.data) ? res.data : res?.data?.items ?? [])
-          .map((col: any) => ({ id: col.id, collection: col.collection ?? col.name }));
       },
     });
   }
@@ -361,12 +341,6 @@ export class ProductFormComponent implements OnInit {
           .filter((src: string) => src && !src.includes('placeholder'));
         this.galleryUrls = [...this.existingImages];
 
-        // Collections multiselect, the product holds a single collection_id;
-        // tolerate a legacy `collection` array too.
-        const serverCollection = p.collection ?? (p.collection_id != null ? [p.collection_id] : []);
-        this.selectedCollectionIds = Array.isArray(serverCollection)
-          ? serverCollection.map((c: any) => (typeof c === 'object' ? c.id : c))
-          : [];
         // Label (single).
         if (p.label_id != null) this.model.label = p.label_id;
 
@@ -567,11 +541,9 @@ export class ProductFormComponent implements OnInit {
       },
       status,
     };
-    // Collection + label assignment. The product schema holds a SINGLE
-    // collection and a single label, so we persist the first selected
-    // collection (the picker stays a multiselect for UX) and the chosen label.
-    const firstCollection = this.selectedCollectionIds.length ? Number(this.selectedCollectionIds[0]) : null;
-    if (firstCollection) payload['collection_id'] = firstCollection;
+    // Label assignment. The product schema holds a single label, so we
+    // persist the chosen one. (No collection_id: collections are admin-curated
+    // and the legacy field is never read by the storefront.)
     if (d.label) payload['label_id'] = Number(d.label);
     // Admin writes specify which vendor the product belongs to.
     if (this.adminMode && d.vendor_id) payload['vendor_id'] = d.vendor_id;
