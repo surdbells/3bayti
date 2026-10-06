@@ -50,11 +50,25 @@ class StubCatalogService {
   /** What the next loadProducts call "returns" into the accumulator. */
   nextItems: Product[] = [];
   nextTotal = 0;
+  /** When true, loadProducts rejects (like the real service's latest call
+   *  failing) and leaves the accumulator untouched. */
+  failLoads = false;
 
   loadCalls: Array<{ filters: CatalogFilters; page: number; append: boolean }> = [];
   facetCalls: CatalogFilters[] = [];
+  resetCalls = 0;
+  resetProductsCalls = 0;
 
   reset(): void {
+    this.resetCalls += 1;
+    this.products.set([]);
+    this.total.set(0);
+    this.hasMore.set(false);
+    this.facets.set(null);
+  }
+
+  resetProducts(): void {
+    this.resetProductsCalls += 1;
     this.products.set([]);
     this.total.set(0);
     this.hasMore.set(false);
@@ -62,6 +76,9 @@ class StubCatalogService {
 
   async loadProducts(filters: CatalogFilters, page = 0, append = false) {
     this.loadCalls.push({ filters, page, append });
+    if (this.failLoads) {
+      throw new HttpErrorResponse({ status: 503 });
+    }
     const items = this.nextItems;
     this.products.set(append ? [...this.products(), ...items] : items);
     this.total.set(this.nextTotal);
@@ -79,6 +96,8 @@ interface SetupOpts {
   detail?: 'ok' | '404' | '500';
   collection?: CollectionDetail;
   catalogItems?: Product[];
+  /** Make the catalog listing (GET /products) fail from the first call. */
+  failLoads?: boolean;
 }
 
 function setup(opts: SetupOpts = {}): {
@@ -90,6 +109,7 @@ function setup(opts: SetupOpts = {}): {
   const catalog = new StubCatalogService();
   catalog.nextItems = opts.catalogItems ?? [];
   catalog.nextTotal = catalog.nextItems.length;
+  catalog.failLoads = opts.failLoads ?? false;
   const col = opts.collection ?? makeCollection();
   const get = vi.fn(() => {
     if (opts.detail === '404') return throwError(() => new HttpErrorResponse({ status: 404 }));
@@ -228,5 +248,116 @@ describe('CollectionDetailComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('[data-testid="collection-load-error"]')).not.toBeNull();
     expect(el.querySelector('[data-testid="collection-not-found"]')).toBeNull();
+  });
+
+  it('does not request the listing or facets when the collection fetch fails (5xx or 404)', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const failed = setup({ detail: '500' });
+    expect(failed.catalog.loadCalls).toHaveLength(0);
+    expect(failed.catalog.facetCalls).toHaveLength(0);
+    TestBed.resetTestingModule();
+
+    const missing = setup({ detail: '404' });
+    expect(missing.catalog.loadCalls).toHaveLength(0);
+    expect(missing.catalog.facetCalls).toHaveLength(0);
+  });
+
+  it('fully resets the shared catalog (incl. facets) on entering the collection', () => {
+    const { catalog } = setup();
+    expect(catalog.resetCalls).toBe(1);
+    expect(catalog.resetProductsCalls).toBe(0);
+  });
+
+  describe('listing failure', () => {
+    it('shows a distinct "couldn\'t load" error (not the no-match state) when a filtered listing fails', async () => {
+      const { fixture, catalog } = setup({ query: { colors: 'gold' }, failLoads: true });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      const error = el.querySelector('[data-testid="collection-list-error"]');
+      expect(error).not.toBeNull();
+      expect(error?.getAttribute('role')).toBe('alert');
+      expect(el.querySelector('[data-testid="collection-list-retry"]')).not.toBeNull();
+      expect(el.querySelector('[data-testid="collection-empty"]')).toBeNull();
+      expect(el.querySelector('[data-testid="collection-grid"]')).toBeNull();
+
+      // Retry re-runs the listing for the same slug + filters.
+      catalog.failLoads = false;
+      catalog.nextItems = [makeProduct({ id: 9, slug: 'gold-9' })];
+      catalog.nextTotal = 1;
+      (el.querySelector('[data-testid="collection-list-retry"]') as HTMLButtonElement).click();
+      fixture.detectChanges(); // the retry re-runs the catalog effect
+      expect(catalog.loadCalls).toHaveLength(2);
+      expect(catalog.loadCalls[1]).toMatchObject({ page: 0, append: false });
+      expect(catalog.loadCalls[1].filters.colors).toEqual(['gold']);
+      expect(catalog.resetProductsCalls).toBe(1); // same collection → facets kept
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="collection-list-error"]')).toBeNull();
+      expect(el.querySelectorAll('[data-testid="collection-grid"] ui-product-card').length).toBe(1);
+    });
+
+    it('keeps the embedded products for the unfiltered view and offers a retry when more exist', async () => {
+      const { fixture } = setup({
+        failLoads: true,
+        collection: makeCollection({ product_count: 30 }),
+      });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelectorAll('[data-testid="collection-grid"] ui-product-card').length).toBe(2);
+      expect(el.querySelector('[data-testid="collection-list-error"]')).toBeNull();
+      expect(el.querySelector('[data-testid="collection-fallback-retry"]')).not.toBeNull();
+    });
+  });
+
+  describe('"load more" failure', () => {
+    it('rolls the page back, does not reject, shows an inline retry that re-requests the same page', async () => {
+      const { fixture, catalog } = setup({ catalogItems: [makeProduct({ id: 9 })] });
+      await fixture.whenStable();
+      catalog.hasMore.set(true);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+      const el: HTMLElement = fixture.nativeElement;
+
+      catalog.failLoads = true;
+      await expect(cmp.loadMore()).resolves.toBeUndefined();
+      expect(catalog.loadCalls.at(-1)).toMatchObject({ page: 1, append: true });
+      expect(cmp.page()).toBe(0); // rolled back, not left at 1
+      expect(cmp.loadMoreFailed()).toBe(true);
+      fixture.detectChanges();
+
+      const error = el.querySelector('[data-testid="collection-load-more-error"]');
+      expect(error).not.toBeNull();
+      expect(el.querySelector('[data-testid="collection-load-more-retry"]')).not.toBeNull();
+      expect(el.querySelector('[data-testid="collection-load-more"]')).toBeNull();
+
+      // Retry asks for page 1 again (no page skipped) and clears the error.
+      catalog.failLoads = false;
+      catalog.nextItems = [makeProduct({ id: 10, slug: 'abaya-10' })];
+      (el.querySelector('[data-testid="collection-load-more-retry"]') as HTMLButtonElement).click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(catalog.loadCalls.at(-1)).toMatchObject({ page: 1, append: true });
+      expect(cmp.page()).toBe(1);
+      expect(cmp.loadMoreFailed()).toBe(false);
+      expect(el.querySelector('[data-testid="collection-load-more-error"]')).toBeNull();
+      expect(cmp.products().map((p) => p.id)).toEqual([9, 10]);
+    });
+  });
+
+  it('renders an image banner as a blurred backdrop plus the uncropped photo', () => {
+    const { fixture } = setup({
+      collection: makeCollection({ image_url: 'https://api-v3.3bayti.ae/uploads/products/a.jpg' }),
+    });
+    const hero = fixture.nativeElement.querySelector('[data-testid="collection-hero"]') as HTMLElement;
+    expect(hero.classList.contains('collection-hero--with-image')).toBe(true);
+    const backdrop = hero.querySelector('[data-testid="collection-hero-backdrop"]') as HTMLImageElement;
+    const photo = hero.querySelector('[data-testid="collection-hero-photo"]') as HTMLImageElement;
+    expect(backdrop).not.toBeNull();
+    expect(photo).not.toBeNull();
+    // Same transformed URL for both, so the browser fetches it once.
+    expect(backdrop.getAttribute('src')).toBe(photo.getAttribute('src'));
+    expect(backdrop.getAttribute('aria-hidden')).toBe('true');
   });
 });

@@ -129,9 +129,10 @@ export class StoreCardComponent {
     return `/product/${slug}`;
   }
 
-  /** Name initial for the logo fallback. */
+  /** Name initial for the logo fallback. Code-point aware (emoji / astral
+   *  first characters stay whole instead of half a surrogate pair). */
   initial(): string {
-    return (this.vendor?.name?.[0] ?? '?').toUpperCase();
+    return (Array.from((this.vendor?.name ?? '').trim())[0] ?? '?').toUpperCase();
   }
 
   /** Cover image, falling back to the first product image (then a gradient). */

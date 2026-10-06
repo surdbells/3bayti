@@ -83,6 +83,19 @@ export interface ProductListingRouteData {
               <li class="listing-skeleton"></li>
             }
           </ul>
+        } @else if (listFailed() && products().length === 0) {
+          <div class="listing-page__error" role="alert" data-testid="listing-error">
+            <p class="listing-page__error-title">{{ 'listing.listError.title' | translate }}</p>
+            <p class="listing-page__error-body">{{ 'listing.listError.body' | translate }}</p>
+            <button
+              type="button"
+              class="listing-page__more-btn"
+              (click)="retryListing()"
+              data-testid="listing-retry"
+            >
+              {{ 'listing.retry' | translate }}
+            </button>
+          </div>
         } @else if (products().length === 0) {
           <p class="listing-page__empty" data-testid="listing-empty">
             {{ emptyKey() | translate }}
@@ -96,14 +109,19 @@ export interface ProductListingRouteData {
 
           @if (hasMore()) {
             <div class="listing-page__more">
+              @if (loadMoreFailed()) {
+                <p class="listing-page__more-error" role="alert" data-testid="listing-load-more-error">
+                  {{ 'listing.loadMoreError' | translate }}
+                </p>
+              }
               <button
                 type="button"
                 class="listing-page__more-btn"
                 (click)="loadMore()"
                 [disabled]="isLoading()"
-                data-testid="listing-load-more"
+                [attr.data-testid]="loadMoreFailed() ? 'listing-load-more-retry' : 'listing-load-more'"
               >
-                {{ (isLoading() ? 'common.loading' : 'listing.loadMore') | translate }}
+                {{ (isLoading() ? 'common.loading' : loadMoreFailed() ? 'listing.retry' : 'listing.loadMore') | translate }}
               </button>
             </div>
           }
@@ -140,6 +158,13 @@ export class ProductListingPageComponent implements OnInit {
   /** When true, every load pins the sale filter on (the /discounted route). */
   private saleOnly = false;
   private readonly page = signal(0);
+  /** Bumped per page-0 (re)load; a settling call that no longer matches is ignored. */
+  private loadToken = 0;
+
+  /** The page-0 listing request failed (network / 5xx), not "no products". */
+  protected readonly listFailed = signal(false);
+  /** The last "load more" failed; the button turns into a retry. */
+  protected readonly loadMoreFailed = signal(false);
 
   ngOnInit(): void {
     const data = this.route.snapshot.data as Partial<ProductListingRouteData>;
@@ -151,11 +176,10 @@ export class ProductListingPageComponent implements OnInit {
     this.activeFilters.set(this.parseQuery());
 
     /* CatalogService is a shared singleton (also used by the category
-       browser); reset its accumulator before loading this listing. */
+       and collection browsers); fully reset it (products AND the previous
+       page's facets) before loading this listing. */
     this.catalog.reset();
-    this.page.set(0);
-    void this.catalog.loadProducts(this.buildFilters(), 0, false);
-    void this.catalog.loadFacets(this.buildFilters());
+    this.loadFirstPage();
 
     const url = `${environment.SITE_URL}${data.canonicalPath ?? '/'}`;
     this.seo.set({
@@ -190,17 +214,52 @@ export class ProductListingPageComponent implements OnInit {
       queryParams: this.toQueryParams(filters),
       replaceUrl: true,
     });
-    this.catalog.reset();
-    this.page.set(0);
-    void this.catalog.loadProducts(this.buildFilters(), 0, false);
-    void this.catalog.loadFacets(this.buildFilters());
+    /* Same listing, new filters: clear the products but keep the facets so
+       the filter bar's options don't flicker while counts refresh. */
+    this.catalog.resetProducts();
+    this.loadFirstPage();
   }
 
-  /** Load the next page and append to the grid. */
+  /** Re-run the page-0 listing (+ facets) after a failure. */
+  protected retryListing(): void {
+    this.loadFirstPage();
+  }
+
+  /**
+   * Load the next page and append to the grid. Never rejects: on failure
+   * the page index is rolled back (so the retry re-requests the same page
+   * instead of skipping one) and the button offers a retry.
+   */
   protected async loadMore(): Promise<void> {
-    const next = this.page() + 1;
+    if (this.isLoading()) return;
+    const token = this.loadToken;
+    const prev = this.page();
+    const next = prev + 1;
     this.page.set(next);
-    await this.catalog.loadProducts(this.buildFilters(), next, true);
+    this.loadMoreFailed.set(false);
+    try {
+      await this.catalog.loadProducts(this.buildFilters(), next, true);
+    } catch {
+      // A filter change since the click already restarted paging from
+      // page 0; only roll back the page this call advanced.
+      if (token !== this.loadToken) return;
+      this.page.set(prev);
+      this.loadMoreFailed.set(true);
+    }
+  }
+
+  /** Load page 0 (+ facets) for the current filters, tracking failure. */
+  private loadFirstPage(): void {
+    const token = ++this.loadToken;
+    const filters = this.buildFilters();
+    this.page.set(0);
+    this.listFailed.set(false);
+    this.loadMoreFailed.set(false);
+    this.catalog.loadProducts(filters, 0, false).then(
+      () => undefined,
+      () => { if (token === this.loadToken) this.listFailed.set(true); },
+    );
+    void this.catalog.loadFacets(filters);
   }
 
   /**

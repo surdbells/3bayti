@@ -483,7 +483,8 @@ export class StyleDetailPageComponent implements OnInit {
   }
 
   protected initialOf(p: StyleProduct): string {
-    return (p.name ?? '?').trim().charAt(0).toUpperCase() || '?';
+    // First code point, not the first UTF-16 unit (emoji-safe).
+    return (Array.from((p.name ?? '').trim())[0] ?? '?').toUpperCase();
   }
 
   protected trackById(_idx: number, p: { id: number }): number {

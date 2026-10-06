@@ -200,7 +200,13 @@
 .home-section__view-all:focus-visible {
   color: var(--color-brand-500);
   gap: 10px;
-  outline: none;
+}
+
+/* Keyboard focus needs a visible ring, not just the colour/gap shift. */
+.home-section__view-all:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .home-section__view-all svg {

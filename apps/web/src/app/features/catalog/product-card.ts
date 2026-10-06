@@ -193,9 +193,10 @@ export class ProductCardComponent {
       || this.i18n.instant('ui.productCard.imageAlt');
   }
 
-  /** First character for the letter-fallback. */
+  /** First character for the letter-fallback. Code-point aware (emoji /
+   *  astral first characters stay whole instead of half a surrogate pair). */
   initial(): string {
-    return (this.product?.name?.[0] ?? '?').toUpperCase();
+    return (Array.from((this.product?.name ?? '').trim())[0] ?? '?').toUpperCase();
   }
 
   /** True if there's a sale_price LOWER than the regular price. */

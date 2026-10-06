@@ -35,23 +35,39 @@
         </header>
       } @else if (collection(); as col) {
 
-        <!-- Banner header: collection image as the background (brand
-             gradient without one), dark scrim, centred white title. -->
+        <!-- Banner header. With an image (usually a portrait product photo)
+             it uses the blurred-backdrop pattern: the same image, blurred and
+             darkened, fills the banner, and the photo itself sits in front
+             uncropped beside the title. Without one, a brand gradient. -->
         <header
           class="collection-hero"
+          [class.collection-hero--with-image]="!!col.image_url"
           [class.collection-hero--no-image]="!col.image_url"
           data-testid="collection-hero"
         >
           @if (col.image_url) {
             <img
-              class="collection-hero__bg"
-              [src]="col.image_url | cfImage:'cover'"
+              class="collection-hero__backdrop"
+              [src]="col.image_url | cfImage:'detail'"
               alt=""
-              fetchpriority="high"
+              aria-hidden="true"
               decoding="async"
+              data-testid="collection-hero-backdrop"
             />
           }
           <span class="collection-hero__scrim" aria-hidden="true"></span>
+          @if (col.image_url) {
+            <div class="collection-hero__media">
+              <img
+                class="collection-hero__photo"
+                [src]="col.image_url | cfImage:'detail'"
+                alt=""
+                fetchpriority="high"
+                decoding="async"
+                data-testid="collection-hero-photo"
+              />
+            </div>
+          }
           <div class="collection-hero__content">
             <p class="collection-hero__eyebrow">{{ 'collections.eyebrow' | translate }}</p>
             <h1 class="collection-hero__title">{{ col.name }}</h1>
@@ -86,6 +102,21 @@
               </div>
             }
 
+            @if (showListError()) {
+              <div class="grid-empty grid-error" role="alert" data-testid="collection-list-error">
+                <p class="grid-empty__title">{{ 'collections.listError.title' | translate }}</p>
+                <p class="grid-empty__hint">{{ 'collections.listError.body' | translate }}</p>
+                <button
+                  class="load-more-btn"
+                  type="button"
+                  (click)="retryListing()"
+                  [disabled]="isLoadingGrid()"
+                  data-testid="collection-list-retry">
+                  {{ isLoadingGrid() ? ('collections.loading' | translate) : ('collections.retry' | translate) }}
+                </button>
+              </div>
+            }
+
             @if (showEmpty()) {
               <div class="grid-empty" data-testid="collection-empty">
                 @if (hasUserFilters()) {
@@ -112,15 +143,42 @@
                   {{ 'collections.showing' | translate:{ shown: products().length, total: totalProducts() } }}
                 </p>
                 @if (hasMore()) {
-                  <button
-                    class="load-more-btn"
-                    type="button"
-                    (click)="loadMore()"
-                    [disabled]="isLoadingGrid()"
-                    [attr.aria-label]="'collections.loadMoreAria' | translate"
-                    data-testid="collection-load-more">
-                    {{ isLoadingGrid() ? ('collections.loading' | translate) : ('collections.loadMore' | translate) }}
-                  </button>
+                  @if (loadMoreFailed()) {
+                    <div class="load-more-error" role="alert" data-testid="collection-load-more-error">
+                      <p class="load-more-error__text">{{ 'collections.loadMoreError' | translate }}</p>
+                      <button
+                        class="load-more-btn"
+                        type="button"
+                        (click)="loadMore()"
+                        [disabled]="isLoadingGrid()"
+                        [attr.aria-label]="'collections.loadMoreAria' | translate"
+                        data-testid="collection-load-more-retry">
+                        {{ isLoadingGrid() ? ('collections.loading' | translate) : ('collections.retry' | translate) }}
+                      </button>
+                    </div>
+                  } @else {
+                    <button
+                      class="load-more-btn"
+                      type="button"
+                      (click)="loadMore()"
+                      [disabled]="isLoadingGrid()"
+                      [attr.aria-label]="'collections.loadMoreAria' | translate"
+                      data-testid="collection-load-more">
+                      {{ isLoadingGrid() ? ('collections.loading' | translate) : ('collections.loadMore' | translate) }}
+                    </button>
+                  }
+                } @else if (showFallbackRetry()) {
+                  <div class="load-more-error" role="alert" data-testid="collection-fallback-error">
+                    <p class="load-more-error__text">{{ 'collections.loadMoreError' | translate }}</p>
+                    <button
+                      class="load-more-btn"
+                      type="button"
+                      (click)="retryListing()"
+                      [disabled]="isLoadingGrid()"
+                      data-testid="collection-fallback-retry">
+                      {{ isLoadingGrid() ? ('collections.loading' | translate) : ('collections.retry' | translate) }}
+                    </button>
+                  </div>
                 }
               </div>
             }

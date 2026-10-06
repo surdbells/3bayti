@@ -33,11 +33,22 @@ class StubCatalogService {
   isLoadingFacets = signal(false);
 
   resetCalls = 0;
+  resetProductsCalls = 0;
+  /** When true, loadProducts rejects (the latest call failing). */
+  failLoads = false;
   loadCalls: Array<{ filters: Record<string, unknown>; page: number; append: boolean }> = [];
   facetCalls: Array<Record<string, unknown>> = [];
 
   reset(): void {
     this.resetCalls += 1;
+    this.products.set([]);
+    this.total.set(0);
+    this.hasMore.set(false);
+    this.facets.set(null);
+  }
+
+  resetProducts(): void {
+    this.resetProductsCalls += 1;
     this.products.set([]);
     this.total.set(0);
     this.hasMore.set(false);
@@ -49,6 +60,7 @@ class StubCatalogService {
     append = false,
   ): Promise<{ items: Product[]; total: number; hasMore: boolean }> {
     this.loadCalls.push({ filters, page, append });
+    if (this.failLoads) throw new Error('503');
     return { items: [], total: 0, hasMore: false };
   }
 
@@ -177,6 +189,62 @@ describe('ProductListingPageComponent', () => {
     });
   });
 
+  it('shows a "couldn\'t load" error with a retry (not the empty copy) when the listing fails', async () => {
+    const catalog = new StubCatalogService();
+    catalog.failLoads = true;
+    TestBed.configureTestingModule({
+      imports: [ProductListingPageComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideI18n(),
+        { provide: CatalogService, useValue: catalog },
+        { provide: SeoService, useValue: new StubSeoService() },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: BEST_SELLERS_DATA } } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ProductListingPageComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-testid="listing-error"]')).not.toBeNull();
+    expect(el.querySelector('[data-testid="listing-empty"]')).toBeNull();
+
+    catalog.failLoads = false;
+    (el.querySelector('[data-testid="listing-retry"]') as HTMLButtonElement).click();
+    expect(catalog.loadCalls).toHaveLength(2);
+    expect(catalog.loadCalls[1]).toEqual({ filters: { sort: 'best_seller' }, page: 0, append: false });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="listing-error"]')).toBeNull();
+    expect(el.querySelector('[data-testid="listing-empty"]')).not.toBeNull();
+  });
+
+  it('rolls the page back on a failed "load more" and retries the same page', async () => {
+    const { fixture, catalog } = setup();
+    catalog.isLoadingList.set(false);
+    catalog.products.set([makeProduct()]);
+    catalog.hasMore.set(true);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+
+    catalog.failLoads = true;
+    (el.querySelector('[data-testid="listing-load-more"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(catalog.loadCalls[1]).toMatchObject({ page: 1, append: true });
+    expect(el.querySelector('[data-testid="listing-load-more-error"]')).not.toBeNull();
+
+    catalog.failLoads = false;
+    (el.querySelector('[data-testid="listing-load-more-retry"]') as HTMLButtonElement).click();
+    expect(catalog.loadCalls[2]).toMatchObject({ page: 1, append: true }); // page 1 again, not 2
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="listing-load-more-error"]')).toBeNull();
+  });
+
   it('hides "load more" when there are no further pages', () => {
     const { fixture, catalog } = setup();
     catalog.isLoadingList.set(false);
@@ -260,6 +328,10 @@ describe('ProductListingPageComponent', () => {
         sort: 'best_seller',
         sizes: ['M'],
       });
+      // Same listing, new filter: products reset, facets kept (no chip flicker).
+      expect(catalog.resetCalls).toBe(1);
+      expect(catalog.resetProductsCalls).toBe(1);
+      expect(fixture.nativeElement.querySelector('[data-testid="chip-size"]')).not.toBeNull();
     });
   });
 });

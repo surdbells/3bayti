@@ -133,6 +133,86 @@ describe('CatalogService', () => {
       expect(service.hasMore()).toBe(false);
     });
 
+    it('discards a superseded "load more" page that resolves after a newer filter load', async () => {
+      const { service, controller } = setup();
+      // Page 0 for filters F0.
+      const p0 = service.loadProducts({ category: 'abayas' }, 0);
+      controller.expectOne(r => r.url === `${V3}/v3/products`)
+        .flush({ data: [makeProduct({ id: 1 })], meta: { total: 30, has_more: true } });
+      await p0;
+
+      // "Load more" (page 1, F0) is in flight when the shopper picks a size (F1).
+      const more = service.loadProducts({ category: 'abayas' }, 1, true);
+      service.reset();
+      const fresh = service.loadProducts({ category: 'abayas', sizes: ['M'] }, 0);
+      const [moreReq, freshReq] = controller.match(r => r.url === `${V3}/v3/products`);
+      expect(moreReq.request.params.get('offset')).toBe(String(CATALOG_PAGE_SIZE));
+      expect(freshReq.request.params.get('sizes')).toBe('M');
+
+      // F1 resolves first, then the late F0 page.
+      freshReq.flush({ data: [makeProduct({ id: 7, slug: 'm-7' })], meta: { total: 1, has_more: false } });
+      await fresh;
+      moreReq.flush({ data: [makeProduct({ id: 2, slug: 'p2' })], meta: { total: 30, has_more: true } });
+      const late = await more;
+
+      expect(late.stale).toBe(true);
+      expect(service.products().map(p => p.id)).toEqual([7]);   // not [7, 2]
+      expect(service.total()).toBe(1);                            // not F0's 30
+      expect(service.hasMore()).toBe(false);
+      expect(service.isLoadingList()).toBe(false);
+    });
+
+    it('ignores a superseded non-append load that resolves late, and keeps loading on for the latest', async () => {
+      const { service, controller } = setup();
+      const first = service.loadProducts({ category: 'abayas' }, 0);
+      const second = service.loadProducts({ category: 'abayas', colors: ['black'] }, 0);
+      const [firstReq, secondReq] = controller.match(r => r.url === `${V3}/v3/products`);
+
+      // The stale call settling first must not touch state (incl. the loading flag).
+      firstReq.flush({ data: [makeProduct({ id: 1 })], meta: { total: 30, has_more: true } });
+      expect((await first).stale).toBe(true);
+      expect(service.products()).toHaveLength(0);
+      expect(service.isLoadingList()).toBe(true);
+
+      secondReq.flush({ data: [makeProduct({ id: 5, slug: 'b-5' })], meta: { total: 1, has_more: false } });
+      const page = await second;
+      expect(page.stale).toBeUndefined();
+      expect(service.products().map(p => p.id)).toEqual([5]);
+      expect(service.total()).toBe(1);
+      expect(service.isLoadingList()).toBe(false);
+    });
+
+    it('swallows a superseded call\'s failure but rejects when the latest call fails', async () => {
+      const { service, controller } = setup();
+      const first = service.loadProducts({ category: 'abayas' }, 0);
+      const second = service.loadProducts({ category: 'kaftans' }, 0);
+      const [firstReq, secondReq] = controller.match(r => r.url === `${V3}/v3/products`);
+      secondReq.flush({ data: [makeProduct({ id: 9, slug: 'k-9' })], meta: { total: 1, has_more: false } });
+      await second;
+      firstReq.flush('boom', { status: 500, statusText: 'Server Error' });
+      await expect(first).resolves.toMatchObject({ stale: true, items: [] });
+      expect(service.products().map(p => p.id)).toEqual([9]);
+
+      const third = service.loadProducts({ category: 'kaftans' }, 1, true);
+      controller.expectOne(r => r.url === `${V3}/v3/products`)
+        .flush('boom', { status: 503, statusText: 'Unavailable' });
+      await expect(third).rejects.toBeTruthy();
+      expect(service.products().map(p => p.id)).toEqual([9]); // accumulator untouched
+      expect(service.isLoadingList()).toBe(false);
+    });
+
+    it('reset invalidates an in-flight product load', async () => {
+      const { service, controller } = setup();
+      const p = service.loadProducts({ category: 'abayas' }, 0);
+      service.reset();
+      expect(service.isLoadingList()).toBe(false);
+      controller.expectOne(r => r.url === `${V3}/v3/products`)
+        .flush({ data: [makeProduct()], meta: { total: 1, has_more: false } });
+      expect((await p).stale).toBe(true);
+      expect(service.products()).toHaveLength(0);
+      expect(service.total()).toBe(0);
+    });
+
     it('reset clears the accumulator', async () => {
       const { service, controller } = setup();
       const p = service.loadProducts({}, 0);
@@ -171,6 +251,61 @@ describe('CatalogService', () => {
       const result = await p2;
       expect(result?.total_products).toBe(12); // previous facets retained
       expect(service.facets()?.total_products).toBe(12);
+    });
+
+    it('discards a superseded facets response that resolves after a newer one', async () => {
+      const { service, controller } = setup();
+      const older = service.loadFacets({ category: 'abayas' });
+      const newer = service.loadFacets({ category: 'abayas', sizes: ['M'] });
+      const [olderReq, newerReq] = controller.match(r => r.url === `${V3}/v3/products/facets`);
+
+      newerReq.flush({ data: makeFacets({ total_products: 4 }) });
+      await newer;
+      olderReq.flush({ data: makeFacets({ total_products: 12 }) });
+      await older;
+
+      expect(service.facets()?.total_products).toBe(4);
+      expect(service.isLoadingFacets()).toBe(false);
+    });
+
+    it('reset clears the facets and invalidates an in-flight facets load', async () => {
+      const { service, controller } = setup();
+      const p1 = service.loadFacets({ category: 'abayas' });
+      controller.expectOne(r => r.url === `${V3}/v3/products/facets`).flush({ data: makeFacets() });
+      await p1;
+      expect(service.facets()).not.toBeNull();
+
+      const inFlight = service.loadFacets({ category: 'abayas', colors: ['black'] });
+      service.reset();
+      expect(service.facets()).toBeNull();
+      expect(service.isLoadingFacets()).toBe(false);
+      controller.expectOne(r => r.url === `${V3}/v3/products/facets`).flush({ data: makeFacets() });
+      await inFlight;
+      expect(service.facets()).toBeNull();
+    });
+
+    it('resetProducts keeps the facets (same-scope filter change)', async () => {
+      const { service, controller } = setup();
+      const p1 = service.loadFacets({ category: 'abayas' });
+      controller.expectOne(r => r.url === `${V3}/v3/products/facets`).flush({ data: makeFacets() });
+      await p1;
+      service.resetProducts();
+      expect(service.facets()?.total_products).toBe(12);
+    });
+
+    it('drops another scope\'s facets up front and does not restore them when the new load fails', async () => {
+      const { service, controller } = setup();
+      const p1 = service.loadFacets({ category: 'abayas' });
+      controller.expectOne(r => r.url === `${V3}/v3/products/facets`).flush({ data: makeFacets() });
+      await p1;
+
+      // A different listing (a collection) reuses the singleton without a reset.
+      const p2 = service.loadFacets({ collection: 'eid-edit' });
+      expect(service.facets()).toBeNull(); // the category's options are gone immediately
+      controller.expectOne(r => r.url === `${V3}/v3/products/facets`)
+        .flush('boom', { status: 500, statusText: 'Server Error' });
+      expect(await p2).toBeNull();
+      expect(service.facets()).toBeNull();
     });
   });
 });

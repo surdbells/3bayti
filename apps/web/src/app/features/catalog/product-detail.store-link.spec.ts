@@ -76,6 +76,17 @@ describe('ProductDetail store link', () => {
     expect(card!.querySelector('.pdp-store__avatar')?.textContent?.trim()).toBe('N');
   });
 
+  it('uses the whole first character for the avatar when the store name starts with an emoji', () => {
+    const el: HTMLElement = setup(
+      makeProduct({ vendor: { slug: 'gem-studio', name: '\u{1F48E} Gem Studio' } }),
+    ).nativeElement;
+    const avatar = el.querySelector('.pdp-store__avatar')?.textContent?.trim() ?? '';
+    // One full code point (a surrogate PAIR in UTF-16), never a lone half.
+    expect(avatar).toBe('\u{1F48E}');
+    expect(Array.from(avatar)).toHaveLength(1);
+    expect(avatar).not.toMatch(/^[\uD800-\uDBFF]$/);
+  });
+
   it('links the vendor line above the title to the same storefront', () => {
     const el: HTMLElement = setup(makeProduct()).nativeElement;
     const link = el.querySelector<HTMLAnchorElement>('[data-testid="pdp-vendor-link"]');

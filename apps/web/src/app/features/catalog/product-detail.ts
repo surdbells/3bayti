@@ -1647,9 +1647,9 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     return `${money.currency} ${formatted}`;
   }
 
-  /** Letter for the image-fallback case. */
+  /** Letter for the image-fallback case (first code point, surrogate-safe). */
   initial(): string {
-    return (this.product()?.name?.[0] ?? '?').toUpperCase();
+    return (Array.from((this.product()?.name ?? '').trim())[0] ?? '?').toUpperCase();
   }
 
   /**
@@ -1743,9 +1743,11 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     return slug ? `/stores/${slug}` : null;
   }
 
-  /** Store-name initial for the "Sold by" card's avatar. */
+  /** Store-name initial for the "Sold by" card's avatar. Takes the first
+   *  code point (Array.from), not the first UTF-16 unit, so a name starting
+   *  with an emoji / astral character never renders half a surrogate pair. */
   vendorInitial(): string {
     const name = (this.product()?.vendor?.name ?? '').trim();
-    return (name[0] || '?').toUpperCase();
+    return (Array.from(name)[0] ?? '?').toUpperCase();
   }
 }

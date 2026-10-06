@@ -115,19 +115,68 @@ export class CategoryDetailComponent {
   readonly isLoadingFacets = this.catalog.isLoadingFacets;
 
   /**
+   * State of the page-0 listing for the CURRENT slug + filters. Once
+   * 'ready' the catalog result is authoritative (including an empty result
+   * for filters that match nothing); 'failed' is a network / server error,
+   * shown as such rather than as "no products match your filters".
+   */
+  private readonly listState = signal<'idle' | 'loading' | 'ready' | 'failed'>('idle');
+  /** Bumped per listing (re)load; a settling call that no longer matches is ignored. */
+  private loadToken = 0;
+  /** Category slug the shared CatalogService last loaded a listing for. */
+  private loadedScope: string | null = null;
+  /** Bumped by retryListing() to re-run the catalog effect for the same filters. */
+  private readonly reloadTick = signal(0);
+
+  /** The page-0 listing request failed (network / 5xx). */
+  readonly listFailed = computed(() => this.listState() === 'failed');
+  /** The last "load more" failed; the footer offers an inline retry. */
+  readonly loadMoreFailed = signal(false);
+
+  /** Whether the shopper has narrowed the listing (any non-default filter). */
+  readonly hasUserFilters = computed(() => {
+    const f = this.currentFilters();
+    return (f.sizes?.length ?? 0) > 0
+      || (f.colors?.length ?? 0) > 0
+      || f.minPrice != null
+      || f.maxPrice != null
+      || (!!f.sort && f.sort !== 'newest')
+      || !!f.q;
+  });
+
+  /**
    * Products shown in the grid:
-   *   - SSR: the embedded products from the category metadata (fast,
-   *     no extra fetch, crawlers see them)
-   *   - Browser after first catalog load: the filtered catalog results
+   *   - once the catalog listing has loaded: the filtered catalog results
+   *   - before that (or if it failed): the products embedded in the
+   *     category metadata, but only for the unfiltered view; a filtered
+   *     view never shows unfiltered products as if they matched
    */
   readonly products = computed(() => {
-    const cat = this.catalogProducts();
-    if (cat.length > 0) return cat;
-    // Fallback to SSR-embedded products before the catalog call completes
+    if (this.listState() === 'ready') return this.catalogProducts();
+    if (this.hasUserFilters()) return [];
     return this.response()?.data?.products ?? [];
   });
 
-  readonly hasMore = computed(() => this.catalogHasMore());
+  /** Matching total for "Showing X of Y" (the category size until the listing loads). */
+  readonly totalProducts = computed(() =>
+    this.listState() === 'ready'
+      ? this.catalogTotal()
+      : this.meta()?.total_products ?? this.category()?.product_count ?? 0,
+  );
+
+  readonly hasMore = computed(() => this.listState() === 'ready' && this.catalogHasMore());
+
+  /** The listing failed and there is nothing to fall back to → error + retry. */
+  readonly showListError = computed(() => this.listFailed() && this.products().length === 0);
+
+  /**
+   * The listing failed but the embedded products are on screen and the
+   * category holds more: no "load more" is possible, so offer a retry.
+   */
+  readonly showFallbackRetry = computed(
+    () => this.listFailed() && this.products().length > 0
+      && this.products().length < this.totalProducts(),
+  );
 
   /** Current page index (used to calculate the offset for load-more). */
   private _page = signal(0);
@@ -188,15 +237,35 @@ export class CategoryDetailComponent {
       });
     });
 
-    // Drive catalog + facets whenever filters change
+    // Drive catalog + facets whenever filters change (or on a retry)
     effect(() => {
       const filters = this.currentFilters();
+      this.reloadTick();
       if (!filters.category) return;
+      const token = ++this.loadToken;
       this._page.set(0);
-      this.catalog.reset();
-      void this.catalog.loadProducts(filters, 0, false);
+      this.loadMoreFailed.set(false);
+      this.listState.set('loading');
+      // A new category is a new scope: drop the previous listing AND its
+      // facets. A filter change within the same category keeps the facets
+      // so the filter bar's options don't flicker while counts refresh.
+      if (filters.category !== this.loadedScope) {
+        this.loadedScope = filters.category;
+        this.catalog.reset();
+      } else {
+        this.catalog.resetProducts();
+      }
+      this.catalog.loadProducts(filters, 0, false).then(
+        () => { if (token === this.loadToken) this.listState.set('ready'); },
+        () => { if (token === this.loadToken) this.listState.set('failed'); },
+      );
       void this.catalog.loadFacets(filters);
     });
+  }
+
+  /** Re-run the page-0 listing (+ facets) after a failure. */
+  retryListing(): void {
+    this.reloadTick.update((n) => n + 1);
   }
 
   /** Called by the filter panel; writes the new filter state to the URL. */
@@ -215,11 +284,27 @@ export class CategoryDetailComponent {
     });
   }
 
-  /** Load the next page and append to the grid. */
+  /**
+   * Load the next page and append to the grid. Never rejects: on failure
+   * the page index is rolled back (so the retry re-requests the same page
+   * instead of skipping one) and the footer shows an inline retry.
+   */
   async loadMore(): Promise<void> {
-    const nextPage = this._page() + 1;
+    if (this.isLoadingGrid()) return;
+    const token = this.loadToken;
+    const prevPage = this._page();
+    const nextPage = prevPage + 1;
     this._page.set(nextPage);
-    await this.catalog.loadProducts(this.currentFilters(), nextPage, true);
+    this.loadMoreFailed.set(false);
+    try {
+      await this.catalog.loadProducts(this.currentFilters(), nextPage, true);
+    } catch {
+      // A filter change since the click already restarted paging from
+      // page 0; only roll back the page this call advanced.
+      if (token !== this.loadToken) return;
+      this._page.set(prevPage);
+      this.loadMoreFailed.set(true);
+    }
   }
 
   categoriesIndexUrl(): string { return '/category'; }

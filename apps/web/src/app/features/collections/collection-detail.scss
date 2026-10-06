@@ -1,9 +1,16 @@
 /* Collection detail page, `/collection/:slug`.
-   Breadcrumb, filter layout, product grid, shimmer, empty state and
-   load-more come from ../categories/category-detail.scss (shared via
+   Breadcrumb, filter layout, product grid, shimmer, empty / error states
+   and load-more come from ../categories/category-detail.scss (shared via
    styleUrls); this file adds the page frame and the banner header, which
-   echoes the CollectionCard (image background, dark scrim, centred white
-   display-serif title). */
+   echoes the CollectionCard (dark scrim, white display-serif title).
+
+   The collection image is usually a PORTRAIT product photo, which a wide
+   240-300px band would crop to a strip (cutting off heads / faces). So an
+   image banner uses the blurred-backdrop pattern: the same image, blurred
+   and darkened, covers the band as atmosphere, and the photo itself is
+   shown whole (object-fit: contain in a portrait frame) beside the title
+   on wide screens, above it on narrow ones. The banner is always dark with
+   white text, so it reads the same in the light and dark themes. */
 
 .collection-detail-page {
   padding-block: 32px 96px;
@@ -39,13 +46,74 @@
   box-shadow: none;
 }
 
-.collection-hero__bg {
+/* ----- Image banner: blurred backdrop + uncropped photo ------------ */
+
+.collection-hero--with-image {
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px 20px 32px;
+  /* Dark base under the blur, so the band never flashes light (or shows
+     the brand gradient) while the image loads. */
+  background: #1f1712;
+}
+
+@media (min-width: 768px) {
+  .collection-hero--with-image {
+    flex-direction: row;
+    gap: 48px;
+    padding: 36px 56px;
+    text-align: start;
+  }
+
+  .collection-hero--with-image .collection-hero__content {
+    flex: 0 1 560px;
+    align-items: flex-start;
+  }
+}
+
+/* The same image, blurred + darkened, as a cover background. Scaled up so
+   the blur's soft, semi-transparent edge falls outside the clipped band. */
+.collection-hero__backdrop {
   position: absolute;
   inset: 0;
   z-index: -2;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
+  filter: blur(28px) saturate(1.15) brightness(0.62);
+  transform: scale(1.2);
+  pointer-events: none;
+}
+
+/* The photo itself, never cropped: a portrait frame (product photos are
+   3:4) with object-fit: contain, so any other aspect letterboxes onto the
+   blurred backdrop instead of losing its edges. */
+.collection-hero__media {
+  position: relative;
+  flex: none;
+  height: 176px;
+  aspect-ratio: 3 / 4;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.16),
+    0 18px 40px -18px rgba(0, 0, 0, 0.65);
+}
+
+@media (min-width: 768px) {
+  .collection-hero__media {
+    height: 264px;
+  }
+}
+
+.collection-hero__photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   object-position: center;
 }
 
@@ -57,6 +125,13 @@
   background:
     radial-gradient(70% 70% at 50% 50%, rgba(20, 14, 10, 0.3), transparent 80%),
     linear-gradient(180deg, rgba(20, 14, 10, 0.3) 0%, rgba(20, 14, 10, 0.5) 55%, rgba(20, 14, 10, 0.68) 100%);
+}
+
+/* The backdrop is already darkened by its filter; a lighter, even scrim
+   keeps the white text legible without muddying the photo's colours. */
+.collection-hero--with-image .collection-hero__scrim {
+  background:
+    linear-gradient(180deg, rgba(20, 14, 10, 0.18) 0%, rgba(20, 14, 10, 0.42) 100%);
 }
 
 .collection-hero--no-image .collection-hero__scrim {

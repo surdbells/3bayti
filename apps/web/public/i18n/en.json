@@ -1205,6 +1205,12 @@
   "listing": {
     "breadcrumbAria": "Breadcrumb",
     "loadMore": "Load more",
+    "loadMoreError": "Couldn't load more products.",
+    "retry": "Retry",
+    "listError": {
+      "title": "Couldn't load products",
+      "body": "Something went wrong while loading these pieces. Please check your connection and try again."
+    },
     "bestSellers": {
       "title": "Best Sellers",
       "subtitle": "The pieces our community keeps coming back to, shop the most-loved abayas, kaftans and modest wear.",
@@ -1835,6 +1841,12 @@
     "loadingProducts": "Loading products…",
     "emptyTitle": "No products match your filters",
     "emptyHint": "Try adjusting or clearing your filters.",
+    "listError": {
+      "title": "Couldn't load products",
+      "body": "Something went wrong while loading these pieces. Please check your connection and try again."
+    },
+    "loadMoreError": "Couldn't load more products.",
+    "retry": "Retry",
     "showing": "Showing {{shown}} of {{total}}",
     "loadMoreAria": "Load more products",
     "loadMore": "Load more",
@@ -1899,6 +1911,12 @@
     "emptyHint": "Try adjusting or clearing your filters.",
     "emptyCollectionTitle": "No pieces in this collection yet",
     "emptyCollectionHint": "Browse other collections",
+    "listError": {
+      "title": "Couldn't load products",
+      "body": "Something went wrong while loading this collection's pieces. Please check your connection and try again."
+    },
+    "loadMoreError": "Couldn't load more products.",
+    "retry": "Retry",
     "showing": "Showing {{shown}} of {{total}}",
     "loadMoreAria": "Load more products",
     "loadMore": "Load more",

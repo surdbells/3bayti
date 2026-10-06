@@ -208,7 +208,7 @@ const SEARCH_DEBOUNCE_MS = 250;
                           @if (store.logo_url) {
                             <img [src]="store.logo_url" alt="" loading="lazy" />
                           } @else {
-                            <span class="search-store__initial" aria-hidden="true">{{ store.name.charAt(0) }}</span>
+                            <span class="search-store__initial" aria-hidden="true">{{ storeInitial(store.name) }}</span>
                           }
                         </span>
                         <span class="search-store__text">
@@ -285,6 +285,12 @@ export class SearchOverlayComponent implements OnDestroy {
 
     this.loading.set(true);
     this.debounceHandle = setTimeout(() => void this.runSearch(value), SEARCH_DEBOUNCE_MS);
+  }
+
+  /** Store-name initial for the logo fallback: the first code point, not
+   *  the first UTF-16 unit, so an emoji never renders as half a pair. */
+  protected storeInitial(name: string | null | undefined): string {
+    return Array.from((name ?? '').trim())[0] ?? '?';
   }
 
   protected priceLabel(product: Product): string {

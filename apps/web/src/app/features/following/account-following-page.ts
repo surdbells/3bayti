@@ -190,7 +190,8 @@ export class AccountFollowingPageComponent implements OnInit {
   }
 
   protected initialOf(store: Store): string {
-    return (store.name ?? '?').trim().charAt(0).toUpperCase() || '?';
+    // First code point, not the first UTF-16 unit (emoji-safe).
+    return (Array.from((store.name ?? '').trim())[0] ?? '?').toUpperCase();
   }
 
   protected trackById(_index: number, store: { id: number }): number {

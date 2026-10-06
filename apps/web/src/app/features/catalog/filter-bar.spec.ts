@@ -85,6 +85,21 @@ describe('FilterBarComponent', () => {
     expect(q(el, '[data-testid="chip-color"]')).not.toBeNull();
   });
 
+  it('renders just the sort chip (no stale options) when facets are null or partial', () => {
+    const { el } = setup({ facets: null });
+    expect(q(el, '[data-testid="filter-bar"]')).not.toBeNull();
+    expect(q(el, '[data-testid="chip-sort"]')).not.toBeNull();
+    expect(q(el, '[data-testid="chip-size"]')).toBeNull();
+    expect(q(el, '[data-testid="chip-color"]')).toBeNull();
+    expect(q(el, '[data-testid="chip-price"]')).toBeNull();
+    TestBed.resetTestingModule();
+
+    const partial = { total_products: 0 } as unknown as Facets;
+    const { el: el2 } = setup({ facets: partial });
+    expect(q(el2, '[data-testid="chip-sort"]')).not.toBeNull();
+    expect(q(el2, '[data-testid="chip-size"]')).toBeNull();
+  });
+
   it('opens a popover when its chip is clicked and toggles it closed again', () => {
     const { fixture, el } = setup();
     expect(q(el, '[data-testid="pop-size"]')).toBeNull();

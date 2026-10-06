@@ -361,11 +361,14 @@ export class FilterBarComponent {
   private readonly _sheetOpen = signal(false);
   readonly sheetOpen = this._sheetOpen.asReadonly();
 
+  /* Facets are null while a listing's facets load (the shared CatalogService
+     clears them when the scope changes) or after a failed load; a group with
+     no values simply isn't rendered, leaving the Sort chip. */
   sizeValues() {
-    return this.facets()?.size.values ?? [];
+    return this.facets()?.size?.values ?? [];
   }
   colorValues() {
-    return this.facets()?.color.values ?? [];
+    return this.facets()?.color?.values ?? [];
   }
   priceValues() {
     // Facet price-band bounds arrive from the API as decimal STRINGS
@@ -374,7 +377,7 @@ export class FilterBarComponent {
     // with ===) and setPriceBand emits numeric min/max, catalog.service's
     // toQuery only forwards a bound when `typeof === 'number'`, so without
     // this the price filter silently does nothing.
-    return (this.facets()?.price.values ?? []).map((v) => ({
+    return (this.facets()?.price?.values ?? []).map((v) => ({
       ...v,
       min: v.min == null ? undefined : Number(v.min),
       max: v.max == null ? undefined : Number(v.max),

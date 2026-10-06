@@ -216,9 +216,11 @@ export class HomeComponent {
     return `/category/${slug}`;
   }
 
-  /** First letter of category name, uppercased, for the letter avatar fallback. */
+  /** First letter of category name, uppercased, for the letter avatar
+   *  fallback. First code point (Array.from), so an emoji / astral first
+   *  character never renders as half a surrogate pair. */
   initial(name: string): string {
-    return (name?.[0] || '?').toUpperCase();
+    return (Array.from((name ?? '').trim())[0] ?? '?').toUpperCase();
   }
 
   /** Resolve the icon URL for a category. Returns null for unmapped slugs. */

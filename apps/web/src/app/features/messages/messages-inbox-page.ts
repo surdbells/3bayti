@@ -126,7 +126,8 @@ export class MessagesInboxPageComponent implements OnInit {
 
   protected initial(c: ConversationSummary): string {
     const name = c.counterparty.name?.trim() ?? '';
-    return name !== '' ? name[0].toUpperCase() : '?';
+    // First code point, not the first UTF-16 unit (emoji-safe).
+    return (Array.from(name)[0] ?? '?').toUpperCase();
   }
 
   protected trackByUuid(_index: number, item: ConversationSummary): string {

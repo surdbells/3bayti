@@ -357,8 +357,10 @@ export class HeroCarouselComponent implements OnDestroy {
     return `/product/${slug}`;
   }
 
+  /** Code-point aware initial (emoji / astral first characters stay whole
+   *  instead of half a surrogate pair). */
   initial(name: string | undefined): string {
-    return (name?.[0] ?? '?').toUpperCase();
+    return (Array.from((name ?? '').trim())[0] ?? '?').toUpperCase();
   }
 
   /* ----- Internal: autoplay machinery ------------------------------ */

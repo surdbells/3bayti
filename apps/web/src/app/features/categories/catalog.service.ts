@@ -59,6 +59,12 @@ export interface CatalogPage {
   items: Product[];
   total: number;
   hasMore: boolean;
+  /**
+   * True when a newer loadProducts() / reset() superseded this call before
+   * it settled: the page was NOT applied to the accumulator (and a failure
+   * was swallowed rather than rethrown). Absent for an applied page.
+   */
+  stale?: boolean;
 }
 
 interface ProductsMeta {
@@ -91,6 +97,28 @@ interface ProductsMeta {
  * the URL query string) and passed in on each call; the service holds
  * only the result accumulator, not the filter state. This keeps the
  * service reusable and the URL the single source of truth for filters.
+ *
+ * Request sequencing
+ * ------------------
+ * The service is a ROOT singleton shared by every listing page, and a
+ * shopper can change filters (or click "load more") while an earlier
+ * request is still in flight. Each loadProducts() / loadFacets() call
+ * takes a sequence number (separate counters); when a call settles and
+ * is no longer the latest of its kind, its result is discarded without
+ * touching any state, so a slow superseded response can never overwrite
+ * or be appended to a newer listing. reset() / resetProducts() /
+ * resetFacets() also invalidate in-flight calls of the kind they clear.
+ *
+ * Scope vs filters
+ * ----------------
+ * Facets describe a listing SCOPE (category / collection / vendor /
+ * search / sale) and are kept across plain filter changes within that
+ * scope, so the filter bar's options don't flicker away on every click.
+ * reset() clears them (call it when the scope changes, e.g. on entering
+ * a page); resetProducts() keeps them (call it for a filter change on
+ * the same page). loadFacets() additionally drops facets that belong to
+ * a different scope before fetching, so a page can never show (or, on a
+ * failed load, keep) another page's size / colour / price options.
  */
 @Injectable({ providedIn: 'root' })
 export class CatalogService {
@@ -103,6 +131,13 @@ export class CatalogService {
   private readonly _isLoadingList = signal<boolean>(false);
   private readonly _isLoadingFacets = signal<boolean>(false);
 
+  /** Latest loadProducts() call; older calls settle as stale no-ops. */
+  private productsSeq = 0;
+  /** Latest loadFacets() call; older calls settle as stale no-ops. */
+  private facetsSeq = 0;
+  /** Scope key of the facets currently held (null = none held). */
+  private facetsScope: string | null = null;
+
   readonly products: Signal<Product[]> = this._products.asReadonly();
   readonly total: Signal<number> = this._total.asReadonly();
   readonly facets: Signal<Facets | null> = this._facets.asReadonly();
@@ -111,23 +146,54 @@ export class CatalogService {
   readonly hasMore = computed(() => this._lastPageHasMore());
   readonly loadedCount = computed(() => this._products().length);
 
-  /** Reset the accumulator (call before a fresh filter load). */
+  /**
+   * Full reset: clears the product accumulator AND the facets, and
+   * invalidates every in-flight product / facet load. Call it when the
+   * listing scope changes (entering a page, switching category or
+   * collection) so nothing from the previous scope can surface.
+   */
   reset(): void {
+    this.resetProducts();
+    this.resetFacets();
+  }
+
+  /**
+   * Clear only the product accumulator (and invalidate in-flight product
+   * loads), keeping the current facets. Call it before a fresh page-0 load
+   * after a filter change within the same scope.
+   */
+  resetProducts(): void {
+    this.productsSeq++;
     this._products.set([]);
     this._total.set(0);
     this._lastPageHasMore.set(false);
+    this._isLoadingList.set(false);
+  }
+
+  /** Clear the facets and invalidate in-flight facet loads. */
+  resetFacets(): void {
+    this.facetsSeq++;
+    this.facetsScope = null;
+    this._facets.set(null);
+    this._isLoadingFacets.set(false);
   }
 
   /**
    * Load a page of products for the given filters. When `append` is
    * false (default) the accumulator is replaced (fresh filter change);
    * when true the page is appended ("load more").
+   *
+   * Rejects when the LATEST call fails (the accumulator is left as it
+   * was). A call superseded by a newer loadProducts() / reset() before it
+   * settles resolves with `stale: true` and changes nothing, whether its
+   * request succeeded or failed.
    */
   async loadProducts(
     filters: CatalogFilters,
     page = 0,
     append = false,
   ): Promise<CatalogPage> {
+    const seq = ++this.productsSeq;
     this._isLoadingList.set(true);
     try {
       const query = {
@@ -143,13 +209,24 @@ export class CatalogService {
       const total = typeof meta.total === 'number' ? meta.total : items.length;
       const hasMore = meta.has_more === true;
 
+      if (seq !== this.productsSeq) {
+        return { items, total, hasMore, stale: true };
+      }
+
       this._products.set(append ? [...this._products(), ...items] : items);
       this._total.set(total);
       this._lastPageHasMore.set(hasMore);
 
       return { items, total, hasMore };
+    } catch (err) {
+      if (seq !== this.productsSeq) {
+        return { items: [], total: 0, hasMore: false, stale: true };
+      }
+      throw err;
     } finally {
-      this._isLoadingList.set(false);
+      if (seq === this.productsSeq) {
+        this._isLoadingList.set(false);
+      }
     }
   }
 
@@ -157,25 +234,55 @@ export class CatalogService {
    * Load facet counts for the given filters. Disjunctive semantics:
    * each facet's counts reflect what the user would get if they
    * switched that one dimension, so counts stay meaningful while
-   * filtering. Failure leaves the previous facets in place (filters
-   * still work without counts).
+   * filtering.
+   *
+   * Facets held for a different scope are dropped before the request, so
+   * the filter bar never shows another listing's options. Within the same
+   * scope a failure leaves the current facets in place (filters still
+   * work without fresh counts); after a scope change a failure leaves
+   * none. A superseded call settles without touching any state.
    */
   async loadFacets(filters: CatalogFilters): Promise<Facets | null> {
+    const seq = ++this.facetsSeq;
+    const scope = this.scopeKey(filters);
+    if (scope !== this.facetsScope) {
+      this.facetsScope = scope;
+      this._facets.set(null);
+    }
     this._isLoadingFacets.set(true);
     try {
       const res = await firstValueFrom(
         this.http.get<Facets>('GET /products/facets', { query: this.toQuery(filters) }),
       );
       const data = (res.data ?? null) as Facets | null;
+      if (seq !== this.facetsSeq) return data;
       if (data) {
         this._facets.set(data);
       }
       return data;
     } catch {
+      if (seq !== this.facetsSeq) return null;
       return this._facets();
     } finally {
-      this._isLoadingFacets.set(false);
+      if (seq === this.facetsSeq) {
+        this._isLoadingFacets.set(false);
+      }
     }
+  }
+
+  /**
+   * The listing scope a facet set describes: everything that changes the
+   * product universe rather than narrowing within it (size / colour /
+   * price / sort are filters inside a scope).
+   */
+  private scopeKey(filters: CatalogFilters): string {
+    return JSON.stringify([
+      filters.category || null,
+      filters.collection || null,
+      filters.vendor || null,
+      filters.q || null,
+      filters.sale === true,
+    ]);
   }
 
   /**

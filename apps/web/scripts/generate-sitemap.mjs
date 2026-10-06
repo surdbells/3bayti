@@ -19,6 +19,8 @@
  *                           per ENDPOINT_ROUTING.
  *   PRODUCT_API_BASE_URL  — products slug source. Default: v3.
  *   VENDOR_API_BASE_URL   — vendors slug source. Default: v3.
+ *   COLLECTION_API_BASE_URL — collections slug source (GET <base>/collections).
+ *                           Default: v3.
  *   API_BASE_URL          — legacy single-base fallback if specific
  *                           overrides above aren't set.
  *   SITE_URL              — optional, defaults to https://3bayti.ae
@@ -55,21 +57,24 @@ const CATEGORY_API_BASE = process.env.CATEGORY_API_BASE_URL || process.env.API_B
 const PRODUCT_API_BASE  = process.env.PRODUCT_API_BASE_URL  || process.env.API_BASE_URL || V3_API_BASE_URL;
 // Vendors still served by v3 (target='new' for both list + detail).
 const VENDOR_API_BASE   = process.env.VENDOR_API_BASE_URL   || process.env.API_BASE_URL || V3_API_BASE_URL;
+// Admin-curated collections are v3-only (GET /v3/collections, public list).
+const COLLECTION_API_BASE = process.env.COLLECTION_API_BASE_URL || process.env.API_BASE_URL || V3_API_BASE_URL;
 const SITE_URL = process.env.SITE_URL || 'https://3bayti.ae';
 const OUT_DIR  = process.env.OUTPUT_DIR || join(__dirname, '..', 'dist', '3bayti-web', 'browser');
 
 const STATIC_PAGES = [
   { loc: '/',          changefreq: 'weekly',  priority: '1.0' },
   { loc: '/category',  changefreq: 'weekly',  priority: '0.9' },
-  // Admin-curated collections index (/collection/:slug pages are linked from it).
+  // Admin-curated collections index. Per-collection (/collection/:slug)
+  // entries come from the collections loop below.
   { loc: '/collection', changefreq: 'weekly', priority: '0.8' },
   // /stores directory index (formerly /designer). Per-store
   // (/stores/:slug) entries come from the vendors loop below.
   { loc: '/stores',    changefreq: 'weekly',  priority: '0.8' },
 ];
 
-async function fetchSitemapDataFrom(baseUrl) {
-  const url = `${baseUrl}/sitemap-data`;
+/** GET a JSON document; any network / HTTP / parse failure → null (fail soft). */
+async function fetchJson(url) {
   try {
     const res = await fetch(url, { headers: { Accept: 'application/json' } });
     if (!res.ok) {
@@ -81,6 +86,20 @@ async function fetchSitemapDataFrom(baseUrl) {
     console.warn(`[sitemap] ${url} unreachable (${err.message})`);
     return null;
   }
+}
+
+async function fetchSitemapDataFrom(baseUrl) {
+  return fetchJson(`${baseUrl}/sitemap-data`);
+}
+
+/**
+ * Collections have no /sitemap-data entry; they come from the public list
+ * endpoint (GET <v3 base>/collections → { data: Collection[] }, active
+ * collections only, unpaginated). Returns the array, or null on failure.
+ */
+async function fetchCollectionsFrom(baseUrl) {
+  const json = await fetchJson(`${baseUrl}/collections`);
+  return Array.isArray(json?.data) ? json.data : null;
 }
 
 /**
@@ -100,14 +119,16 @@ async function fetchSitemapData() {
   const categorySrc = cache.get(CATEGORY_API_BASE);
   const productSrc  = cache.get(PRODUCT_API_BASE);
   const vendorSrc   = cache.get(VENDOR_API_BASE);
+  const collectionSrc = await fetchCollectionsFrom(COLLECTION_API_BASE);
 
-  if (!categorySrc && !productSrc && !vendorSrc) {
+  if (!categorySrc && !productSrc && !vendorSrc && !collectionSrc) {
     return null;  // All bases unreachable — caller falls back.
   }
   return {
-    categories: categorySrc?.categories || [],
-    products:   productSrc?.products    || [],
-    vendors:    vendorSrc?.vendors      || [],
+    categories:  categorySrc?.categories || [],
+    products:    productSrc?.products    || [],
+    vendors:     vendorSrc?.vendors      || [],
+    collections: collectionSrc           || [],
   };
 }
 
@@ -192,11 +213,28 @@ async function main() {
         priority: '0.6',
       });
     }
+    /*
+     * Admin-curated collection pages (/collection/:slug, slug only). Only
+     * collections with storefront-visible products are advertised, the
+     * same rule the storefront uses to show a collection card, so crawlers
+     * are never sent to an empty collection page.
+     */
+    let collectionCount = 0;
+    for (const collection of apiData.collections || []) {
+      if (!collection?.slug || !(Number(collection.product_count) > 0)) continue;
+      entries.push({
+        loc: `${SITE_URL}/collection/${collection.slug}`,
+        changefreq: 'weekly',
+        priority: '0.7',
+      });
+      collectionCount++;
+    }
     console.log(
       `[sitemap] ${entries.length} URLs total `
       + `(${apiData.categories?.length || 0} categories, `
       + `${apiData.products?.length || 0} products, `
-      + `${apiData.vendors?.length || 0} stores)`
+      + `${apiData.vendors?.length || 0} stores, `
+      + `${collectionCount} collections)`
     );
   } else {
     console.log(`[sitemap] static-only mode: ${entries.length} URLs`);

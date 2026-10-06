@@ -69,9 +69,24 @@
               </div>
             }
 
+            <!-- Listing failed (network / server): distinct from "no match" -->
+            @if (!isLoadingGrid() && showListError()) {
+              <div class="grid-empty grid-error" role="alert" data-testid="category-list-error">
+                <p class="grid-empty__title">{{ 'categories.listError.title' | translate }}</p>
+                <p class="grid-empty__hint">{{ 'categories.listError.body' | translate }}</p>
+                <button
+                  class="load-more-btn"
+                  type="button"
+                  (click)="retryListing()"
+                  data-testid="category-list-retry">
+                  {{ 'categories.retry' | translate }}
+                </button>
+              </div>
+            }
+
             <!-- Empty state -->
-            @if (!isLoadingGrid() && products().length === 0) {
-              <div class="grid-empty">
+            @if (!isLoadingGrid() && products().length === 0 && !showListError()) {
+              <div class="grid-empty" data-testid="category-empty">
                 <p class="grid-empty__title">{{ 'categories.emptyTitle' | translate }}</p>
                 <p class="grid-empty__hint">{{ 'categories.emptyHint' | translate }}</p>
               </div>
@@ -88,17 +103,43 @@
               <!-- Load more / total indicator -->
               <div class="grid-footer">
                 <p class="grid-count">
-                  {{ 'categories.showing' | translate:{ shown: products().length, total: catalogTotal() } }}
+                  {{ 'categories.showing' | translate:{ shown: products().length, total: totalProducts() } }}
                 </p>
                 @if (hasMore()) {
-                  <button
-                    class="load-more-btn"
-                    type="button"
-                    (click)="loadMore()"
-                    [disabled]="isLoadingGrid()"
-                    [attr.aria-label]="'categories.loadMoreAria' | translate">
-                    {{ isLoadingGrid() ? ('categories.loading' | translate) : ('categories.loadMore' | translate) }}
-                  </button>
+                  @if (loadMoreFailed()) {
+                    <div class="load-more-error" role="alert" data-testid="category-load-more-error">
+                      <p class="load-more-error__text">{{ 'categories.loadMoreError' | translate }}</p>
+                      <button
+                        class="load-more-btn"
+                        type="button"
+                        (click)="loadMore()"
+                        [disabled]="isLoadingGrid()"
+                        [attr.aria-label]="'categories.loadMoreAria' | translate"
+                        data-testid="category-load-more-retry">
+                        {{ 'categories.retry' | translate }}
+                      </button>
+                    </div>
+                  } @else {
+                    <button
+                      class="load-more-btn"
+                      type="button"
+                      (click)="loadMore()"
+                      [disabled]="isLoadingGrid()"
+                      [attr.aria-label]="'categories.loadMoreAria' | translate">
+                      {{ isLoadingGrid() ? ('categories.loading' | translate) : ('categories.loadMore' | translate) }}
+                    </button>
+                  }
+                } @else if (showFallbackRetry()) {
+                  <div class="load-more-error" role="alert" data-testid="category-fallback-error">
+                    <p class="load-more-error__text">{{ 'categories.loadMoreError' | translate }}</p>
+                    <button
+                      class="load-more-btn"
+                      type="button"
+                      (click)="retryListing()"
+                      data-testid="category-fallback-retry">
+                      {{ 'categories.retry' | translate }}
+                    </button>
+                  </div>
                 }
               </div>
             }

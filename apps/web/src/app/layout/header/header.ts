@@ -265,9 +265,10 @@ export class HeaderComponent {
     return categoryIconUrl(slug);
   }
 
-  /** Uppercase first letter of a category name, for the icon fallback. */
+  /** Uppercase first letter of a category name, for the icon fallback.
+   *  Code-point aware (emoji / astral first characters stay whole). */
   protected categoryInitial(name: string): string {
-    return (name?.trim()?.[0] ?? '·').toUpperCase();
+    return (Array.from((name ?? '').trim())[0] ?? '·').toUpperCase();
   }
 
   /** Toggle the mobile drawer. */

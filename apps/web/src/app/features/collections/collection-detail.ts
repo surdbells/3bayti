@@ -136,7 +136,17 @@ export class CollectionDetailComponent {
    */
   private readonly catalogState = signal<'idle' | 'loading' | 'ready' | 'failed'>('idle');
   private readonly catalogReady = computed(() => this.catalogState() === 'ready');
+  /** Bumped per catalog (re)load; a settling call that no longer matches is ignored. */
   private loadToken = 0;
+  /** Collection slug the shared CatalogService last loaded a listing for. */
+  private loadedScope: string | null = null;
+  /** Bumped by retryListing() to re-run the catalog effect for the same slug + filters. */
+  private readonly reloadTick = signal(0);
+
+  /** The page-0 listing request failed (network / 5xx), as opposed to matching nothing. */
+  readonly listFailed = computed(() => this.catalogState() === 'failed');
+  /** The last "load more" failed; the footer offers an inline retry. */
+  readonly loadMoreFailed = signal(false);
 
   /** Whether the shopper has narrowed the listing (any non-default filter). */
   readonly hasUserFilters = computed(() => {
@@ -168,15 +178,35 @@ export class CollectionDetailComponent {
 
   readonly hasMore = computed(() => this.catalogReady() && this.catalogHasMore());
 
-  /** Nothing to show and nothing pending → the empty state. */
+  /**
+   * Nothing to show and nothing pending → the empty state. Only a listing
+   * that actually loaded (or the unfiltered embedded view) can be "empty";
+   * a failed listing gets the distinct error state below instead, so a
+   * network error is never presented as "no products match your filters".
+   */
   readonly showEmpty = computed(() => {
     if (this.products().length > 0) return false;
     const state = this.catalogState();
-    return state === 'ready' || state === 'failed' || (state === 'idle' && !this.hasUserFilters());
+    return state === 'ready' || (state === 'idle' && !this.hasUserFilters());
   });
 
+  /** The listing failed and there is nothing to fall back to → error + retry. */
+  readonly showListError = computed(() => this.listFailed() && this.products().length === 0);
+
   /** Nothing to show yet but a listing is on its way → shimmer cards. */
-  readonly showSkeleton = computed(() => this.products().length === 0 && !this.showEmpty());
+  readonly showSkeleton = computed(
+    () => this.products().length === 0 && !this.showEmpty() && !this.showListError(),
+  );
+
+  /**
+   * The listing failed but the embedded first page is on screen (unfiltered
+   * view) and the collection holds more than that: no "load more" is
+   * possible, so the footer offers a retry of the listing instead.
+   */
+  readonly showFallbackRetry = computed(
+    () => this.listFailed() && this.products().length > 0
+      && this.products().length < this.collectionTotal(),
+  );
 
   /** Current page index (used to calculate the offset for load-more). */
   private _page = signal(0);
@@ -239,21 +269,46 @@ export class CollectionDetailComponent {
         });
       });
 
-    // Drive catalog + facets whenever the slug or filters change.
+    // Drive catalog + facets whenever the slug, filters or a retry change.
     effect(() => {
       const filters = this.currentFilters();
-      if (!filters.collection || this.notFound()) return;
+      this.reloadTick();
+      // List products only for a collection whose header actually loaded:
+      // a 404 (notFound), a failed fetch (loadError) or a header still on its
+      // way renders its own state with no grid, so GET /products and
+      // /products/facets would be wasted calls. The header embeds the first
+      // page of products, so the unfiltered grid doesn't wait on this.
+      const headerReady = this.collection() !== null && !this.notFound() && !this.loadError();
       const token = ++this.loadToken;
       this._page.set(0);
+      this.loadMoreFailed.set(false);
+      if (!filters.collection || !headerReady) {
+        this.catalogState.set('idle');
+        return;
+      }
       this.catalogState.set('loading');
-      this.catalog.reset();
+      // A new collection is a new scope: drop the previous listing AND its
+      // facets. A filter change within the same collection keeps the facets
+      // so the filter bar's options don't flicker while counts refresh.
+      if (filters.collection !== this.loadedScope) {
+        this.loadedScope = filters.collection;
+        this.catalog.reset();
+      } else {
+        this.catalog.resetProducts();
+      }
       this.catalog.loadProducts(filters, 0, false).then(
         () => { if (token === this.loadToken) this.catalogState.set('ready'); },
-        // Listing failed: fall back to the embedded products (unfiltered view).
+        // Listing failed: the unfiltered view falls back to the embedded
+        // products; a filtered view shows the "couldn't load" error state.
         () => { if (token === this.loadToken) this.catalogState.set('failed'); },
       );
       void this.catalog.loadFacets(filters);
     });
+  }
+
+  /** Re-run the page-0 listing (+ facets) after a failure. */
+  retryListing(): void {
+    this.reloadTick.update((n) => n + 1);
   }
 
   /** Called by the filter bar; writes the new filter state to the URL. */
@@ -272,11 +327,27 @@ export class CollectionDetailComponent {
     });
   }
 
-  /** Load the next page and append to the grid. */
+  /**
+   * Load the next page and append to the grid. Never rejects: on failure
+   * the page index is rolled back (so the retry re-requests the same page
+   * instead of skipping one) and the footer shows an inline retry.
+   */
   async loadMore(): Promise<void> {
-    const nextPage = this._page() + 1;
+    if (this.isLoadingGrid()) return;
+    const token = this.loadToken;
+    const prevPage = this._page();
+    const nextPage = prevPage + 1;
     this._page.set(nextPage);
-    await this.catalog.loadProducts(this.currentFilters(), nextPage, true);
+    this.loadMoreFailed.set(false);
+    try {
+      await this.catalog.loadProducts(this.currentFilters(), nextPage, true);
+    } catch {
+      // A filter / slug change since the click already restarted paging
+      // from page 0; only roll back the page this call advanced.
+      if (token !== this.loadToken) return;
+      this._page.set(prevPage);
+      this.loadMoreFailed.set(true);
+    }
   }
 
   // ── Private ──────────────────────────────────────────────────────

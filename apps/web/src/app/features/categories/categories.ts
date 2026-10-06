@@ -116,9 +116,11 @@ export class CategoriesComponent {
 
   /**
    * First letter of the category name, uppercased, for the letter
-   * fallback avatar. Defensive against empty strings.
+   * fallback avatar. Defensive against empty strings, and takes the first
+   * code point (Array.from) so an emoji / astral first character never
+   * renders as half a surrogate pair.
    */
   initial(name: string): string {
-    return (name?.[0] || '?').toUpperCase();
+    return (Array.from((name ?? '').trim())[0] ?? '?').toUpperCase();
   }
 }
