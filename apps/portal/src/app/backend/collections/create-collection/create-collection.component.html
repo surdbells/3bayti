@@ -13,7 +13,10 @@
           </button>
           <span class="ax-page-header-eyebrow">Catalog</span>
           <h1 class="ax-page-title">Create collection</h1>
-          <p class="ax-page-subtitle">Group products for campaigns, seasonal curations, or landing pages.</p>
+          <p class="ax-page-subtitle">
+            Collections are admin-curated groups of products shown on the storefront (e.g. seasonal edits,
+            bestsellers, gift guides). Create it here, then pick its products on the next screen.
+          </p>
         </div>
       </header>
 
@@ -28,8 +31,21 @@
               type="text"
               class="ax-input"
               [(ngModel)]="create.collection"
+              (keydown.enter)="createCollection()"
               placeholder="e.g. Ramadan 2026, Bestsellers, New Arrivals" />
-            <span class="ax-hint">Vendors will see this when tagging products.</span>
+            <span class="ax-hint">Shown to customers as the collection's title on the storefront.</span>
+          </div>
+
+          <div class="ax-form-field ax-mb-4">
+            <label class="ax-label" for="collection_description">Description</label>
+            <textarea
+              id="collection_description"
+              name="description"
+              rows="3"
+              class="ax-textarea"
+              [(ngModel)]="create.description"
+              placeholder="Optional short intro for the collection page"></textarea>
+            <span class="ax-hint">Optional. Shown on the storefront collection page.</span>
           </div>
 
           <div class="ax-flex ax-gap-2 ax-justify-end">
@@ -50,5 +66,6 @@
             </button>
           </div>
         </div>
-      </section>  </div>
+      </section>
+  </div>
 </app-admin-shell>

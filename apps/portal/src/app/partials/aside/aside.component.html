@@ -296,6 +296,12 @@
             <span class="ax-sidenav-link-label">OTP providers</span>
           </a>
         </li>
+        <li *axCan="'settings.view'">
+          <a routerLink="/admin/notification-settings" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+            <app-icon name="toggle_on" aria-hidden="true"></app-icon>
+            <span class="ax-sidenav-link-label">Notification settings</span>
+          </a>
+        </li>
         <li *axCan="'audit.view'">
           <a routerLink="/admin/audit-logs" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="receipt_long" aria-hidden="true"></app-icon>

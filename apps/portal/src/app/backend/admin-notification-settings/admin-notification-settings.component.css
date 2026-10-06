@@ -1,0 +1,73 @@
+.ns-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.ns-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.ns-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.ns-desc {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ax-color-text-secondary);
+  max-width: 44rem;
+}
+.ns-desc--note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  color: var(--ax-color-text-tertiary);
+}
+
+.ns-switch {
+  flex: 0 0 auto;
+  margin-top: 0.125rem;
+}
+.ns-switch-text {
+  font-size: 0.8125rem;
+  color: var(--ax-color-text-secondary);
+  min-width: 3.75rem;
+}
+
+.ns-warn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ax-color-text-secondary);
+  border-top: 1px solid var(--ax-color-border-subtle);
+  background: var(--ax-color-bg-muted);
+}
+
+.ns-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  color: var(--ax-color-text-secondary);
+  text-align: center;
+}
+.ns-error p {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 540px) {
+  .ns-switch-text {
+    display: none;
+  }
+}

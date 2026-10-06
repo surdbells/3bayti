@@ -1,0 +1,84 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to dashboard
+        </button>
+        <span class="ax-page-header-eyebrow">System</span>
+        <h1 class="ax-page-title">Notification settings</h1>
+        <p class="ax-page-subtitle">
+          Control which order updates customers receive. Changes apply to the next status change — no redeploy.
+        </p>
+      </div>
+      <div class="ax-page-header-actions" *axCan="'settings.edit'">
+        <button type="button" class="ax-btn ax-btn-primary" [disabled]="saving() || loading() || loadError() || !dirty()" (click)="save()">
+          <app-icon name="save" aria-hidden="true"></app-icon>
+          {{ saving() ? 'Saving…' : 'Save changes' }}
+        </button>
+      </div>
+    </header>
+
+    <div *ngIf="loading()" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner" aria-label="Loading"></span>
+    </div>
+
+    <section *ngIf="!loading() && loadError()" class="ax-card ns-error" role="alert">
+      <app-icon name="error" aria-hidden="true"></app-icon>
+      <h2 class="ax-h6 ax-m-0">Couldn't load notification settings</h2>
+      <p>
+        The current value is unknown, so it can't be shown or changed until it loads.
+      </p>
+      <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="load()">
+        <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+      </button>
+    </section>
+
+    <section *ngIf="!loading() && !loadError()" class="ax-card ax-p-0">
+      <div class="ax-p-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+        <h2 class="ax-h6 ax-m-0">Customer order updates</h2>
+        <p class="ax-text-2xs ax-text-tertiary ax-m-0 ax-mt-1">
+          Email + push notifications sent to customers about their orders.
+        </p>
+      </div>
+
+      <div class="ns-row" [class.ns-row--on]="suppressVendorItemStatus()">
+        <div class="ns-meta">
+          <div class="ns-name">
+            <span class="ax-font-medium" id="ns-suppress-label">Pause per-item order updates to customers</span>
+            <span *ngIf="suppressVendorItemStatus(); else liveBadge" class="ax-badge ax-badge-warning">paused</span>
+            <ng-template #liveBadge>
+              <span class="ax-badge ax-badge-success">sending</span>
+            </ng-template>
+            <span *ngIf="dirty()" class="ax-badge ax-badge-info">unsaved</span>
+          </div>
+          <p class="ns-desc" id="ns-suppress-desc">
+            When on, customers stop getting an email + push each time a vendor accepts, prepares, ships,
+            delivers or rejects an individual item. This avoids flooding customers on multi-vendor orders,
+            where every store's item updates arrive separately.
+          </p>
+          <p class="ns-desc ns-desc--note">
+            <app-icon name="info" aria-hidden="true"></app-icon>
+            Order-level updates and changes made by an admin still notify the customer either way.
+          </p>
+        </div>
+
+        <label class="ax-switch ax-switch-lg ns-switch">
+          <input type="checkbox"
+                 [checked]="suppressVendorItemStatus()"
+                 [disabled]="!canEdit() || saving()"
+                 (change)="toggleSuppress()"
+                 aria-labelledby="ns-suppress-label"
+                 aria-describedby="ns-suppress-desc" />
+          <span class="ax-switch-track" aria-hidden="true"></span>
+          <span class="ax-switch-label ns-switch-text">{{ suppressVendorItemStatus() ? 'Paused' : 'Sending' }}</span>
+        </label>
+      </div>
+
+      <div *ngIf="!canEdit()" class="ax-p-4 ax-text-2xs ns-warn">
+        <app-icon name="lock" aria-hidden="true"></app-icon>
+        You can view this setting but need the settings.edit permission to change it.
+      </div>
+    </section>
+  </div>
+</app-admin-shell>

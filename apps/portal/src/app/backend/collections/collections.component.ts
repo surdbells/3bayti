@@ -11,6 +11,9 @@ import { apiErrorMessage } from '../../shared/http/api-error';
 import { GlobalComponent } from '../../global-component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { AxConfirmService } from '../../shared/overlays/ax-confirm.service';
+import { AxCanDirective } from '../../shared/security/ax-can.directive';
+import { PermissionService } from '../../services/permission.service';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -24,12 +27,18 @@ interface CollectionRow extends Record<string, unknown> {
   id: number;
   label: string;
   is_active: boolean;
+  display_order: number | null;
 }
 
+/**
+ * Admin "Collections" list — admin-curated storefront collections. Each row
+ * opens the edit page (fields + product curation) by its v3 id; delete removes
+ * the collection and its curated product list (the products themselves stay).
+ */
 @Component({
   selector: 'app-collections',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, RouterLink, AxDataTableComponent, AxCellDirective, IconComponent],
+  imports: [AdminShellComponent, CommonModule, RouterLink, AxDataTableComponent, AxCellDirective, IconComponent, AxCanDirective],
   templateUrl: './collections.component.html',
   styleUrl: './collections.component.css',
 })
@@ -49,6 +58,8 @@ export class CollectionsComponent implements OnInit {
     private navHistory: NavigationHistoryService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
+    private confirm: AxConfirmService,
+    private perms: PermissionService,
   ) {}
 
   ngOnInit() {
@@ -59,6 +70,7 @@ export class CollectionsComponent implements OnInit {
   }
 
   private buildTable() {
+    const canManage = () => this.perms.can('catalog.collections_manage');
     this.dataSource = new AxServerDataSource<CollectionRow>((q) => this.fetchCollections(q));
     this.config = {
       tableId: 'admin-collections',
@@ -71,13 +83,20 @@ export class CollectionsComponent implements OnInit {
       stickyHeader: true,
       hover: true,
       emptyTitle: 'No collections',
-      emptyDescription: 'Create your first collection to group products.',
+      emptyDescription: 'Create your first collection, then add the products it should show on the storefront.',
       export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'collections' },
       columns: [
         { key: 'label', label: 'Name', sortable: true, sticky: 'left', width: '20rem' },
+        {
+          key: 'display_order', label: 'Display order', align: 'center', hideOnMobile: true,
+          value: (r) => (r.display_order != null ? String(r.display_order) : '—'),
+        },
         { key: 'is_active', label: 'Status', align: 'center', value: (r) => (r.is_active ? 'Active' : 'Inactive') },
       ],
-      rowActions: [{ id: 'edit', label: 'Edit', icon: 'edit' }],
+      rowActions: [
+        { id: 'edit', label: 'Edit', icon: 'edit', can: canManage },
+        { id: 'delete', label: 'Delete', icon: 'delete', variant: 'danger', can: canManage },
+      ],
     };
   }
 
@@ -95,6 +114,7 @@ export class CollectionsComponent implements OnInit {
           id: c.id,
           label: c.name ?? c.collection ?? '—',
           is_active: c.is_active ?? false,
+          display_order: c.display_order ?? null,
         } as CollectionRow));
         return { rows, total: response?.meta?.total ?? rows.length };
       }),
@@ -106,11 +126,34 @@ export class CollectionsComponent implements OnInit {
   }
 
   onRowAction(e: { action: { id: string }; row: CollectionRow }) {
-    if (e.action.id === 'edit') {
-      this.router.navigate(['/edit_collection'], {
-        queryParams: { id: e.row.id, label: e.row.label, active: e.row.is_active },
-      });
+    switch (e.action.id) {
+      case 'edit':
+        this.router.navigate(['/admin/collections/edit'], { queryParams: { id: e.row.id } });
+        return;
+      case 'delete':
+        this.confirmDelete(e.row);
+        return;
     }
+  }
+
+  private confirmDelete(row: CollectionRow): void {
+    this.confirm.confirm({
+      title: 'Delete collection',
+      message: `Delete collection "${row.label}"? Its product list is removed; the products themselves are not deleted.`,
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      variant: 'danger',
+    }).then((ok) => { if (ok) this.deleteCollection(row); });
+  }
+
+  private deleteCollection(row: CollectionRow): void {
+    this.adapter.delete_v3('DELETE /admin/collections/:id', { params: { id: String(row.id) } }).subscribe({
+      next: () => {
+        this.toast.success(`Collection "${row.label}" deleted.`);
+        this.dataSource.retry();
+      },
+      error: (err: any) => this.toast.error(apiErrorMessage(err, 'Unable to delete the collection.')),
+    });
   }
 
   goBack() { this.navHistory.back('/backend'); }

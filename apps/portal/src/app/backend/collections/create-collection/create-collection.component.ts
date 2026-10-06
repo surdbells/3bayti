@@ -9,6 +9,12 @@ import { FormsModule } from '@angular/forms';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
+
+/**
+ * Create an admin-curated storefront collection (name + optional
+ * description). On success the admin lands on the edit page for the new
+ * collection to curate its products.
+ */
 @Component({
   selector: 'app-create-collection',
   standalone: true,
@@ -30,7 +36,7 @@ export class CreateCollectionComponent implements OnInit {
     is_vendor: false, is_customer: false,
   };
 
-  create = { id: 0, token: '', collection: '' };
+  create = { collection: '', description: '' };
 
   constructor(
     private router: Router,
@@ -42,12 +48,10 @@ export class CreateCollectionComponent implements OnInit {
   ngOnInit() {
     this.session_data = sessionStorage.getItem('SESSION');
     this.user_session = GlobalComponent.decodeBase64(this.session_data);
-    this.create.id = this.user_session.id;
-    this.create.token = this.user_session.token;
   }
 
   goBack() {
-    this.navHistory.back('/collections');
+    this.navHistory.back('/admin/collections');
   }
 
   error_notification(message: string) {
@@ -59,24 +63,35 @@ export class CreateCollectionComponent implements OnInit {
   }
 
   createCollection() {
-    if (this.create.collection.length === 0) {
+    if (this.ui_controls.is_loading) return;
+    const name = this.create.collection.trim();
+    if (name.length === 0) {
       this.error_notification('Collection name cannot be empty');
       return;
     }
+    const body: { name: string; description?: string } = { name };
+    const description = this.create.description.trim();
+    if (description) body.description = description;
+
     this.ui_controls.is_loading = true;
-    this.adapter.post_v3('POST /admin/collections', { name: this.create.collection }).subscribe({
+    this.adapter.post_v3('POST /admin/collections', body).subscribe({
       next: (response: any) => {
         this.ui_controls.is_loading = false;
-        if (response) {
-          this.success_notification(response.message);
-          this.router.navigate(['/collections']).then(r => console.log(r));
-        } else if (false) {
-          this.error_notification(response.message);
+        const created = response?.data ?? response;
+        const id = Number(created?.id);
+        if (Number.isFinite(id) && id > 0) {
+          this.success_notification('Collection created — now add products.');
+          // replaceUrl: "Back" from the edit page returns to the list, not
+          // to this (now finished) create form.
+          this.router.navigate(['/admin/collections/edit'], { queryParams: { id }, replaceUrl: true });
+        } else {
+          // Created, but the response carried no id to deep-link to.
+          this.success_notification('Collection created.');
+          this.router.navigate(['/admin/collections']);
         }
       },
       error: (e: any) => {
-        console.error(e);
-        this.error_notification(apiErrorMessage(e, 'Unable to complete your request at this time.'));
+        this.error_notification(apiErrorMessage(e, 'Unable to create the collection.'));
         this.ui_controls.is_loading = false;
       },
     });

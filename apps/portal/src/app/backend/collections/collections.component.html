@@ -7,10 +7,10 @@
         </button>
         <span class="ax-page-header-eyebrow">Catalog</span>
         <h1 class="ax-page-title">Collections</h1>
-        <p class="ax-page-subtitle">Curated groups of products.</p>
+        <p class="ax-page-subtitle">Admin-curated groups of products shown on the storefront. Active collections appear in display order.</p>
       </div>
-      <div class="ax-flex ax-gap-2 ax-items-center">
-        <a routerLink="/create_collections" class="ax-btn ax-btn-primary ax-btn-sm">
+      <div class="ax-flex ax-gap-2 ax-items-center" *axCan="'catalog.collections_manage'">
+        <a routerLink="/admin/collections/new" class="ax-btn ax-btn-primary ax-btn-sm">
           <app-icon name="add" aria-hidden="true"></app-icon> New collection
         </a>
       </div>

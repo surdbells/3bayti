@@ -1,0 +1,5 @@
+.ax-textarea {
+  resize: vertical;
+  min-height: 5rem;
+  font-family: inherit;
+}

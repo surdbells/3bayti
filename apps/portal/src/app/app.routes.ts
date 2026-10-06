@@ -207,6 +207,15 @@ export const routes: Routes = [
     title: 'OTP providers'
   },
   {
+    // Customer-notification switches (e.g. pause per-item vendor status
+    // updates). Viewable with settings.view; Save is gated to settings.edit
+    // inside the page.
+    path: 'admin/notification-settings',
+    loadComponent: () => import('./backend/admin-notification-settings/admin-notification-settings.component').then(m => m.AdminNotificationSettingsComponent),
+    canActivate: [adminGuard, requirePermission('settings.view')],
+    title: 'Notification settings'
+  },
+  {
     path: 'admin/audit-logs',
     loadComponent: () => import('./backend/audit-logs/audit-logs.component').then(m => m.AuditLogsComponent),
     canActivate: [adminGuard, requirePermission('audit.view')],
