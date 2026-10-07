@@ -1,12 +1,16 @@
-import { Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { of, Subject } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import imageCompression from 'browser-image-compression';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { ImageUploadService } from '../../services/image-upload.service';
 import { HotToastService } from '../toast/toast.service';
+import { apiErrorMessage } from '../http/api-error';
 import { GlobalComponent } from '../../global-component';
 import { Category } from '../../class/category';
 import { Labels } from '../../class/labels';
@@ -103,6 +107,12 @@ const SIZE_MAP: Record<string, string> = {
  *   - adminMode=true         , targets the /admin/products write API and
  *                               shows a required vendor/store selector
  *                               (admins create/edit on behalf of a vendor).
+ *                               Labels are store-scoped: admin mode lists and
+ *                               creates the TARGET store's labels
+ *                               (GET/POST /admin/vendors/:id/labels) - on edit
+ *                               the product's store, on create the selected
+ *                               store - never the admin's own session store.
+ *                               Vendor mode uses GET/POST /vendor/labels.
  *   - productId              , when editing, the product to load.
  *
  * The component owns the entire form (fields, images, colors, sizes,
@@ -147,6 +157,7 @@ export class ProductFormComponent implements OnInit {
   @Output() saved = new EventEmitter<void>();
 
   private readonly confirm = inject(AxConfirmService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // ── Lookup data ───────────────────────────────────────────────
   category?: Category[];
@@ -156,6 +167,18 @@ export class ProductFormComponent implements OnInit {
   /** Admin edit only: the owning store's name, shown read-only (a product's
    *  store is fixed and can't be reassigned from the editor). */
   editVendorName = '';
+
+  // ── Store labels (admin mode: the target store's, via the admin API) ──
+  /** Admin mode: the store whose labels are listed (0 = none chosen yet). */
+  labelsStoreId = 0;
+  labelsLoading = false;
+  labelsError = '';
+  /** Edit only: the label stored on the product when it loaded (null = none). */
+  currentLabelId: number | null = null;
+  /** Admin label loads, switchMap'd so a late response for a previously
+   *  selected store never replaces the current store's list. */
+  private readonly storeLabels$ = new Subject<number>();
+
   /** Store selector options (searchable combobox). */
   get vendorOptions(): AxComboboxOption[] {
     return this.vendors.map((v) => ({ id: v.id, label: v.name }));
@@ -235,10 +258,19 @@ export class ProductFormComponent implements OnInit {
     this.vendor_label_create.token = this.user_session.token;
 
     this.fetchCategory();
-    this.fetchVendorLabels();
-    if (this.adminMode) this.fetchVendors();
-    // Pre-select the store when an admin creates from a specific store's page.
-    if (this.adminMode && this.mode === 'create' && this.vendorId) this.model.vendor_id = this.vendorId;
+    if (this.adminMode) {
+      this.watchStoreLabels();
+      this.fetchVendors();
+      // Pre-select the store when an admin creates from a specific store's
+      // page, and list that store's labels. (On edit the labels load once the
+      // product, and so its store, is known.)
+      if (this.mode === 'create' && this.vendorId) {
+        this.model.vendor_id = this.vendorId;
+        this.loadStoreLabels(this.vendorId);
+      }
+    } else {
+      this.fetchVendorLabels();
+    }
     if (this.mode === 'edit' && (this.productId || this.productSlug)) this.fetchProductById();
   }
 
@@ -258,15 +290,96 @@ export class ProductFormComponent implements OnInit {
         if (response) this.category = response.data;
         if (this.mode !== 'edit') this.ui.page_loading = false;
       },
+      error: (err: unknown) => this.toast.error(apiErrorMessage(err, 'Unable to load categories.')),
     });
   }
 
+  /** Vendor mode: the signed-in vendor's own store labels. */
   fetchVendorLabels(): void {
     this.adapter.get_v3('GET /vendor/labels').subscribe({
       next: (response: any) => {
         if (response?.data) this.labels = Array.isArray(response.data) ? response.data : [];
       },
     });
+  }
+
+  /** Admin mode: wire the label stream for the target store. */
+  private watchStoreLabels(): void {
+    this.storeLabels$
+      .pipe(
+        switchMap((storeId) =>
+          this.adapter.get_v3('GET /admin/vendors/:id/labels', { params: { id: String(storeId) } }).pipe(
+            map((res: any) => ({ storeId, res, err: null as unknown })),
+            catchError((err: unknown) => of({ storeId, res: null as any, err })),
+          ),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(({ storeId, res, err }) => {
+        if (storeId !== this.labelsStoreId) return;
+        this.labelsLoading = false;
+        if (err) {
+          this.labels = [];
+          this.labelsError = apiErrorMessage(err, "Unable to load this store's labels.");
+          return;
+        }
+        const raw = res?.data ?? res;
+        this.labels = Array.isArray(raw) ? raw : [];
+        // Create: a selected label must belong to this store (the API 422s
+        // otherwise). Edit keeps the product's own label even when it's no
+        // longer active: re-sending it is an accepted no-op.
+        const selected = Number(this.model.label) || 0;
+        if (!this.isEdit && selected && !this.labels.some((l) => Number(l.id) === selected)) {
+          this.model.label = 0;
+        }
+      });
+  }
+
+  /** Admin mode: list the labels of store `storeId` (0 clears the list). */
+  loadStoreLabels(storeId: number): void {
+    this.labelsStoreId = storeId > 0 ? storeId : 0;
+    this.labelsError = '';
+    if (!this.labelsStoreId) {
+      this.labels = [];
+      this.labelsLoading = false;
+      return;
+    }
+    this.labels = undefined;
+    this.labelsLoading = true;
+    this.storeLabels$.next(this.labelsStoreId);
+  }
+
+  /**
+   * Admin create: the store changed. A label belongs to exactly one store, so
+   * a label picked for the previous store is cleared, and the new store's
+   * labels are listed.
+   */
+  onVendorChange(value: string | number | null): void {
+    const id = Number(value) || 0;
+    const prev = Number(this.model.vendor_id) || 0;
+    this.model.vendor_id = id || null;
+    if (id === prev) return;
+    this.model.label = 0;
+    this.vendor_label_create.label = '';
+    this.loadStoreLabels(id);
+  }
+
+  /** Name of the store whose labels are listed (admin mode). */
+  get labelsStoreName(): string {
+    if (!this.labelsStoreId) return '';
+    if (this.isEdit && this.editVendorName && this.editVendorName !== '—') return this.editVendorName;
+    return this.vendors.find((v) => Number(v.id) === this.labelsStoreId)?.name ?? `Store #${this.labelsStoreId}`;
+  }
+
+  /** Edit: the product's stored label is not among the store's active labels. */
+  get currentLabelInactive(): boolean {
+    return this.currentLabelId != null && Array.isArray(this.labels)
+      && !this.labels.some((l) => Number(l.id) === this.currentLabelId);
+  }
+
+  /** Admin mode needs a target store before a label can be created. */
+  get labelCreateBlocked(): boolean {
+    return this.adminMode && !this.labelsStoreId;
   }
 
   fetchVendors(): void {
@@ -277,6 +390,7 @@ export class ProductFormComponent implements OnInit {
           .map((v: any) => ({ id: v.id, name: v.name ?? v.store_name ?? `Store #${v.id}` }))
           .sort((a, b) => a.name.localeCompare(b.name));
       },
+      error: (err: unknown) => this.toast.error(apiErrorMessage(err, 'Unable to load the store list.')),
     });
   }
 
@@ -326,9 +440,11 @@ export class ProductFormComponent implements OnInit {
         this.model.delivery_note = di.note ?? '';
         this.model.status = p.status ?? 'active';
         if (this.adminMode) {
-          this.model.vendor_id = p.vendor?.id ?? p.vendor_id ?? null;
+          this.model.vendor_id = Number(p.vendor?.id ?? p.vendor_id) || null;
           this.editVendorName = p.store_name ?? p.vendor?.name
             ?? (this.model.vendor_id ? `Store #${this.model.vendor_id}` : '—');
+          // Labels are the PRODUCT's store's (a product's store is fixed).
+          this.loadStoreLabels(this.model.vendor_id ?? 0);
         }
 
         // Featured + gallery images. The vendor detail endpoint returns
@@ -341,8 +457,10 @@ export class ProductFormComponent implements OnInit {
           .filter((src: string) => src && !src.includes('placeholder'));
         this.galleryUrls = [...this.existingImages];
 
-        // Label (single).
-        if (p.label_id != null) this.model.label = p.label_id;
+        // Label (single, store-scoped).
+        const labelId = Number(p.label_id) || 0;
+        if (labelId > 0) this.model.label = labelId;
+        this.currentLabelId = labelId > 0 ? labelId : null;
 
         // Sizes, v3 returns [{label, in_stock}]; tolerate bare strings/flags.
         const sizesArr: string[] = Array.isArray(p.sizes)
@@ -361,12 +479,17 @@ export class ProductFormComponent implements OnInit {
 
         this.ui.page_loading = false;
       },
-      error: () => { this.ui.page_loading = false; this.toast.error('Unable to load the product.'); },
+      error: (err: unknown) => {
+        this.ui.page_loading = false;
+        this.toast.error(apiErrorMessage(err, 'Unable to load the product.'));
+      },
     });
   }
 
   createVendorLabel(): void {
-    if (!this.vendor_label_create.label.length) { this.toast.error('Label name is required'); return; }
+    const name = this.vendor_label_create.label.trim();
+    if (!name.length) { this.toast.error('Label name is required'); return; }
+    if (this.adminMode) { this.createStoreLabel(name); return; }
     this.ui.creating_label = true;
     this.adapter.post_v3('POST /vendor/labels', this.vendor_label_create).subscribe({
       next: (response: any) => {
@@ -377,7 +500,34 @@ export class ProductFormComponent implements OnInit {
           this.fetchVendorLabels();
         }
       },
-      error: () => { this.ui.creating_label = false; this.toast.error('Unable to create the label.'); },
+      error: (err: unknown) => {
+        this.ui.creating_label = false;
+        this.toast.error(apiErrorMessage(err, 'Unable to create the label.'));
+      },
+    });
+  }
+
+  /** Admin mode: create the label under the TARGET store and select it. */
+  private createStoreLabel(name: string): void {
+    const storeId = this.labelsStoreId;
+    if (!storeId) { this.toast.error('Select the store first: labels belong to a store.'); return; }
+    this.ui.creating_label = true;
+    this.adapter.post_v3('POST /admin/vendors/:id/labels', { label: name }, { params: { id: String(storeId) } }).subscribe({
+      next: (response: any) => {
+        this.ui.creating_label = false;
+        // The admin may have switched store meanwhile: the label exists on the
+        // store it was created for, but isn't selected for the new one.
+        if (storeId !== this.labelsStoreId) return;
+        this.vendor_label_create.label = '';
+        this.toast.success(`Label "${name}" added to ${this.labelsStoreName || 'the store'}.`);
+        const createdId = Number(response?.data?.id ?? response?.id) || 0;
+        if (createdId > 0) this.model.label = createdId;
+        this.loadStoreLabels(storeId);
+      },
+      error: (err: unknown) => {
+        this.ui.creating_label = false;
+        this.toast.error(apiErrorMessage(err, 'Unable to create the label.'));
+      },
     });
   }
 
@@ -419,7 +569,7 @@ export class ProductFormComponent implements OnInit {
       this.model.image_1 = result.url;
       this.featuredProgress = 100;
     } catch (error) {
-      this.toast.error('Image upload failed: ' + error);
+      this.toast.error(apiErrorMessage(error, 'Image upload failed. Please try again.'));
     } finally {
       this.uploadingFeatured = false;
     }
@@ -440,7 +590,7 @@ export class ProductFormComponent implements OnInit {
       // New uploads plus any pre-existing images, capped at 5.
       this.galleryUrls = [...this.existingImages, ...results].slice(0, 5);
     } catch (error) {
-      this.toast.error('Image compression failed: ' + error);
+      this.toast.error(apiErrorMessage(error, 'Image upload failed. Please try again.'));
     } finally {
       this.uploadingGallery = false;
     }
@@ -541,10 +691,14 @@ export class ProductFormComponent implements OnInit {
       },
       status,
     };
-    // Label assignment. The product schema holds a single label, so we
-    // persist the chosen one. (No collection_id: collections are admin-curated
-    // and the legacy field is never read by the storefront.)
-    if (d.label) payload['label_id'] = Number(d.label);
+    // Label assignment. The product schema holds a single, store-scoped label:
+    // the API requires an active label of the product's store (create: of the
+    // chosen vendor_id's store) and 422s on label_id otherwise. Omitted when
+    // none is chosen: absent keeps the stored label (there is no "clear").
+    // (No collection_id: collections are admin-curated and the legacy field
+    // is never read by the storefront.)
+    const labelId = Number(d.label) || 0;
+    if (labelId > 0) payload['label_id'] = labelId;
     // Admin writes specify which vendor the product belongs to.
     if (this.adminMode && d.vendor_id) payload['vendor_id'] = d.vendor_id;
     return payload;
@@ -563,11 +717,12 @@ export class ProductFormComponent implements OnInit {
         this.toast.error('Unable to save the product.');
       }
     };
-    // Surface the API's actual reason (e.g. a per-field validation message)
-    // instead of an opaque toast, so the vendor knows exactly what to fix.
+    // Surface the API's actual reason (e.g. a per-field validation message such
+    // as a 422 on label_id) instead of an opaque toast, so the user knows
+    // exactly what to fix.
     const fail = (err: unknown) => {
       this.ui.loading = false;
-      this.toast.error(this.apiErrorMessage(err, 'Unable to complete your request at this time.'));
+      this.toast.error(apiErrorMessage(err, 'Unable to complete your request at this time.'));
     };
 
     if (this.isEdit) {
@@ -581,24 +736,6 @@ export class ProductFormComponent implements OnInit {
         next: (r: any) => done(!!r?.data?.id, 'Product saved successfully'), error: fail,
       });
     }
-  }
-
-  /**
-   * Best human-readable message from a v3 error envelope
-   * ({ error: { message, details: { field: [msg] } } }). Prefers the first
-   * field-level validation message, then the top-level message, then a fallback.
-   */
-  private apiErrorMessage(err: any, fallback: string): string {
-    const body = err?.error?.error ?? err?.error;
-    const details = body?.details;
-    if (details && typeof details === 'object') {
-      for (const key of Object.keys(details)) {
-        const v = (details as Record<string, unknown>)[key];
-        const msg = Array.isArray(v) ? v[0] : v;
-        if (msg) return String(msg);
-      }
-    }
-    return body?.message || fallback;
   }
 
   private defaultReturn(): string {

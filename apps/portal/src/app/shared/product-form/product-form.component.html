@@ -48,14 +48,15 @@
           <ng-template #vendorSelect>
             <app-ax-combobox
               name="vendor_id"
-              [(ngModel)]="model.vendor_id"
+              [ngModel]="model.vendor_id"
+              (ngModelChange)="onVendorChange($event)"
               [options]="vendorOptions"
               [searchable]="true"
               [allowClear]="false"
               placeholder="Select the store this product belongs to"
               ariaLabel="Vendor / store">
             </app-ax-combobox>
-            <span class="ax-hint">Admins create products on behalf of a store.</span>
+            <span class="ax-hint">Admins create products on behalf of a store. Changing the store clears the chosen label (labels belong to a store).</span>
           </ng-template>
         </div>
       </section>
@@ -268,20 +269,55 @@
 
         <app-ax-accordion-item title="Labels">
           <div class="ax-flex ax-flex-col ax-gap-3">
+            <!-- Admin: labels are the TARGET store's (edit: the product's store; create: the selected store). -->
+            <span *ngIf="adminMode" class="ax-hint ax-m-0">
+              <ng-container *ngIf="labelsStoreId; else pickStoreFirst">
+                Labels of <strong>{{ labelsStoreName }}</strong>. A new label is added to that store and selected.
+              </ng-container>
+              <ng-template #pickStoreFirst>Select the store first: labels belong to a store.</ng-template>
+            </span>
+
             <div class="ax-input-group">
-              <input type="text" name="new_label" class="ax-input ax-input-sm" [(ngModel)]="vendor_label_create.label" placeholder="New label name" />
-              <button type="button" class="ax-btn ax-btn-sm ax-btn-outline" (click)="createVendorLabel()" [disabled]="ui.creating_label"
+              <input type="text" name="new_label" class="ax-input ax-input-sm" [(ngModel)]="vendor_label_create.label"
+                [maxlength]="150" [disabled]="labelCreateBlocked || ui.creating_label"
+                aria-label="New label name" placeholder="New label name"
+                (keydown.enter)="$event.preventDefault(); createVendorLabel()" />
+              <button type="button" class="ax-btn ax-btn-sm ax-btn-outline" (click)="createVendorLabel()"
+                [disabled]="labelCreateBlocked || ui.creating_label || !vendor_label_create.label.trim()"
                 style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
                 <span *ngIf="ui.creating_label" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
                 <span *ngIf="!ui.creating_label">Add</span>
               </button>
             </div>
-            <div class="ax-flex ax-flex-col ax-gap-2">
+
+            <div *ngIf="labelsLoading" class="ax-flex ax-items-center ax-gap-2 ax-text-sm ax-text-tertiary">
+              <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> Loading labels…
+            </div>
+
+            <div *ngIf="!labelsLoading && labelsError" class="pf-inline-error" role="alert">
+              <span>{{ labelsError }}</span>
+              <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="loadStoreLabels(labelsStoreId)">
+                <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+              </button>
+            </div>
+
+            <div *ngIf="!labelsLoading && !labelsError" class="ax-flex ax-flex-col ax-gap-2" role="radiogroup" aria-label="Label">
               <label *ngFor="let l of labels" class="ax-radio">
                 <input type="radio" name="label" [value]="l.id" [(ngModel)]="model.label" />
                 <span class="ax-radio-dot"></span><span class="ax-radio-label">{{ l.label }}</span>
               </label>
+              <p *ngIf="labels && !labels.length && !labelCreateBlocked" class="ax-text-sm ax-text-tertiary ax-m-0">
+                No labels yet. Add one above.
+              </p>
             </div>
+
+            <p *ngIf="isEdit && currentLabelInactive && model.label === currentLabelId" class="ax-hint ax-m-0">
+              This product's current label has been deleted. It stays on the product until you choose another label.
+            </p>
+            <!-- The API can switch a label but not remove one, so there is no "No label" choice. -->
+            <p *ngIf="isEdit && currentLabelId" class="ax-hint ax-m-0">
+              A label can be switched to another of the store's labels, but not removed from here.
+            </p>
           </div>
         </app-ax-accordion-item>
 

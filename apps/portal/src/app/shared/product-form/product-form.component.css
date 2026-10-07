@@ -175,3 +175,13 @@
   background: var(--ax-palette-beige-200, #efe2cf);
   transition: width 150ms ease-out;
 }
+
+/* Inline error (e.g. the store's labels failed to load) with a retry. */
+.pf-inline-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--ax-color-text-danger);
+}

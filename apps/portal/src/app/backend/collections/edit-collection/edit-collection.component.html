@@ -98,7 +98,7 @@
                 </p>
               </div>
               <div class="ec-products-actions">
-                <span *ngIf="productsDirty" class="ax-badge ax-badge-info">unsaved changes</span>
+                <span *ngIf="productsDirty && !savingInFlight" class="ax-badge ax-badge-info">unsaved changes</span>
                 <button
                   type="button"
                   class="ax-btn ax-btn-outline ax-btn-sm"
@@ -106,10 +106,20 @@
                   [disabled]="!productsDirty || ui.products_saving || ui.is_saving || ui.products_loading">
                   <span *ngIf="ui.products_saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
                   <app-icon name="save" *ngIf="!ui.products_saving" aria-hidden="true"></app-icon>
-                  Save products
+                  {{ ui.products_saving ? 'Saving…' : 'Save products' }}
                 </button>
               </div>
             </div>
+
+            <!-- While a save is in flight the list is frozen: its response replaces the list,
+                 so an add/remove/reorder made meanwhile would otherwise be lost. -->
+            <p *ngIf="savingInFlight && !ui.products_loading && !ui.products_error" class="ec-saving ax-mt-3" role="status">
+              <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+              Saving… Adding, removing and reordering products is paused until the save finishes.
+            </p>
+
+            <!-- Announces single adds (which show no toast) to screen readers. -->
+            <p class="ax-sr-only" role="status" aria-live="polite">{{ announcement }}</p>
 
             <!-- Sale-aware price, shared by search hits, browse rows and the curated list. -->
             <ng-template #priceTpl let-p>
@@ -148,6 +158,7 @@
                   <div class="ec-search__box">
                     <app-icon name="search" aria-hidden="true"></app-icon>
                     <input
+                      #searchInput
                       id="ec_search"
                       type="text"
                       class="ax-input"
@@ -160,7 +171,7 @@
 
                   <ul *ngIf="searchResults.length" class="ec-results" aria-label="Matching products">
                     <li *ngFor="let p of searchResults">
-                      <button type="button" class="ec-results__item" [class.ec-results__item--added]="isAdded(p.id)" (click)="addProduct(p)">
+                      <button type="button" class="ec-results__item" [class.ec-results__item--added]="isAdded(p.id)" [disabled]="curationLocked" (click)="addProduct(p)">
                         <img *ngIf="p.image; else noResultImg" [src]="p.image" alt="" class="ec-results__img" />
                         <ng-template #noResultImg><span class="ec-results__img ec-thumb-empty" aria-hidden="true"></span></ng-template>
                         <span class="ec-results__text">
@@ -216,14 +227,21 @@
                         <span class="ec-browse__title">{{ browseTitle }}</span>
                         <span class="ec-browse__hint">{{ browseHint }}</span>
                       </div>
+                      <!-- aria-disabled (not disabled) so focus stays here after it adds the last products. -->
                       <button
                         type="button"
                         class="ax-btn ax-btn-outline ax-btn-sm"
                         (click)="addAllOnPage()"
-                        [disabled]="browse.loading || !browse.items.length">
-                        <app-icon name="done_all" aria-hidden="true"></app-icon>
-                        Add all on this page
-                        <span *ngIf="!browse.loading && browse.items.length" class="ec-browse__count">({{ browseAddableCount }} new)</span>
+                        [attr.aria-disabled]="addAllDisabled ? 'true' : null">
+                        <ng-container *ngIf="!browse.loading && browse.items.length && browseAddableCount === 0; else addAllLabel">
+                          <app-icon name="check" aria-hidden="true"></app-icon>
+                          All added
+                        </ng-container>
+                        <ng-template #addAllLabel>
+                          <app-icon name="done_all" aria-hidden="true"></app-icon>
+                          Add all on this page
+                          <span *ngIf="!browse.loading && browse.items.length" class="ec-browse__count">({{ browseAddableCount }} new)</span>
+                        </ng-template>
                       </button>
                     </div>
 
@@ -268,28 +286,25 @@
                           </span>
                         </span>
                         <span class="ec-results__price" *ngIf="p.price != null"><ng-container *ngTemplateOutlet="priceTpl; context: { $implicit: p }"></ng-container></span>
+                        <!-- ONE button whose label/state switches (aria-disabled, never removed or
+                             `disabled`), so keyboard focus stays on it after Add. -->
                         <button
-                          *ngIf="!isAdded(p.id); else addedBtn"
                           type="button"
-                          class="ax-btn ax-btn-outline ax-btn-sm ec-browse__add"
+                          class="ax-btn ax-btn-sm ec-browse__add"
+                          [class.ax-btn-outline]="!isAdded(p.id)"
+                          [class.ax-btn-ghost]="isAdded(p.id)"
                           (click)="addProduct(p, 'browse')"
-                          [attr.aria-label]="'Add ' + p.name + ' to the collection'">
-                          <app-icon name="add" aria-hidden="true"></app-icon> Add
+                          [attr.aria-disabled]="isAdded(p.id) || curationLocked ? 'true' : null"
+                          [attr.aria-label]="isAdded(p.id) ? p.name + ' is already in this collection' : 'Add ' + p.name + ' to the collection'">
+                          <app-icon [name]="isAdded(p.id) ? 'check' : 'add'" aria-hidden="true"></app-icon>
+                          {{ isAdded(p.id) ? 'Added' : 'Add' }}
                         </button>
-                        <ng-template #addedBtn>
-                          <button
-                            type="button"
-                            class="ax-btn ax-btn-ghost ax-btn-sm ec-browse__add"
-                            disabled
-                            [attr.aria-label]="p.name + ' is already in this collection'">
-                            <app-icon name="check" aria-hidden="true"></app-icon> Added
-                          </button>
-                        </ng-template>
                       </li>
                     </ul>
 
                     <!-- Pager -->
-                    <nav *ngIf="browse.total > 0 || browse.page > 1" class="ec-pager" aria-label="Product pages">
+                    <!-- Hidden until this view's total is known, so a remembered page never reads "Page N of 1". -->
+                    <nav *ngIf="browse.totalKnown && (browse.total > 0 || browse.page > 1)" class="ec-pager" aria-label="Product pages">
                       <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="prevBrowsePage()" [disabled]="browsePrevDisabled">
                         <app-icon name="chevron_left" aria-hidden="true"></app-icon> Prev
                       </button>
@@ -347,16 +362,17 @@
 
                 <div class="ec-item__actions">
                   <button type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm"
-                          [disabled]="first" (click)="moveUp(i)"
+                          [disabled]="first || curationLocked" (click)="moveUp(i)"
                           [attr.aria-label]="'Move ' + it.name + ' up'" title="Move up">
                     <app-icon name="keyboard_arrow_up" aria-hidden="true"></app-icon>
                   </button>
                   <button type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm"
-                          [disabled]="last" (click)="moveDown(i)"
+                          [disabled]="last || curationLocked" (click)="moveDown(i)"
                           [attr.aria-label]="'Move ' + it.name + ' down'" title="Move down">
                     <app-icon name="keyboard_arrow_down" aria-hidden="true"></app-icon>
                   </button>
                   <button type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm ec-remove"
+                          [disabled]="curationLocked"
                           (click)="removeItem(i)"
                           [attr.aria-label]="'Remove ' + it.name" title="Remove from collection">
                     <app-icon name="delete" aria-hidden="true"></app-icon>
@@ -379,7 +395,7 @@
               [disabled]="ui.is_saving || ui.products_saving">
               <span *ngIf="ui.is_saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
               <app-icon name="save" *ngIf="!ui.is_saving" aria-hidden="true"></app-icon>
-              Save changes
+              {{ ui.is_saving ? 'Saving…' : 'Save changes' }}
             </button>
           </div>
         </section>

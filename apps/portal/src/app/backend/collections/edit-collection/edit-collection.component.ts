@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -103,6 +103,9 @@ export class EditCollectionComponent implements OnInit, OnDestroy {
   searchResults: CuratedProduct[] = [];
   private search$ = new Subject<string>();
   private sub = new Subscription();
+  @ViewChild('searchInput') private searchInput?: ElementRef<HTMLInputElement>;
+  /** Polite screen-reader announcement for adds that show no toast. */
+  announcement = '';
 
   // ── "Add products" tabs ──────────────────────────────────────────
   readonly addTabs: { id: AddTab; label: string; icon: string }[] = [
@@ -129,6 +132,12 @@ export class EditCollectionComponent implements OnInit, OnDestroy {
     /** 1-based page currently shown (or loading). */
     page: 1,
     total: 0,
+    /**
+     * `total` belongs to the current view. False from a tab/category switch
+     * until that view's first response lands, so the pager never pairs a
+     * remembered page with a stale/zero total ("Page 3 of 1").
+     */
+    totalKnown: false,
     hasMore: false,
   };
   /**
@@ -204,7 +213,11 @@ export class EditCollectionComponent implements OnInit, OnDestroy {
           this.browse.loading = false;
           if (result.page) {
             this.browse.items = result.page.items;
-            this.browse.total = result.page.total;
+            // A page that returned products exists, whatever the reported
+            // total says, so the pager can never read "Page N of M" with N > M.
+            const shownThrough = (result.req.page - 1) * BROWSE_PAGE_SIZE + result.page.items.length;
+            this.browse.total = Math.max(result.page.total, shownThrough);
+            this.browse.totalKnown = true;
             this.browse.hasMore = result.page.hasMore;
           } else {
             this.browse.items = [];
@@ -306,14 +319,28 @@ export class EditCollectionComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * The ONE add path for search and browse. Curation is locked while the
-   * saved list is loading or failed to load (a save could otherwise
-   * overwrite the real list). Skips products already curated (and repeats
-   * within `products`), appends the rest in the given order and returns how
-   * many were added. Appending is what flags unsaved changes (productsDirty).
+   * Curation (add / remove / reorder) is locked while the saved list is
+   * loading or failed to load (a save could otherwise overwrite the real list
+   * with an empty one), and while a save is in flight: the PUT response
+   * replaces `items`, so a change made meanwhile would be silently dropped.
+   */
+  get curationLocked(): boolean {
+    return this.ui.products_loading || this.ui.products_error || this.ui.products_saving || this.ui.is_saving;
+  }
+
+  /** A save (products only, or the whole collection) is in flight. */
+  get savingInFlight(): boolean {
+    return this.ui.products_saving || this.ui.is_saving;
+  }
+
+  /**
+   * The ONE add path for search and browse (no-op while curation is locked).
+   * Skips products already curated (and repeats within `products`), appends
+   * the rest in the given order and returns how many were added. Appending
+   * is what flags unsaved changes (productsDirty).
    */
   private appendToCuration(products: CuratedProduct[]): number {
-    if (this.ui.products_loading || this.ui.products_error) return 0;
+    if (this.curationLocked) return 0;
     const seen = new Set(this.items.map((i) => i.id));
     const fresh: CuratedProduct[] = [];
     for (const p of products) {
@@ -326,19 +353,32 @@ export class EditCollectionComponent implements OnInit, OnDestroy {
     return fresh.length;
   }
 
-  /** Add one product (a search hit or a browse row). */
+  /**
+   * Add one product (a search hit or a browse row). A browse row keeps its
+   * single button, which just switches to an "Added" state, so keyboard focus
+   * stays on it; a search hit's list closes, so focus returns to the search box.
+   */
   addProduct(p: CuratedProduct, from: 'search' | 'browse' = 'search') {
-    if (this.ui.products_loading || this.ui.products_error) return;
+    if (this.curationLocked) return;
     if (this.isAdded(p.id)) {
-      this.toast.error('That product is already in this collection.');
+      // The browse button already reads "Added" (aria-disabled); stay quiet.
+      if (from === 'search') this.toast.error('That product is already in this collection.');
       return;
     }
-    this.appendToCuration([p]);
+    if (!this.appendToCuration([p])) return;
+    this.announce(`Added ${p.name} to the collection.`);
     if (from === 'search') {
       this.productQuery = '';
       this.searchResults = [];
       this.search$.next('');
+      this.searchInput?.nativeElement.focus();
     }
+  }
+
+  /** Update the polite live region (cleared first so a repeat is re-read). */
+  private announce(message: string) {
+    this.announcement = '';
+    setTimeout(() => (this.announcement = message), 50);
   }
 
   // ── "Add products" tabs ──────────────────────────────────────────
@@ -445,7 +485,10 @@ export class EditCollectionComponent implements OnInit, OnDestroy {
     this.browse.error = '';
     this.browse.loading = !!req;
     if (!sameView) {
+      // New view: its total is unknown until the response lands, so the
+      // pager is hidden meanwhile (see browse.totalKnown).
       this.browse.total = 0;
+      this.browse.totalKnown = false;
       this.browse.hasMore = false;
     }
     if (req) {
@@ -524,14 +567,21 @@ export class EditCollectionComponent implements OnInit, OnDestroy {
     return this.browse.items.filter((p) => !this.isAdded(p.id)).length;
   }
 
+  /**
+   * "Add all on this page" has nothing to do: loading, empty, every product
+   * already added, or curation locked. Rendered as aria-disabled (not
+   * `disabled`) so a click that adds the last products keeps focus on it.
+   */
+  get addAllDisabled(): boolean {
+    return this.curationLocked || this.browse.loading || !this.browse.items.length || this.browseAddableCount === 0;
+  }
+
   /** Append every not-yet-added product on this page, in displayed order. */
   addAllOnPage() {
-    if (this.ui.products_loading || this.ui.products_error || this.browse.loading || !this.browse.items.length) return;
+    if (this.addAllDisabled) return;
     const added = this.appendToCuration(this.browse.items);
     if (added > 0) {
       this.toast.success(`Added ${added} product${added === 1 ? '' : 's'}.`);
-    } else {
-      this.toast.error('Every product on this page is already in this collection.');
     }
   }
 
@@ -566,12 +616,12 @@ export class EditCollectionComponent implements OnInit, OnDestroy {
   trackProductById = (_: number, p: CuratedProduct) => p.id;
 
   moveUp(index: number) {
-    if (index <= 0) return;
+    if (this.curationLocked || index <= 0) return;
     this.swap(index, index - 1);
   }
 
   moveDown(index: number) {
-    if (index >= this.items.length - 1) return;
+    if (this.curationLocked || index >= this.items.length - 1) return;
     this.swap(index, index + 1);
   }
 
@@ -582,6 +632,7 @@ export class EditCollectionComponent implements OnInit, OnDestroy {
   }
 
   removeItem(index: number) {
+    if (this.curationLocked) return;
     this.items = this.items.filter((_, i) => i !== index);
   }
 

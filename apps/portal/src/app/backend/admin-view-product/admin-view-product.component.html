@@ -15,6 +15,7 @@
           <h1 class="ax-page-title">{{ update.name || 'Product details' }}</h1>
           <p *ngIf="update.name" class="ax-page-subtitle">
             Admin edit: changes are applied immediately to the live product.
+            <ng-container *ngIf="vendorName"> Store: <strong>{{ vendorName }}</strong>.</ng-container>
           </p>
         </div>
 
@@ -23,7 +24,7 @@
             type="button"
             class="ax-btn ax-btn-primary"
             (click)="start_update()"
-            [disabled]="ui_controls.is_loading">
+            [disabled]="!canSave">
             <span *ngIf="ui_controls.is_loading" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
             <app-icon name="save" *ngIf="!ui_controls.is_loading" aria-hidden="true"></app-icon>
             Save changes
@@ -36,8 +37,20 @@
         <span class="ax-spinner ax-spinner-lg" aria-label="Loading product"></span>
       </div>
 
+      <!-- Load error -->
+      <section *ngIf="!ui_controls.page_loading && load_error" class="ax-card ax-p-6 avp-load-error" role="alert">
+        <app-icon name="error" aria-hidden="true"></app-icon>
+        <p class="ax-m-0">{{ load_error }}</p>
+        <div class="ax-flex ax-gap-2">
+          <button *ngIf="productId" type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="retryLoad()">
+            <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+          </button>
+          <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="goBack()">Go back</button>
+        </div>
+      </section>
+
       <!-- Form grid -->
-      <div *ngIf="!ui_controls.page_loading" class="ax-grid ax-grid-cols-1 ax-lg-grid-cols-3 ax-gap-5">
+      <div *ngIf="!ui_controls.page_loading && !load_error" class="ax-grid ax-grid-cols-1 ax-lg-grid-cols-3 ax-gap-5">
 
         <!-- ═══════ LEFT COLUMN: Main form (spans 2) ═══════ -->
         <form method="post" style="grid-column: span 2;" class="ax-flex ax-flex-col ax-gap-4">
@@ -300,43 +313,77 @@
             <!-- Featured image -->
             <app-ax-accordion-item title="Featured image *">
               <div class="ax-flex ax-flex-col ax-gap-3">
-                <img
-                  [src]="getImageUrl(update.image_1) | cfImage:'card'"
-                  alt="Featured preview"
-                  style="width: 100%; height: 220px; object-fit: cover; object-position: top center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
+                <div class="avp-featured">
+                  <img
+                    [src]="getImageUrl(update.image_1) | cfImage:'card'"
+                    alt="Featured preview"
+                    style="width: 100%; height: 220px; object-fit: cover; object-position: top center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
+                  <div *ngIf="ui_controls.featured_uploading" class="avp-featured__overlay" role="status">
+                    <span>Uploading… {{ featured_progress }}%</span>
+                    <div class="avp-featured__track">
+                      <div class="avp-featured__bar" [style.width.%]="featured_progress"></div>
+                    </div>
+                  </div>
+                </div>
                 <div class="ax-form-field">
                   <input
                     type="file"
                     name="image_1"
                     class="ax-input"
+                    aria-label="Replace featured image"
+                    [disabled]="ui_controls.featured_uploading || ui_controls.refreshing"
                     (change)="select_image_1($event)"
                     accept="image/png, image/jpeg, image/webp" />
-                  <span class="ax-hint">Replace featured image. PNG, JPG or WEBP.</span>
+                  <span class="ax-hint">Replace featured image. PNG, JPG or WEBP. It's applied when you save.</span>
                 </div>
               </div>
             </app-ax-accordion-item>
 
-            <!-- Labels -->
-            <app-ax-accordion-item title="Product labels">
+            <!-- Labels: the PRODUCT's store labels (admin endpoints), never the admin's own. -->
+            <app-ax-accordion-item title="Store label">
               <div class="ax-flex ax-flex-col ax-gap-3">
+                <span class="ax-hint ax-m-0">
+                  Labels belong to <strong>{{ vendorName || "this product's store" }}</strong>.
+                  A new label is added to that store and selected here; it's applied when you save.
+                </span>
                 <div class="ax-input-group">
                   <input
                     type="text"
                     name="new_label"
                     class="ax-input ax-input-sm"
-                    [(ngModel)]="vendor_label_create.label"
-                    placeholder="e.g. Clearance Sale" />
+                    [(ngModel)]="newLabelName"
+                    [maxlength]="150"
+                    [disabled]="!vendorId || ui_controls.is_creating_label"
+                    aria-label="New label name"
+                    placeholder="e.g. Clearance Sale"
+                    (keydown.enter)="$event.preventDefault(); create_store_label()" />
                   <button
                     type="button"
                     class="ax-btn ax-btn-sm ax-btn-outline"
-                    (click)="create_vendor_labels()"
-                    [disabled]="ui_controls.is_creating_label"
+                    (click)="create_store_label()"
+                    [disabled]="!vendorId || ui_controls.is_creating_label || !newLabelName.trim()"
                     style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
                     <span *ngIf="ui_controls.is_creating_label" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
                     <span *ngIf="!ui_controls.is_creating_label">Add</span>
                   </button>
                 </div>
-                <div class="ax-flex ax-flex-col ax-gap-2">
+
+                <div *ngIf="ui_controls.labels_loading" class="ax-flex ax-items-center ax-gap-2 ax-text-sm ax-text-tertiary">
+                  <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> Loading the store's labels…
+                </div>
+
+                <div *ngIf="!ui_controls.labels_loading && labels_error" class="avp-inline-error" role="alert">
+                  <span>{{ labels_error }}</span>
+                  <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="get_store_labels()">
+                    <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+                  </button>
+                </div>
+
+                <div
+                  *ngIf="!ui_controls.labels_loading && !labels_error && labels"
+                  class="ax-flex ax-flex-col ax-gap-2"
+                  role="radiogroup"
+                  aria-label="Store label">
                   <label *ngFor="let l of labels" class="ax-radio">
                     <input
                       type="radio"
@@ -346,7 +393,18 @@
                     <span class="ax-radio-dot"></span>
                     <span class="ax-radio-label">{{ l.label }}</span>
                   </label>
+                  <p *ngIf="!labels.length" class="ax-text-sm ax-text-tertiary ax-m-0">
+                    This store has no labels yet. Add one above.
+                  </p>
                 </div>
+
+                <p *ngIf="currentLabelInactive && update.label === currentLabelId" class="ax-hint ax-m-0">
+                  This product's current label has been deleted from the store. It stays on the product until you choose another label.
+                </p>
+                <!-- The API can switch a label but not remove one, so there is no "No label" choice. -->
+                <p *ngIf="currentLabelId" class="ax-hint ax-m-0">
+                  A label can be switched to another of the store's labels, but not removed from here.
+                </p>
               </div>
             </app-ax-accordion-item>
 
@@ -402,7 +460,7 @@
       </div>
 
       <!-- ═══════ Change history (full width) ═══════ -->
-      <section *ngIf="!ui_controls.page_loading" class="ax-card ax-p-5 ax-mt-5 product-history">
+      <section *ngIf="!ui_controls.page_loading && !load_error" class="ax-card ax-p-5 ax-mt-5 product-history">
         <div class="ax-flex ax-items-center ax-gap-2 ax-mb-4">
           <app-icon name="history" aria-hidden="true"></app-icon>
           <h3 class="ax-h5 ax-m-0">Change history</h3>
