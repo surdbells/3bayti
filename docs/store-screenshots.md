@@ -53,7 +53,7 @@ The `screengrab` + `uiautomator` test dependencies are already in
 
 ### Demo account (for logged-in, populated screens)
 Most screens require auth + data, so create a throwaway **"screenshots" account**
-with nice curated data (a few styles, cart items, a gift card). Pass its creds
+with nice curated data (cart items, a gift card). Pass its creds
 at run time — **never commit them**:
 - **iOS**: Xcode ▸ Edit Scheme ▸ Test ▸ Arguments ▸ Environment Variables →
   `SNAP_EMAIL`, `SNAP_PASSWORD`.
@@ -87,9 +87,9 @@ run:
 - **Android**: `adb shell uiautomator dump` (or Android Studio's Layout
   Inspector) to read the on-screen text.
 
-The bottom-tab labels map to the app's i18n (`home / explore / cart / sketch
-(=Styles) / gift / profile`) — adjust the strings in the test to whatever is
-visibly rendered in each locale.
+The bottom-tab labels map to the app's i18n (`home / explore / cart / gift /
+profile`) — adjust the strings in the test to whatever is visibly rendered in
+each locale.
 
 If the WebView tapping proves flaky, the fallback is deep-link + native capture:
 `xcrun simctl openurl booted <url>` / `adb shell am start -d <url>` to route the
