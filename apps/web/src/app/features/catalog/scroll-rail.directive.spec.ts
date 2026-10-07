@@ -13,6 +13,8 @@ import { ScrollRailDirective } from './scroll-rail.directive';
       <li data-rail-item><a href="/product/b">B</a></li>
       <li data-rail-item><a href="/product/c">C</a></li>
     </ul>
+    <button type="button" class="prev" (click)="rail.scroll(-1)" [attr.aria-disabled]="rail.atStart() ? 'true' : null">Prev</button>
+    <button type="button" class="next" (click)="rail.scroll(1)" [attr.aria-disabled]="rail.atEnd() ? 'true' : null">Next</button>
   `,
 })
 class HostComponent {
@@ -91,6 +93,62 @@ describe('ScrollRailDirective', () => {
     geometry(ul, { scrollWidth: 900, clientWidth: 300, scrollLeft: -600 }); // RTL, scrolled to the end
     rail.update();
     expect([rail.atStart(), rail.atEnd()]).toEqual([false, true]);
+  });
+
+  it('keeps an edge arrow focusable (aria-disabled) with a no-op click, so focus never drops at either end', () => {
+    const { fixture, ul } = setup();
+    const root = fixture.nativeElement as HTMLElement;
+    const prev = root.querySelector<HTMLButtonElement>('button.prev')!;
+    const next = root.querySelector<HTMLButtonElement>('button.next')!;
+    // 900px of items in a 300px window; scrollBy moves (clamped) and fires scroll.
+    let scrollLeft = 0;
+    Object.defineProperty(ul, 'scrollWidth', { configurable: true, get: () => 900 });
+    Object.defineProperty(ul, 'clientWidth', { configurable: true, get: () => 300 });
+    Object.defineProperty(ul, 'scrollLeft', {
+      configurable: true,
+      get: () => scrollLeft,
+      set: (v: number) => { scrollLeft = v; },
+    });
+    const scrollBy = vi.fn((opts: ScrollToOptions) => {
+      scrollLeft = Math.min(600, Math.max(0, scrollLeft + (opts.left ?? 0)));
+      ul.dispatchEvent(new Event('scroll'));
+    });
+    (ul as unknown as { scrollBy: typeof scrollBy }).scrollBy = scrollBy;
+    ul.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+    expect(prev.getAttribute('aria-disabled')).toBe('true');
+    expect(next.getAttribute('aria-disabled')).toBeNull();
+
+    // "Next" until the end (240 + 240 + the last 120px): focus stays on it.
+    next.focus();
+    for (let i = 0; i < 3; i++) {
+      next.click();
+      fixture.detectChanges();
+    }
+    expect(scrollLeft).toBe(600);
+    expect(next.getAttribute('aria-disabled')).toBe('true');
+    expect(next.disabled).toBe(false);
+    expect(document.activeElement).toBe(next);
+    next.click();
+    fixture.detectChanges();
+    expect(scrollBy).toHaveBeenCalledTimes(3); // no-op at the end
+    expect(document.activeElement).toBe(next);
+    expect(prev.getAttribute('aria-disabled')).toBeNull();
+
+    // And "Previous" back to the start.
+    prev.focus();
+    for (let i = 0; i < 3; i++) {
+      prev.click();
+      fixture.detectChanges();
+    }
+    expect(scrollLeft).toBe(0);
+    expect(prev.getAttribute('aria-disabled')).toBe('true');
+    expect(document.activeElement).toBe(prev);
+    prev.click();
+    fixture.detectChanges();
+    expect(scrollBy).toHaveBeenCalledTimes(6); // no-op at the start
+    expect(document.activeElement).toBe(prev);
+    expect(next.getAttribute('aria-disabled')).toBeNull();
   });
 
   it('scrolls about one page towards the inline end, mirrored in RTL', () => {

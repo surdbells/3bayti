@@ -50,6 +50,7 @@ import { NgIf } from '@angular/common';
             class="ui-btn"
             [class]="'ui-btn--' + variant + ' ui-btn--' + size"
             [disabled]="disabled"
+            [attr.aria-disabled]="(busy && !disabled) || null"
             (click)="onClick($event)">
       <ng-content></ng-content>
     </button>
@@ -141,12 +142,19 @@ export class ButtonComponent {
   @Input() variant: 'primary' | 'secondary' | 'ghost' = 'primary';
   @Input() size: 'sm' | 'md' | 'lg' = 'md';
   @Input() disabled = false;
+  /**
+   * Temporarily unavailable (e.g. a request in flight): looks and announces
+   * as disabled (aria-disabled) and ignores clicks, but stays focusable so a
+   * keyboard user who just pressed it doesn't lose focus to <body> the way a
+   * native `disabled` would drop it.
+   */
+  @Input() busy = false;
   @Input() href: string | null = null;
   @Input() routerLink: string | null = null;
   @Output() clicked = new EventEmitter<MouseEvent>();
 
   onClick(event: MouseEvent): void {
-    if (this.disabled) {
+    if (this.disabled || this.busy) {
       event.preventDefault();
       event.stopPropagation();
       return;

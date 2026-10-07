@@ -72,14 +72,46 @@ const RELATED_LIMIT = 8;
 /** Widths offered to the browser for the gallery images (srcset). */
 const GALLERY_WIDTHS = [480, 720, 900, 1200] as const;
 
-/** Rendered gallery width per breakpoint (mirrors the SCSS layout). */
-const GALLERY_SIZES = '(min-width: 1024px) 40vw, (min-width: 768px) 70vw, 100vw';
+/**
+ * Rendered gallery width (mirrors the SCSS layout in product-detail.scss):
+ *   - >= 1024px: the stage width the desktop CSS derives from the viewport
+ *     HEIGHT, i.e. 3/4 of --pdp-stage-h = clamp(min(420px, 100vh - 226.67px),
+ *     100vh - 270.67px, 650px) (the floor / first-screen fit / cap; the px
+ *     terms are --pdp-header-rest + offsets + the thumbnail row). Rounded
+ *     so the slot is never under-declared. Without this entry a 1280x720
+ *     window (337px stage) would fetch the 900w file at 2x DPR.
+ *   - otherwise the 3:4 stage is never taller than 650px, so never wider
+ *     than 487.5px; below that it is edge-to-edge on phones (100vw).
+ * A browser that can't parse the math in the first entry skips it and uses
+ * the next one (a valid upper bound).
+ */
+const GALLERY_SIZES =
+  '(min-width: 1024px) calc(clamp(min(420px, 100vh - 226px), 100vh - 270px, 650px) * 3 / 4), ' +
+  '(min-width: 488px) 488px, 100vw';
 
 /** Image transform for the small "Complete the look" cards (~120-140px wide). */
 const CTL_IMAGE: CfImageOptions = { width: 320, quality: 80, fit: 'cover', format: 'auto' };
 
 /** Empty "Complete the look" result (no request / failure). */
 const EMPTY_LOOK: CompleteLookResult = { interactionId: null, items: [] };
+
+/** Placeholder cards in the "Complete the look" skeleton (the API's default limit). */
+const CTL_SKELETON_SLOTS = [0, 1, 2, 3, 4, 5] as const;
+
+/** A "Complete the look" response, tagged with the product id it belongs to. */
+interface LookForProduct {
+  productId: number | null;
+  result: CompleteLookResult;
+}
+
+/**
+ * "Complete the look" request state for the CURRENT product:
+ *   - idle:    no product shown (nothing to reserve);
+ *   - loading: the product is shown but its complements are not in yet
+ *              (the strip's skeleton holds its slot, so nothing shifts);
+ *   - ready:   answered (the real strip, or nothing when it is empty / failed).
+ */
+export type CompleteTheLookStatus = 'idle' | 'loading' | 'ready';
 
 /** One gallery slide, precomputed so the template stays declarative. */
 export interface GallerySlide {
@@ -116,10 +148,11 @@ function prefersReducedMotion(): boolean {
  * Product detail page (PDP), `/product/:slug`.
  *
  * Layout (compact / modern pass):
- *   - Desktop (>= 1024px): gallery left (single swipeable stage + compact
- *     thumbnail rail, height-capped to the viewport), info column right.
- *     Both columns are position:sticky below the (measured) site header,
- *     so whichever is shorter stays in view while the other scrolls.
+ *   - Desktop (>= 1024px): gallery left (single swipeable 3:4 stage, never
+ *     taller than 650px, with a horizontal thumbnail row below it, sized to
+ *     fit the first screen), info column right. Both columns are
+ *     position:sticky below the (measured) site header, so whichever is
+ *     shorter stays in view while the other scrolls.
  *   - Mobile (< 768px): full-bleed swipeable gallery (scroll-snap, dots +
  *     count), stacked info, and a sticky bottom bar that appears only once
  *     the main Add to cart has scrolled out of view.
@@ -232,22 +265,49 @@ export class ProductDetailComponent implements OnDestroy {
    * "Complete the Look" complements. Unlike recommendations (slug-keyed), this
    * endpoint is keyed by the v3 numeric id, which is only known once the product
    * has loaded, so the stream is driven off the product id (deduped, so the
-   * same product never triggers a second request).
+   * same product never triggers a second request). Each answer is tagged with
+   * the id it was fetched for (a failure answers EMPTY_LOOK for that id).
    */
-  readonly completeTheLook = toSignal(
+  private readonly lookFetch = toSignal(
     toObservable(this.productId).pipe(
       switchMap((id) => {
         if (!id) {
-          return of(EMPTY_LOOK);
+          return of<LookForProduct>({ productId: null, result: EMPTY_LOOK });
         }
-        return from(this.ctlService.forProduct(id)).pipe(catchError(() => of(EMPTY_LOOK)));
+        return from(this.ctlService.forProduct(id)).pipe(
+          map((result): LookForProduct => ({ productId: id, result })),
+          catchError(() => of<LookForProduct>({ productId: id, result: EMPTY_LOOK })),
+        );
       }),
     ),
-    { initialValue: EMPTY_LOOK },
+    { initialValue: { productId: null, result: EMPTY_LOOK } as LookForProduct },
   );
+
+  /**
+   * Request state for the CURRENT product. Derived synchronously from the
+   * product id, so it reads 'loading' in the very render that first paints a
+   * product (and again the moment the id changes, e.g. after clicking a
+   * complement), before the request stream has even emitted: the skeleton
+   * is in place from the first product paint and the strip never pops in.
+   */
+  readonly completeTheLookStatus = computed<CompleteTheLookStatus>(() => {
+    const id = this.productId();
+    if (!id) return 'idle';
+    return this.lookFetch().productId === id ? 'ready' : 'loading';
+  });
+
+  /** The current product's complements (never a previous product's while the next loads). */
+  readonly completeTheLook = computed<CompleteLookResult>(() => {
+    const fetched = this.lookFetch();
+    const id = this.productId();
+    return id && fetched.productId === id ? fetched.result : EMPTY_LOOK;
+  });
 
   /** The complement cards for the "Complete the look" strip. */
   readonly completeTheLookItems = computed<CompleteLookItem[]>(() => this.completeTheLook().items);
+
+  /** Placeholder cards for the strip's loading skeleton. */
+  protected readonly ctlSkeletonSlots = CTL_SKELETON_SLOTS;
 
   /**
    * The products for the "you may also like" row: engine recommendations
@@ -303,6 +363,12 @@ export class ProductDetailComponent implements OnDestroy {
   });
 
   @ViewChild('track') private trackEl?: ElementRef<HTMLElement>;
+  /** The horizontal thumbnail row under the stage (>= 768px). */
+  @ViewChild('thumbs') private thumbsEl?: ElementRef<HTMLElement>;
+  /** Re-reveals the active thumb when the row appears (display:none ->
+   *  flex at 768px) or changes width (it follows the viewport height). */
+  private thumbsObserver?: ResizeObserver;
+  private observedThumbs: HTMLElement | null = null;
   /** Slide the track is programmatically scrolling to (ignore the frames in between). */
   private trackTarget: number | null = null;
   private trackTargetTimer: ReturnType<typeof setTimeout> | null = null;
@@ -481,6 +547,7 @@ export class ProductDetailComponent implements OnDestroy {
     this.sentinelObserver?.disconnect();
     this.headerObserver?.disconnect();
     this.colorChipsObserver?.disconnect();
+    this.thumbsObserver?.disconnect();
     if (this.trackTargetTimer !== null) clearTimeout(this.trackTargetTimer);
     if (this.trackRaf && typeof cancelAnimationFrame !== 'undefined') cancelAnimationFrame(this.trackRaf);
     if (this.tryOnPollHandle !== null) {
@@ -1596,6 +1663,14 @@ export class ProductDetailComponent implements OnDestroy {
       },
     });
 
+    /* Whenever the active image changes (thumbnail, stage arrows, swipe,
+       keyboard or the lightbox), keep its thumbnail in view inside the
+       horizontally scrolling thumbnail row. Browser only. */
+    afterRenderEffect(() => {
+      const index = this.activeImageIndex();
+      untracked(() => this.revealActiveThumb(index));
+    });
+
     /* Apply SEO via effect() so it runs within Angular's CD cycle. */
     effect(() => {
       const p = this.product();
@@ -1743,6 +1818,9 @@ export class ProductDetailComponent implements OnDestroy {
       const track = this.trackEl?.nativeElement;
       if (track) {
         track.scrollLeft = 0;
+        /* A reused thumbnail row starts over at the first thumb too. */
+        const thumbs = this.thumbsEl?.nativeElement;
+        if (thumbs) thumbs.scrollLeft = 0;
         this.pendingTrackReset = false;
       }
     }
@@ -1800,6 +1878,20 @@ export class ProductDetailComponent implements OnDestroy {
         if (chips) this.colorChipsObserver.observe(chips);
         this.observedColorChips = chips;
       }
+
+      /* The active-thumb reveal otherwise runs only when the index changes:
+         a row that was hidden (phone layout) or narrower when the image
+         changed would keep the active thumb out of view after a rotate /
+         resize. Instant (not smooth): it follows a layout change. */
+      const thumbs = this.thumbsEl?.nativeElement ?? null;
+      if (thumbs !== this.observedThumbs) {
+        this.thumbsObserver ??= new ResizeObserver(() =>
+          this.revealActiveThumb(this.activeImageIndex(), 'auto'),
+        );
+        if (this.observedThumbs) this.thumbsObserver.unobserve(this.observedThumbs);
+        if (thumbs) this.thumbsObserver.observe(thumbs);
+        this.observedThumbs = thumbs;
+      }
     }
   }
 
@@ -1831,13 +1923,50 @@ export class ProductDetailComponent implements OnDestroy {
     }
   }
 
-  /** Previous / next arrows on the stage (clamped at the ends). */
+  /**
+   * Previous / next arrows on the stage. At the first / last image the
+   * arrow is aria-disabled but stays focusable, so its click is a no-op
+   * (focus stays on it instead of dropping to <body>).
+   */
   galleryPrev(): void {
+    if (this.activeImageIndex() <= 0) return;
     this.goToSlide(this.activeImageIndex() - 1);
   }
 
   galleryNext(): void {
+    if (this.activeImageIndex() >= this.slides().length - 1) return;
     this.goToSlide(this.activeImageIndex() + 1);
+  }
+
+  /**
+   * Keep thumbnail `index` fully visible inside the horizontal thumbnail
+   * row by scrolling the ROW itself (never scrollIntoView, which would also
+   * scroll the page). The maths is physical: both rects are viewport-
+   * relative and scrollLeft moves content the same way in LTR and RTL (in
+   * RTL it runs from 0 towards negative values), so `scrollLeft + delta`
+   * is direction-agnostic. The row's own padding (room for the focus ring)
+   * is kept clear. No-op while the row is hidden (phones) or not laid out.
+   * `behavior` defaults to smooth (unless reduced motion is preferred);
+   * the resize observer passes 'auto' (instant).
+   */
+  private revealActiveThumb(index: number, behavior?: ScrollBehavior): void {
+    const row = this.thumbsEl?.nativeElement;
+    const item = row?.children.item(index) as HTMLElement | null | undefined;
+    if (!row || !item) return;
+    const rowRect = row.getBoundingClientRect();
+    if (rowRect.width === 0) return;
+    const style = typeof getComputedStyle === 'function' ? getComputedStyle(row) : null;
+    const viewLeft = rowRect.left + (parseFloat(style?.paddingLeft ?? '') || 0);
+    const viewRight = rowRect.right - (parseFloat(style?.paddingRight ?? '') || 0);
+    const itemRect = item.getBoundingClientRect();
+    let delta = 0;
+    if (itemRect.left < viewLeft) delta = itemRect.left - viewLeft;
+    else if (itemRect.right > viewRight) delta = itemRect.right - viewRight;
+    if (Math.abs(delta) < 1) return;
+    const left = row.scrollLeft + delta;
+    behavior ??= prefersReducedMotion() ? 'auto' : 'smooth';
+    if (typeof row.scrollTo === 'function') row.scrollTo({ left, behavior });
+    else row.scrollLeft = left;
   }
 
   /**

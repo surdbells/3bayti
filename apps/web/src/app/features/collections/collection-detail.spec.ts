@@ -312,20 +312,29 @@ describe('CollectionDetailComponent', () => {
         holdLoads: true,
         catalogItems: [makeProduct({ id: 9, slug: 'late-9' })],
       });
-      expect(catalog.loadCalls.length).toBeLessThanOrEqual(1);
-      expect(catalog.facetCalls.length).toBeLessThanOrEqual(1);
+      // Exactly one listing (page 0) and one facets request, for the route
+      // slug, are already in flight while the header is still pending.
+      expect(catalog.loadCalls).toHaveLength(1);
+      expect(catalog.loadCalls[0]).toMatchObject({ page: 0, append: false, filters: { collection: 'eid-edit' } });
+      expect(catalog.facetCalls).toHaveLength(1);
+      expect(catalog.facetCalls[0].collection).toBe('eid-edit');
 
       header.pending!.error(new HttpErrorResponse({ status }));
       fixture.detectChanges();
       expect(q(fixture, status === 404 ? 'collection-not-found' : 'collection-load-error')).not.toBeNull();
       expect(q(fixture, 'collection-grid')).toBeNull();
       expect(fixture.componentInstance.products()).toEqual([]);
+      // The failed header issues no further listing / facets requests.
+      expect(catalog.loadCalls).toHaveLength(1);
+      expect(catalog.facetCalls).toHaveLength(1);
 
       // The in-flight listing answers after the failure: it is discarded.
       catalog.releaseLoads();
       await settle();
       await fixture.whenStable();
       fixture.detectChanges();
+      expect(catalog.loadCalls).toHaveLength(1);
+      expect(catalog.facetCalls).toHaveLength(1);
       expect(q(fixture, status === 404 ? 'collection-not-found' : 'collection-load-error')).not.toBeNull();
       expect(q(fixture, 'collection-grid')).toBeNull();
       expect(fixture.nativeElement.querySelectorAll('ui-product-card')).toHaveLength(0);

@@ -1,5 +1,5 @@
 <main class="pdp-page" [style.--pdp-header-h]="headerHeight() ? headerHeight() + 'px' : null">
-  <ui-container size="default">
+  <ui-container class="pdp-container" size="default">
 
     @if (loading()) {
       <ui-text tone="secondary">{{ 'product.loading' | translate }}</ui-text>
@@ -35,29 +35,10 @@
 
         <!-- ======================================================== -->
         <!-- Gallery: one scroll-snap track (swipe / trackpad / arrows  -->
-        <!-- / thumbnails), click-to-zoom lightbox.                     -->
+        <!-- / thumbnails), click-to-zoom lightbox. The stage comes     -->
+        <!-- first; the thumbnail row (>= 768px) sits BELOW it.         -->
         <!-- ======================================================== -->
         <section class="pdp-gallery" [attr.aria-label]="'product.gallery.aria' | translate">
-
-          @if (slides().length > 1) {
-            <ul class="pdp-thumbnails" [attr.aria-label]="'product.gallery.thumbsAria' | translate">
-              @for (s of slides(); track s.url; let i = $index) {
-                <li>
-                  <button
-                    type="button"
-                    class="pdp-thumb"
-                    [class.is-active]="i === activeImageIndex()"
-                    [attr.aria-label]="'product.gallery.thumbAria' | translate:{ n: i + 1, total: slides().length }"
-                    [attr.aria-pressed]="i === activeImageIndex()"
-                    (click)="selectImage(i)"
-                    (keydown)="onThumbnailKeydown($event, i)"
-                  >
-                    <img [src]="s.url | cfImage:'gallery'" alt="" width="64" height="85" loading="lazy" decoding="async" />
-                  </button>
-                </li>
-              }
-            </ul>
-          }
 
           <div class="pdp-stage">
             @if (slides().length > 0) {
@@ -123,13 +104,16 @@
             }
 
             @if (slides().length > 1) {
+              <!-- At the ends the arrow stays focusable (aria-disabled, no-op
+                   click) so keyboard focus is never dropped to <body>. -->
               <button
                 type="button"
                 class="pdp-stage__nav pdp-stage__nav--prev"
                 (click)="galleryPrev()"
-                [disabled]="activeImageIndex() === 0"
+                [attr.aria-disabled]="activeImageIndex() === 0 ? 'true' : null"
                 aria-controls="pdp-gallery-track"
                 [attr.aria-label]="'product.gallery.prev' | translate"
+                data-testid="pdp-gallery-prev"
               >
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M15 5l-7 7 7 7"/>
@@ -139,9 +123,10 @@
                 type="button"
                 class="pdp-stage__nav pdp-stage__nav--next"
                 (click)="galleryNext()"
-                [disabled]="activeImageIndex() === slides().length - 1"
+                [attr.aria-disabled]="activeImageIndex() === slides().length - 1 ? 'true' : null"
                 aria-controls="pdp-gallery-track"
                 [attr.aria-label]="'product.gallery.next' | translate"
+                data-testid="pdp-gallery-next"
               >
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M9 5l7 7-7 7"/>
@@ -161,6 +146,34 @@
               </span>
             }
           </div>
+
+          <!-- Thumbnail row below the stage (>= 768px; dots + count on
+               phones). Scrolls sideways when the thumbs don't fit; the
+               active one is kept in view (see revealActiveThumb). -->
+          @if (slides().length > 1) {
+            <ul
+              #thumbs
+              class="pdp-thumbnails"
+              [attr.aria-label]="'product.gallery.thumbsAria' | translate"
+              data-testid="pdp-thumbnails"
+            >
+              @for (s of slides(); track s.url; let i = $index) {
+                <li>
+                  <button
+                    type="button"
+                    class="pdp-thumb"
+                    [class.is-active]="i === activeImageIndex()"
+                    [attr.aria-label]="'product.gallery.thumbAria' | translate:{ n: i + 1, total: slides().length }"
+                    [attr.aria-pressed]="i === activeImageIndex()"
+                    (click)="selectImage(i)"
+                    (keydown)="onThumbnailKeydown($event, i)"
+                  >
+                    <img [src]="s.url | cfImage:'gallery'" alt="" width="56" height="75" loading="lazy" decoding="async" />
+                  </button>
+                </li>
+              }
+            </ul>
+          }
         </section>
 
         <!-- ======================================================== -->
@@ -346,7 +359,7 @@
                   #colorChips
                   id="pdp-color-chips"
                   class="pdp-chips pdp-chips--colors"
-                  [class.is-collapsed]="colorsCollapsible() && !colorsExpanded()"
+                  [class.is-collapsed]="!colorsExpanded()"
                   data-testid="pdp-color-chips"
                 >
                   @for (c of orderedColors(); track c.label) {
@@ -504,21 +517,26 @@
                reveals the hints next to the options instead. -->
           <div #buyBox class="pdp-buybox" data-testid="pdp-buybox">
             @if (p.in_stock) {
+              <!-- At 1 / 99 a step button is aria-disabled but stays
+                   focusable (its clamped click is a no-op), so stepping to
+                   the limit never drops keyboard focus to <body>. -->
               <div class="pdp-qty" role="group" [attr.aria-label]="'product.quantityAria' | translate">
                 <button
                   type="button"
                   class="pdp-qty__btn"
                   (click)="decrementQuantity()"
-                  [disabled]="quantity() <= 1"
+                  [attr.aria-disabled]="quantity() <= 1 ? 'true' : null"
                   [attr.aria-label]="'product.decreaseQty' | translate"
+                  data-testid="pdp-qty-dec"
                 >−</button>
                 <span class="pdp-qty__value" aria-live="polite">{{ quantity() }}</span>
                 <button
                   type="button"
                   class="pdp-qty__btn"
                   (click)="incrementQuantity()"
-                  [disabled]="quantity() >= 99"
+                  [attr.aria-disabled]="quantity() >= 99 ? 'true' : null"
                   [attr.aria-label]="'product.increaseQty' | translate"
+                  data-testid="pdp-qty-inc"
                 >+</button>
               </div>
             }
@@ -526,7 +544,8 @@
               class="pdp-buybox__cta"
               variant="primary"
               size="lg"
-              [disabled]="adding() || !p.in_stock"
+              [disabled]="!p.in_stock"
+              [busy]="adding()"
               (clicked)="addToCart()"
               data-testid="pdp-add-to-cart"
             >
@@ -635,8 +654,62 @@
 
           <!-- Ain "Complete the look": real, in-stock complements from other
                categories, right under the buy area (before "You may also
-               like"). Silently omitted when there are none. -->
-          @if (completeTheLookItems().length > 0) {
+               like"). Its slot is held by a same-size skeleton from the
+               first product paint until the request answers, so it never
+               pushes the content below it down; silently omitted when the
+               answer is empty (or failed).
+               Known trade-off: on that empty / failed path the reserved
+               slot collapses when the answer lands (content below moves up
+               once). Measured as rare (every sampled product returned 6
+               complements); removing it entirely needs the product payload
+               to say up front whether complements exist (an API change). -->
+          @if (completeTheLookStatus() === 'loading') {
+            <!-- Skeleton: the SAME container / head / rail / card classes as
+                 the strip below, with inert placeholders (aria-hidden, no
+                 focusable elements, a non-scrolling rail). The loading line
+                 is plain, visually hidden text for screen-reader users who
+                 browse into the section, NOT a live region: inside an
+                 aria-busy section that is replaced (never un-busied) an
+                 announcement would not be read, and a status for a
+                 secondary strip loading on every product view would be
+                 noise. -->
+            <section
+              class="pdp-ctl pdp-ctl--loading"
+              aria-labelledby="pdp-ctl-heading"
+              aria-busy="true"
+              data-testid="pdp-ctl-skeleton"
+            >
+              <div class="pdp-ctl__head">
+                <h2 id="pdp-ctl-heading" class="pdp-ctl__heading">
+                  <svg class="pdp-ctl__spark" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <path d="M12 3l1.6 3.9L17.5 8l-3.9 1.6L12 13.5 10.4 9.6 6.5 8l3.9-1.1L12 3z" fill="currentColor"></path>
+                    <circle cx="18" cy="17" r="1.4" fill="currentColor"></circle>
+                  </svg>
+                  {{ 'product.completeTheLookHeading' | translate }}
+                </h2>
+                <!-- Same footprint as the real tools (two rail arrows + the
+                     "Add the look" pill, sized by its own label), so the head
+                     wraps identically at every width. -->
+                <div class="pdp-ctl__tools" aria-hidden="true" data-testid="pdp-ctl-skeleton-tools">
+                  <span class="pdp-rail-btn pdp-skel"></span>
+                  <span class="pdp-rail-btn pdp-skel"></span>
+                  <span class="pdp-ctl__add pdp-ctl__add--skel pdp-skel">{{ 'product.addTheLook' | translate }}</span>
+                </div>
+              </div>
+              <ul class="pdp-rail pdp-ctl__rail pdp-ctl__rail--skel" aria-hidden="true" data-testid="pdp-ctl-skeleton-rail">
+                @for (slot of ctlSkeletonSlots; track slot) {
+                  <li class="pdp-ctl__item">
+                    <span class="pdp-ctl__link">
+                      <span class="pdp-ctl__img pdp-skel"></span>
+                      <span class="pdp-ctl__name pdp-ctl__line--skel"><span class="pdp-skel"></span></span>
+                      <span class="pdp-ctl__price pdp-ctl__line--skel"><span class="pdp-skel"></span></span>
+                    </span>
+                  </li>
+                }
+              </ul>
+              <p class="visually-hidden" data-testid="pdp-ctl-loading">{{ 'product.ctl.loading' | translate }}</p>
+            </section>
+          } @else if (completeTheLookItems().length > 0) {
             <section class="pdp-ctl" aria-labelledby="pdp-ctl-heading" data-testid="pdp-ctl">
               <div class="pdp-ctl__head">
                 <h2 id="pdp-ctl-heading" class="pdp-ctl__heading">
@@ -647,32 +720,36 @@
                   {{ 'product.completeTheLookHeading' | translate }}
                 </h2>
                 <div class="pdp-ctl__tools">
-                  @if (ctlRail.overflowing()) {
-                    <button
-                      type="button"
-                      class="pdp-rail-btn pdp-rail-btn--prev"
-                      (click)="ctlRail.scroll(-1)"
-                      [disabled]="ctlRail.atStart()"
-                      aria-controls="pdp-ctl-rail"
-                      [attr.aria-label]="'product.rail.prev' | translate"
-                    >
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
-                    </button>
-                    <button
-                      type="button"
-                      class="pdp-rail-btn pdp-rail-btn--next"
-                      (click)="ctlRail.scroll(1)"
-                      [disabled]="ctlRail.atEnd()"
-                      aria-controls="pdp-ctl-rail"
-                      [attr.aria-label]="'product.rail.next' | translate"
-                    >
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
-                    </button>
-                  }
+                  <!-- Always rendered (so the head never re-wraps when the
+                       rail is measured); at an edge, or when nothing
+                       overflows, an arrow is aria-disabled but stays
+                       focusable, and its click is a no-op. -->
+                  <button
+                    type="button"
+                    class="pdp-rail-btn pdp-rail-btn--prev"
+                    (click)="ctlRail.scroll(-1)"
+                    [attr.aria-disabled]="ctlRail.atStart() ? 'true' : null"
+                    aria-controls="pdp-ctl-rail"
+                    [attr.aria-label]="'product.rail.prev' | translate"
+                    data-testid="pdp-ctl-prev"
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="pdp-rail-btn pdp-rail-btn--next"
+                    (click)="ctlRail.scroll(1)"
+                    [attr.aria-disabled]="ctlRail.atEnd() ? 'true' : null"
+                    aria-controls="pdp-ctl-rail"
+                    [attr.aria-label]="'product.rail.next' | translate"
+                    data-testid="pdp-ctl-next"
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+                  </button>
                   <button
                     type="button"
                     class="pdp-ctl__add"
-                    [disabled]="addingLook()"
+                    [attr.aria-disabled]="addingLook() || null"
                     (click)="addTheLook()"
                     data-testid="pdp-ctl-add-look"
                   >
@@ -732,7 +809,8 @@
                       class="pdp-ctl__quick"
                       [class.is-added]="ctlState(item.id) === 'added'"
                       [class.is-error]="ctlState(item.id) === 'error'"
-                      [disabled]="!item.in_stock || ctlState(item.id) === 'adding'"
+                      [disabled]="!item.in_stock"
+                      [attr.aria-disabled]="ctlState(item.id) === 'adding' || null"
                       (click)="quickAddComplement(item)"
                       [attr.aria-label]="'product.ctl.quickAdd' | translate:{ name: item.name }"
                       [attr.data-testid]="'pdp-ctl-quick-' + item.id"
@@ -1115,11 +1193,13 @@
                 }
               </ul>
               @if (relRail.overflowing()) {
+                <!-- At an edge the arrow is aria-disabled but stays
+                     focusable (no-op click), so focus is never dropped. -->
                 <button
                   type="button"
                   class="pdp-rail-btn pdp-rail-btn--overlay pdp-rail-btn--prev"
                   (click)="relRail.scroll(-1)"
-                  [disabled]="relRail.atStart()"
+                  [attr.aria-disabled]="relRail.atStart() ? 'true' : null"
                   aria-controls="pdp-related-rail"
                   [attr.aria-label]="'product.rail.prev' | translate"
                 >
@@ -1129,7 +1209,7 @@
                   type="button"
                   class="pdp-rail-btn pdp-rail-btn--overlay pdp-rail-btn--next"
                   (click)="relRail.scroll(1)"
-                  [disabled]="relRail.atEnd()"
+                  [attr.aria-disabled]="relRail.atEnd() ? 'true' : null"
                   aria-controls="pdp-related-rail"
                   [attr.aria-label]="'product.rail.next' | translate"
                 >
@@ -1175,7 +1255,7 @@
             class="pdp-sticky-cta__btn"
             variant="primary"
             size="md"
-            [disabled]="adding()"
+            [busy]="adding()"
             (clicked)="addToCart()"
           >
             {{ adding() ? ('product.adding' | translate) : ('product.addToCart' | translate) }}

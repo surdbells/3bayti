@@ -13,7 +13,12 @@ import {
  * look" strip and "You may also like" row.
  *
  * - Edge state (`atStart` / `atEnd` / `overflowing`) drives prev/next
- *   buttons (`(click)="rail.scroll(1)"`, `[disabled]="rail.atEnd()"`).
+ *   buttons. At an edge the button is marked `aria-disabled="true"` and
+ *   KEPT focusable (never `disabled` / hidden: a keyboard user pressing
+ *   "Next" until the end would otherwise lose focus to <body>); `scroll()`
+ *   is a no-op towards an edge the rail already sits at, so the click needs
+ *   no extra guard:
+ *   `(click)="rail.scroll(1)" [attr.aria-disabled]="rail.atEnd() ? 'true' : null"`.
  * - ArrowLeft / ArrowRight move focus between items (`[data-rail-item]`),
  *   Home / End jump to the first / last item.
  * - RTL-aware: in a right-to-left context the visual "next" is to the
@@ -27,7 +32,7 @@ import {
  *   <ul appScrollRail #rail="scrollRail">
  *     <li data-rail-item>…</li>
  *   </ul>
- *   <button (click)="rail.scroll(-1)" [disabled]="rail.atStart()">‹</button>
+ *   <button (click)="rail.scroll(-1)" [attr.aria-disabled]="rail.atStart() ? 'true' : null">‹</button>
  */
 @Directive({
   selector: '[appScrollRail]',
@@ -84,10 +89,13 @@ export class ScrollRailDirective implements AfterViewInit, OnDestroy {
   /**
    * Scroll roughly one "page" (80% of the visible width) towards the
    * inline-end (`1`) or inline-start (`-1`). Scroll-snap settles the
-   * result on a whole item.
+   * result on a whole item. A no-op when the rail already sits at that edge
+   * (the click of an aria-disabled arrow).
    */
   scroll(direction: 1 | -1): void {
     const el = this.host.nativeElement;
+    this.update();
+    if (direction === 1 ? this.atEnd() : this.atStart()) return;
     const step = Math.max(el.clientWidth * 0.8, 120);
     const left = direction * this.inlineSign() * step;
     if (typeof el.scrollBy === 'function') {

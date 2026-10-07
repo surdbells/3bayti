@@ -225,10 +225,13 @@ import { TranslatePipe } from '@ngx-translate/core';
       }
       /* Compact density (PDP info column): smaller round buttons. */
       .share--compact {
-        gap: 6px;
+        gap: var(--space-xs);
       }
+      /* The token gap alone spaces the label from the first button (no
+         extra 2px: 8px, on the spacing scale). */
       .share--compact .share__label {
         font-size: 12px;
+        margin-inline-end: 0;
       }
       .share--compact .share__btn {
         width: 32px;

@@ -89,7 +89,7 @@ import { ConciergeService } from '../ai-concierge/concierge.service';
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 0.3rem 0.5rem;
+      gap: var(--space-2xs) var(--space-xs);
       margin: 0;
       font-size: 0.85rem;
       line-height: 1.4;
@@ -99,7 +99,7 @@ import { ConciergeService } from '../ai-concierge/concierge.service';
     .gcn-slim__cta {
       display: inline-flex;
       align-items: center;
-      gap: 0.25rem;
+      gap: var(--space-2xs);
       padding: 0;
       border: 0;
       background: none;

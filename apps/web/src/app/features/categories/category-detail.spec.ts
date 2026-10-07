@@ -315,20 +315,29 @@ describe('CategoryDetailComponent', () => {
         holdLoads: true,
         catalogItems: [makeProduct({ id: 9, slug: 'abaya-9' })],
       });
-      expect(catalog.loadCalls.length).toBeLessThanOrEqual(1);
-      expect(catalog.facetCalls.length).toBeLessThanOrEqual(1);
+      // Exactly one listing (page 0) and one facets request, for the route
+      // slug, are already in flight while the header is still pending.
+      expect(catalog.loadCalls).toHaveLength(1);
+      expect(catalog.loadCalls[0]).toMatchObject({ page: 0, append: false, filters: { category: 'abayas' } });
+      expect(catalog.facetCalls).toHaveLength(1);
+      expect(catalog.facetCalls[0].category).toBe('abayas');
 
       header.pending!.error(new HttpErrorResponse({ status: 404 }));
       fixture.detectChanges();
       expect(q(fixture, 'category-not-found')).not.toBeNull();
       expect(q(fixture, 'category-header')).toBeNull();
       expect(fixture.componentInstance.products()).toEqual([]);
+      // The failed header issues no further listing / facets requests.
+      expect(catalog.loadCalls).toHaveLength(1);
+      expect(catalog.facetCalls).toHaveLength(1);
 
       // The in-flight listing lands after the 404: it is ignored.
       catalog.releaseLoads();
       await settle();
       await fixture.whenStable();
       fixture.detectChanges();
+      expect(catalog.loadCalls).toHaveLength(1);
+      expect(catalog.facetCalls).toHaveLength(1);
       expect(q(fixture, 'category-not-found')).not.toBeNull();
       expect(fixture.nativeElement.querySelectorAll('ui-product-card')).toHaveLength(0);
       expect(fixture.componentInstance.products()).toEqual([]);

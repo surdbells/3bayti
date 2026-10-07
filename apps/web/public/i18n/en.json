@@ -1761,7 +1761,8 @@
       "quickAdd": "Add {{name}} to cart",
       "save": "Save {{name}} to wishlist",
       "added": "{{name}} added to your cart",
-      "addFailed": "Couldn't add {{name}}. Please try again."
+      "addFailed": "Couldn't add {{name}}. Please try again.",
+      "loading": "Loading pieces to complete the look…"
     }
   },
   "ui": {

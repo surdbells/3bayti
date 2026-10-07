@@ -1,15 +1,21 @@
 /* PDP page, `/product/:slug`.
 
    Compact / modern layout:
-   - < 768px    single column, full-bleed swipeable gallery (dots + count),
-                sticky bottom bar once the buy box scrolls away.
-   - 768-1023px single column, centred gallery with a thumbnail rail.
-   - >= 1024px  gallery | info. The gallery stage is height-capped to the
-                viewport below the header (sized from its constant RESTING
-                height, --pdp-header-rest, so the columns never reflow as the
-                header condenses on scroll) and both columns are sticky
-                (offset by the MEASURED header, --pdp-header-h), so the
-                shorter one stays in view while the other scrolls.
+   - < 768px    single column, swipeable gallery (dots + count): edge-to-edge
+                while its 3:4 stage is at most 650px tall (<= 487.5px wide),
+                centred and capped on wider small screens; sticky bottom bar
+                once the buy box scrolls away.
+   - 768-1023px single column, centred gallery: the stage with a row of
+                thumbnails below it.
+   - >= 1024px  gallery | info. The 3:4 stage is never taller than 650px and
+                is sized so stage + thumbnail row fit the first screen below
+                the RESTING header (the constant --pdp-header-rest, so the
+                columns never reflow as the header condenses on scroll). Both
+                columns are sticky (offset by the MEASURED header,
+                --pdp-header-h), so the shorter one stays in view while the
+                other scrolls. The page's content column is capped to the
+                gallery | info band and centred, so every section shares
+                the same two edges on wide windows.
    Logical properties throughout (RTL-safe); colours, spacing, radii and
    motion come from the global tokens in styles.scss. */
 
@@ -19,6 +25,26 @@
   --pdp-header-rest: 112px;
   /* Sticky offset: the measured site header (fallback: its resting height). */
   --pdp-sticky-top: calc(var(--pdp-header-h, var(--pdp-header-rest)) + var(--space-md));
+
+  /* Gallery geometry, in ONE place. The 3:4 stage is never taller than
+     --pdp-stage-max-h at any viewport, so never wider than --pdp-stage-max-w. */
+  --pdp-stage-max-h: 650px;
+  --pdp-stage-max-w: calc(var(--pdp-stage-max-h) * 3 / 4);
+  /* Desktop floor: on short windows the stage stops shrinking here, unless
+     the stuck gallery column would no longer fit (see the >= 1024px block). */
+  --pdp-stage-min-h: 420px;
+  /* Desktop: the info (buy) column's width cap. */
+  --pdp-info-max: 680px;
+  /* Thumbnails (>= 768px): one row of 3:4 thumbs directly below the stage. */
+  --pdp-thumb-w: 56px;
+  --pdp-thumb-h: calc(var(--pdp-thumb-w) * 4 / 3);
+  --pdp-thumbs-gap: var(--space-xs);
+  /* First paint: what sits between the resting header and the stage (page
+     top padding + breadcrumb row; stage top measured at 172px = 112 + 60). */
+  --pdp-stage-offset: 60px;
+  /* Room kept below the thumbnail row on the first screen. */
+  --pdp-gallery-end-gap: var(--space-md);
+
   padding-block: var(--space-sm) var(--space-2xl);
 }
 
@@ -27,6 +53,7 @@
   width: 1px;
   height: 1px;
   padding: 0;
+  /* Exception: the standard visually-hidden -1px (keeps the 1px box off-flow). */
   margin: -1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
@@ -39,7 +66,7 @@
 .pdp-breadcrumb {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-xs);
   min-width: 0;
   margin-block-end: var(--space-sm);
   font-size: 12.5px;
@@ -96,16 +123,63 @@
 }
 
 @media (min-width: 1024px) {
+  .pdp-page {
+    /* Stage height: the SMALLER of the 650px cap and what fits so that
+       stage + gap + thumbnail row sit on the first screen below the RESTING
+       header (--pdp-stage-fit-first), never under the floor. The floor
+       itself gives way on short windows (below ~647px tall): it is never
+       more than what fits while the gallery column is STUCK under the
+       header (--pdp-stage-fit-stuck: sticky gap + stage + gap + thumbnail
+       row + end gap), so the stuck column never hides its thumbnail row.
+       Both are deliberately NOT derived from the measured --pdp-header-h:
+       the header condenses once the page scrolls, and a size that tracked
+       it would reflow both columns (a layout shift) on the first scroll.
+       The resting height is the larger one, so the stuck fit is safe. */
+    --pdp-stage-fit-first: calc(
+      100vh
+      - var(--pdp-header-rest)
+      - var(--pdp-stage-offset)
+      - var(--pdp-thumbs-gap)
+      - var(--pdp-thumb-h)
+      - var(--pdp-gallery-end-gap)
+    );
+    --pdp-stage-fit-stuck: calc(
+      100vh
+      - var(--pdp-header-rest)
+      - var(--space-md)
+      - var(--pdp-thumbs-gap)
+      - var(--pdp-thumb-h)
+      - var(--pdp-gallery-end-gap)
+    );
+    --pdp-stage-h: clamp(
+      min(var(--pdp-stage-min-h), var(--pdp-stage-fit-stuck)),
+      var(--pdp-stage-fit-first),
+      var(--pdp-stage-max-h)
+    );
+    --pdp-stage-w: calc(var(--pdp-stage-h) * 3 / 4);
+    /* 4vw >= 40.96px from 1024px, so this is the previous 41-56px gap. */
+    --pdp-grid-gap: clamp(var(--space-xl), 4vw, calc(var(--space-xl) + var(--space-md)));
+    /* The gallery | info band at full size. */
+    --pdp-band-w: calc(var(--pdp-stage-w) + var(--pdp-grid-gap) + var(--pdp-info-max));
+  }
+
+  /* The page's content column (breadcrumb, gallery | info, Reviews, You
+     may also like) is never wider than the gallery | info band and is
+     centred in the page: on wide windows the room the capped gallery and
+     buy column don't use becomes equal side margins, and every PDP section
+     keeps the same two content edges (instead of the top band stopping
+     short of the inline-end edge the sections below it reach). The
+     container keeps its own gutter (padding) inside this width. */
+  .pdp-page > .pdp-container {
+    max-width: calc(var(--pdp-band-w) + 2 * var(--page-padding-x));
+  }
+
   .pdp-grid {
-    /* Stage width that keeps the 3:4 image inside the viewport height.
-       Deliberately NOT derived from the measured --pdp-header-h: the header
-       condenses once the page scrolls, and a width that tracked it would
-       reflow both columns (a layout shift) on the first scroll. */
-    --pdp-stage-w: max(340px, calc((100vh - var(--pdp-header-rest) - 48px) * 3 / 4));
-    grid-template-columns:
-      minmax(0, min(58%, calc(var(--pdp-stage-w) + 72px)))
-      minmax(0, 1fr);
-    gap: clamp(32px, 4vw, 56px);
+    /* The gallery column is exactly the stage's width (thumbnails sit
+       below it, not beside it); the info column takes the rest, which is
+       --pdp-info-max once the container is capped to the band above. */
+    grid-template-columns: minmax(0, var(--pdp-stage-w)) minmax(0, 1fr);
+    gap: var(--pdp-grid-gap);
     align-items: start;
   }
 
@@ -115,33 +189,45 @@
     top: var(--pdp-sticky-top);
   }
 
+  /* Takes the width the old side thumbnail rail used (+72px at 1280x720). */
   .pdp-info {
-    max-width: 620px;
+    max-width: var(--pdp-info-max);
   }
 }
 
 /* ----- Gallery --------------------------------------------------------- */
 
+/* Stage on top, thumbnail row (>= 768px) below it. */
 .pdp-gallery {
   display: flex;
   flex-direction: column;
+  gap: var(--pdp-thumbs-gap);
   min-width: 0;
 }
 
+/* Capped at --pdp-stage-max-w (so <= 650px tall) and centred at every
+   breakpoint; the 3:4 ratio is never stretched. */
 .pdp-stage {
   position: relative;
-  flex: 1 1 auto;
+  flex: none;
+  width: 100%;
+  max-width: var(--pdp-stage-max-w);
   min-width: 0;
+  margin-inline: auto;
   aspect-ratio: 3 / 4;
   overflow: hidden;
   background: var(--color-bg-muted);
   border-radius: var(--radius-md);
 }
 
-/* Mobile: edge-to-edge (cancels the container gutter). */
-@media (max-width: 767.98px) {
+/* Phones up to 487.5px wide: edge-to-edge (cancels the container gutter),
+   which keeps the 3:4 stage <= 650px tall. Wider small screens (488-767px)
+   keep the capped, centred stage above (no full bleed beyond that width). */
+@media (max-width: 487.5px) {
   .pdp-stage {
-    margin-inline: calc(-1 * var(--page-padding-x, 20px));
+    width: auto;
+    max-width: none;
+    margin-inline: calc(-1 * var(--page-padding-x));
     border-radius: 0;
   }
 }
@@ -212,12 +298,12 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: var(--space-xs);
   pointer-events: none;
 }
 
 .pill {
-  padding: 4px 10px;
+  padding: var(--space-2xs) var(--space-xs);
   border-radius: var(--radius-pill);
   font-size: 11px;
   font-weight: 600;
@@ -262,14 +348,16 @@
 
 /* Prev / next arrows (pointer devices; touch swipes) */
 .pdp-stage__nav {
+  --pdp-stage-nav-size: 38px;
   position: absolute;
   inset-block-start: 50%;
   display: none;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  margin-block-start: -19px;
+  width: var(--pdp-stage-nav-size);
+  height: var(--pdp-stage-nav-size);
+  /* Exception (centring, not a gap): half the button's own size. */
+  margin-block-start: calc(var(--pdp-stage-nav-size) / -2);
   padding: 0;
   border: 1px solid var(--color-border-subtle);
   border-radius: 50%;
@@ -284,7 +372,7 @@
 .pdp-stage__nav--prev { inset-inline-start: var(--space-sm); }
 .pdp-stage__nav--next { inset-inline-end: var(--space-sm); }
 
-.pdp-stage__nav:hover:not(:disabled) {
+.pdp-stage__nav:hover:not([aria-disabled='true']) {
   background: var(--color-bg-surface);
 }
 
@@ -294,9 +382,22 @@
   outline-offset: 2px;
 }
 
-.pdp-stage__nav:disabled {
+/* At the first / last image the arrow stays rendered and focusable
+   (aria-disabled + a no-op click, never `disabled` / visibility:hidden), so
+   a keyboard user pressing it at the end keeps focus instead of dropping to
+   <body>. For the mouse it is invisible and clicks pass through to the
+   slide (as before); with keyboard focus it shows dimmed. */
+.pdp-stage__nav[aria-disabled='true'] {
   cursor: default;
-  visibility: hidden;
+}
+
+.pdp-stage .pdp-stage__nav[aria-disabled='true']:not(:focus-visible) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pdp-stage .pdp-stage__nav[aria-disabled='true']:focus-visible {
+  opacity: 0.45;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -319,7 +420,7 @@
   inset-inline: 0;
   display: flex;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-xs);
   pointer-events: none;
 }
 
@@ -342,7 +443,7 @@
   position: absolute;
   inset-block-end: var(--space-sm);
   inset-inline-end: var(--space-sm);
-  padding: 2px 8px;
+  padding: var(--space-2xs) var(--space-xs);
   border-radius: var(--radius-pill);
   background: rgba(28, 20, 16, 0.55);
   color: var(--color-text-inverse);
@@ -351,9 +452,15 @@
   pointer-events: none;
 }
 
-/* Thumbnails: hidden on phones (dots instead), a compact rail beside the
-   stage from 768px. `order: -1` puts the rail at the inline-start, which
-   mirrors automatically in RTL. */
+/* Thumbnails: hidden on phones (dots + count instead). From 768px they form
+   one compact HORIZONTAL row directly BELOW the stage, starting at the
+   stage's inline-start (mirrors in RTL) and never wider than it (the gallery
+   column is the stage's width). Thumbs that don't fit scroll sideways with
+   no visible scrollbar; the component keeps the active one in view by
+   scrolling the row itself (scrollLeft maths, RTL-safe), never with
+   scrollIntoView, which would also scroll the page. The row's --space-2xs
+   padding, cancelled by an equal negative margin, keeps the thumbs' focus
+   rings (2px outline + 2px offset) inside its clip box. */
 .pdp-thumbnails {
   display: none;
   margin: 0;
@@ -361,9 +468,14 @@
   list-style: none;
 }
 
+.pdp-thumbnails > li {
+  flex: none;
+}
+
 .pdp-thumb {
   display: block;
-  width: 64px;
+  box-sizing: border-box;
+  width: var(--pdp-thumb-w);
   aspect-ratio: 3 / 4;
   padding: 0;
   overflow: hidden;
@@ -397,20 +509,17 @@
 }
 
 @media (min-width: 768px) {
-  .pdp-gallery {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: var(--space-xs);
-  }
-
   .pdp-thumbnails {
-    order: -1;
-    flex: 0 0 64px;
     display: flex;
-    flex-direction: column;
     gap: var(--space-xs);
-    max-height: min(650px, calc(var(--pdp-stage-w, 488px) * 4 / 3));
-    overflow-y: auto;
+    margin: calc(-1 * var(--space-2xs));
+    padding: var(--space-2xs);
+    /* Keyboard focus scrolling (Tab onto a partly visible thumb) stops the
+       thumb this far inside the edge, so its focus ring isn't clipped. */
+    scroll-padding-inline: var(--space-2xs);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
   }
 
@@ -424,11 +533,12 @@
   }
 }
 
-/* Tablet: single column, so cap + centre the gallery. */
+/* Tablet: single column, so centre the gallery at the (capped) stage width;
+   the thumbnail row then starts at the stage's inline-start edge. */
 @media (min-width: 768px) and (max-width: 1023.98px) {
   .pdp-gallery {
     width: 100%;
-    max-width: 560px;
+    max-width: var(--pdp-stage-max-w);
     margin-inline: auto;
   }
 }
@@ -458,7 +568,7 @@
 .pdp-vendor {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2xs);
   min-width: 0;
   margin: 0;
   font-size: 13px;
@@ -468,11 +578,11 @@
 .pdp-store {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2xs);
   min-width: 0;
   max-width: 100%;
-  padding-block: 2px;
-  padding-inline: 2px 10px;
+  padding-block: var(--space-2xs);
+  padding-inline: var(--space-2xs) var(--space-sm);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-pill);
   background: var(--color-bg-muted);
@@ -529,7 +639,7 @@
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--space-2xs);
   font-weight: 600;
   color: var(--color-brand-700);
   white-space: nowrap;
@@ -554,7 +664,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px 8px;
+  gap: var(--space-2xs) var(--space-xs);
   font-size: 13px;
   color: var(--color-text-secondary);
 }
@@ -566,13 +676,13 @@
 .pdp-rating {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2xs);
 }
 
 .pdp-rating__stars {
   display: inline-flex;
   align-items: center;
-  gap: 1px;
+  gap: 0; /* the star glyphs keep ~1px of viewBox inset each side */
   font-size: 14px;
   line-height: 0;
 }
@@ -642,7 +752,7 @@
 .pdp-stock {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-xs);
   margin: 0;
 }
 
@@ -673,7 +783,7 @@
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 4px 10px;
+  gap: var(--space-2xs) var(--space-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -696,7 +806,7 @@
 
 .pdp-price__save {
   align-self: center;
-  padding: 2px 8px;
+  padding: var(--space-2xs) var(--space-xs);
   border-radius: var(--radius-pill);
   background: var(--color-sale-bg);
   color: var(--color-sale);
@@ -710,13 +820,13 @@
 .pdp-options {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-sm);
 }
 
 .pdp-opt {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-xs);
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -727,7 +837,7 @@
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 2px 8px;
+  gap: var(--space-2xs) var(--space-xs);
   min-height: 20px;
 }
 
@@ -758,8 +868,11 @@
 .pdp-textlink {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 0;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) 0;
+  /* The padding enlarges the hit area only: the equal negative margin keeps
+     the layout box at the text height (so the label rows never grow). */
+  margin-block: calc(-1 * var(--space-2xs));
   border: 0;
   background: transparent;
   font: inherit;
@@ -791,18 +904,26 @@
 .pdp-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-xs);
 }
 
-/* Colours collapse to two rows. The 3px padding (cancelled by the negative
-   margin) keeps the chips' focus rings inside the clipped box. */
+/* Colours collapse to two rows. The --space-2xs padding (cancelled by the
+   negative margin) keeps the chips' 4px focus rings inside the clipped box.
+   The list is clipped to two rows from its FIRST render (is-collapsed is on
+   whenever it isn't expanded), so it never paints taller and then shrinks
+   once measured; with two rows or fewer the clip is a no-op. */
 .pdp-chips--colors {
-  margin: -3px;
-  padding: 3px;
+  margin: calc(-1 * var(--space-2xs));
+  padding: var(--space-2xs);
 }
 
 .pdp-chips--colors.is-collapsed {
-  max-height: calc(2 * 34px + 6px + 6px);
+  /* Exactly the natural height of a two-row list. max-height is a
+     BORDER-box height here (the global preflight sets box-sizing:
+     border-box), so it is the list's own padding on both sides + two 34px
+     chip rows (border-box buttons) + the row gap between them: 84px. Row 2
+     and its 4px focus ring stay whole; a third row is clipped entirely. */
+  max-height: calc(2 * var(--space-2xs) + 2 * 34px + var(--space-xs));
   overflow: hidden;
 }
 
@@ -810,10 +931,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-2xs);
   min-width: 42px;
   height: 34px;
-  padding: 0 12px;
+  padding: 0 var(--space-sm);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-sm);
   background: var(--color-bg-surface);
@@ -873,15 +994,15 @@
 /* The live region is always present (so screen readers announce the hint
    when it appears) but takes no space while empty: cancel the group gap. */
 .pdp-opt__live {
-  margin-block-start: -6px;
+  margin-block-start: calc(-1 * var(--space-xs));
 }
 
 /* Required-selection hint: only after an add-to-cart attempt. */
 .pdp-opt__hint {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 8px 0 0;
+  gap: var(--space-2xs);
+  margin: var(--space-xs) 0 0;
   font-size: 13px;
   font-weight: 500;
   color: var(--color-sale);
@@ -895,7 +1016,7 @@
 .pdp-field {
   width: 100%;
   box-sizing: border-box;
-  padding: 9px 12px;
+  padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-sm);
   background: var(--color-bg-surface);
@@ -934,7 +1055,7 @@ textarea.pdp-field {
 .pdp-measure__field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-2xs);
 }
 
 .pdp-measure__label {
@@ -982,7 +1103,7 @@ textarea.pdp-field {
 .pdp-note__panel {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2xs);
   width: 100%;
 }
 
@@ -1029,7 +1150,7 @@ textarea.pdp-field {
   transition: background var(--duration-fast) ease;
 }
 
-.pdp-qty__btn:hover:not(:disabled) {
+.pdp-qty__btn:hover:not([aria-disabled='true']) {
   background: var(--color-bg-muted);
 }
 
@@ -1038,7 +1159,9 @@ textarea.pdp-field {
   box-shadow: inset 0 0 0 2px var(--color-brand-500);
 }
 
-.pdp-qty__btn:disabled {
+/* At 1 / 99 the button is aria-disabled but stays focusable (the clamped
+   click is a no-op), so stepping down to 1 never drops focus to <body>. */
+.pdp-qty__btn[aria-disabled='true'] {
   color: var(--color-text-tertiary);
   cursor: not-allowed;
 }
@@ -1053,7 +1176,7 @@ textarea.pdp-field {
 }
 
 .pdp-buybox__error {
-  margin: -6px 0 0;
+  margin: calc(-1 * var(--space-xs)) 0 0;
   font-size: 13px;
   font-weight: 500;
   color: var(--color-sale);
@@ -1071,8 +1194,8 @@ textarea.pdp-field {
 .pdp-tryon-cta {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
+  gap: var(--space-2xs);
+  padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--color-brand-400);
   border-radius: var(--radius-pill);
   background: linear-gradient(120deg, var(--color-brand-50), var(--color-bg-surface) 70%);
@@ -1131,7 +1254,7 @@ textarea.pdp-field {
 }
 
 .pdp-customization__done {
-  gap: 4px;
+  gap: var(--space-2xs);
   background: var(--color-bg-muted);
 }
 
@@ -1153,7 +1276,7 @@ textarea.pdp-field {
 .pdp-customization__field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2xs);
 }
 
 .pdp-customization__label {
@@ -1165,7 +1288,7 @@ textarea.pdp-field {
 .pdp-customization__check {
   display: flex;
   align-items: flex-start;
-  gap: 9px;
+  gap: var(--space-xs);
   font-size: 13px;
   line-height: 1.45;
   color: var(--color-text-primary);
@@ -1176,7 +1299,8 @@ textarea.pdp-field {
   flex-shrink: 0;
   width: 16px;
   height: 16px;
-  margin-top: 2px;
+  /* Exception (optical): centres the 16px box on the first 13px x 1.45 text line. */
+  margin-block-start: 2px;
   accent-color: var(--color-brand-700);
   cursor: pointer;
 }
@@ -1216,18 +1340,38 @@ textarea.pdp-field {
   text-decoration: underline;
 }
 
-/* ----- Horizontal rails (Complete the look, You may also like) ---------- */
-
+/* ----- Horizontal rails (Complete the look, You may also like) ----------
+   overflow-x:auto forces overflow-y to clip as well, so a rail would clip
+   its cards' focus rings, hover lift and shadows at its edges. Each rail
+   therefore gets inner padding big enough to contain them
+   (--pdp-rail-pad-*), cancelled by equal negative margins: the cards keep
+   their place (flush with the heading above), and scroll-padding-inline
+   keeps the snap edge where the cards rest. --pdp-rail-after is the net
+   space the rail keeps below its cards (0 by default).
+   The inline padding must stay <= the 12px card gap: with more, a card
+   snapped to the start edge leaves a sliver of the previous card (and its
+   shadow) showing inside the padding.
+   Default (Complete the look): the card link's focus ring is a 2px outline
+   + 2px offset = 4px on every side; the quick-add / heart shadows stay
+   inside their card. All logical, so it mirrors in RTL. */
 .pdp-rail {
+  --pdp-rail-pad-block-start: var(--space-2xs);
+  --pdp-rail-pad-block-end: var(--space-2xs);
+  --pdp-rail-pad-inline: var(--space-2xs);
+  --pdp-rail-after: 0px;
   display: flex;
   gap: var(--space-sm);
-  margin: 0;
-  padding: 2px 2px 6px;
+  margin-block:
+    calc(-1 * var(--pdp-rail-pad-block-start))
+    calc(var(--pdp-rail-after) - var(--pdp-rail-pad-block-end));
+  margin-inline: calc(-1 * var(--pdp-rail-pad-inline));
+  padding-block: var(--pdp-rail-pad-block-start) var(--pdp-rail-pad-block-end);
+  padding-inline: var(--pdp-rail-pad-inline);
   list-style: none;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
-  scroll-padding-inline: 2px;
+  scroll-padding-inline: var(--pdp-rail-pad-inline);
   scrollbar-width: none;
 }
 
@@ -1244,6 +1388,7 @@ textarea.pdp-field {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   width: 30px;
   height: 30px;
   padding: 0;
@@ -1255,7 +1400,7 @@ textarea.pdp-field {
   transition: background var(--duration-fast) ease, opacity var(--duration-fast) ease;
 }
 
-.pdp-rail-btn:hover:not(:disabled) {
+.pdp-rail-btn:hover:not([aria-disabled='true']) {
   background: var(--color-brand-50);
 }
 
@@ -1264,18 +1409,23 @@ textarea.pdp-field {
   outline-offset: 2px;
 }
 
-.pdp-rail-btn:disabled {
+/* At an edge (or when nothing overflows) the arrow is aria-disabled but
+   stays rendered and focusable, so focus is never dropped to <body>. */
+.pdp-rail-btn[aria-disabled='true'] {
   opacity: 0.35;
   cursor: default;
 }
 
 /* ----- Ain "Complete the look" (compact strip under the buy area) ------- */
 
+/* Cards sit 16px in from the border on the inline sides and below, 12px
+   under the head: the strip's previous card placement and height (its
+   rail's old uncompensated 2px / 6px padding is now part of these tokens). */
 .pdp-ctl {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 14px 10px;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md) var(--space-md);
   border: 1px solid color-mix(in srgb, var(--color-brand-300) 55%, transparent);
   border-radius: var(--radius-md);
   background: linear-gradient(160deg, var(--color-brand-50), var(--color-bg-surface) 75%);
@@ -1292,7 +1442,7 @@ textarea.pdp-field {
 .pdp-ctl__heading {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2xs);
   margin: 0;
   font-family: 'Playfair Display', Georgia, serif;
   font-size: 1.05rem;
@@ -1307,12 +1457,13 @@ textarea.pdp-field {
 .pdp-ctl__tools {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-xs);
 }
 
 .pdp-ctl__add {
+  box-sizing: border-box;
   height: 30px;
-  padding: 0 14px;
+  padding: 0 var(--space-sm);
   border: 1px solid var(--color-brand-700);
   border-radius: var(--radius-pill);
   background: var(--color-brand-700);
@@ -1324,7 +1475,7 @@ textarea.pdp-field {
   transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease;
 }
 
-.pdp-ctl__add:hover:not(:disabled) {
+.pdp-ctl__add:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--color-brand-600);
   border-color: var(--color-brand-600);
 }
@@ -1334,7 +1485,9 @@ textarea.pdp-field {
   outline-offset: 2px;
 }
 
-.pdp-ctl__add:disabled {
+/* aria-disabled while "Add the look" runs: stays focusable (no focus loss). */
+.pdp-ctl__add:disabled,
+.pdp-ctl__add[aria-disabled="true"] {
   opacity: 0.55;
   cursor: default;
 }
@@ -1347,7 +1500,7 @@ textarea.pdp-field {
 .pdp-ctl__link {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2xs);
   color: inherit;
   text-decoration: none;
   border-radius: var(--radius-sm);
@@ -1362,7 +1515,6 @@ textarea.pdp-field {
   display: block;
   width: 112px;
   aspect-ratio: 3 / 4;
-  margin-block-end: 4px;
   overflow: hidden;
   border-radius: var(--radius-sm);
   background: var(--color-bg-muted);
@@ -1391,6 +1543,15 @@ textarea.pdp-field {
   background: var(--color-brand-100);
 }
 
+/* One line each, at a fixed line box (1.4em): the card height never depends
+   on the text's font (e.g. an Arabic name set in a fallback font), so the
+   loading skeleton below matches it exactly. */
+.pdp-ctl__name,
+.pdp-ctl__price {
+  block-size: 1.4em;
+  line-height: 1.4;
+}
+
 .pdp-ctl__name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1411,11 +1572,11 @@ textarea.pdp-field {
 }
 
 /* Quick add: overlaid on the image's bottom inline-end corner (outside the
-   link, so no nested interactive content). */
+   link, so no nested interactive content): image height - button - inset. */
 .pdp-ctl__quick {
   position: absolute;
-  inset-block-start: calc(112px * 4 / 3 - 36px);
-  inset-inline-end: 6px;
+  inset-block-start: calc(112px * 4 / 3 - 30px - var(--space-xs));
+  inset-inline-end: var(--space-xs);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1453,8 +1614,8 @@ textarea.pdp-field {
 /* Wishlist heart (top inline-end of the image, like the product cards). */
 .pdp-ctl__save {
   position: absolute;
-  inset-block-start: 6px;
-  inset-inline-end: 6px;
+  inset-block-start: var(--space-xs);
+  inset-inline-end: var(--space-xs);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1490,9 +1651,69 @@ textarea.pdp-field {
   outline-offset: 2px;
 }
 
-.pdp-ctl__quick:disabled {
+/* disabled = out of stock; aria-disabled = its add request is in flight
+   (stays focusable, so keyboard focus is not dropped). */
+.pdp-ctl__quick:disabled,
+.pdp-ctl__quick[aria-disabled="true"] {
   opacity: 0.6;
   cursor: default;
+}
+
+/* "Complete the look" loading skeleton: the strip's own container, head,
+   rail and card classes (so it has the strip's exact height at every width,
+   LTR and RTL); only the paint differs. Inert: aria-hidden placeholders,
+   no pointer interaction, and a rail that is NOT a scroll container (an
+   overflowing overflow:auto box is a keyboard tab stop in Chromium). */
+.pdp-skel {
+  background-color: var(--color-bg-muted);
+}
+
+.pdp-ctl--loading .pdp-ctl__tools {
+  pointer-events: none;
+}
+
+/* Sized by its own (invisible) label, exactly like the real button. */
+.pdp-ctl__add.pdp-ctl__add--skel {
+  display: inline-flex;
+  align-items: center;
+  border-color: transparent;
+  color: transparent;
+  user-select: none;
+}
+
+.pdp-ctl__rail--skel {
+  overflow: hidden;
+}
+
+.pdp-ctl__line--skel {
+  position: relative;
+}
+
+.pdp-ctl__line--skel > .pdp-skel {
+  position: absolute;
+  inset-block: 20%;
+  inset-inline-start: 0;
+  inline-size: 80%;
+  border-radius: var(--radius-pill);
+}
+
+.pdp-ctl__price.pdp-ctl__line--skel > .pdp-skel {
+  inline-size: 45%;
+}
+
+/* Static tint by default; the shimmer runs only when motion is welcome. */
+@media (prefers-reduced-motion: no-preference) {
+  .pdp-skel {
+    background-image: linear-gradient(110deg, transparent 30%, rgba(253, 250, 243, 0.7) 50%, transparent 70%);
+    background-repeat: no-repeat;
+    background-size: 200% 100%;
+    animation: pdp-shimmer 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes pdp-shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
 }
 
 /* ----- Extras: gift-card line, share, trust ----------------------------- */
@@ -1516,7 +1737,7 @@ textarea.pdp-field {
 .pdp-trust__item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--space-xs);
   min-width: 0;
 }
 
@@ -1535,7 +1756,7 @@ textarea.pdp-field {
 .pdp-trust__text {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
   min-width: 0;
   line-height: 1.3;
 }
@@ -1584,7 +1805,7 @@ textarea.pdp-field {
   justify-content: space-between;
   gap: var(--space-sm);
   width: 100%;
-  padding: 14px 0;
+  padding: var(--space-sm) 0;
   border: 0;
   background: none;
   color: var(--color-brand-700);
@@ -1671,7 +1892,7 @@ textarea.pdp-field {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 4px var(--space-md);
+  gap: var(--space-2xs) var(--space-md);
   margin-block-end: var(--space-md);
 }
 
@@ -1698,7 +1919,7 @@ textarea.pdp-field {
 .pdp-reviews__summary {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: var(--space-2xs);
   margin: 0;
   font-size: 14px;
   color: var(--color-text-secondary);
@@ -1734,8 +1955,8 @@ textarea.pdp-field {
 .pdp-review {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 14px 16px;
+  gap: var(--space-xs);
+  padding: var(--space-md);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-sm);
   background: var(--color-bg-surface);
@@ -1751,7 +1972,7 @@ textarea.pdp-field {
 .pdp-review__stars {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 0; /* the star glyphs keep ~1px of viewBox inset each side */
   font-size: 14px;
   line-height: 0;
 }
@@ -1759,8 +1980,8 @@ textarea.pdp-field {
 .pdp-review__verified {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-xs);
   border-radius: var(--radius-pill);
   background: var(--color-brand-50);
   color: var(--color-brand-700);
@@ -1786,7 +2007,7 @@ textarea.pdp-field {
 .pdp-review__foot {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: var(--space-2xs);
   font-size: 13px;
   color: var(--color-text-tertiary);
 }
@@ -1800,7 +2021,7 @@ textarea.pdp-field {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-xs);
   padding: var(--space-lg) var(--space-md);
   text-align: center;
   color: var(--color-text-secondary);
@@ -1859,7 +2080,7 @@ textarea.pdp-field {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-xs);
   padding: var(--space-lg) var(--space-md);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
@@ -1907,7 +2128,7 @@ textarea.pdp-field {
 }
 
 .pdp-review-form__rating legend {
-  margin-block-end: 6px;
+  margin-block-end: var(--space-2xs);
   padding: 0;
   font-size: 14px;
   font-weight: 600;
@@ -1916,12 +2137,12 @@ textarea.pdp-field {
 
 .pdp-review-form__stars {
   display: inline-flex;
-  gap: 4px;
+  gap: var(--space-2xs);
 }
 
 .pdp-review-form__star {
   display: inline-flex;
-  padding: 2px;
+  padding: var(--space-2xs);
   border: 0;
   background: transparent;
   color: var(--color-border-default);
@@ -1942,7 +2163,7 @@ textarea.pdp-field {
 .pdp-review-form__field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2xs);
 }
 
 .pdp-review-form__label {
@@ -1965,9 +2186,35 @@ textarea.pdp-field {
   display: flex;
 }
 
-/* You may also like: one scrollable row of compact product cards. */
+/* You may also like: one scrollable row of compact product cards.
+   flow-root keeps the rail's negative block margins (below) from collapsing
+   through the wrapper, so the wrapper box (the overlay arrows' reference)
+   stays exactly the cards' band. */
 .pdp-rail-wrap {
   position: relative;
+  display: flow-root;
+}
+
+/* Room for ui-product-card's hover state inside the scroller: a
+   translateY(-3px) lift plus --shadow-card-hover (0 2px 4px, 0 8px 20px
+   -4px) reaches 8 + 20 - 4 = 24px below and (20 - 4 - 8) + 3 = 11px above
+   (its 2px focus ring stays within that). Sideways it reaches 16px, but
+   the inline padding is capped at the 12px card gap (see .pdp-rail), where
+   the shadow's remaining tail is under 1% alpha. That room only matters
+   where cards lift on hover (fine pointers); on touch screens the rail
+   keeps just the 4px focus-ring room, so it stays inside the gutter and
+   the next card is visibly cut at the edge (the cue that the row
+   scrolls). The 8px kept below the cards is the band's previous height. */
+.pdp-related__rail {
+  --pdp-rail-pad-block-start: var(--space-sm);
+  --pdp-rail-pad-block-end: var(--space-lg);
+  --pdp-rail-after: var(--space-xs);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pdp-related__rail {
+    --pdp-rail-pad-inline: var(--space-sm);
+  }
 }
 
 .pdp-related__item {
@@ -1995,11 +2242,19 @@ textarea.pdp-field {
   box-shadow: var(--shadow-floating);
 }
 
-.pdp-rail-btn--overlay.pdp-rail-btn--prev { inset-inline-start: -8px; }
-.pdp-rail-btn--overlay.pdp-rail-btn--next { inset-inline-end: -8px; }
+.pdp-rail-btn--overlay.pdp-rail-btn--prev { inset-inline-start: calc(-1 * var(--space-xs)); }
+.pdp-rail-btn--overlay.pdp-rail-btn--next { inset-inline-end: calc(-1 * var(--space-xs)); }
 
-.pdp-rail-btn--overlay:disabled {
-  visibility: hidden;
+/* At an edge the overlay arrow stays focusable (aria-disabled, no-op click):
+   invisible to the mouse (clicks pass through to the card, as before), shown
+   dimmed while it holds keyboard focus. */
+.pdp-rail-btn--overlay[aria-disabled='true']:not(:focus-visible) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pdp-rail-btn--overlay[aria-disabled='true']:focus-visible {
+  opacity: 0.45;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -2031,7 +2286,7 @@ textarea.pdp-field {
 
 .pdp-not-found {
   max-width: 560px;
-  padding: 48px 0;
+  padding: var(--space-xl) 0;
 }
 
 .eyebrow {
@@ -2110,7 +2365,7 @@ textarea.pdp-field {
 }
 
 .pdp-sticky-cta__save {
-  padding: 1px 6px;
+  padding: 0 var(--space-xs);
   border-radius: var(--radius-pill);
   background: var(--color-sale-bg);
   color: var(--color-sale);
@@ -2146,7 +2401,8 @@ textarea.pdp-field {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(16px, 4vw, 48px);
+  /* Fluid spacing: token bounds, vw only scales between them. */
+  padding: clamp(var(--space-md), 4vw, calc(var(--space-xl) + var(--space-xs)));
   background: rgba(28, 20, 16, 0.86);
   animation: pdp-fade-in var(--duration-base) var(--ease-out);
 }
@@ -2194,8 +2450,9 @@ textarea.pdp-field {
 }
 
 .pdp-lightbox__close {
-  inset-block-start: clamp(12px, 3vw, 28px);
-  inset-inline-end: clamp(12px, 3vw, 28px);
+  /* Fluid spacing: token bounds, vw only scales between them. */
+  inset-block-start: clamp(var(--space-sm), 3vw, calc(var(--space-lg) + var(--space-2xs)));
+  inset-inline-end: clamp(var(--space-sm), 3vw, calc(var(--space-lg) + var(--space-2xs)));
   width: 44px;
   height: 44px;
 }
@@ -2207,25 +2464,30 @@ textarea.pdp-field {
   transform: translateY(-50%);
 }
 
-.pdp-lightbox__nav--prev { inset-inline-start: clamp(8px, 2vw, 24px); }
-.pdp-lightbox__nav--next { inset-inline-end: clamp(8px, 2vw, 24px); }
+/* Fluid spacing: token bounds, vw only scales between them. */
+.pdp-lightbox__nav--prev { inset-inline-start: clamp(var(--space-xs), 2vw, var(--space-lg)); }
+.pdp-lightbox__nav--next { inset-inline-end: clamp(var(--space-xs), 2vw, var(--space-lg)); }
 
 :host-context([dir='rtl']) .pdp-lightbox__nav svg {
   transform: scaleX(-1);
 }
 
+/* Centred without a direction-dependent translate (inset-inline-start:50%
+   + translateX(-50%) lands a full counter width off centre in RTL). */
 .pdp-lightbox__counter {
   position: fixed;
-  inset-block-end: clamp(12px, 3vw, 28px);
-  inset-inline-start: 50%;
-  padding: 4px 12px;
+  /* Fluid spacing: token bounds, vw only scales between them. */
+  inset-block-end: clamp(var(--space-sm), 3vw, calc(var(--space-lg) + var(--space-2xs)));
+  inset-inline: 0;
+  width: fit-content;
+  margin-inline: auto;
+  padding: var(--space-2xs) var(--space-sm);
   border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
-  transform: translateX(-50%);
 }
 
 @keyframes pdp-fade-in {
@@ -2243,7 +2505,8 @@ textarea.pdp-field {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(16px, 4vw, 48px);
+  /* Fluid spacing: token bounds, vw only scales between them. */
+  padding: clamp(var(--space-md), 4vw, calc(var(--space-xl) + var(--space-xs)));
   background: rgba(28, 20, 16, 0.6);
   animation: pdp-fade-in var(--duration-base) var(--ease-out);
 }
@@ -2276,7 +2539,7 @@ textarea.pdp-field {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-  padding: 18px 20px;
+  padding: var(--space-md) var(--space-lg);
   border-block-end: 1px solid var(--color-border-subtle);
 }
 
@@ -2314,20 +2577,20 @@ textarea.pdp-field {
 }
 
 .pdp-size-guide__body {
-  padding: 20px;
+  padding: var(--space-lg);
   overflow-y: auto;
 }
 
 .pdp-size-guide__status {
   margin: 0;
-  padding: 24px 0;
+  padding: var(--space-lg) 0;
   text-align: center;
   font-size: 14px;
   color: var(--color-text-tertiary);
 }
 
 .pdp-size-guide__note {
-  margin: 0 0 14px;
+  margin: 0 0 var(--space-sm);
   font-size: 13px;
   line-height: 1.5;
   color: var(--color-text-tertiary);
@@ -2346,7 +2609,7 @@ textarea.pdp-field {
 
 .pdp-size-guide__table th,
 .pdp-size-guide__table td {
-  padding: 10px 12px;
+  padding: var(--space-xs) var(--space-sm);
   border-block-end: 1px solid var(--color-border-subtle);
   text-align: start;
   white-space: nowrap;
@@ -2378,8 +2641,8 @@ textarea.pdp-field {
 .pdp-tryon__body {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 20px;
+  gap: var(--space-md);
+  padding: var(--space-lg);
   overflow-y: auto;
 }
 
@@ -2393,8 +2656,8 @@ textarea.pdp-field {
 .pdp-tryon__upload {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: var(--space-xs);
+  padding: var(--space-md);
   border: 1px dashed var(--color-brand-500);
   border-radius: 10px;
   background: var(--color-brand-50);
@@ -2415,7 +2678,7 @@ textarea.pdp-field {
 .pdp-tryon__consent {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--space-xs);
   font-size: 13px;
   line-height: 1.5;
   color: var(--color-text-secondary);
@@ -2424,6 +2687,7 @@ textarea.pdp-field {
 
 .pdp-tryon__consent input {
   flex: none;
+  /* Exception (optical): centres the native checkbox on the first 13px x 1.5 text line. */
   margin-block-start: 2px;
 }
 
@@ -2434,7 +2698,7 @@ textarea.pdp-field {
 }
 
 .pdp-tryon__generate {
-  padding: 12px 18px;
+  padding: var(--space-sm) var(--space-md);
   border: 0;
   border-radius: var(--radius-pill);
   background: var(--color-brand-700);
@@ -2459,8 +2723,8 @@ textarea.pdp-field {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 32px 0;
+  gap: var(--space-sm);
+  padding: var(--space-xl) 0;
   font-size: 14px;
   color: var(--color-text-secondary);
 }
@@ -2489,7 +2753,7 @@ textarea.pdp-field {
 
 .pdp-tryon__again {
   align-self: center;
-  padding: 10px 18px;
+  padding: var(--space-xs) var(--space-md);
   border: 1px solid var(--color-brand-500);
   border-radius: var(--radius-pill);
   background: transparent;
