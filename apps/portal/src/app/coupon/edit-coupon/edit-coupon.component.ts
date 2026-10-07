@@ -161,12 +161,18 @@ export class EditCouponComponent implements OnInit {
     });
 
     if (this.user_session.is_vendor) {
-      const payload = { token: this.user_session.token, id: this.user_session.id, store: this.user_session.id };
-      this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', { params: { id: String(payload.id ?? 0) }, query: { limit: 100 } }).subscribe({
+      // Self-scoped: the vendor is resolved from the JWT, so no id is sent
+      // (same as create-coupon). The previous legacy-id products lookup was
+      // keyed by the session USER id, so it listed the wrong store or none.
+      // Product ids here are v3 ids, matching the coupon's target_id.
+      this.adapter.get_v3('GET /vendor/products', { query: { limit: 100 } }).subscribe({
         next: (r: any) => {
           if (r) {
             this.products = (r.data || []).map((p: any) => ({ id: p.id, name: p.name }));
           }
+        },
+        error: (err: any) => {
+          this.toast.error(apiErrorMessage(err, 'Could not load your products. Please try again.'));
         },
       });
     }

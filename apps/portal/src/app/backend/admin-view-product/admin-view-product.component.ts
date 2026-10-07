@@ -58,6 +58,16 @@ const HISTORY_PREVIEW_ROWS = 5;
 
 const PLACEHOLDER_IMAGE = 'assets/img/placeholder-1.png';
 
+/** Stock fields the API applies together (see buildUpdatePayload). */
+const STOCK_KEYS = ['stock_quantity', 'stock_status', 'allow_oversell'] as const;
+
+/** A positive whole number, or null (null / blank / 0 / negative / non-numeric). */
+function positiveIntOrNull(v: unknown): number | null {
+  if (v == null || (typeof v === 'string' && v.trim() === '')) return null;
+  const n = Math.trunc(Number(v));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 /**
  * Size checkbox flag → stored size label, for the sizes this page offers.
  * Labels are stored upper-case ('CUSTOM'), matching the shared product form
@@ -442,6 +452,12 @@ export class AdminViewProductComponent implements OnInit {
     for (const [key, value] of Object.entries(values)) {
       if (this.comparable(value) !== this.baseline[key]) payload[key] = value;
     }
+    // Stock fields travel together: the API auto-flips stock_status when only
+    // stock_quantity is sent, so an unchanged status/oversell rides along with
+    // any stock change and the admin's explicit choice wins.
+    if (STOCK_KEYS.some((k) => k in payload)) {
+      for (const k of STOCK_KEYS) payload[k] = values[k];
+    }
 
     if (this.featuredChanged && this.update.image_1 && !String(this.update.image_1).includes('placeholder')) {
       payload['primary_image_url'] = this.update.image_1;
@@ -469,12 +485,16 @@ export class AdminViewProductComponent implements OnInit {
       stock_status: u.stock_status,
       stock_quantity: Math.max(0, Math.trunc(Number(u.quantity) || 0)),
       allow_oversell: !!u.allow_checkout_when_out_of_stock,
-      min_order_qty: Math.max(1, Math.trunc(Number(u.minimum_order_quantity) || 1)),
-      max_order_qty: Math.max(1, Math.trunc(Number(u.maximum_order_quantity) || 1)),
+      // Positive whole number, or null (blank / 0): a stored null ("no
+      // limit") loads blank and stays unsent unless the admin enters a limit.
+      min_order_qty: positiveIntOrNull(u.minimum_order_quantity),
+      max_order_qty: positiveIntOrNull(u.maximum_order_quantity),
       cost_per_item: Math.max(0, Number(u.cost_per_item) || 0),
       is_featured: !!u.is_featured,
       requires_extra_msmt: !!u.require_extra_msmt,
-      extra_msmt: u.extra_msmt || null,
+      // A string, so clearing the text sends '' and actually clears it (the
+      // API ignores null). A stored null loads as '' and so stays unsent.
+      extra_msmt: String(u.extra_msmt ?? ''),
     };
   }
 
@@ -507,13 +527,15 @@ export class AdminViewProductComponent implements OnInit {
     u.quantity = Number(p.stock_quantity ?? p.quantity ?? 0) || 0;
     u.stock_status = p.stock_status || 'in_stock';
     u.allow_checkout_when_out_of_stock = !!(p.allow_oversell ?? p.allow_checkout_when_out_of_stock);
-    u.minimum_order_quantity = Number(p.min_order_quantity ?? p.min_order_qty ?? p.minimum_order_quantity) || 1;
-    u.maximum_order_quantity = Number(p.max_order_quantity ?? p.max_order_qty ?? p.maximum_order_quantity) || 1;
+    // Detail-shape keys min_order_quantity / max_order_quantity (the _qty
+    // keys are identical aliases). Null ("no limit") stays null, shown blank.
+    u.minimum_order_quantity = positiveIntOrNull(p.min_order_quantity ?? p.min_order_qty);
+    u.maximum_order_quantity = positiveIntOrNull(p.max_order_quantity ?? p.max_order_qty);
     u.is_featured = !!p.is_featured;
     u.is_hot = !!p.is_hot;
     u.is_new = !!p.is_new;
     u.is_sale = !!p.is_sale;
-    u.require_extra_msmt = !!(p.requires_extra_msmt ?? p.require_extra_msmt ?? p.requires_measurement);
+    u.require_extra_msmt = !!(p.requires_extra_msmt ?? p.requires_measurement);
     u.extra_msmt = p.extra_msmt ?? p.measurement_instructions ?? '';
 
     const di = p.delivery_info ?? {};
@@ -584,8 +606,8 @@ export class AdminViewProductComponent implements OnInit {
       with_storehouse_management: false,
       stock_status: 'in_stock',
       price: 0,
-      minimum_order_quantity: 1,
-      maximum_order_quantity: 1,
+      minimum_order_quantity: null,
+      maximum_order_quantity: null,
       cost_per_item: 0,
       delivery_time: '',
       custom_delivery_time: '',

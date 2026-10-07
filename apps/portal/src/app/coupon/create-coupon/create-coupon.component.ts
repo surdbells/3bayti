@@ -105,8 +105,8 @@ export class CreateCouponComponent implements OnInit {
 
     if (this.user_session.is_vendor) {
       // Self-scoped: the vendor is resolved from the JWT, so no id is sent.
-      // The previous GET /vendors/by-legacy-id/:id/products call 404'd because
-      // the session id is the user id, not the vendor's legacy id.
+      // (An older legacy-id products lookup 404'd: the session id is the
+      // USER id, not a store id.)
       this.adapter.get_v3('GET /vendor/products', { query: { limit: 100 } }).subscribe({
         next: (r: any) => {
           if (r) {

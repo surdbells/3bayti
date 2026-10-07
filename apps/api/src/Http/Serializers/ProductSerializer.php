@@ -115,8 +115,18 @@ final class ProductSerializer
     /**
      * Vendor product DETAIL shape, the management shape plus the rich
      * fields the vendor preview drawer needs (description, gallery, sizes,
-     * colors). Works for any status (drafts included). Used by
-     * GET /v3/vendor/products/{id}.
+     * colors) AND every stored field the product EDITORS (vendor + admin
+     * portal forms) round-trip. Works for any status (drafts included). Used
+     * by GET /v3/vendor/products/{id} and GET /v3/admin/products/{id}.
+     *
+     * Editor round-trip contract: each editable field is exposed under the
+     * SAME key the write DTO (VendorProductInput) accepts, so an editor that
+     * loads this shape and re-saves it never resets a field it could not read
+     * (it used to: cost_per_item, is_featured and made-to-measure were missing
+     * and the order limits only existed as *_quantity, so every edit reset
+     * max order qty / cost / featured / measurement). min_order_quantity and
+     * max_order_quantity stay for existing consumers; min_order_qty and
+     * max_order_qty are identical-value aliases matching the DTO names.
      *
      * @return array<string, mixed>
      */
@@ -138,7 +148,25 @@ final class ProductSerializer
             'delivery_info' => $p->getDeliveryInfo(),
             'min_order_quantity' => $p->getMinOrderQty(),
             'max_order_quantity' => $p->getMaxOrderQty(),
+            // Aliases under the write-DTO names (same values).
+            'min_order_qty'      => $p->getMinOrderQty(),
+            'max_order_qty'      => $p->getMaxOrderQty(),
             'allow_oversell'     => $p->getAllowOversell(),
+            // Already in vendorManageShape; restated so the editor contract
+            // does not silently depend on the list shape.
+            'stock_quantity'     => $p->getStockQuantity(),
+            'stock_status'       => $p->getStockStatus(),
+            // Decimal string ("12.50") or null, as stored.
+            'cost_per_item'      => $p->getCostPerItem(),
+            'is_featured'        => $p->isFeatured(),
+            'is_new'             => $p->isNew(),
+            'is_hot'             => $p->isHot(),
+            'is_sale'            => $p->isSale(),
+            // Made-to-measure, under the DTO names (the storefront detailShape
+            // exposes the same data as requires_measurement /
+            // measurement_instructions).
+            'requires_extra_msmt' => $p->requiresExtraMsmt(),
+            'extra_msmt'          => $p->getExtraMsmt(),
         ]);
     }
 

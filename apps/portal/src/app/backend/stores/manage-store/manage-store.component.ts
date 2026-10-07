@@ -494,13 +494,10 @@ export class ManageStoreComponent implements OnInit {
   private openTab(path: string) {
     // storeId here is the v3 vendor id (the /admin/stores/:id route param,
     // which get_store() resolves against GET /admin/vendors/:id). The
-    // sub-screens historically treated their `id` param as a LEGACY store
-    // id and resolved it via /vendors/by-legacy-id, passing a v3 id there
-    // silently loaded a DIFFERENT vendor. Send it as `vendor_id` so they
-    // use it directly; `id` is kept only for backward-compatible links.
+    // sub-screens (store orders / products / sales) are keyed by that v3 id,
+    // read from `vendor_id`; they no longer accept a legacy store id.
     this.router.navigate([path], {
       queryParams: {
-        id: this.storeId,
         vendor_id: this.storeId,
         name: this.store.store_name || this.store_name,
       },

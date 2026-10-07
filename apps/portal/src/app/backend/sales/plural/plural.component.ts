@@ -95,12 +95,11 @@ export class PluralComponent implements OnInit {
   }
 
   get_vendorOrderItems() {
-    // Vendor ORDER ITEMS, the previous code fetched the vendor's product
-    // CATALOG (GET /vendors/by-legacy-id/:id/products) and rendered products as
-    // order items, so customer/qty/total/status were blank and the price object
-    // rendered as "[object Object]". Fetch the admin cross-vendor orders scoped
-    // to this vendor, then flatten THIS vendor's line items. Admin sees every
-    // item in a matched order, so we filter by item.vendor_id.
+    // Vendor ORDER ITEMS (not the product catalog, which an older version
+    // rendered here as order items, leaving customer/qty/total/status blank).
+    // Fetch the admin cross-vendor orders scoped to this vendor (v3 id), then
+    // flatten THIS vendor's line items. Admin sees every item in a matched
+    // order, so we filter by item.vendor_id.
     const vendorId = Number(this.single_vendor) || Number(this.vendor.id) || 0;
     const rate = Number((this.vendor as any).commission_rate) || 0;
     this.adapter.get_v3('GET /admin/orders', { query: { vendor_id: vendorId, limit: 100, offset: 0 } }).subscribe({

@@ -8,6 +8,7 @@ use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Http\Controllers\Vendor\Product\Dto\VendorProductInput;
+use Bayti\Api\Http\Controllers\Vendor\Product\ProductInputApplier;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
@@ -24,6 +25,8 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * POST /v3/admin/products, Create a product on behalf of a vendor. Requires vendor_id in body.
  * Optional label_id must be an active label of that vendor (see ProductLabelValidator).
+ * Every other VendorProductInput field is applied exactly as the vendor create
+ * does (shared ProductInputApplier), except collection_id (admin-curated separately).
  */
 final class CreateAdminProductController
 {
@@ -34,6 +37,7 @@ final class CreateAdminProductController
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $serializer,
         private readonly ProductLabelValidator $labels,
+        private readonly ProductInputApplier $applier,
     ) {}
     protected function getResponseFactory(): ResponseFactoryInterface { return $this->responseFactory; }
 
@@ -69,17 +73,13 @@ final class CreateAdminProductController
         $slug = ($slug !== '' ? $slug : 'product') . '-' . substr(bin2hex(random_bytes(4)), 0, 8);
 
         $product = new Product(vendor: $vendor, slug: $slug, name: $input->name ?? '');
-        $product->setPrice(number_format((float) $input->price, 2, '.', '')); // guaranteed non-null & > 0 above
-        $product->setSalePrice($input->sale_price !== null ? number_format((float) $input->sale_price, 2, '.', '') : null);
-        if ($input->description !== null)  $product->setDescription($input->description);
-        if ($input->status !== null)       $product->setStatus($input->status);
-        if ($input->primary_image_url !== null) $product->setPrimaryImageUrl($input->primary_image_url);
-        if ($input->image_urls !== null)   $product->setImages($input->image_urls);
-        if ($input->sizes !== null)        $product->setAvailableSizes($input->sizes);
-        if ($input->colors !== null)       $product->setAvailableColors($input->colors);
-        if ($category !== null)            $product->setCategory($category);
-        if ($input->delivery_info !== null) $product->setDeliveryInfo($input->normalizedDeliveryInfo());
-        if ($labelId !== null)             $product->setLabelId($labelId);
+        // Same field application as the vendor create (ProductInputApplier):
+        // price (guaranteed non-null & > 0 above), sale_price (always, a new
+        // product takes the sent value or none), stock + oversell, order limits,
+        // cost, merchandising flags, made-to-measure, media, delivery, status,
+        // label, category. collection_id is NOT applied: admin storefront
+        // collections are curated separately.
+        $this->applier->apply($product, $input, $category, $labelId, salePricePresent: true, applyCollection: false);
 
         /** @var ProductRepository $pRepo */
         $pRepo = $this->em->getRepository(Product::class);

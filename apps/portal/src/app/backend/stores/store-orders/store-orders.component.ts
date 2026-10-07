@@ -39,7 +39,7 @@ interface OrderRow extends Record<string, unknown> {
 })
 export class StoreOrdersComponent implements OnInit {
   store_name = '';
-  private storeId = 0;
+  /** The store's v3 vendor id (the `vendor_id` query param). */
   private vendorV3Id = 0;
 
   user_session = {
@@ -64,31 +64,14 @@ export class StoreOrdersComponent implements OnInit {
     this.user_session = GlobalComponent.decodeBase64(
       sessionStorage.getItem('SESSION') ?? '',
     );
-    this.storeId = Number(this.route.snapshot.queryParamMap.get('id'));
     this.store_name = this.route.snapshot.queryParamMap.get('name') ?? '';
-    // The admin flow passes the v3 vendor id straight through as vendor_id;
-    // only fall back to legacy-id resolution when it's absent (older links).
+    // The store is identified by its v3 vendor id (`vendor_id`), which
+    // manage-store passes straight through. Legacy store ids are not accepted.
     this.vendorV3Id = Number(this.route.snapshot.queryParamMap.get('vendor_id')) || 0;
-    this.resolveVendorThenBuild();
-  }
-
-  /** Use the v3 vendor id when supplied; otherwise resolve it from the legacy store id. */
-  private resolveVendorThenBuild() {
-    if (this.vendorV3Id > 0) {
-      this.buildTable();
-      return;
+    if (!this.vendorV3Id) {
+      this.toast.error('This link is missing the store. Open the store from the Stores list.');
     }
-    this.adapter.get_v3('GET /vendors/by-legacy-id/:id', { params: { id: String(this.storeId) } }).subscribe({
-      next: (res: any) => {
-        this.vendorV3Id = res?.data?.id ?? 0;
-        this.buildTable();
-      },
-      error: () => {
-        // Build anyway; without a vendor id the list would be cross-store,
-        // so guard the fetch on a resolved id instead (see fetchOrders).
-        this.buildTable();
-      },
-    });
+    this.buildTable();
   }
 
   private buildTable() {
@@ -138,9 +121,8 @@ export class StoreOrdersComponent implements OnInit {
 
   private fetchOrders(query: AxQueryState) {
     // The list MUST be scoped to this store. /admin/orders filters by the
-    // v3 vendor_id; we resolved it from the legacy id at init. If it isn't
-    // ready (resolution failed), return empty rather than leaking a
-    // cross-store list.
+    // v3 vendor_id; without one (a malformed link), return empty rather than
+    // leaking a cross-store list.
     if (!this.vendorV3Id) {
       return of({ rows: [], total: 0 } as AxServerFetchResult<OrderRow>);
     }

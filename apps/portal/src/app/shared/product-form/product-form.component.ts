@@ -86,6 +86,9 @@ const COLOR_OPTIONS: ColorOption[] = [
 
 const SIZED_CATEGORIES = [1, 2, 3, 6, 7];
 
+/** Gallery images per product besides the featured one (VendorProductInput.image_urls: up to 5). */
+const GALLERY_MAX = 5;
+
 const SIZE_MAP: Record<string, string> = {
   size_xs: 'XS', size_s: 'S', size_m: 'M', size_l: 'L', size_xl: 'XL', size_xxl: 'XXL',
   size_50: '50', size_51: '51', size_52: '52', size_53: '53', size_54: '54', size_55: '55',
@@ -97,6 +100,21 @@ const SIZE_MAP: Record<string, string> = {
   // load matches case-insensitively so legacy/mixed-case values still prefill.
   size_custom: 'CUSTOM',
 };
+
+/** A finite number, or null for null / blank / non-numeric input. */
+function toNumberOrNull(v: unknown): number | null {
+  if (v == null || (typeof v === 'string' && v.trim() === '')) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** A positive whole number, or null (null / blank / 0 / negative / non-numeric). */
+function toPositiveIntOrNull(v: unknown): number | null {
+  const n = toNumberOrNull(v);
+  if (n === null) return null;
+  const i = Math.trunc(n);
+  return i > 0 ? i : null;
+}
 
 /**
  * Shared product create/edit form used by both the vendor pages
@@ -125,6 +143,16 @@ const SIZE_MAP: Record<string, string> = {
  * The legacy single products.collection_id the old picker wrote is never
  * read by the storefront, so the form neither shows nor sends it (omitting
  * it leaves any existing value untouched server-side).
+ *
+ * Edit round-trip: every control is loaded from the product detail shape
+ * (ProductSerializer::vendorDetailShape, served by GET /vendor/products/:id
+ * and GET /admin/products/:id) and written back under its VendorProductInput
+ * name. On edit, everything beyond the core fields (name, description, price,
+ * category, status) is sent only when it differs from what was loaded, so a
+ * value the form can't represent exactly (a null cost / order limit, a size
+ * with no checkbox, a primary image the API derived from the gallery) is
+ * never overwritten by an unchanged save. The update API treats an absent
+ * key as "leave unchanged".
  */
 @Component({
   selector: 'app-product-form',
@@ -191,11 +219,22 @@ export class ProductFormComponent implements OnInit {
   ];
 
   // ── Images ────────────────────────────────────────────────────
+  readonly galleryMax = GALLERY_MAX;
   featuredFiles: AxUploadFile[] = [];
+  /** Gallery files staged in the uploader this session (new images only). */
   galleryFiles: AxUploadFile[] = [];
-  private galleryUrls: string[] = [];
+  /** Uploaded URLs of `galleryFiles`, in the same order. */
+  private galleryUploadUrls: string[] = [];
+  /** One upload per staged file (keyed by its id), so adding or removing a
+   *  file never re-uploads the ones already done. */
+  private readonly galleryUploads = new Map<string, Promise<string>>();
+  private gallerySeq = 0;
+  /** Edit: the stored gallery, WITHOUT the featured image (kept unless removed). */
   existingImages: string[] = [];
-  // Uploads are async (compress + upload), so model.image_1 / galleryUrls
+  /** Edit: the featured image as loaded. Never part of the gallery, so
+   *  replacing it doesn't move the old one into the gallery. */
+  private loadedPrimary: string | null = null;
+  // Uploads are async (compress + upload), so model.image_1 / the gallery URLs
   // aren't set until they resolve. Track in-flight state so submit waits
   // instead of validating against the stale placeholder.
   uploadingFeatured = false;
@@ -205,6 +244,16 @@ export class ProductFormComponent implements OnInit {
 
   // ── Colors ────────────────────────────────────────────────────
   selected = new Set<string>();
+
+  // ── Sizes ─────────────────────────────────────────────────────
+  /** Edit: stored sizes this form has no checkbox for, round-tripped verbatim. */
+  private extraSizes: string[] = [];
+
+  /**
+   * Edit: comparable snapshot of every change-detected payload group, taken
+   * right after the product loaded (null on create: everything is sent).
+   */
+  private baseline: Record<string, string> | null = null;
 
   // ── Session ───────────────────────────────────────────────────
   private session_data: any = '';
@@ -224,12 +273,16 @@ export class ProductFormComponent implements OnInit {
     name: '', description: '',
     image_1: 'assets/img/placeholder-1.png',
     images: [] as string[],
-    quantity: 0,
+    quantity: 0 as number | null,
     allow_checkout_when_out_of_stock: false,
+    // UI-only toggle: not a product field (VendorProductInput has no key for
+    // it), so it is neither loaded nor sent.
     with_storehouse_management: false,
     stock_status: 'in_stock',
-    price: 0, cost_per_item: 0, sale_price: null as number | null,
-    minimum_order_quantity: 1, maximum_order_quantity: 1,
+    // cost_per_item / order limits are nullable on the product. Create keeps
+    // the historical defaults; edit loads the stored value (null stays blank).
+    price: 0, cost_per_item: 0 as number | null, sale_price: null as number | null,
+    minimum_order_quantity: 1 as number | null, maximum_order_quantity: 1 as number | null,
     delivery_time: '', custom_delivery_time: '', delivery_note: '',
     size_xs: false, size_s: false, size_m: false, size_l: false, size_xl: false, size_xxl: false,
     size_50: false, size_51: false, size_52: false, size_53: false, size_54: false, size_55: false,
@@ -407,31 +460,36 @@ export class ProductFormComponent implements OnInit {
       next: (response: any) => {
         const p = response?.data;
         if (!p) { this.ui.page_loading = false; return; }
-        // Populate flat fields, tolerating both v3 and legacy-ish shapes.
+        // Populate every control from the detail shape
+        // (ProductSerializer::vendorDetailShape) using its own keys.
         this.model.name = p.name ?? '';
         this.model.description = p.description ?? '';
+        // `price` is a flat number in this shape; tolerate a Money object too.
         this.model.price = Number(p.price?.amount ?? p.price ?? 0);
-        this.model.cost_per_item = Number(p.cost_per_item ?? 0);
+        // Decimal string or null. Null stays null (blank input), never 0.
+        this.model.cost_per_item = toNumberOrNull(p.cost_per_item);
         // sale_price is serialized as a Money object ({amount,currency}) like
         // price, or absent/null when the product isn't discounted. Keep it null
         // when unset so the input renders blank (not "0").
         const rawSale = p.sale_price?.amount ?? p.sale_price;
-        this.model.sale_price = rawSale == null || rawSale === '' ? null : Number(rawSale);
-        // Coerce to Number so the category radio (bound via [value]="c.id",
-        // a number) pre-selects even when the serializer emits a string id.
-        this.model.category = Number(p.category?.id ?? p.category_id ?? p.category ?? 0) || 0;
-        this.model.quantity = p.stock_quantity ?? p.quantity ?? 0;
-        this.model.stock_status = p.stock_status ?? 'in_stock';
-        this.model.allow_checkout_when_out_of_stock = !!(p.allow_oversell ?? p.allow_checkout_when_out_of_stock);
-        // Coerce 0/blank to 1: the API requires a positive min/max order qty,
-        // and `0 ?? 1` keeps 0 (0 isn't nullish), which then fails on save.
-        this.model.minimum_order_quantity = Number(p.min_order_qty ?? p.minimum_order_quantity) || 1;
-        this.model.maximum_order_quantity = Number(p.max_order_qty ?? p.maximum_order_quantity) || 1;
+        this.model.sale_price = toNumberOrNull(rawSale);
+        // `category` is the category NAME in this shape; the id is
+        // `category_id`. Coerce to Number so the category radio (bound via
+        // [value]="c.id", a number) pre-selects even for a string id.
+        this.model.category = Number(p.category_id ?? p.category?.id ?? 0) || 0;
+        this.model.quantity = Math.max(0, Math.trunc(Number(p.stock_quantity ?? p.quantity ?? 0)) || 0);
+        this.model.stock_status = p.stock_status || 'in_stock';
+        this.model.allow_checkout_when_out_of_stock = !!p.allow_oversell;
+        // The detail shape names these min_order_quantity / max_order_quantity
+        // (min_order_qty / max_order_qty are identical aliases). A stored null
+        // (no limit) stays null instead of being re-saved as 1.
+        this.model.minimum_order_quantity = toPositiveIntOrNull(p.min_order_quantity ?? p.min_order_qty);
+        this.model.maximum_order_quantity = toPositiveIntOrNull(p.max_order_quantity ?? p.max_order_qty);
         this.model.is_featured = !!p.is_featured;
         this.model.is_hot = !!p.is_hot;
         this.model.is_new = !!p.is_new;
         this.model.is_sale = !!p.is_sale;
-        this.model.require_extra_msmt = !!(p.requires_extra_msmt ?? p.require_extra_msmt);
+        this.model.require_extra_msmt = !!p.requires_extra_msmt;
         this.model.extra_msmt = p.extra_msmt ?? '';
         // Delivery estimate, restore so an edit round-trips it instead of wiping.
         const di = p.delivery_info ?? {};
@@ -447,35 +505,44 @@ export class ProductFormComponent implements OnInit {
           this.loadStoreLabels(this.model.vendor_id ?? 0);
         }
 
-        // Featured + gallery images. The vendor detail endpoint returns
-        // images as [{url, alt, ...}]; tolerate both that and bare strings.
+        // Featured + gallery images. The detail endpoint returns images as
+        // [{url, alt, ...}] with the featured image prepended; tolerate bare
+        // strings too. The gallery is kept WITHOUT the featured image.
         const primary = p.primary_image?.url ?? p.primary_image_url ?? p.image ?? p.image_1 ?? '';
-        if (primary && !String(primary).includes('placeholder')) this.model.image_1 = primary;
+        this.loadedPrimary = primary && !String(primary).includes('placeholder') ? String(primary) : null;
+        if (this.loadedPrimary) this.model.image_1 = this.loadedPrimary;
         const rawImgs = p.image_urls ?? p.images ?? [];
         this.existingImages = (Array.isArray(rawImgs) ? rawImgs : [])
           .map((img: any) => (typeof img === 'string' ? img : img?.url))
-          .filter((src: string) => src && !src.includes('placeholder'));
-        this.galleryUrls = [...this.existingImages];
+          .filter((src: string) => src && !src.includes('placeholder') && src !== this.loadedPrimary);
 
         // Label (single, store-scoped).
         const labelId = Number(p.label_id) || 0;
         if (labelId > 0) this.model.label = labelId;
         this.currentLabelId = labelId > 0 ? labelId : null;
 
-        // Sizes, v3 returns [{label, in_stock}]; tolerate bare strings/flags.
-        const sizesArr: string[] = Array.isArray(p.sizes)
-          ? p.sizes.map((s: any) => String(typeof s === 'string' ? s : s?.label ?? '').toUpperCase())
-          : [];
+        // Sizes, v3 returns [{label, in_stock}]; tolerate bare strings. Matched
+        // case-insensitively onto the checkboxes; a stored size with no
+        // checkbox here is kept verbatim (never dropped by a save).
+        const sizesArr: string[] = (Array.isArray(p.sizes) ? p.sizes : [])
+          .map((s: any) => String(typeof s === 'string' ? s : s?.label ?? '').trim())
+          .filter(Boolean);
+        const sizesUpper = sizesArr.map((s) => s.toUpperCase());
         for (const [flag, label] of Object.entries(SIZE_MAP)) {
-          if (sizesArr.includes(label.toUpperCase())) (this.model as any)[flag] = true;
+          (this.model as any)[flag] = sizesUpper.includes(label.toUpperCase());
         }
+        const knownSizes = new Set(Object.values(SIZE_MAP).map((l) => l.toUpperCase()));
+        this.extraSizes = sizesArr.filter((s) => !knownSizes.has(s.toUpperCase()));
 
         // Colors, v3 returns [{label, hex_code}]; tolerate array of strings or CSV.
         const colorVals: string[] = Array.isArray(p.colors)
-          ? p.colors.map((c: any) => (typeof c === 'string' ? c : c?.label)).filter(Boolean)
+          ? p.colors.map((c: any) => (typeof c === 'string' ? c : c?.label)).filter(Boolean).map(String)
           : String(p.colors ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-        for (const c of colorVals) this.selected.add(c);
+        this.selected = new Set(colorVals);
         this.model.colors = colorVals.join(',');
+
+        // Snapshot what loaded: buildPayload sends a group only if it changed.
+        this.baseline = this.snapshotGroups();
 
         this.ui.page_loading = false;
       },
@@ -549,6 +616,9 @@ export class ProductFormComponent implements OnInit {
 
   get showSizing(): boolean { return SIZED_CATEGORIES.includes(Number(this.model.category)); }
 
+  /** Stored sizes with no checkbox here (shown read-only; kept on save). */
+  get otherSizes(): string[] { return this.extraSizes; }
+
   // ═══════════════════════════════════════════════════════════════
   //  IMAGE HANDLING
   // ═══════════════════════════════════════════════════════════════
@@ -575,25 +645,64 @@ export class ProductFormComponent implements OnInit {
     }
   }
 
+  /** Gallery slots left for new uploads (the stored gallery counts; the featured image doesn't). */
+  get galleryRoom(): number {
+    return Math.max(0, GALLERY_MAX - this.existingImages.length);
+  }
+
+  /** Total gallery images the save will keep (stored + newly staged). */
+  get galleryCount(): number {
+    return this.existingImages.length + this.galleryFiles.length;
+  }
+
+  /** Edit: drop a stored gallery image (applied on save). */
+  removeExistingImage(url: string): void {
+    this.existingImages = this.existingImages.filter((u) => u !== url);
+  }
+
   async onGalleryChange(files: AxUploadFile[]): Promise<void> {
-    if (files.length > 5) { this.toast.error('You can only add up to 5 gallery images'); files = files.slice(0, 5); }
-    this.galleryFiles = files;
-    this.uploadingGallery = true;
-    try {
-      const results = await Promise.all(
-        files.map(async (uf) => {
-          const compressed = await imageCompression(uf.file, { maxSizeMB: 3, maxWidthOrHeight: 1920, useWebWorker: true });
-          const uploaded = await this.imageUpload.upload(compressed, 'product');
-          return uploaded.url;
-        }),
-      );
-      // New uploads plus any pre-existing images, capped at 5.
-      this.galleryUrls = [...this.existingImages, ...results].slice(0, 5);
-    } catch (error) {
-      this.toast.error(apiErrorMessage(error, 'Image upload failed. Please try again.'));
-    } finally {
-      this.uploadingGallery = false;
+    // Only the room left beside the stored gallery: never drop an upload silently.
+    const room = this.galleryRoom;
+    if (files.length > room) {
+      this.toast.error(room > 0
+        ? `You can add ${room} more gallery image${room === 1 ? '' : 's'} (${GALLERY_MAX} max).`
+        : `The gallery already has ${GALLERY_MAX} images. Remove one to add another.`);
+      files = files.slice(0, room);
     }
+    this.galleryFiles = files;
+    const seq = ++this.gallerySeq;
+    this.uploadingGallery = true;
+    const settled = await Promise.allSettled(files.map((f) => this.uploadGalleryFile(f)));
+    // A newer add/remove owns the state (it awaits these same uploads).
+    if (seq !== this.gallerySeq) return;
+    const urls: string[] = [];
+    const failed = new Set<string>();
+    let firstError: unknown = null;
+    settled.forEach((r, i) => {
+      if (r.status === 'fulfilled') { urls.push(r.value); return; }
+      failed.add(files[i].id);
+      this.galleryUploads.delete(files[i].id); // allow a retry
+      firstError ??= r.reason;
+    });
+    this.galleryUploadUrls = urls;
+    if (failed.size) {
+      // Unstage the failed files so what's shown matches what will be saved.
+      this.galleryFiles = files.filter((f) => !failed.has(f.id));
+      this.toast.error(apiErrorMessage(firstError, 'Image upload failed. Please try again.'));
+    }
+    this.uploadingGallery = false;
+  }
+
+  private uploadGalleryFile(f: AxUploadFile): Promise<string> {
+    let upload = this.galleryUploads.get(f.id);
+    if (!upload) {
+      upload = (async () => {
+        const compressed = await imageCompression(f.file, { maxSizeMB: 3, maxWidthOrHeight: 1920, useWebWorker: true });
+        return (await this.imageUpload.upload(compressed, 'product')).url;
+      })();
+      this.galleryUploads.set(f.id, upload);
+    }
+    return upload;
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -601,10 +710,15 @@ export class ProductFormComponent implements OnInit {
   // ═══════════════════════════════════════════════════════════════
   private validate(): boolean {
     // An image upload may still be in flight (compress + upload is async), so
-    // model.image_1 / galleryUrls aren't set yet. Ask the user to wait rather
+    // model.image_1 / the gallery URLs aren't set yet. Ask the user to wait rather
     // than falsely reporting "Featured image is required".
     if (this.uploadingFeatured || this.uploadingGallery) {
       this.toast.error('Please wait for the image upload to finish.'); return false;
+    }
+    // Edit must start from the stored product: saving a form whose load failed
+    // would overwrite the product with blank defaults.
+    if (this.isEdit && !this.baseline) {
+      this.toast.error("The product didn't load. Reload the page before saving."); return false;
     }
     // Store is only chosen at create time; on edit it's fixed (read-only), so
     // don't block the save on it, the product already belongs to a vendor.
@@ -649,48 +763,27 @@ export class ProductFormComponent implements OnInit {
     }).then((ok) => { if (ok) this.submit('draft'); });
   }
 
+  /**
+   * Write body (VendorProductInput field names). Create sends every field.
+   * Edit always sends the core fields + the chosen status, and each other
+   * group only when it differs from what loaded (see `baseline`): an absent
+   * key leaves the stored value untouched (sale_price included, which the API
+   * applies only when the key is present).
+   */
   private buildPayload(status: string): Record<string, unknown> {
     const d = this.model;
-    const sizes = Object.entries(SIZE_MAP).filter(([k]) => (d as any)[k]).map(([, v]) => v);
-    const colors = this.getSelectedIdsCsv().split(',').map((s) => s.trim()).filter(Boolean);
-    const primaryImg = d.image_1 && !d.image_1.includes('placeholder') ? d.image_1 : (this.galleryUrls[0] ?? null);
-    const galleryImgs = this.galleryUrls.filter((i) => i !== primaryImg).slice(0, 4);
     const payload: Record<string, unknown> = {
       name: d.name,
       description: d.description,
       price: d.price,
-      cost_per_item: d.cost_per_item,
-      // Send null (not 0) when blank so the product isn't flagged on-sale.
-      sale_price:
-        d.sale_price === null || (d.sale_price as any) === '' || Number.isNaN(Number(d.sale_price))
-          ? null
-          : Number(d.sale_price),
       category_id: d.category || null,
-      stock_quantity: d.quantity,
-      stock_status: d.stock_status,
-      allow_oversell: d.allow_checkout_when_out_of_stock,
-      min_order_qty: Math.max(1, Number(d.minimum_order_quantity) || 1),
-      max_order_qty: Math.max(1, Number(d.maximum_order_quantity) || 1),
-      primary_image_url: primaryImg,
-      image_urls: galleryImgs,
-      sizes,
-      colors,
-      is_featured: d.is_featured,
-      is_new: d.is_new,
-      is_hot: d.is_hot,
-      is_sale: d.is_sale,
-      requires_extra_msmt: d.require_extra_msmt,
-      extra_msmt: d.extra_msmt || null,
-      // Delivery estimate → Product.delivery_info { time, custom_time, note }.
-      // Persist as an object the API stores verbatim and the storefront reads;
-      // without this, new products showed no delivery time (only legacy ones did).
-      delivery_info: {
-        time: d.delivery_time || null,
-        custom_time: d.delivery_time === 'custom' ? (d.custom_delivery_time || null) : null,
-        note: d.delivery_note || null,
-      },
       status,
     };
+    const groups = this.optionalGroups();
+    for (const [group, fields] of Object.entries(groups)) {
+      if (this.baseline && this.baseline[group] === JSON.stringify(fields)) continue;
+      Object.assign(payload, fields);
+    }
     // Label assignment. The product schema holds a single, store-scoped label:
     // the API requires an active label of the product's store (create: of the
     // chosen vendor_id's store) and 422s on label_id otherwise. Omitted when
@@ -702,6 +795,72 @@ export class ProductFormComponent implements OnInit {
     // Admin writes specify which vendor the product belongs to.
     if (this.adminMode && d.vendor_id) payload['vendor_id'] = d.vendor_id;
     return payload;
+  }
+
+  /**
+   * The change-detected payload groups. Fields that interact server-side are
+   * grouped so they always travel together (stock quantity can auto-flip the
+   * stock status unless the status is sent alongside; the gallery is derived
+   * from the primary image).
+   */
+  private optionalGroups(): Record<string, Record<string, unknown>> {
+    const d = this.model;
+    const flagSizes = Object.entries(SIZE_MAP).filter(([k]) => (d as any)[k]).map(([, v]) => v);
+    const flagUpper = new Set(flagSizes.map((s) => s.toUpperCase()));
+    const sizes = [...flagSizes, ...this.extraSizes.filter((s) => !flagUpper.has(s.toUpperCase()))];
+    const colors = this.getSelectedIdsCsv().split(',').map((s) => s.trim()).filter(Boolean);
+    // Gallery = stored gallery (minus removals) + new uploads; never the
+    // featured image, old or new. Nothing stored is truncated: new uploads
+    // are capped at the room left (onGalleryChange), so the API's orphan
+    // cleanup only ever deletes an image the user replaced or removed.
+    const gallery = [...this.existingImages, ...this.galleryUploadUrls];
+    const primaryImg = d.image_1 && !d.image_1.includes('placeholder') ? d.image_1 : (gallery[0] ?? null);
+    const galleryImgs = gallery.filter((i) => i !== primaryImg && i !== this.loadedPrimary);
+    const cost = toNumberOrNull(d.cost_per_item);
+    const qty = toNumberOrNull(d.quantity);
+    return {
+      // Send null (not 0) when blank so the product isn't flagged on-sale.
+      sale_price: { sale_price: toNumberOrNull(d.sale_price) },
+      // Blank → null (the API keeps the stored cost).
+      cost_per_item: { cost_per_item: cost === null ? null : Math.max(0, cost) },
+      stock: {
+        stock_quantity: qty === null ? null : Math.max(0, Math.trunc(qty)),
+        stock_status: d.stock_status,
+        allow_oversell: d.allow_checkout_when_out_of_stock,
+      },
+      // Positive whole numbers only (the API rejects 0); blank/0 → null,
+      // which leaves the stored limit (create: no limit).
+      min_order_qty: { min_order_qty: toPositiveIntOrNull(d.minimum_order_quantity) },
+      max_order_qty: { max_order_qty: toPositiveIntOrNull(d.maximum_order_quantity) },
+      images: { primary_image_url: primaryImg, image_urls: galleryImgs },
+      sizes: { sizes },
+      colors: { colors },
+      is_featured: { is_featured: d.is_featured },
+      is_new: { is_new: d.is_new },
+      is_hot: { is_hot: d.is_hot },
+      is_sale: { is_sale: d.is_sale },
+      requires_extra_msmt: { requires_extra_msmt: d.require_extra_msmt },
+      // Edit sends '' when the text was cleared (null would be ignored, so the
+      // old text could never be removed); create keeps null for "none".
+      extra_msmt: { extra_msmt: d.extra_msmt ? d.extra_msmt : (this.isEdit ? '' : null) },
+      // Delivery estimate → Product.delivery_info { time, custom_time, note }.
+      // Persist as an object the API stores verbatim and the storefront reads;
+      // without this, new products showed no delivery time (only legacy ones did).
+      delivery_info: {
+        delivery_info: {
+          time: d.delivery_time || null,
+          custom_time: d.delivery_time === 'custom' ? (d.custom_delivery_time || null) : null,
+          note: d.delivery_note || null,
+        },
+      },
+    };
+  }
+
+  /** Comparable form of every optional group (see `baseline`). */
+  private snapshotGroups(): Record<string, string> {
+    return Object.fromEntries(
+      Object.entries(this.optionalGroups()).map(([group, fields]) => [group, JSON.stringify(fields)]),
+    );
   }
 
   private submit(status: string): void {

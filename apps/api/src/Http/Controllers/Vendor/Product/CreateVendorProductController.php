@@ -44,6 +44,7 @@ final class CreateVendorProductController
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $serializer,
         private readonly ProductLabelValidator $labels,
+        private readonly ProductInputApplier $applier,
     ) {
     }
 
@@ -96,7 +97,9 @@ final class CreateVendorProductController
             name: $input->name ?? '',
         );
 
-        $this->applyInput($product, $input, $category, $labelId);
+        // Shared with vendor update + admin create/update (ProductInputApplier).
+        // A new product always takes the sent sale_price (or none).
+        $this->applier->apply($product, $input, $category, $labelId, salePricePresent: true);
 
         /** @var ProductRepository $productRepo */
         $productRepo = $this->em->getRepository(Product::class);
@@ -105,89 +108,6 @@ final class CreateVendorProductController
         return $this->created(PaginatedEnvelope::single(
             $this->serializer->detailShape($product),
         ));
-    }
-
-    private function applyInput(Product $product, VendorProductInput $input, ?Category $category, ?int $labelId): void
-    {
-        if ($input->name !== null) {
-            $product->setName($input->name);
-        }
-        if ($input->description !== null) {
-            $product->setDescription($input->description);
-        }
-        if ($input->price !== null) {
-            $product->setPrice(number_format((float) $input->price, 2, '.', ''));
-        }
-        // Always apply sale_price so a blank value clears any existing discount
-        // (the portal form always sends the key; null = not on sale).
-        $product->setSalePrice(
-            $input->sale_price !== null
-                ? number_format((float) $input->sale_price, 2, '.', '')
-                : null,
-        );
-        if ($input->cost_per_item !== null) {
-            $product->setCostPerItem(number_format((float) $input->cost_per_item, 2, '.', ''));
-        }
-        if ($input->stock_quantity !== null) {
-            $product->setStockQuantity($input->stock_quantity);
-        }
-        if ($input->stock_status !== null) {
-            $product->setStockStatus($input->stock_status);
-        }
-        if ($input->allow_oversell !== null) {
-            $product->setAllowOversell($input->allow_oversell);
-        }
-        if ($input->min_order_qty !== null) {
-            $product->setMinOrderQty($input->min_order_qty);
-        }
-        if ($input->max_order_qty !== null) {
-            $product->setMaxOrderQty($input->max_order_qty);
-        }
-        if ($input->primary_image_url !== null) {
-            $product->setPrimaryImageUrl($input->primary_image_url);
-        }
-        if ($input->image_urls !== null) {
-            $product->setImages($input->image_urls);
-        }
-        if ($input->sizes !== null) {
-            $product->setAvailableSizes($input->sizes);
-        }
-        if ($input->colors !== null) {
-            $product->setAvailableColors($input->colors);
-        }
-        if ($input->is_featured !== null) {
-            $product->setIsFeatured($input->is_featured);
-        }
-        if ($input->is_new !== null) {
-            $product->setIsNew($input->is_new);
-        }
-        if ($input->is_hot !== null) {
-            $product->setIsHot($input->is_hot);
-        }
-        if ($input->is_sale !== null) {
-            $product->setIsSale($input->is_sale);
-        }
-        if ($input->requires_extra_msmt !== null) {
-            $product->setRequiresExtraMsmt($input->requires_extra_msmt);
-        }
-        if ($input->extra_msmt !== null) {
-            $product->setExtraMsmt($input->extra_msmt);
-        }
-        if ($input->delivery_info !== null) {
-            $product->setDeliveryInfo($input->normalizedDeliveryInfo());
-        }
-        if ($input->status !== null) {
-            $product->setStatus($input->status);
-        }
-        if ($input->collection_id !== null) {
-            $product->setCollectionId($input->collection_id);
-        }
-        if ($labelId !== null) {
-            $product->setLabelId($labelId);
-        }
-        if ($category !== null) {
-            $product->setCategory($category);
-        }
     }
 
     private function generateSlug(string $name, int $userId): string

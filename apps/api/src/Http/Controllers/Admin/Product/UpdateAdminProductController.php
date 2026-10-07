@@ -6,6 +6,7 @@ use Bayti\Api\Domain\Catalog\CategoryRepository;
 use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Http\Controllers\Vendor\Product\Dto\VendorProductInput;
+use Bayti\Api\Http\Controllers\Vendor\Product\ProductInputApplier;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\PaginatedEnvelope;
@@ -21,6 +22,9 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * PUT /v3/admin/products/{id}
  * Optional label_id must be an active label of the product's store (see ProductLabelValidator).
+ * Every other VendorProductInput field is applied exactly as the vendor update
+ * does (shared ProductInputApplier, partial-update semantics), except
+ * collection_id (admin-curated separately).
  */
 final class UpdateAdminProductController
 {
@@ -31,6 +35,7 @@ final class UpdateAdminProductController
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $serializer,
         private readonly ProductLabelValidator $labels,
+        private readonly ProductInputApplier $applier,
     ) {}
     protected function getResponseFactory(): ResponseFactoryInterface { return $this->responseFactory; }
 
@@ -54,23 +59,20 @@ final class UpdateAdminProductController
         $cRepo = $this->em->getRepository(Category::class);
         $cat   = $input->category_id !== null ? $cRepo->find($input->category_id) : null;
 
-        if ($input->name !== null)            $product->setName($input->name);
-        if ($input->description !== null)     $product->setDescription($input->description);
-        if ($input->price !== null)           $product->setPrice(number_format((float) $input->price, 2, '.', ''));
-        // Only touch sale_price when the key is present (a partial update that
-        // omits it preserves the stored discount; an explicit null clears it).
-        if (array_key_exists('sale_price', $body)) {
-            $product->setSalePrice($input->sale_price !== null ? number_format((float) $input->sale_price, 2, '.', '') : null);
-        }
-        if ($input->status !== null)          $product->setStatus($input->status);
-        if ($input->primary_image_url !== null) $product->setPrimaryImageUrl($input->primary_image_url);
-        if ($input->image_urls !== null)      $product->setImages($input->image_urls);
-        if ($input->sizes !== null)           $product->setAvailableSizes($input->sizes);
-        if ($input->colors !== null)          $product->setAvailableColors($input->colors);
-        if ($cat !== null)                    $product->setCategory($cat);
-        if ($input->delivery_info !== null)   $product->setDeliveryInfo($input->normalizedDeliveryInfo());
-        // Absent/null label_id (or the unchanged current one) keeps the stored label.
-        if ($labelId !== null)                $product->setLabelId($labelId);
+        // Same partial-update field application as the vendor update
+        // (ProductInputApplier): absent/null fields keep their stored value;
+        // sale_price is touched only when the key is present (an explicit null
+        // clears it); absent/null label_id (or the unchanged current one) keeps
+        // the stored label. collection_id is NOT applied: admin storefront
+        // collections are curated separately.
+        $this->applier->apply(
+            $product,
+            $input,
+            $cat,
+            $labelId,
+            salePricePresent: array_key_exists('sale_price', $body),
+            applyCollection: false,
+        );
 
         $repo->save($product);
         return $this->ok(PaginatedEnvelope::single($this->serializer->detailShape($product)));

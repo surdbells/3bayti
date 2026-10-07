@@ -57,7 +57,7 @@ interface SvgPoint { x: number; y: number; raw: RevenuePoint; }
 })
 export class StoreSalesComponent implements OnInit {
   store_name = '';
-  private storeId = 0;
+  /** The store's v3 vendor id (the `vendor_id` query param). */
   private vendorV3Id = 0;
 
   user_session = {
@@ -170,35 +170,17 @@ export class StoreSalesComponent implements OnInit {
     this.user_session = GlobalComponent.decodeBase64(
       sessionStorage.getItem('SESSION') ?? '',
     );
-    this.storeId = Number(this.route.snapshot.queryParamMap.get('id'));
     this.store_name = this.route.snapshot.queryParamMap.get('name') ?? '';
-    // The admin flow passes the v3 vendor id straight through as vendor_id;
-    // only fall back to legacy-id resolution when it's absent (older links).
+    // The store is identified by its v3 vendor id (`vendor_id`), which
+    // manage-store passes straight through. Legacy store ids are not accepted.
     this.vendorV3Id = Number(this.route.snapshot.queryParamMap.get('vendor_id')) || 0;
-    this.resolveVendorThenLoad();
-    this.buildTable();
-  }
-
-  /** Use the v3 vendor id when supplied; otherwise resolve it from the legacy store id. */
-  private resolveVendorThenLoad() {
-    if (this.vendorV3Id > 0) {
+    if (this.vendorV3Id) {
       this.loadAnalytics();
-      return;
+    } else {
+      this.loadingAnalytics.set(false);
+      this.toast.error('This link is missing the store. Open the store from the Stores list.');
     }
-    this.adapter.get_v3('GET /vendors/by-legacy-id/:id', { params: { id: String(this.storeId) } }).subscribe({
-      next: (res: any) => {
-        this.vendorV3Id = res?.data?.id ?? 0;
-        if (this.vendorV3Id) {
-          this.loadAnalytics();
-          // The table was built before resolution; re-run its fetch now
-          // that we have the vendor id to scope by.
-          this.dataSource?.retry();
-        } else {
-          this.loadingAnalytics.set(false);
-        }
-      },
-      error: () => { this.loadingAnalytics.set(false); },
-    });
+    this.buildTable();
   }
 
   loadAnalytics() {
@@ -262,7 +244,7 @@ export class StoreSalesComponent implements OnInit {
   private fetchSales(query: AxQueryState) {
     // Scope the list to THIS store. /admin/transactions has no vendor
     // filter (it's global), using it showed every store the same list.
-    // /admin/orders filters by the resolved v3 vendor_id and carries the
+    // /admin/orders filters by the v3 vendor_id and carries the
     // product/line-item data this table needs.
     if (!this.vendorV3Id) {
       return of({ rows: [], total: 0 } as AxServerFetchResult<SaleRow>);

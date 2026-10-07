@@ -114,6 +114,44 @@ final class GetVendorOwnProductControllerTest extends HttpTestCase
     }
 
     #[Test]
+    public function exposesEditorFieldsUnderTheWriteDtoNames(): void
+    {
+        // The vendor product editor round-trips these keys straight back into
+        // PUT /v3/vendor/products/{id}; a missing key used to be re-saved as a
+        // default (max order qty 1, no cost, not featured, no measurement).
+        $user = $this->makeVendorUser(100);
+        $vendor = $this->makeVendor(101);
+        $product = $this->makeProduct($vendor, 5, Product::STATUS_ACTIVE);
+        $product->setCostPerItem('55.50');
+        $product->setMinOrderQty(2);
+        $product->setMaxOrderQty(8);
+        $product->setIsFeatured(true);
+        $product->setIsHot(true);
+        $product->setRequiresExtraMsmt(true);
+        $product->setExtraMsmt('Sleeve length');
+        $this->bindDeps($user, $vendor, $product);
+
+        $res = $this->get($user, '/v3/vendor/products/5');
+        self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
+        $data = $this->jsonBody($res)['data'];
+
+        self::assertSame('55.50', $data['cost_per_item']);
+        self::assertSame(2, $data['min_order_qty']);
+        self::assertSame(8, $data['max_order_qty']);
+        self::assertSame(2, $data['min_order_quantity']);
+        self::assertSame(8, $data['max_order_quantity']);
+        self::assertTrue($data['is_featured']);
+        self::assertFalse($data['is_new']);
+        self::assertTrue($data['is_hot']);
+        self::assertFalse($data['is_sale']);
+        self::assertTrue($data['requires_extra_msmt']);
+        self::assertSame('Sleeve length', $data['extra_msmt']);
+        self::assertSame(3, $data['stock_quantity']);
+        self::assertSame(Product::STOCK_IN, $data['stock_status']);
+        self::assertFalse($data['allow_oversell']);
+    }
+
+    #[Test]
     public function notFoundWhenNotOwned(): void
     {
         $user = $this->makeVendorUser(100);

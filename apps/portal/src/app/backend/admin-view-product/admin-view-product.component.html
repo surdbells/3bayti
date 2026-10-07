@@ -273,8 +273,10 @@
                   type="number"
                   class="ax-input"
                   [(ngModel)]="update.minimum_order_quantity"
-                  [min]="1" />
-                <span class="ax-hint">Minimum quantity to place an order. 0 = no limit.</span>
+                  [min]="1"
+                  [step]="1"
+                  placeholder="No minimum" />
+                <span class="ax-hint">Fewest units a customer can order at once (a whole number, 1 or more).</span>
               </div>
               <div class="ax-form-field">
                 <label class="ax-label" for="maximum_order_quantity">Maximum order quantity</label>
@@ -284,8 +286,10 @@
                   type="number"
                   class="ax-input"
                   [(ngModel)]="update.maximum_order_quantity"
-                  [min]="update.minimum_order_quantity" />
-                <span class="ax-hint">Maximum quantity to place an order. 0 = no limit.</span>
+                  [min]="update.minimum_order_quantity ?? 1"
+                  [step]="1"
+                  placeholder="No limit" />
+                <span class="ax-hint">Most units a customer can order at once (a whole number, 1 or more).</span>
               </div>
             </div>
           </section>

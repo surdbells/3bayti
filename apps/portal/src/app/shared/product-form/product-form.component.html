@@ -83,16 +83,25 @@
         <div class="ax-form-field">
           <label class="ax-label">Product gallery</label>
           <span class="ax-hint ax-mb-2">
-            {{ galleryFiles.length }} / 5 images · Up to 5 additional photos (the featured image goes in the sidebar).
+            {{ galleryCount }} / {{ galleryMax }} images · Up to {{ galleryMax }} additional photos (the featured image goes in the sidebar).
+            <ng-container *ngIf="galleryRoom === 0">Gallery full: remove an image to add another.</ng-container>
           </span>
+          <div *ngIf="existingImages.length" class="ax-flex ax-gap-2 ax-mb-3" style="flex-wrap: wrap;">
+            <div *ngFor="let img of existingImages; let i = index" class="pf-gallery-thumb">
+              <img [src]="img" [alt]="'Gallery image ' + (i + 1)" />
+              <button type="button" class="pf-gallery-thumb-remove" [attr.aria-label]="'Remove gallery image ' + (i + 1)"
+                title="Remove (applied when you save)" (click)="removeExistingImage(img)">
+                <app-icon name="close" aria-hidden="true"></app-icon>
+              </button>
+            </div>
+          </div>
+          <!-- Room left beside the stored gallery (maxFiles 0 means unlimited,
+               so a full gallery disables the picker instead). -->
           <app-ax-file-upload [(ngModel)]="galleryFiles" [ngModelOptions]="{ standalone: true }"
-            (filesChange)="onGalleryChange($event)" [multiple]="true" [maxFiles]="5" [maxSizeMb]="10"
+            (filesChange)="onGalleryChange($event)" [multiple]="true"
+            [maxFiles]="galleryRoom || 1" [disabled]="galleryRoom === 0 && !galleryFiles.length" [maxSizeMb]="10"
             accept="image/*" hint="PNG, JPG, or WEBP up to 10 MB each">
           </app-ax-file-upload>
-          <div *ngIf="existingImages.length" class="ax-flex ax-gap-2 ax-mt-3" style="flex-wrap: wrap;">
-            <img *ngFor="let img of existingImages" [src]="img" alt="Existing"
-                 style="width: 64px; height: 64px; object-fit: cover; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
-          </div>
         </div>
       </section>
 
@@ -221,13 +230,13 @@
         <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
           <div class="ax-form-field">
             <label class="ax-label" for="minimum_order_quantity">Minimum order quantity</label>
-            <input id="minimum_order_quantity" name="minimum_order_quantity" type="number" class="ax-input" [(ngModel)]="model.minimum_order_quantity" [min]="1" />
-            <span class="ax-hint">Minimum quantity to place an order. 0 = no limit.</span>
+            <input id="minimum_order_quantity" name="minimum_order_quantity" type="number" class="ax-input" [(ngModel)]="model.minimum_order_quantity" [min]="1" [step]="1" placeholder="No minimum" />
+            <span class="ax-hint">Fewest units a customer can order at once (a whole number, 1 or more).</span>
           </div>
           <div class="ax-form-field">
             <label class="ax-label" for="maximum_order_quantity">Maximum order quantity</label>
-            <input id="maximum_order_quantity" name="maximum_order_quantity" type="number" class="ax-input" [(ngModel)]="model.maximum_order_quantity" [min]="model.minimum_order_quantity" />
-            <span class="ax-hint">Maximum quantity to place an order. 0 = no limit.</span>
+            <input id="maximum_order_quantity" name="maximum_order_quantity" type="number" class="ax-input" [(ngModel)]="model.maximum_order_quantity" [min]="model.minimum_order_quantity ?? 1" [step]="1" placeholder="No limit" />
+            <span class="ax-hint">Most units a customer can order at once (a whole number, 1 or more).</span>
           </div>
         </div>
       </section>
@@ -347,6 +356,9 @@
               <label class="ax-check"><input type="checkbox" [checked]="model.size_64"  (change)="model.size_64  = !model.size_64"  /><span class="ax-check-box"></span><span class="ax-check-label">64</span></label>
               <label class="ax-check" style="grid-column: span 2;"><input type="checkbox" [checked]="model.size_custom" (change)="model.size_custom = !model.size_custom" /><span class="ax-check-box"></span><span class="ax-check-label">Custom</span></label>
             </div>
+            <p *ngIf="otherSizes.length" class="ax-hint ax-mt-3 ax-mb-0">
+              Also on this product (kept as-is): {{ otherSizes.join(', ') }}
+            </p>
           </app-ax-accordion-item>
         }
 
