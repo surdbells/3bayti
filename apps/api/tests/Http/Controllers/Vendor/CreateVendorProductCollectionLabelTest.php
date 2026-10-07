@@ -8,6 +8,8 @@ use Bayti\Api\Domain\Catalog\Category;
 use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\Catalog\Vendor;
+use Bayti\Api\Domain\Catalog\VendorLabel;
+use Bayti\Api\Domain\Catalog\VendorLabelRepository;
 use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
@@ -45,10 +47,25 @@ final class CreateVendorProductCollectionLabelTest extends HttpTestCase
         return $v;
     }
 
-    private function bindDeps(User $user, Vendor $vendor): void
+    private function makeLabel(int $id, Vendor $owner): VendorLabel
+    {
+        $l = new VendorLabel($owner, "label-{$id}", "Label {$id}");
+        $rp = new \ReflectionProperty($l, 'id');
+        $rp->setAccessible(true);
+        $rp->setValue($l, $id);
+        return $l;
+    }
+
+    /** @param array<int, VendorLabel> $labelsById */
+    private function bindDeps(User $user, Vendor $vendor, array $labelsById = []): void
     {
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->willReturn($user);
+
+        $labelRepo = $this->createMock(VendorLabelRepository::class);
+        $labelRepo->method('find')->willReturnCallback(
+            static fn (mixed $id): ?VendorLabel => $labelsById[(int) $id] ?? null,
+        );
 
         $vendorRepo = $this->createMock(VendorRepository::class);
         $vendorRepo->method('findByOwnerUser')->willReturn([$vendor]);
@@ -65,12 +82,13 @@ final class CreateVendorProductCollectionLabelTest extends HttpTestCase
             $rp->setValue($p, 4242);
         });
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $vendorRepo, $catRepo, $productRepo): void {
+        $em = $this->stubEm(function ($em) use ($userRepo, $vendorRepo, $catRepo, $productRepo, $labelRepo): void {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Vendor::class, $vendorRepo],
                 [Category::class, $catRepo],
                 [Product::class, $productRepo],
+                [VendorLabel::class, $labelRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
@@ -81,7 +99,8 @@ final class CreateVendorProductCollectionLabelTest extends HttpTestCase
     {
         $user = $this->makeVendorUser(100);
         $vendor = $this->makeVendor(101);
-        $this->bindDeps($user, $vendor);
+        // label 3 belongs to THIS vendor's store, so it may be attached.
+        $this->bindDeps($user, $vendor, [3 => $this->makeLabel(3, $vendor)]);
 
         $jwt = $this->app->getContainer()->get(JwtService::class);
         $pair = $jwt->issueTokenPair($user);
@@ -100,6 +119,37 @@ final class CreateVendorProductCollectionLabelTest extends HttpTestCase
         self::assertSame(7, $this->saved->getCollectionId());
         self::assertSame(3, $this->saved->getLabelId());
         self::assertSame('active', $this->saved->getStatus());
+    }
+
+    #[Test]
+    public function rejectsAnotherStoresLabelAndPersistsNothing(): void
+    {
+        $user = $this->makeVendorUser(300);
+        $vendor = $this->makeVendor(301);
+        $otherStore = $this->makeVendor(999);
+        // label 9 exists but belongs to a DIFFERENT store.
+        $this->bindDeps($user, $vendor, [9 => $this->makeLabel(9, $otherStore)]);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $res = $this->handle($this->jsonRequest('POST', '/v3/vendor/products', [
+            'name' => 'Silk Abaya',
+            'price' => 450,
+            'label_id' => 9,
+        ], ['Authorization' => 'Bearer ' . $pair->accessToken]));
+
+        self::assertSame(422, $res->getStatusCode(), (string) $res->getBody());
+        self::assertStringContainsString('label_id', (string) $res->getBody());
+        self::assertNull($this->saved, 'A product must not be created with another store\'s label.');
+    }
+
+    #[Test]
+    public function rejectsAnUnknownLabel(): void
+    {
+        $res = $this->createWithBody(['name' => 'Silk Abaya', 'price' => 450, 'label_id' => 12345]);
+        self::assertSame(422, $res->getStatusCode(), (string) $res->getBody());
+        self::assertNull($this->saved);
     }
 
     #[Test]

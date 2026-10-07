@@ -974,7 +974,7 @@ return [
     \Bayti\Api\Http\Serializers\VendorLabelSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\ListAdminVendorLabelsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\CreateAdminVendorLabelController::class => \DI\autowire(),
-    \Bayti\Api\Http\Controllers\Admin\Product\AdminProductLabelValidator::class => \DI\autowire(),
+    \Bayti\Api\Http\Validator\ProductLabelValidator::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Product\CreateAdminProductController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Product\UpdateAdminProductController::class => \DI\autowire(),
 

@@ -72,6 +72,17 @@ final class VendorLabelCrudControllerTest extends HttpTestCase
         self::assertSame('New In', $data['label']);
     }
 
+    #[Test]
+    public function createRejectsAnOverlongNameWith422NotADbError(): void
+    {
+        [$user] = $this->bindVendor();
+
+        $res = $this->send($user, 'POST', '/v3/vendor/labels', ['label' => str_repeat('a', VendorLabel::MAX_NAME_LENGTH + 1)]);
+
+        self::assertSame(422, $res->getStatusCode(), (string) $res->getBody());
+        self::assertCount(0, $this->saved, 'nothing persisted');
+    }
+
     // =================================================================
     // Helpers
     // =================================================================

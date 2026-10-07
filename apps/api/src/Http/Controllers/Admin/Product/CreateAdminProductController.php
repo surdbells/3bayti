@@ -14,6 +14,7 @@ use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\ProductSerializer;
+use Bayti\Api\Http\Validator\ProductLabelValidator;
 use Bayti\Api\Http\Validator\RequestValidator;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -22,7 +23,7 @@ use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * POST /v3/admin/products, Create a product on behalf of a vendor. Requires vendor_id in body.
- * Optional label_id must be an active label of that vendor (see AdminProductLabelValidator).
+ * Optional label_id must be an active label of that vendor (see ProductLabelValidator).
  */
 final class CreateAdminProductController
 {
@@ -32,7 +33,7 @@ final class CreateAdminProductController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $serializer,
-        private readonly AdminProductLabelValidator $labels,
+        private readonly ProductLabelValidator $labels,
     ) {}
     protected function getResponseFactory(): ResponseFactoryInterface { return $this->responseFactory; }
 

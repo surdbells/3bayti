@@ -18,6 +18,7 @@ use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\ProductSerializer;
+use Bayti\Api\Http\Validator\ProductLabelValidator;
 use Bayti\Api\Http\Validator\RequestValidator;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -41,6 +42,7 @@ final class UpdateVendorProductController
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $serializer,
         private readonly \Bayti\Api\Domain\Media\ImageStorageService $imageStorage,
+        private readonly ProductLabelValidator $labels,
     ) {
     }
 
@@ -80,6 +82,12 @@ final class UpdateVendorProductController
 
         $input = $this->validator->parse($request, VendorProductInput::class);
 
+        // label_id must be an active label of THIS product's store (422
+        // otherwise; re-sending the current label is a no-op). Validated before
+        // ANY mutation, incl. the orphaned-image cleanup below, so a rejected
+        // label changes nothing.
+        $labelId = $this->labels->resolve($input->label_id, $product->getVendor(), $product->getLabelId());
+
         /** @var CategoryRepository $catRepo */
         $catRepo  = $this->em->getRepository(Category::class);
         $category = null;
@@ -98,6 +106,7 @@ final class UpdateVendorProductController
             $input,
             $category,
             array_key_exists('sale_price', (array) ($request->getParsedBody() ?? [])),
+            $labelId,
         );
         $productRepo->save($product);
 
@@ -133,7 +142,7 @@ final class UpdateVendorProductController
         }
     }
 
-    private function applyInput(Product $product, VendorProductInput $input, ?Category $category, bool $salePricePresent): void
+    private function applyInput(Product $product, VendorProductInput $input, ?Category $category, bool $salePricePresent, ?int $labelId): void
     {
         if ($input->name !== null)                $product->setName($input->name);
         if ($input->description !== null)         $product->setDescription($input->description);
@@ -164,7 +173,7 @@ final class UpdateVendorProductController
         if ($input->delivery_info !== null)       $product->setDeliveryInfo($input->normalizedDeliveryInfo());
         if ($input->status !== null)              $product->setStatus($input->status);
         if ($input->collection_id !== null)       $product->setCollectionId($input->collection_id);
-        if ($input->label_id !== null)            $product->setLabelId($input->label_id);
+        if ($labelId !== null)                    $product->setLabelId($labelId);
         if ($category !== null)                   $product->setCategory($category);
     }
 }

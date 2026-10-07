@@ -46,12 +46,23 @@ final class VendorLabelCrudController
         return $this->ok(['data' => array_map([$this, 'shape'], $labels)]);
     }
 
+    /** name is VARCHAR(150): a longer one is a 422 (matching the admin endpoint), not a DB 500. */
+    private function assertNameLength(string $name): void
+    {
+        if (mb_strlen($name) > VendorLabel::MAX_NAME_LENGTH) {
+            throw HttpException::validation([
+                'label' => ['Label name must be ' . VendorLabel::MAX_NAME_LENGTH . ' characters or fewer.'],
+            ]);
+        }
+    }
+
     public function create(ServerRequestInterface $request): ResponseInterface
     {
         $vendor = $this->vendorOrFail($request);
         $body   = (array) ($request->getParsedBody() ?? []);
         $name   = trim((string) ($body['label'] ?? $body['name'] ?? ''));
         if ($name === '') throw HttpException::badRequest('label name is required.');
+        $this->assertNameLength($name);
 
         $label = new VendorLabel($vendor, VendorLabel::generateSlug($name), $name);
 
@@ -69,7 +80,10 @@ final class VendorLabelCrudController
         $label   = $this->labelOrFail($id, $vendor);
         $body    = (array) ($request->getParsedBody() ?? []);
         $newName = trim((string) ($body['label'] ?? $body['name'] ?? ''));
-        if ($newName !== '') $label->setName($newName);
+        if ($newName !== '') {
+            $this->assertNameLength($newName);
+            $label->setName($newName);
+        }
 
         /** @var VendorLabelRepository $repo */
         $repo = $this->em->getRepository(VendorLabel::class);

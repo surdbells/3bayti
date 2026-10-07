@@ -11,6 +11,7 @@ use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\ProductSerializer;
+use Bayti\Api\Http\Validator\ProductLabelValidator;
 use Bayti\Api\Http\Validator\RequestValidator;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -19,7 +20,7 @@ use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * PUT /v3/admin/products/{id}
- * Optional label_id must be an active label of the product's store (see AdminProductLabelValidator).
+ * Optional label_id must be an active label of the product's store (see ProductLabelValidator).
  */
 final class UpdateAdminProductController
 {
@@ -29,7 +30,7 @@ final class UpdateAdminProductController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $serializer,
-        private readonly AdminProductLabelValidator $labels,
+        private readonly ProductLabelValidator $labels,
     ) {}
     protected function getResponseFactory(): ResponseFactoryInterface { return $this->responseFactory; }
 

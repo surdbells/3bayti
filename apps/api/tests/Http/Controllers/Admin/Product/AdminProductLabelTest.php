@@ -14,7 +14,7 @@ use Bayti\Api\Domain\Catalog\VendorLabelRepository;
 use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
-use Bayti\Api\Http\Controllers\Admin\Product\AdminProductLabelValidator;
+use Bayti\Api\Http\Validator\ProductLabelValidator;
 use Bayti\Api\Http\Controllers\Admin\Product\CreateAdminProductController;
 use Bayti\Api\Http\Controllers\Admin\Product\UpdateAdminProductController;
 use Bayti\Api\Infrastructure\Auth\JwtService;
@@ -32,7 +32,7 @@ use Psr\Http\Message\ResponseInterface;
  */
 #[CoversClass(CreateAdminProductController::class)]
 #[CoversClass(UpdateAdminProductController::class)]
-#[CoversClass(AdminProductLabelValidator::class)]
+#[CoversClass(ProductLabelValidator::class)]
 final class AdminProductLabelTest extends HttpTestCase
 {
     private const STORE = 5;

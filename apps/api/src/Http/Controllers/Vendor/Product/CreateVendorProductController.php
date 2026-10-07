@@ -18,6 +18,7 @@ use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\ProductSerializer;
+use Bayti\Api\Http\Validator\ProductLabelValidator;
 use Bayti\Api\Http\Validator\RequestValidator;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -42,6 +43,7 @@ final class CreateVendorProductController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $serializer,
+        private readonly ProductLabelValidator $labels,
     ) {
     }
 
@@ -67,6 +69,10 @@ final class CreateVendorProductController
 
         $input = $this->validator->parse($request, VendorProductInput::class);
 
+        // label_id must be an active label of THIS vendor's store (422
+        // otherwise) — validated before anything is built so nothing persists.
+        $labelId = $this->labels->resolve($input->label_id, $vendor);
+
         // A new product MUST have a real, positive price. The DTO's Positive
         // constraint rejects a supplied 0/negative, but the price field is
         // nullable (shared with partial-update); an omitted price would otherwise
@@ -90,7 +96,7 @@ final class CreateVendorProductController
             name: $input->name ?? '',
         );
 
-        $this->applyInput($product, $input, $category);
+        $this->applyInput($product, $input, $category, $labelId);
 
         /** @var ProductRepository $productRepo */
         $productRepo = $this->em->getRepository(Product::class);
@@ -101,7 +107,7 @@ final class CreateVendorProductController
         ));
     }
 
-    private function applyInput(Product $product, VendorProductInput $input, ?Category $category): void
+    private function applyInput(Product $product, VendorProductInput $input, ?Category $category, ?int $labelId): void
     {
         if ($input->name !== null) {
             $product->setName($input->name);
@@ -176,8 +182,8 @@ final class CreateVendorProductController
         if ($input->collection_id !== null) {
             $product->setCollectionId($input->collection_id);
         }
-        if ($input->label_id !== null) {
-            $product->setLabelId($input->label_id);
+        if ($labelId !== null) {
+            $product->setLabelId($labelId);
         }
         if ($category !== null) {
             $product->setCategory($category);

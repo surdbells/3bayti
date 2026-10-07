@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Bayti\Api\Http\Controllers\Admin\Product;
+namespace Bayti\Api\Http\Validator;
 
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorLabel;
@@ -11,10 +11,12 @@ use Bayti\Api\Http\Errors\HttpException;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Validates the store label (`label_id`) an admin picks in the product form,
- * for POST /v3/admin/products and PUT /v3/admin/products/{id}.
+ * Validates the store label (`label_id`) sent with a product write — shared by
+ * the ADMIN (POST/PUT /v3/admin/products) and VENDOR (POST/PUT
+ * /v3/vendor/products) endpoints so neither can attach another store's label
+ * (the vendor endpoints previously set any positive label_id unchecked).
  *
- * Semantics (same null/absent behaviour as the vendor product endpoints):
+ * Semantics:
  *   - absent / null  -> no change (create: no label; update: keeps the stored one)
  *   - 0 / negative   -> 422 from VendorProductInput's Positive constraint, so
  *                       there is no "clear the label" value (vendor flow has none either)
@@ -27,7 +29,7 @@ use Doctrine\ORM\EntityManagerInterface;
  * soft-deleted. The edit form round-trips the stored label on every save, so
  * rejecting it would block unrelated edits to the product.
  */
-final class AdminProductLabelValidator
+final class ProductLabelValidator
 {
     public function __construct(
         private readonly EntityManagerInterface $em,
