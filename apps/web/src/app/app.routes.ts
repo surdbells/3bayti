@@ -143,23 +143,19 @@ export const routes: Routes = [
   { path: 'designer/:slug', redirectTo: 'stores/:slug' },
   {
     /* P9: shared hotlink short URL. Resolves the code (records the click) then
-       forwards to /stores/:slug or /styles/:slug. */
+       forwards to /stores/:slug (legacy style codes forward to home). */
     path: 's/:code',
     loadComponent: () =>
       import('./features/hotlinks/hotlink-resolver-page').then(m => m.HotlinkResolverPageComponent),
     title: 'routeTitles.hotlink',
   },
-  {
-    /* Style Hub, `/styles`. Public storefront page: Community,
-       3bayti (editorial), and My styles (auth) tabs, each a grid of
-       curated-outfit cards. Backed by /v3/styles + /v3/me/styles.
-       Registered before `styles/:slug` so the index wins. */
-    path: 'styles',
-    pathMatch: 'full',
-    loadComponent: () =>
-      import('./features/styles/styles-hub-page').then(m => m.StylesHubPageComponent),
-    title: 'routeTitles.styles',
-  },
+  /* The Style Hub was removed. Its old URLs (/styles, /styles/create,
+     /styles/:slug, /styles/:slug/edit, and anything deeper) are indexed,
+     bookmarked and shared, so send every one to the home page instead of a
+     404. A componentless parent + `**` child catches the bare /styles too
+     (`**` also matches zero remaining segments); the redirect is absolute so
+     it lands on the root rather than resolving relative to /styles. */
+  { path: 'styles', children: [{ path: '**', redirectTo: '/' }] },
   {
     /* Ask Ain — AI style & gifting concierge. Public (personalises when
        signed in); the endpoint resolves NL queries to real products. */
@@ -178,7 +174,7 @@ export const routes: Routes = [
   },
   {
     /* Style me with Ain — guided outfit generator (occasion/style/colour/budget →
-       a coordinated multi-piece look). Public; saving a look requires sign-in. */
+       a coordinated multi-piece look). Public. */
     path: 'outfit',
     loadComponent: () =>
       import('./features/ai-concierge/outfit-page').then(m => m.OutfitPageComponent),
@@ -199,34 +195,6 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/gift-reminders/gift-reminders-page').then(m => m.GiftRemindersPageComponent),
     title: 'routeTitles.giftReminders',
-  },
-  {
-    /* Create a style, `/styles/create`. Name + product picker → POST
-       /me/styles. Auth-gated (the create endpoint is Bearer-bound).
-       MUST precede `styles/:slug` so the literal segment wins. */
-    path: 'styles/create',
-    canActivate: [authActivateGuard],
-    loadComponent: () =>
-      import('./features/styles/style-create-page').then(m => m.StyleCreatePageComponent),
-    title: 'routeTitles.styleCreate',
-  },
-  {
-    /* Edit a saved style, `/styles/:slug/edit`. Reuses the create page in
-       edit mode (prefills name + products, PUT /me/styles/:id). Auth-gated.
-       Two segments, so it never collides with single-segment `styles/:slug`. */
-    path: 'styles/:slug/edit',
-    canActivate: [authActivateGuard],
-    loadComponent: () =>
-      import('./features/styles/style-create-page').then(m => m.StyleCreatePageComponent),
-    title: 'routeTitles.styleEdit',
-  },
-  {
-    /* Style detail, `/styles/:slug`. Cover + the bundled products with
-       View product + Add to wishlist, plus a display-only total. */
-    path: 'styles/:slug',
-    loadComponent: () =>
-      import('./features/styles/style-detail-page').then(m => m.StyleDetailPageComponent),
-    title: 'routeTitles.styleDetail',
   },
   {
     /* Best Sellers, curated product listing sorted by sales. */

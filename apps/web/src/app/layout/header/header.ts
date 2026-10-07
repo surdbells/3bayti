@@ -99,8 +99,8 @@ export class HeaderComponent {
 
   /**
    * Primary browse spine (the "Atelier" editorial nav), deliberately spare:
-   * just Categories (which opens the mega panel). Styles, Stores, New In, Best
-   * Sellers and Gift Cards were lifted out of the top bar — they now live as
+   * just Categories (which opens the mega panel). Stores, New In, Best Sellers
+   * and Gift Cards were lifted out of the top bar — they now live as
    * homepage action cards + hero tiles, in the mega panel's "Discover" column
    * (desktop, see {@link discoverItems}) and the drawer's "Explore" group
    * (mobile), so the bar reads clean while every destination stays one click
@@ -127,11 +127,10 @@ export class HeaderComponent {
   /**
    * "Discover" links shown in the mega panel's middle column (desktop) and the
    * drawer's "Explore" group (mobile). This is the home for the browse links
-   * lifted out of the top bar, so Styles / Stores / New In / Best Sellers /
-   * Gift Cards all stay reachable from the menu.
+   * lifted out of the top bar, so Stores / New In / Best Sellers / Gift Cards
+   * all stay reachable from the menu.
    */
   protected readonly discoverItems: readonly NavItem[] = [
-    { path: '/styles', labelKey: 'nav.styles', key: 'styles' },
     { path: '/stores', labelKey: 'nav.stores', key: 'stores' },
     { path: '/new-arrivals', labelKey: 'nav.newArrivals', key: 'newArrivals' },
     { path: '/best-sellers', labelKey: 'nav.bestSellers', key: 'bestSellers' },

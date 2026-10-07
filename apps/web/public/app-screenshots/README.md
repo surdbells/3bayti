@@ -3,7 +3,7 @@
 These images power the auto-advancing carousel in the home page **“Get the app”**
 band (`app-showcase` component → `features/home/app-showcase.ts`).
 
-The eight files here are **branded placeholders** (a cream→gold gradient with a
+The seven files here are **branded placeholders** (a cream→gold gradient with a
 phone outline). **Replace each one with the real App Store / Play Store promo
 tile**, keeping the exact filename below.
 
@@ -12,7 +12,6 @@ tile**, keeping the exact filename below.
 | `home.png`         | Home — “Modest Fashion, Beautifully Curated” |
 | `collections.png`  | Category grid — “Explore the Collections” |
 | `product.png`      | Product detail — “Hand-Embellished, Premium Quality” |
-| `style-hub.png`    | Style Hub — “Get Styled by the Community” |
 | `filters.png`      | Filters sheet — “Your Size, Your Colour”  |
 | `gift-cards.png`   | Gift cards — “Gifts for Eid, Birthdays & More” |
 | `checkout.png`     | Cart — “Seamless Checkout”                |

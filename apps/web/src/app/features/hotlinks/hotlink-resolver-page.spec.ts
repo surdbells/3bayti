@@ -65,10 +65,12 @@ describe('HotlinkResolverPageComponent', () => {
     expect(navigate).toHaveBeenCalledWith('/stores/atelier-noor', { replaceUrl: true });
   });
 
-  it('resolves a style code and forwards to /styles/:slug', async () => {
-    const { navigate } = setup('def456', { target_type: 'style', target_slug: 'eid-look-a1b2' });
+  it('sends a legacy style code (Style Hub removed) to the home page', async () => {
+    const { hotlinks, navigate } = setup('def456', { target_type: 'style', target_slug: 'eid-look-a1b2' });
     await flush();
-    expect(navigate).toHaveBeenCalledWith('/styles/eid-look-a1b2', { replaceUrl: true });
+    expect(hotlinks.resolveCalls).toEqual(['def456']);
+    expect(navigate).toHaveBeenCalledWith('/', { replaceUrl: true });
+    expect(navigate).not.toHaveBeenCalledWith(expect.stringContaining('/styles'), expect.anything());
   });
 
   it('shows a not-found message when the code does not resolve', async () => {

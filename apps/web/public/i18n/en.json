@@ -32,7 +32,6 @@
     "bestSellers": "Best Sellers",
     "newArrivals": "New In",
     "categories": "Categories",
-    "styles": "Styles",
     "giftCards": "Gift Cards",
     "discounted": "Discounted",
     "askAin": "Ask Ain",
@@ -94,7 +93,7 @@
   },
   "outfit": {
     "title": "Style me with Ain",
-    "subtitle": "Tell Ain the occasion and vibe. It puts together a full look from real, in-stock pieces you can add to your bag or save.",
+    "subtitle": "Tell Ain the occasion and vibe. It puts together a full look from real, in-stock pieces you can add to your bag.",
     "occasionLabel": "What's the occasion?",
     "heroLabel": "Build it around (optional)",
     "styleLabel": "Your vibe",
@@ -106,10 +105,6 @@
     "totalLabel": "The look",
     "addLook": "Add the look to bag",
     "addingLook": "Adding…",
-    "saveLook": "Save this look",
-    "savingLook": "Saving…",
-    "savedLook": "Saved to your styles",
-    "signInToSave": "Sign in to save",
     "roleHero": "The piece",
     "roleComplement": "Styled with",
     "empty": "Ain couldn't build a look from that. Try a different occasion, colour or budget.",
@@ -118,8 +113,6 @@
     "giftCardCta": "Send a gift card",
     "addedToast": "Added {{count}} pieces to your bag",
     "addFailedToast": "Those pieces couldn't be added. They may have sold out.",
-    "savedToast": "Your look is saved to your styles.",
-    "saveFailedToast": "Couldn't save the look just now. Please try again.",
     "occasions": {
       "eid": "Eid",
       "wedding": "Wedding",
@@ -1478,9 +1471,7 @@
       "storesTitle": "Stores",
       "storesSub": "Browse UAE ateliers",
       "giftTitle": "Gift Cards",
-      "giftSub": "The always-right gift",
-      "stylesTitle": "Styles",
-      "stylesSub": "Shop curated looks"
+      "giftSub": "The always-right gift"
     },
     "categories": {
       "eyebrow": "Browse",
@@ -1572,7 +1563,6 @@
         "home": "3bayti app home screen: modest fashion, beautifully curated",
         "collections": "Browsing the collections in the 3bayti app",
         "product": "A hand-embellished piece on a 3bayti product page",
-        "styleHub": "Community style looks in the 3bayti app Style Hub",
         "filters": "Filtering by size and colour in the 3bayti app",
         "giftCards": "Choosing a 3bayti gift card design in the app",
         "checkout": "Seamless checkout in the 3bayti app",
@@ -1985,8 +1975,6 @@
   "routeTitles": {
     "privacy": "Privacy Policy · 3bayti",
     "deleteAccount": "Delete your account · 3bayti",
-    "styleCreate": "Create a style · 3bayti",
-    "styleEdit": "Edit your style · 3bayti",
     "askAin": "Ask Ain · 3bayti",
     "giftAin": "Gift Finder · 3bayti",
     "outfit": "Style me with Ain · 3bayti",
@@ -2036,8 +2024,6 @@
     "checkoutReturn": "Confirming payment · 3bayti",
     "checkoutSuccess": "Order placed · 3bayti",
     "notFound": "Page not found · 3bayti",
-    "styles": "Styles · 3bayti",
-    "styleDetail": "Style · 3bayti",
     "accountConnected": "Connected accounts · 3bayti"
   },
   "devComponents": {
@@ -2085,91 +2071,6 @@
     "productCards": {
       "title": "Product Cards",
       "note": "Reusable card for product grids on /category/:slug, PDP related-products, /designer/:slug, and search. Renders all branches: image present + missing, on sale + regular price, in stock + out of stock, with rating + without, and the defensive \"no slug\" fallback (renders as div, not anchor)."
-    }
-  },
-  "styles": {
-    "restyle": {
-      "heading": "Restyle with Ain",
-      "intro": "Tell Ain how to reimagine this look and it will rebuild it from real, in-stock pieces.",
-      "placeholder": "e.g. make it more elegant for a wedding",
-      "cta": "Restyle",
-      "working": "Restyling…",
-      "noResults": "Ain couldn't rebuild this look. Try a different instruction.",
-      "save": "Save this look",
-      "saving": "Saving…",
-      "s1": "Make it more elegant",
-      "s2": "Style this for a wedding",
-      "s3": "A more traditional version"
-    },
-    "create": {
-      "cta": "Create a style",
-      "title": "Create a style",
-      "subtitle": "Bundle up to four pieces into one curated outfit and share it with the community.",
-      "signInToCreate": "Sign in to create your own style.",
-      "nameLabel": "Style name",
-      "namePlaceholder": "e.g. Evening elegance",
-      "productsLabel": "Products",
-      "trayEmpty": "No products added yet. Search below to add up to four.",
-      "searchLabel": "Add products",
-      "searchPlaceholder": "Search products by name",
-      "added": "Added",
-      "remove": "Remove",
-      "noResults": "No products match your search.",
-      "maxReached": "You can add up to {{max}} products.",
-      "alreadyAdded": "That product is already in your style.",
-      "submit": "Publish style",
-      "success": "Your style has been created.",
-      "errors": {
-        "failed": "Could not create the style. Please try again.",
-        "unauthenticated": "Please sign in to create a style."
-      }
-    },
-    "edit": {
-      "title": "Edit your style",
-      "subtitle": "Rename your look or swap the pieces. Your saved link stays the same.",
-      "submit": "Save changes",
-      "success": "Your style has been updated.",
-      "notOwner": "You can only edit styles you created.",
-      "loadFailed": "We couldn't load that style to edit.",
-      "errors": {
-        "failed": "Could not save your changes. Please try again."
-      }
-    },
-    "title": "Styles",
-    "subtitle": "Shop the look, curated outfits that bundle pieces our community and editors love.",
-    "tabs": {
-      "community": "Community",
-      "editorial": "3bayti",
-      "mine": "My styles"
-    },
-    "itemCount": "{{count}} items",
-    "total": "Total",
-    "loadMore": "Load more",
-    "signIn": "Sign in",
-    "signInToView": "Sign in to see the styles you've created.",
-    "addToWishlist": "Add to wishlist",
-    "savedToWishlist": "Saved",
-    "empty": {
-      "community": "No community styles yet. Be the first to create one!",
-      "editorial": "No 3bayti styles to show just yet. Check back soon.",
-      "mine": "You haven't created any styles yet."
-    },
-    "detail": {
-      "productsHeading": "Products in this style",
-      "viewProduct": "View product",
-      "notFoundTitle": "Style not found",
-      "notFoundBody": "We couldn't find that style. It may have moved or is no longer available.",
-      "backToHub": "Back to Styles",
-      "addTheLook": "Add the look to cart",
-      "addingToCart": "Adding to cart",
-      "addedToCart": "Added {{count}} item(s) to your cart.",
-      "addFailed": "Sorry, none of these pieces could be added right now.",
-      "edit": "Edit",
-      "delete": "Delete",
-      "deleting": "Deleting",
-      "deleteConfirm": "Delete this look? This can't be undone from here.",
-      "deleted": "Look deleted.",
-      "deleteFailed": "Couldn't delete the look. Please try again."
     }
   }
 }

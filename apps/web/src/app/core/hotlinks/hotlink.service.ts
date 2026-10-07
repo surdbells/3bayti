@@ -2,6 +2,11 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { RoutedHttpClient } from '../http/routed-http-client';
 
+/**
+ * Hotlink target kinds on the wire. The web app only creates 'store' links;
+ * 'style' codes were minted by the removed Style Hub and can still come back
+ * from resolve() (the resolver sends them to the home page).
+ */
 export type HotlinkTargetType = 'store' | 'style';
 
 export interface Hotlink {
@@ -17,8 +22,8 @@ export interface HotlinkTarget {
 }
 
 /**
- * Store hotlinks & Style-Me codes (P9). Creates the canonical shareable short
- * link for a store/look (auth-only) and resolves a code to its target.
+ * Store hotlinks (P9). Creates the canonical shareable short link for a store
+ * (auth-only) and resolves a code to its target.
  *
  * A per-browser session id (localStorage) is threaded into the resolve call so
  * logged-out clicks still contribute to a link's reach, mirroring how the AI
@@ -33,7 +38,7 @@ export class HotlinkService {
    * Get-or-create the canonical hotlink for a target. Returns null on failure
    * (e.g. not signed in — the caller then falls back to the plain URL).
    */
-  async create(targetType: HotlinkTargetType, targetSlug: string): Promise<Hotlink | null> {
+  async create(targetType: 'store', targetSlug: string): Promise<Hotlink | null> {
     try {
       const env = await firstValueFrom(
         this.http.post<Hotlink>('POST /me/hotlinks', {

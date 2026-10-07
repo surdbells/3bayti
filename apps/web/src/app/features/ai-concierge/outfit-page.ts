@@ -4,10 +4,8 @@ import { TranslatePipe } from '@ngx-translate/core';
 
 import { ProductCardComponent } from '../catalog/product-card';
 import { AnalyticsService } from '../../core/monitoring/analytics.service';
-import { AuthService } from '../../core/auth/auth.service';
 import { CartService } from '../../core/cart/cart.service';
 import { ToastService } from '../../shared/forms';
-import { StyleService } from '../styles/style.service';
 import {
   ConciergeService,
   type OutfitBriefInput,
@@ -25,8 +23,8 @@ interface BudgetBand {
  * "Style me with Ain": a guided outfit generator. The shopper picks an occasion
  * (+ optional style, colour, budget and hero garment); Ain composes a
  * coordinated multi-piece look — a hero garment plus complementary pieces — from
- * real, in-stock products, with "add the look to bag" and "save the look" (a
- * signed-in Style). A gift-card nudge is offered when no coherent look fits.
+ * real, in-stock products, with "add the look to bag". A gift-card nudge is
+ * offered when no coherent look fits.
  */
 @Component({
   selector: 'app-outfit',
@@ -40,12 +38,8 @@ export class OutfitPageComponent implements OnInit {
   private readonly concierge = inject(ConciergeService);
   private readonly analytics = inject(AnalyticsService);
   private readonly router = inject(Router);
-  private readonly auth = inject(AuthService);
   private readonly cart = inject(CartService);
-  private readonly styles = inject(StyleService);
   private readonly toast = inject(ToastService);
-
-  readonly isAuthenticated = this.auth.isAuthenticated;
 
   readonly occasions = ['eid', 'wedding', 'party', 'graduation', 'ramadan', 'everyday'];
   readonly styleOptions = ['elegant', 'casual', 'traditional', 'modern', 'minimal', 'embellished'];
@@ -90,8 +84,6 @@ export class OutfitPageComponent implements OnInit {
   readonly loading = signal(false);
   readonly hasSearched = signal(false);
   readonly adding = signal(false);
-  readonly saving = signal(false);
-  readonly saved = signal(false);
 
   private interactionId: number | null = null;
 
@@ -149,7 +141,6 @@ export class OutfitPageComponent implements OnInit {
   private async run(brief: OutfitBriefInput): Promise<void> {
     this.loading.set(true);
     this.hasSearched.set(true);
-    this.saved.set(false);
     this.pieces.set([]);
     this.rationale.set('');
     this.giftCard.set(null);
@@ -206,53 +197,9 @@ export class OutfitPageComponent implements OnInit {
     }
   }
 
-  /** Save the composed look as an Ain Style (signed-in only, <= 4 pieces). */
-  async saveLook(): Promise<void> {
-    if (!this.isAuthenticated()) {
-      void this.router.navigateByUrl('/login?returnUrl=/outfit');
-      return;
-    }
-    const pieces = this.pieces();
-    if (pieces.length === 0 || this.saving()) {
-      return;
-    }
-    this.saving.set(true);
-    try {
-      await this.styles.createStyle({
-        name: this.lookName(),
-        products: pieces.slice(0, 4).map((p) => p.product.id),
-        source: 'ai',
-        prompt: this.promptSummary(),
-        rationale: this.rationale() || undefined,
-      });
-      this.saved.set(true);
-      this.concierge.recordEvent('ai_outfit_saved', { count: pieces.length });
-      this.toast.success('outfit.savedToast');
-    } catch {
-      this.toast.error('outfit.saveFailedToast');
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
   openGiftCards(): void {
     this.analytics.event('ai_gift_card_cta_click', { denomination: this.giftCard()?.suggested_denomination ?? '' });
     this.concierge.recordEvent('ai_gift_card_recommended', { context: 'outfit', surface: 'web' });
     void this.router.navigateByUrl('/gift-cards');
-  }
-
-  private lookName(): string {
-    const parts = [this.selectedStyles()[0], this.occasion()].filter((s) => !!s);
-    const label = parts.join(' ').trim();
-    return label !== '' ? `${label} look`.replace(/^\w/, (c) => c.toUpperCase()) : 'My Ain outfit';
-  }
-
-  private promptSummary(): string {
-    const b: string[] = [];
-    if (this.occasion()) b.push(this.occasion());
-    if (this.selectedStyles().length) b.push(this.selectedStyles().join(', '));
-    if (this.selectedColours().length) b.push('in ' + this.selectedColours().join(', '));
-    if (this.heroType()) b.push('around a ' + this.heroType());
-    return b.join(' · ');
   }
 }

@@ -100,15 +100,6 @@
           <button type="button" class="btn btn--solid" [disabled]="adding()" (click)="addLook()">
             @if (adding()) { {{ 'outfit.addingLook' | translate }} } @else { {{ 'outfit.addLook' | translate }} }
           </button>
-          @if (saved()) {
-            <span class="outfit__saved">{{ 'outfit.savedLook' | translate }}</span>
-          } @else {
-            <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="saveLook()">
-              @if (saving()) { {{ 'outfit.savingLook' | translate }} }
-              @else if (!isAuthenticated()) { {{ 'outfit.signInToSave' | translate }} }
-              @else { {{ 'outfit.saveLook' | translate }} }
-            </button>
-          }
         </div>
       </div>
 

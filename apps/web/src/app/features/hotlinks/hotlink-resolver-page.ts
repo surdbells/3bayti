@@ -8,8 +8,10 @@ import { HotlinkService } from '../../core/hotlinks/hotlink.service';
  * /s/:code — resolves a shared hotlink and forwards to the target page.
  *
  * Calls GET /hotlinks/:code (which records the click), then replaces the URL
- * with /stores/:slug or /styles/:slug. Shows a brief resolving state, and a
- * "link not found" message that offers the home page on a bad/expired code.
+ * with /stores/:slug. Codes minted for the removed Style Hub (target_type
+ * 'style') still resolve server-side; they land on the home page. Shows a
+ * brief resolving state, and a "link not found" message that offers the home
+ * page on a bad/expired code.
  */
 @Component({
   selector: 'app-hotlink-resolver-page',
@@ -54,9 +56,9 @@ export class HotlinkResolverPageComponent implements OnInit {
       this.failed.set(true);
       return;
     }
-    const path = target.target_type === 'style'
-      ? `/styles/${target.target_slug}`
-      : `/stores/${target.target_slug}`;
+    const path = target.target_type === 'store'
+      ? `/stores/${target.target_slug}`
+      : '/';
     await this.router.navigateByUrl(path, { replaceUrl: true });
   }
 }

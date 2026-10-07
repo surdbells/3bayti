@@ -238,14 +238,13 @@ export class AppShowcaseComponent {
   readonly paused = signal(false);
 
   /**
-   * The eight app-store promo tiles, in a browse-the-app order. Files live in
+   * The seven app-store promo tiles, in a browse-the-app order. Files live in
    * public/app-screenshots/ and are served from the site root at /app-screenshots/*.
    */
   readonly shots: readonly Shot[] = [
     { img: '/app-screenshots/home.jpg',        altKey: 'home.getApp.shots.home' },
     { img: '/app-screenshots/collections.jpg', altKey: 'home.getApp.shots.collections' },
     { img: '/app-screenshots/product.jpg',     altKey: 'home.getApp.shots.product' },
-    { img: '/app-screenshots/style-hub.jpg',   altKey: 'home.getApp.shots.styleHub' },
     { img: '/app-screenshots/filters.jpg',     altKey: 'home.getApp.shots.filters' },
     { img: '/app-screenshots/gift-cards.jpg',  altKey: 'home.getApp.shots.giftCards' },
     { img: '/app-screenshots/checkout.jpg',    altKey: 'home.getApp.shots.checkout' },

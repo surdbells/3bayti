@@ -44,12 +44,6 @@ export interface GiftResult {
   giftCard: GiftCardSuggestion | null;
 }
 
-export interface RestyleResult {
-  interactionId: number | null;
-  cards: ConciergeCard[];
-  rationale: string;
-}
-
 /** The guided outfit-brief inputs. */
 export interface OutfitBriefInput {
   occasion?: string;
@@ -97,12 +91,6 @@ interface VisualSearchResponse {
   interaction_id: number | null;
   description?: string | null;
   products?: ConciergeCard[];
-}
-
-interface RestyleResponse {
-  interaction_id: number | null;
-  products: ConciergeCard[];
-  rationale: string;
 }
 
 /** Raw concierge response body (Responder::ok returns it un-enveloped). */
@@ -175,25 +163,6 @@ export class ConciergeService {
     this.analytics.event('ai_gift_results', { count: cards.length, gift_card: !!giftCard });
 
     return { interactionId: data.interaction_id ?? null, cards, giftCard };
-  }
-
-  /** Rebuild an existing look from an instruction; returns a preview (not saved). */
-  async restyle(styleSlug: string, instruction: string): Promise<RestyleResult> {
-    this.analytics.event('style_ai_used', {});
-    this.recordEvent('style_ai_used');
-
-    const env = await firstValueFrom(
-      this.http.post<RestyleResponse>('POST /ai/styles/restyle', {
-        body: { style_slug: styleSlug, instruction, locale: this.locale.current(), channel: 'WEB' },
-      }),
-    );
-
-    const data = (env.data ?? {}) as RestyleResponse;
-    return {
-      interactionId: data.interaction_id ?? null,
-      cards: Array.isArray(data.products) ? data.products : [],
-      rationale: typeof data.rationale === 'string' ? data.rationale : '',
-    };
   }
 
   /** Guided outfit flow: a structured brief → a coordinated multi-piece look. */

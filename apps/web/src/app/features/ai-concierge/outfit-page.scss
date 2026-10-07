@@ -220,13 +220,6 @@
 .btn:disabled { opacity: .55; cursor: not-allowed; }
 .btn--solid { border: none; background: var(--color-brand-700, #5a3a2c); color: #fff; }
 .btn--solid:hover:not(:disabled) { background: var(--color-brand-500, #b26a1b); }
-.btn--ghost {
-  background: #fff;
-  border: 1px solid var(--color-brand-400, #c69d63);
-  color: var(--color-brand-700, #5a3a2c);
-}
-.btn--ghost:hover:not(:disabled) { border-color: var(--color-brand-700, #5a3a2c); }
-.outfit__saved { align-self: center; color: var(--color-brand-600, #8c6f0f); font-weight: 600; font-size: 0.9rem; }
 
 .outfit__grid {
   display: grid;

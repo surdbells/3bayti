@@ -221,11 +221,24 @@ describe('HeaderComponent (auth-aware)', () => {
       expect(href).toMatch(/category/);
       expect(cats!.querySelector('app-nav-icon')).toBeNull();
 
-      // Styles / Stores / New In / Best Sellers / Gift Cards were lifted out of
-      // the top bar (now homepage action cards + mega Discover + drawer Explore).
-      for (const id of ['nav-styles', 'nav-stores', 'nav-bestSellers', 'nav-newArrivals', 'nav-gift']) {
+      // Stores / New In / Best Sellers / Gift Cards were lifted out of the top
+      // bar (now homepage action cards + mega Discover + drawer Explore).
+      for (const id of ['nav-stores', 'nav-bestSellers', 'nav-newArrivals', 'nav-gift']) {
         expect(nav.querySelector(`[data-testid="${id}"]`), id).toBeNull();
       }
+    });
+
+    it('has no Styles entry anywhere in the header (Style Hub removed)', () => {
+      const { fixture } = setup({ user: null });
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-testid="nav-styles"]')).toBeNull();
+      expect(root.querySelector('[data-testid="drawer-nav-styles"]')).toBeNull();
+      const links = Array.from(root.querySelectorAll('a'));
+      const toStyles = links.filter((a) => {
+        const href = a.getAttribute('href') ?? a.getAttribute('ng-reflect-router-link') ?? '';
+        return /^\/styles(\/|$|\?)/.test(href);
+      });
+      expect(toStyles).toEqual([]);
     });
 
     it('renders a text-only Discounted nav item (desktop + drawer) linking to /discounted', () => {
