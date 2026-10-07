@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
@@ -16,10 +16,49 @@ import { provideI18n } from '../../core/i18n';
 import type { ProductDetail } from './product.model';
 
 /**
- * Reviews-section coverage for the PDP (H3.A). The Reviews section now
- * renders for EVERY product: the review list when reviews exist, or an
- * inviting empty state (#4) when none do, never a missing section.
+ * Reviews-section coverage for the PDP (H3.A). The Reviews section renders
+ * for EVERY product: the review list when reviews exist, or an inviting
+ * empty state (#4) when none do, never a missing section. The section
+ * heading (the #reviews anchor) renders eagerly; its body is an
+ * @defer (on viewport) block.
  */
+/** jsdom has no IntersectionObserver. This stub records what is observed;
+ *  `revealAll()` reports every observed element as on-screen, which is how
+ *  the PDP's @defer (on viewport) blocks are triggered in these tests. */
+class StubIntersectionObserver {
+  static instances: StubIntersectionObserver[] = [];
+  private readonly targets = new Set<Element>();
+  constructor(private readonly callback: IntersectionObserverCallback) {
+    StubIntersectionObserver.instances.push(this);
+  }
+  observe(target: Element): void { this.targets.add(target); }
+  unobserve(target: Element): void { this.targets.delete(target); }
+  disconnect(): void { this.targets.clear(); }
+  takeRecords(): IntersectionObserverEntry[] { return []; }
+  static revealAll(): void {
+    for (const io of StubIntersectionObserver.instances) {
+      const entries = [...io.targets].map((target) => ({
+        target,
+        isIntersecting: true,
+        intersectionRatio: 1,
+        boundingClientRect: target.getBoundingClientRect(),
+        intersectionRect: target.getBoundingClientRect(),
+        rootBounds: null,
+        time: 0,
+      }) as IntersectionObserverEntry);
+      if (entries.length > 0) io.callback(entries, io as unknown as IntersectionObserver);
+    }
+  }
+}
+
+/** Scroll the deferred (on viewport) sections "into view" and let them render. */
+async function revealDeferred(fixture: ComponentFixture<ProductDetailComponent>): Promise<void> {
+  fixture.detectChanges();
+  StubIntersectionObserver.revealAll();
+  await fixture.whenStable();
+  fixture.detectChanges();
+}
+
 function makeProduct(overrides: Partial<ProductDetail> = {}): ProductDetail {
   return {
     id: 100,
@@ -35,8 +74,9 @@ function makeProduct(overrides: Partial<ProductDetail> = {}): ProductDetail {
   } as ProductDetail;
 }
 
-function setup(product: ProductDetail): ComponentFixture<ProductDetailComponent> {
+async function setup(product: ProductDetail): Promise<ComponentFixture<ProductDetailComponent>> {
   TestBed.configureTestingModule({
+    imports: [ProductDetailComponent],
     providers: [
       provideRouter([]),
       provideHttpClient(),
@@ -51,6 +91,7 @@ function setup(product: ProductDetail): ComponentFixture<ProductDetailComponent>
       { provide: PLATFORM_ID, useValue: 'browser' },
     ],
   });
+  await TestBed.compileComponents();
   const fixture = TestBed.createComponent(ProductDetailComponent);
   fixture.detectChanges();
   return fixture;
@@ -59,18 +100,37 @@ function setup(product: ProductDetail): ComponentFixture<ProductDetailComponent>
 describe('ProductDetail reviews section', () => {
   beforeEach(() => {
     TestBed.resetTestingModule();
+    StubIntersectionObserver.instances = [];
+    vi.stubGlobal('IntersectionObserver', StubIntersectionObserver);
   });
 
-  it('shows the empty-reviews state when the product has no reviews', () => {
-    const fixture = setup(makeProduct({ recent_reviews: [] }));
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('renders the #reviews anchor eagerly and defers the body until it nears the viewport', async () => {
+    const fixture = await setup(makeProduct({ recent_reviews: [] }));
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector('section#reviews h2')).not.toBeNull();
+    expect(root.querySelector('.pdp-reviews__placeholder')).not.toBeNull();
+    expect(root.querySelector('[data-testid="pdp-reviews-body"]')).toBeNull();
+
+    await revealDeferred(fixture);
+    expect(root.querySelector('[data-testid="pdp-reviews-body"]')).not.toBeNull();
+    expect(root.querySelector('.pdp-reviews__placeholder')).toBeNull();
+  });
+
+  it('shows the empty-reviews state when the product has no reviews', async () => {
+    const fixture = await setup(makeProduct({ recent_reviews: [] }));
+    await revealDeferred(fixture);
     const root: HTMLElement = fixture.nativeElement;
     expect(root.querySelector('#reviews')).not.toBeNull();
     expect(root.querySelector('[data-testid="pdp-reviews-empty"]')).not.toBeNull();
     expect(root.querySelector('.pdp-reviews__list')).toBeNull();
   });
 
-  it('shows the reviews list (and not the empty state) when reviews exist', () => {
-    const fixture = setup(
+  it('shows the reviews list (and not the empty state) when reviews exist', async () => {
+    const fixture = await setup(
       makeProduct({
         rating: 4.5,
         review_count: 2,
@@ -80,6 +140,7 @@ describe('ProductDetail reviews section', () => {
         ],
       }),
     );
+    await revealDeferred(fixture);
     const root: HTMLElement = fixture.nativeElement;
     expect(root.querySelector('.pdp-reviews__list')).not.toBeNull();
     expect(root.querySelectorAll('.pdp-review')).toHaveLength(2);

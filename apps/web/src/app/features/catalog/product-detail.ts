@@ -5,12 +5,14 @@ import {
   computed,
   signal,
   effect,
+  untracked,
+  afterNextRender,
+  afterRenderEffect,
   ViewChild,
   ElementRef,
-  AfterViewChecked,
   OnDestroy,
 } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { catchError, from, map, of, switchMap, tap } from 'rxjs';
@@ -32,6 +34,7 @@ import {
   ShareButtonsComponent,
 } from '../../shared/ui';
 import { ProductCardComponent } from './product-card';
+import { ScrollRailDirective } from './scroll-rail.directive';
 import { GiftCardNudgeComponent } from '../gift-cards/gift-card-nudge';
 import type {
   Money,
@@ -51,48 +54,86 @@ import { StoreService } from './store.service';
 import { CartService } from '../../core/cart/cart.service';
 import { CartDrawerService } from '../../core/cart/cart-drawer.service';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
+import { cfImage, CF_PRESETS, type CfImageOptions } from '../../shared/util/image-transform';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { MeasurementService, MEASUREMENT_FIELDS } from '../account/measurement.service';
 import { ConciergeService } from '../ai-concierge/concierge.service';
+import { WishlistService } from '../wishlist/wishlist.service';
 
 /** Categories where size selection is optional, a size (incl. CUSTOM) is
  *  never required before add-to-cart, and CUSTOM doesn't force measurements. */
 const SIZE_OPTIONAL_CATEGORIES = ['bags', 'accessories', 'kaftans', 'mukhawars'];
 
+/** "You may also like" is a single scrollable row: at most this many cards
+ *  (also the limit asked of the recommendations engine). */
+const RELATED_LIMIT = 8;
+
+/** Widths offered to the browser for the gallery images (srcset). */
+const GALLERY_WIDTHS = [480, 720, 900, 1200] as const;
+
+/** Rendered gallery width per breakpoint (mirrors the SCSS layout). */
+const GALLERY_SIZES = '(min-width: 1024px) 40vw, (min-width: 768px) 70vw, 100vw';
+
+/** Image transform for the small "Complete the look" cards (~120-140px wide). */
+const CTL_IMAGE: CfImageOptions = { width: 320, quality: 80, fit: 'cover', format: 'auto' };
+
+/** Empty "Complete the look" result (no request / failure). */
+const EMPTY_LOOK: CompleteLookResult = { interactionId: null, items: [] };
+
+/** One gallery slide, precomputed so the template stays declarative. */
+export interface GallerySlide {
+  url: string;
+  alt: string | null;
+  width: number;
+  height: number;
+  src: string;
+  srcset: string | null;
+}
+
+/** Content accordions under the buy area (Description / Details). */
+export type PdpSection = 'description' | 'details';
+
+/** Per-complement quick-add state in the "Complete the look" strip. */
+type QuickAddState = 'adding' | 'added' | 'error';
+
+/**
+ * Build a srcset for a gallery image, or null when the URL is not on the
+ * Cloudflare-transformable origin (passthrough: every width would be the
+ * same file, so a srcset would only add noise).
+ */
+function gallerySrcset(url: string): string | null {
+  const probe = cfImage(url, { ...CF_PRESETS.detail, width: GALLERY_WIDTHS[0] });
+  if (probe === url) return null;
+  return GALLERY_WIDTHS.map((w) => `${cfImage(url, { ...CF_PRESETS.detail, width: w })} ${w}w`).join(', ');
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 /**
  * Product detail page (PDP), `/product/:slug`.
  *
- * THIS IS THE SEO TARGET PAGE. Every product gets its own server-
- * rendered HTML page with full content visible to crawlers without
- * JavaScript. Bottom-of-funnel, these are the pages that need to
- * rank for "{vendor} {product name}", "{category} from {vendor}",
- * and brand-name + product-name search queries.
+ * Layout (compact / modern pass):
+ *   - Desktop (>= 1024px): gallery left (single swipeable stage + compact
+ *     thumbnail rail, height-capped to the viewport), info column right.
+ *     Both columns are position:sticky below the (measured) site header,
+ *     so whichever is shorter stays in view while the other scrolls.
+ *   - Mobile (< 768px): full-bleed swipeable gallery (scroll-snap, dots +
+ *     count), stacked info, and a sticky bottom bar that appears only once
+ *     the main Add to cart has scrolled out of view.
+ *   - The info column carries, top to bottom: one "Sold by · Visit store"
+ *     row, title, rating/stock, price, options (colours collapse to two
+ *     rows), an optional seller-note disclosure, the buy box, secondary
+ *     actions (try-on, customization), the "Complete the look" strip,
+ *     a one-line gift-card nudge, share + trust rows and the Description /
+ *     Details accordions.
+ *   - Below the fold: Reviews and "You may also like" (single row), both
+ *     rendered with @defer (on viewport; prefetch on idle).
  *
- * Prerender strategy:
- *   /v2/products?limit=200&sort=newest at build time → prerender 200
- *   most recent products. The remaining ~1,457 products work via
- *   runtime SSR, slower first paint but still fully indexable.
- *   Build time stays under 5 minutes.
- *   See app.routes.server.ts for the cap.
- *
- * What's in W2.2a:
- *   - Image gallery (primary + thumbnails)
- *   - Title, vendor, price (with sale strike-through)
- *   - Sizes + colors display
- *   - Description (HTML stripped to plain text, no XSS risk)
- *   - Stock state
- *   - Visual breadcrumb (Home › Categories › {category} › {product})
- *   - Basic SEO meta (title, description, canonical, OG)
- *
- * What's in W2.2b:
- *   - Aggregate rating widget (5 stars + count, fractional support)
- *   - Reviews section (per-review stars, verified buyer badge,
- *     graceful date handling)
- *   - schema.org Product JSON-LD (price, availability, brand,
- *     aggregateRating, review[]), eligible for Google rich results
- *   - BreadcrumbList JSON-LD mirroring the visual breadcrumb
- *   - Related products grid ("You may also like"), bottom of page
+ * SEO: title / meta / canonical / OG plus Product + BreadcrumbList JSON-LD
+ * (see the SEO effect in the constructor).
  */
 @Component({
   selector: 'app-product-detail',
@@ -104,6 +145,7 @@ const SIZE_OPTIONAL_CATEGORIES = ['bags', 'accessories', 'kaftans', 'mukhawars']
     TextComponent,
     StackComponent,
     ProductCardComponent,
+    ScrollRailDirective,
     GiftCardNudgeComponent,
     ShareButtonsComponent,
     TranslatePipe,
@@ -113,7 +155,7 @@ const SIZE_OPTIONAL_CATEGORIES = ['bags', 'accessories', 'kaftans', 'mukhawars']
   templateUrl: './product-detail.html',
   styleUrl: './product-detail.scss',
 })
-export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
+export class ProductDetailComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
   private routed = inject(RoutedHttpClient);
   private seo = inject(SeoService);
@@ -127,8 +169,14 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   private auth = inject(AuthService);
   private measurements = inject(MeasurementService);
   private concierge = inject(ConciergeService);
+  private wishlist = inject(WishlistService);
+  private router = inject(Router);
   /** Signed-in state, gates the custom-size measurement form. */
   protected readonly isAuthenticated = this.auth.isAuthenticated;
+
+  /** Template constants. */
+  protected readonly gallerySizes = GALLERY_SIZES;
+  protected readonly ctlImage = CTL_IMAGE;
 
   /** Last product id we beaconed a `product_viewed` for (de-dupes effect re-runs). */
   private lastViewedId: number | null = null;
@@ -157,11 +205,9 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
    * Recommendations from the X.12 engine (co-purchase + category +
    * popular fallback), loaded for the current product slug.
    *
-   * The "you may also like" strip prefers these engine results and only
+   * The "you may also like" row prefers these engine results and only
    * falls back to the product's own `related_products` (from the single
-   * PDP fetch) when the engine returns nothing, so the section always
-   * has the best data available and never regresses below the old
-   * behaviour.
+   * PDP fetch) when the engine returns nothing.
    */
   readonly recommendations = toSignal(
     this.route.paramMap.pipe(
@@ -170,7 +216,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
         if (slug === '') {
           return of([] as Product[]);
         }
-        return from(this.recsService.forProduct(slug)).pipe(
+        return from(this.recsService.forProduct(slug, RELATED_LIMIT)).pipe(
           map((recs) => recs.map((r) => r.product)),
           catchError(() => of([] as Product[])),
         );
@@ -179,39 +225,39 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     { initialValue: [] as Product[] },
   );
 
+  /** v3 id of the loaded product; equal ids never re-emit (computed dedupes). */
+  private readonly productId = computed<number | null>(() => this.product()?.id ?? null);
+
   /**
    * "Complete the Look" complements. Unlike recommendations (slug-keyed), this
    * endpoint is keyed by the v3 numeric id, which is only known once the product
-   * has loaded — so the stream is driven off the product signal, not the route.
+   * has loaded, so the stream is driven off the product id (deduped, so the
+   * same product never triggers a second request).
    */
   readonly completeTheLook = toSignal(
-    toObservable(this.product).pipe(
-      switchMap((p) => {
-        const id = p?.id;
+    toObservable(this.productId).pipe(
+      switchMap((id) => {
         if (!id) {
-          return of({ interactionId: null, items: [] } as CompleteLookResult);
+          return of(EMPTY_LOOK);
         }
-        return from(this.ctlService.forProduct(id)).pipe(
-          catchError(() => of({ interactionId: null, items: [] } as CompleteLookResult)),
-        );
+        return from(this.ctlService.forProduct(id)).pipe(catchError(() => of(EMPTY_LOOK)));
       }),
     ),
-    { initialValue: { interactionId: null, items: [] } as CompleteLookResult },
+    { initialValue: EMPTY_LOOK },
   );
 
   /** The complement cards for the "Complete the look" strip. */
   readonly completeTheLookItems = computed<CompleteLookItem[]>(() => this.completeTheLook().items);
 
   /**
-   * The products to show in the "you may also like" grid: engine
-   * recommendations when present, otherwise the PDP's related_products,
-   * otherwise empty (section hidden). Capped at 10, the grid is a
-   * wrapping 5×2 layout (decision #5), 2 per row on mobile.
+   * The products for the "you may also like" row: engine recommendations
+   * when present, otherwise the PDP's related_products, otherwise empty
+   * (section hidden). Capped at {@link RELATED_LIMIT}.
    */
   readonly relatedProducts = computed<Product[]>(() => {
     const engine = this.recommendations();
     const list = engine.length > 0 ? engine : (this.product()?.related_products ?? []);
-    return list.slice(0, 10);
+    return list.slice(0, RELATED_LIMIT);
   });
 
   /**
@@ -223,7 +269,12 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     return slug ? `${environment.SITE_URL}/product/${slug}` : environment.SITE_URL;
   });
 
-  /** Currently-displayed image (clicking thumbnails switches it). */
+  /* ----- Gallery -----------------------------------------------------------
+   * One scroll-snap track holds every image at all breakpoints: swipe on
+   * touch, trackpad-scroll / arrows / thumbnails on desktop. The track's
+   * scroll position and `activeImageIndex` are kept in sync both ways. */
+
+  /** Currently-displayed image (thumbnails / arrows / swipes switch it). */
   readonly activeImageIndex = signal(0);
 
   readonly activeImage = computed(() => {
@@ -234,9 +285,34 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     return images[this.activeImageIndex()] ?? fallback;
   });
 
+  /** Gallery slides: every image, or the primary image alone. */
+  readonly slides = computed<GallerySlide[]>(() => {
+    const p = this.product();
+    if (!p) return [];
+    const source = p.images?.length ? p.images : p.primary_image ? [p.primary_image] : [];
+    return source
+      .filter((img) => !!img?.url)
+      .map((img) => ({
+        url: img.url,
+        alt: img.alt || null,
+        width: img.width || 900,
+        height: img.height || 1200,
+        src: cfImage(img.url, CF_PRESETS.detail),
+        srcset: gallerySrcset(img.url),
+      }));
+  });
+
+  @ViewChild('track') private trackEl?: ElementRef<HTMLElement>;
+  /** Slide the track is programmatically scrolling to (ignore the frames in between). */
+  private trackTarget: number | null = null;
+  private trackTargetTimer: ReturnType<typeof setTimeout> | null = null;
+  private trackRaf = 0;
+  /** Set on product change: snap the (reused) track back to the first slide. */
+  private pendingTrackReset = false;
+
   /* ----- Gallery lightbox (PDP3) -----------------------------------------
    * Click-to-zoom fullscreen viewer. Focus moves to the close button on
-   * open and is restored to the trigger on close; Tab is trapped within
+   * open and returns to the slide now showing on close; Tab is trapped within
    * the dialog; Esc closes; Left/Right cycle images. CSR-only. */
   readonly lightboxOpen = signal(false);
   private lightboxTrigger: HTMLElement | null = null;
@@ -245,7 +321,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   @ViewChild('lightboxClose') private lightboxCloseBtn?: ElementRef<HTMLButtonElement>;
 
   /** Number of gallery images (used to bound prev/next + show controls). */
-  readonly imageCount = computed(() => this.product()?.images?.length ?? 0);
+  readonly imageCount = computed(() => this.slides().length);
 
   openLightbox(): void {
     if (!this.activeImage()) return;
@@ -260,8 +336,25 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   closeLightbox(): void {
     if (!this.lightboxOpen()) return;
     this.lightboxOpen.set(false);
-    this.lightboxTrigger?.focus();
+    const trigger = this.lightboxTrigger;
     this.lightboxTrigger = null;
+    const track = this.trackEl?.nativeElement;
+    const fromSlide =
+      !trigger ||
+      !trigger.isConnected ||
+      (typeof document !== 'undefined' && trigger === document.body) ||
+      !!track?.contains(trigger);
+    if (fromSlide) {
+      /* The lightbox may have cycled images: bring the track along and
+       * return focus to the CURRENT slide, not the one it was opened from.
+       * Focusing that (now off-screen) slide would scroll the track back to
+       * it, out of sync with the active index; goToSlide focuses with
+       * preventScroll. */
+      this.goToSlide(this.activeImageIndex(), { focus: true, smooth: false });
+    } else {
+      this.scrollTrackTo(this.activeImageIndex(), false);
+      trigger?.focus({ preventScroll: true });
+    }
   }
 
   lightboxNext(): void {
@@ -316,80 +409,80 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     }
   }
 
-  /* ----- Content tabs (PDP #10e) -----------------------------------------
-   * Description / Reviews / Details are presented as a premium tab strip
-   * (single visible panel) rather than stacked accordions. Reviews is
-   * always present; Description and Details only when they have content,
-   * so the tab strip is built dynamically. `activeContentTab` holds the
-   * user's explicit choice (null = none yet); `effectiveContentTab` falls
-   * back to the first available tab, so the default is Description when
-   * present, otherwise Reviews. */
-  readonly activeContentTab = signal<'description' | 'reviews' | 'details' | null>(null);
+  /* ----- Content accordions (Description / Details) ----------------------
+   * Disclosure buttons (aria-expanded + aria-controls) over labelled
+   * regions; Description is open by default. Reviews is its own section
+   * below the fold. */
+  private static readonly DEFAULT_SECTIONS: ReadonlySet<PdpSection> = new Set<PdpSection>(['description']);
+  readonly openSections = signal<ReadonlySet<PdpSection>>(ProductDetailComponent.DEFAULT_SECTIONS);
 
   readonly hasDescriptionContent = computed<boolean>(() => this.descriptionParagraphs().length > 0);
   readonly hasDetailsContent = computed<boolean>(() => {
     const p = this.product();
-    return !!(p?.fabric || (p?.materials?.length ?? 0) > 0 || p?.care_instructions);
+    return !!(p?.fabric || (p?.materials?.length ?? 0) > 0 || p?.care_instructions || p?.sku);
   });
 
-  /** Tabs to render, in display order (Reviews always present). */
-  readonly contentTabs = computed<Array<'description' | 'reviews' | 'details'>>(() => {
-    const tabs: Array<'description' | 'reviews' | 'details'> = [];
-    if (this.hasDescriptionContent()) tabs.push('description');
-    tabs.push('reviews');
-    if (this.hasDetailsContent()) tabs.push('details');
-    return tabs;
-  });
-
-  /** The tab actually shown: the explicit selection if still valid, else the first. */
-  readonly effectiveContentTab = computed<'description' | 'reviews' | 'details'>(() => {
-    const sel = this.activeContentTab();
-    const tabs = this.contentTabs();
-    return sel && tabs.includes(sel) ? sel : tabs[0];
-  });
-
-  selectContentTab(tab: 'description' | 'reviews' | 'details'): void {
-    this.activeContentTab.set(tab);
+  isSectionOpen(section: PdpSection): boolean {
+    return this.openSections().has(section);
   }
 
-  /** Left/Right arrows move between content tabs (WAI-ARIA tabs). */
-  onContentTabKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-    event.preventDefault();
-    const tabs = this.contentTabs();
-    const cur = tabs.indexOf(this.effectiveContentTab());
-    const next =
-      event.key === 'ArrowRight'
-        ? (cur + 1) % tabs.length
-        : (cur - 1 + tabs.length) % tabs.length;
-    this.activeContentTab.set(tabs[next]);
+  toggleSection(section: PdpSection): void {
+    this.openSections.update((open) => {
+      const next = new Set(open);
+      if (next.has(section)) next.delete(section);
+      else next.add(section);
+      return next;
+    });
   }
 
-  /* ----- Mobile sticky CTA visibility (follow-up) ------------------------
-   * The fixed bottom add-to-cart bar (mobile only) hides once the shopper
-   * reaches the end of the content, so it never sits over the site footer.
-   * A sentinel at the end of the page is observed; the negative bottom root
-   * margin (~bar height) flips the bar off just before it would cover the
-   * sentinel. CSR-only, IntersectionObserver is feature-guarded. */
-  readonly stickyCtaHidden = signal(false);
-  @ViewChild('ctaSentinel') private ctaSentinel?: ElementRef<HTMLElement>;
-  private ctaObserver?: IntersectionObserver;
+  /* ----- Reviews section anchor ------------------------------------------
+   * The rating link and the /product/x#reviews deep link scroll to the
+   * Reviews section (which also triggers its @defer viewport block). A
+   * plain href="#reviews" would resolve against <base href="/"> and leave
+   * the page, so the link is handled here. */
+  @ViewChild('reviewsSection') private reviewsSectionEl?: ElementRef<HTMLElement>;
+  private pendingReviewsScroll = false;
 
-  ngAfterViewChecked(): void {
-    if (this.ctaObserver || typeof IntersectionObserver === 'undefined') return;
-    const el = this.ctaSentinel?.nativeElement;
+  scrollToReviews(event?: Event): void {
+    event?.preventDefault();
+    const el = this.reviewsSectionEl?.nativeElement;
     if (!el) return;
-    this.ctaObserver = new IntersectionObserver(
-      entries => {
-        for (const entry of entries) this.stickyCtaHidden.set(entry.isIntersecting);
-      },
-      { rootMargin: '0px 0px -72px 0px' },
-    );
-    this.ctaObserver.observe(el);
+    if (typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+    }
+    el.focus({ preventScroll: true });
   }
+
+  /* ----- Sticky bottom bar (mobile / tablet) ------------------------------
+   * The fixed price + Add to cart bar appears only once the main buy box has
+   * scrolled ABOVE the viewport, and hides again near the end of the page
+   * so it never covers the footer. Two IntersectionObservers (feature-
+   * guarded; CSR-only) drive the two signals. */
+  readonly buyBoxOutOfView = signal(false);
+  readonly nearPageEnd = signal(false);
+  readonly stickyCtaVisible = computed(() => this.buyBoxOutOfView() && !this.nearPageEnd());
+
+  @ViewChild('buyBox') private buyBoxEl?: ElementRef<HTMLElement>;
+  @ViewChild('ctaSentinel') private ctaSentinel?: ElementRef<HTMLElement>;
+  private buyBoxObserver?: IntersectionObserver;
+  private sentinelObserver?: IntersectionObserver;
+  private observedBuyBox: HTMLElement | null = null;
+  private observedSentinel: HTMLElement | null = null;
+
+  /* ----- Site header height ----------------------------------------------
+   * The sticky columns (and the reviews scroll target) sit just below the
+   * sticky site header, whose height changes as it condenses on scroll.
+   * Measured with a ResizeObserver; the SCSS falls back to 112px. */
+  readonly headerHeight = signal<number | null>(null);
+  private headerObserver?: ResizeObserver;
 
   ngOnDestroy(): void {
-    this.ctaObserver?.disconnect();
+    this.buyBoxObserver?.disconnect();
+    this.sentinelObserver?.disconnect();
+    this.headerObserver?.disconnect();
+    this.colorChipsObserver?.disconnect();
+    if (this.trackTargetTimer !== null) clearTimeout(this.trackTargetTimer);
+    if (this.trackRaf && typeof cancelAnimationFrame !== 'undefined') cancelAnimationFrame(this.trackRaf);
     if (this.tryOnPollHandle !== null) {
       clearTimeout(this.tryOnPollHandle);
       this.tryOnPollHandle = null;
@@ -413,6 +506,11 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   readonly adding = signal(false);
   /** Surfaced when an add-to-cart attempt fails; cleared on the next try. */
   readonly addError = signal<string | null>(null);
+  /**
+   * Set once the shopper tries to add to cart without a required selection.
+   * The "Select a size / colour…" hints only render after that attempt.
+   */
+  readonly attemptedAdd = signal(false);
 
   /** Whether this product offers a size / colour axis at all. */
   readonly hasSizes = computed(() => (this.product()?.sizes?.length ?? 0) > 0);
@@ -422,9 +520,120 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   /** Optional on-PDP guidance shown beside the extra-measurement field. */
   readonly measurementInstructions = computed(() => this.product()?.measurement_instructions ?? null);
 
+  @ViewChild('sizeGroup') private sizeGroupEl?: ElementRef<HTMLElement>;
+  @ViewChild('colorGroup') private colorGroupEl?: ElementRef<HTMLElement>;
+  @ViewChild('measurementGroup') private measurementGroupEl?: ElementRef<HTMLElement>;
+  @ViewChild('customGroup') private customGroupEl?: ElementRef<HTMLElement>;
+
+  /* ----- Colour chips: collapse to two rows --------------------------------
+   * Long colour lists (24 text chips on some products) collapse to two rows
+   * with a "+N more" toggle. Which chips fall past row 2 is measured from
+   * the laid-out chips (offsetTop), so it adapts to any width/language; the
+   * overflow chips stay in the layout (visibility:hidden, so they are not
+   * focusable) which keeps the measurement stable. The expanded state
+   * persists while on the page. A selected colour is never hidden: if a
+   * collapse (or a resize) would push it past row 2 it is pinned first. */
+  readonly colorsExpanded = signal(false);
+  /** Labels of the colour chips laid out past the second row. */
+  readonly colorOverflow = signal<readonly string[]>([]);
+  /** A selected colour moved to the front so a collapse can't hide it. */
+  private readonly pinnedColor = signal<string | null>(null);
+  @ViewChild('colorChips') private colorChipsEl?: ElementRef<HTMLElement>;
+  private colorChipsObserver?: ResizeObserver;
+  private observedColorChips: HTMLElement | null = null;
+
+  /** Colours in display order (the pinned selection, if any, first). */
+  readonly orderedColors = computed<ProductColor[]>(() => {
+    const colors = this.product()?.colors ?? [];
+    const pin = this.pinnedColor();
+    if (!pin) return colors;
+    const hit = colors.find((c) => c.label === pin);
+    return hit ? [hit, ...colors.filter((c) => c !== hit)] : colors;
+  });
+
+  /** Number of colours hidden by the collapse (0 when expanded). */
+  readonly hiddenColorCount = computed(() => (this.colorsExpanded() ? 0 : this.colorOverflow().length));
+
+  /** Whether the "+N more / Show less" toggle is needed at all. */
+  readonly colorsCollapsible = computed(() => this.colorOverflow().length > 0);
+
+  /** True when this colour chip is currently hidden by the collapse. */
+  isColorHidden(label: string): boolean {
+    return !this.colorsExpanded() && this.colorOverflow().includes(label);
+  }
+
+  toggleColors(): void {
+    const expand = !this.colorsExpanded();
+    this.colorsExpanded.set(expand);
+    if (!expand) this.pinSelectedColorIfHidden();
+  }
+
+  /**
+   * Measure which colour chips sit past the second row. Public so specs can
+   * drive it with stubbed layout; in the browser it runs after render and
+   * on every resize of the chip list.
+   */
+  measureColors(): void {
+    const host = this.colorChipsEl?.nativeElement;
+    if (!host) {
+      if (this.colorOverflow().length > 0) this.colorOverflow.set([]);
+      return;
+    }
+    const chips = Array.from(host.querySelectorAll<HTMLElement>('[data-color-label]'));
+    const rowTops: number[] = [];
+    for (const chip of chips) {
+      const top = chip.offsetTop;
+      if (!rowTops.some((t) => Math.abs(t - top) <= 4)) rowTops.push(top);
+    }
+    rowTops.sort((a, b) => a - b);
+    const overflow =
+      rowTops.length > 2
+        ? chips
+            .filter((chip) => chip.offsetTop >= rowTops[2] - 4)
+            .map((chip) => chip.dataset['colorLabel'] ?? '')
+        : [];
+    const current = this.colorOverflow();
+    if (overflow.length !== current.length || overflow.some((l, i) => l !== current[i])) {
+      this.colorOverflow.set(overflow);
+    }
+    this.pinSelectedColorIfHidden();
+  }
+
+  private pinSelectedColorIfHidden(): void {
+    const selected = this.selectedColor();
+    if (
+      selected &&
+      !this.colorsExpanded() &&
+      this.colorOverflow().includes(selected) &&
+      this.pinnedColor() !== selected
+    ) {
+      this.pinnedColor.set(selected);
+    }
+  }
+
+  /* ----- Seller note disclosure -------------------------------------------
+   * The optional note sits behind an "Add a note for the seller" toggle. It
+   * is always open while it holds text, so a typed note is never hidden
+   * (and it is still sent exactly as before: trimmed, or null). */
+  readonly noteExpanded = signal(false);
+  readonly noteOpen = computed(() => this.noteExpanded() || this.note().trim() !== '');
+  @ViewChild('noteInput') private noteInputEl?: ElementRef<HTMLTextAreaElement>;
+
+  toggleNote(): void {
+    if (this.note().trim() !== '') {
+      /* Never collapse over text the shopper typed: just return to it. */
+      this.noteExpanded.set(true);
+      this.noteInputEl?.nativeElement.focus();
+      return;
+    }
+    const open = !this.noteExpanded();
+    this.noteExpanded.set(open);
+    if (open) setTimeout(() => this.noteInputEl?.nativeElement.focus(), 0);
+  }
+
   /* ----- Size guide (store size chart) -----------------------------------
-   * A "Size guide" link sits beside the Sizes fieldset legend and opens a
-   * modal table of the STORE's published size chart (GET /vendors/:slug/
+   * A "Size guide" link sits beside the Sizes label and opens a modal
+   * table of the STORE's published size chart (GET /vendors/:slug/
    * size-chart). Mirrors the mobile size-chart sheet.
    *
    * Shown only when the product offers sizes AND is not a made-to-measure
@@ -440,7 +649,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     'bust', 'waist', 'hip', 'length', 'neck', 'arm', 'armhole', 'shoulder',
   ] as const;
 
-  /** Whether to show the "Size guide" trigger beside the Sizes legend. */
+  /** Whether to show the "Size guide" trigger beside the Sizes label. */
   readonly showSizeGuide = computed(
     () => this.hasSizes() && !this.requiresExtraMeasurement() && !this.isBagOrAccessory(),
   );
@@ -533,7 +742,6 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     return this.i18n.instant(`product.sizeGuide.dimensions.${dim}`);
   }
 
-  /** Open the size-guide modal, lazily fetching the chart on first open. */
   /** Open the try-on modal; pre-check consent from a prior acknowledgement. */
   openTryOn(): void {
     if (!this.tryOnEnabled()) return;
@@ -720,6 +928,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     }
   }
 
+  /** Open the size-guide modal, lazily fetching the chart on first open. */
   openSizeGuide(): void {
     const slug = this.product()?.vendor?.slug;
     if (!slug) return;
@@ -830,41 +1039,71 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     return this.customMeasurement()[field] ?? '';
   }
 
-  /**
-   * True when every required variant axis has an in-stock selection.
-   * Validates against the CURRENT product's options (not just "non-null")
-   * so a stale selection carried across navigation can't pass.
-   */
-  readonly selectionValid = computed(() => {
+  /* ----- Required-selection rules ------------------------------------------
+   * Each axis reports whether it is still missing a valid selection,
+   * validated against the CURRENT product's options (not just "non-null")
+   * so a stale selection carried across navigation can't pass. */
+
+  /** A required size has no valid in-stock selection. Size is required
+   *  unless the category makes it optional (bags, accessories, kaftans,
+   *  mukhawars); out-of-stock sizes can't be picked (the chips disable them). */
+  readonly sizeMissing = computed(() => {
     const p = this.product();
     if (!p) return false;
     const sizes = p.sizes ?? [];
-    /* Size is required unless the category makes it optional (bags,
-       accessories, kaftans, mukhawars). Out-of-stock sizes can't be picked
-       (the chips disable them), so an optional category just skips the check. */
-    if (sizes.length > 0 && !this.isSizeOptional()) {
-      const s = this.selectedSize();
-      if (!s || !sizes.some((x) => x.label === s && x.in_stock)) return false;
-    }
-    const colors = p.colors ?? [];
-    if (colors.length > 0 && !this.isBagOrAccessory()) {
-      const c = this.selectedColor();
-      if (!c || !colors.some((x) => x.label === c && x.in_stock)) return false;
-    }
-    /* Products that ask for an extra measurement need it filled in. */
-    if (p.requires_measurement === true && this.extraMeasurement().trim() === '') return false;
-    /* CUSTOM size requires a signed-in shopper with a complete measurement -
-       unless the category makes size optional, where it's never forced. */
-    if (this.isCustomSize() && !this.isSizeOptional()) {
-      if (!this.isAuthenticated()) return false;
-      if (!this.customMeasurementComplete()) return false;
-    }
-    return true;
+    if (sizes.length === 0 || this.isSizeOptional()) return false;
+    const s = this.selectedSize();
+    return !s || !sizes.some((x) => x.label === s && x.in_stock);
   });
 
-  /** The add-to-cart button is enabled only when all conditions hold. */
+  /** A required colour has no valid in-stock selection (never for bags/accessories). */
+  readonly colorMissing = computed(() => {
+    const p = this.product();
+    if (!p) return false;
+    const colors = p.colors ?? [];
+    if (colors.length === 0 || this.isBagOrAccessory()) return false;
+    const c = this.selectedColor();
+    return !c || !colors.some((x) => x.label === c && x.in_stock);
+  });
+
+  /** Products that ask for an extra measurement need it filled in. */
+  readonly measurementMissing = computed(
+    () => this.product()?.requires_measurement === true && this.extraMeasurement().trim() === '',
+  );
+
+  /** CUSTOM size requires a signed-in shopper with a complete measurement,
+   *  unless the category makes size optional, where it's never forced. */
+  readonly customMissing = computed(
+    () =>
+      this.isCustomSize() &&
+      !this.isSizeOptional() &&
+      (!this.isAuthenticated() || !this.customMeasurementComplete()),
+  );
+
+  /** True when every required variant axis has an in-stock selection. */
+  readonly selectionValid = computed(() => {
+    if (!this.product()) return false;
+    return !this.sizeMissing() && !this.colorMissing() && !this.measurementMissing() && !this.customMissing();
+  });
+
+  /** Whether an add-to-cart would go through right now. */
   readonly canAddToCart = computed(
     () => !!this.product()?.in_stock && this.selectionValid() && !this.adding(),
+  );
+
+  /* The hints only appear after an add-to-cart attempt, next to the option
+   * they concern (inside an aria-live region). */
+  private readonly hintsActive = computed(() => this.attemptedAdd() && !!this.product()?.in_stock);
+  readonly showSizeHint = computed(() => this.hintsActive() && this.sizeMissing());
+  readonly showColorHint = computed(() => this.hintsActive() && this.colorMissing());
+  readonly showMeasurementHint = computed(() => this.hintsActive() && this.measurementMissing());
+  readonly showCustomHint = computed(
+    () =>
+      this.hintsActive() &&
+      this.isCustomSize() &&
+      !this.isSizeOptional() &&
+      this.isAuthenticated() &&
+      !this.customMeasurementComplete(),
   );
 
   /**
@@ -929,19 +1168,13 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
 
   /**
    * Aggregate rating to display, or null if there's nothing meaningful
-   * to show. Used by both the visible star block and (W2.2b Phase 2)
-   * the schema.org JSON-LD AggregateRating, both must reflect the
-   * same numbers, which is why this is a single source of truth.
+   * to show. Used by both the visible star block and the schema.org
+   * JSON-LD AggregateRating, both must reflect the same numbers, which is
+   * why this is a single source of truth.
    *
-   * Returns null when:
-   *   - product hasn't loaded yet
-   *   - rating is null/undefined (no rating data at all)
-   *   - review_count is 0 or missing (no reviews → showing a 0-star
-   *     widget would be visually misleading)
-   *
-   * Google's structured-data guidelines also reject AggregateRating
-   * without a positive reviewCount, so this null guard protects both
-   * surfaces simultaneously.
+   * Returns null when the product hasn't loaded, the rating is missing, or
+   * review_count is 0 (Google also rejects AggregateRating without a
+   * positive reviewCount).
    */
   readonly aggregateRating = computed<{ value: number; count: number } | null>(() => {
     const p = this.product();
@@ -952,12 +1185,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     return { value, count };
   });
 
-  /**
-   * Static array used by the template to render star icons. Five
-   * positions; the template fills/empties each based on whether the
-   * average rating reaches that position. Sourced once here so the
-   * template stays declarative.
-   */
+  /** Five star positions for the declarative star templates. */
   readonly starPositions = [1, 2, 3, 4, 5] as const;
 
   /* ----- Reviews: read (embedded + paginated load-more) ------------------
@@ -1252,16 +1480,17 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   });
 
   constructor() {
-    /* Deep link: /product/x#reviews opens directly on the Reviews tab.
-       Guarded, some test harnesses provide ActivatedRoute without a
-       snapshot. */
+    /* Deep link: /product/x#reviews scrolls to the Reviews section once the
+       product has rendered. Guarded, some test harnesses provide
+       ActivatedRoute without a snapshot. */
     if (this.route.snapshot?.fragment === 'reviews') {
-      this.activeContentTab.set('reviews');
+      this.pendingReviewsScroll = true;
     }
 
-    /* Reset the buy box whenever the product changes (navigation to a
-       different slug) so a previous product's size/colour/quantity or a
-       stale error never leaks into the next one. Reads product() to
+    /* Reset the page state whenever the product changes (navigation to a
+       different slug, the component instance is reused by the router) so a
+       previous product's selections, note, gallery position, open panels
+       or a stale error never leak into the next one. Reads product() to
        track it; writes only unrelated signals, so there's no feedback
        loop. */
     effect(() => {
@@ -1273,6 +1502,27 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       this.customPrefilled.set(false);
       this.quantity.set(1);
       this.addError.set(null);
+      this.attemptedAdd.set(false);
+      this.note.set('');
+      this.noteExpanded.set(false);
+      this.colorsExpanded.set(false);
+      this.colorOverflow.set([]);
+      this.pinnedColor.set(null);
+      this.openSections.set(ProductDetailComponent.DEFAULT_SECTIONS);
+      /* Gallery: back to the first image, lightbox closed. */
+      this.activeImageIndex.set(0);
+      this.lightboxOpen.set(false);
+      this.pendingTrackReset = true;
+      /* "Complete the look" per-card states belong to the old product. */
+      this.ctlItemState.set({});
+      this.ctlStatus.set('');
+      /* Customization request state is per product. */
+      this.customizationOpen.set(false);
+      this.customizationDescription.set('');
+      this.customizationIncludeMeasurements.set(true);
+      this.customizationSubmitting.set(false);
+      this.customizationSubmitted.set(false);
+      this.customizationError.set(null);
       /* Reset the size-guide modal so a previous store's chart never leaks
          into the next product. */
       this.sizeGuideOpen.set(false);
@@ -1331,11 +1581,22 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       }
     });
 
-    /* Apply SEO via effect() so it runs within Angular's CD cycle.
-       During SSR prerender, this ensures meta tags are present in the
-       captured HTML. (Microtask-based scheduling does NOT work for
-       prerender, see CategoryDetailComponent commit history for
-       background.) */
+    /* Measure the site header once (browser only) and keep it current. */
+    afterNextRender(() => this.observeHeader());
+
+    /* After each render that changes the product or the colour order:
+       (re)attach the observers to the current elements, re-measure the
+       colour rows, snap a reused gallery track back to slide 1, and honour
+       a pending #reviews deep link. Runs in the browser only. */
+    afterRenderEffect({
+      read: () => {
+        this.product();
+        this.orderedColors();
+        untracked(() => this.afterProductRender());
+      },
+    });
+
+    /* Apply SEO via effect() so it runs within Angular's CD cycle. */
     effect(() => {
       const p = this.product();
       if (!p) return;
@@ -1473,9 +1734,93 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     );
   }
 
-  /** Click handler for thumbnail switching. */
+  /* ----- Post-render DOM work (browser only) ------------------------------ */
+
+  private afterProductRender(): void {
+    this.syncObservers();
+    this.measureColors();
+    if (this.pendingTrackReset) {
+      const track = this.trackEl?.nativeElement;
+      if (track) {
+        track.scrollLeft = 0;
+        this.pendingTrackReset = false;
+      }
+    }
+    if (this.pendingReviewsScroll && this.reviewsSectionEl) {
+      this.pendingReviewsScroll = false;
+      this.scrollToReviews();
+    }
+  }
+
+  /** Attach the IntersectionObservers / ResizeObserver to the CURRENT elements. */
+  private syncObservers(): void {
+    if (typeof IntersectionObserver !== 'undefined') {
+      const buyBox = this.buyBoxEl?.nativeElement ?? null;
+      if (buyBox !== this.observedBuyBox) {
+        /* Shrink the root by the sticky header so a buy box hidden under
+           the header counts as scrolled away. */
+        this.buyBoxObserver ??= new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              const rootTop = entry.rootBounds?.top ?? 0;
+              this.buyBoxOutOfView.set(
+                !entry.isIntersecting && entry.boundingClientRect.bottom <= rootTop + 1,
+              );
+            }
+          },
+          { rootMargin: '-96px 0px 0px 0px' },
+        );
+        if (this.observedBuyBox) this.buyBoxObserver.unobserve(this.observedBuyBox);
+        if (buyBox) this.buyBoxObserver.observe(buyBox);
+        this.observedBuyBox = buyBox;
+        if (!buyBox) this.buyBoxOutOfView.set(false);
+      }
+
+      const sentinel = this.ctaSentinel?.nativeElement ?? null;
+      if (sentinel !== this.observedSentinel) {
+        /* The negative bottom margin (~bar height) hides the bar just
+           before it would cover the end-of-content sentinel / footer. */
+        this.sentinelObserver ??= new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) this.nearPageEnd.set(entry.isIntersecting);
+          },
+          { rootMargin: '0px 0px -72px 0px' },
+        );
+        if (this.observedSentinel) this.sentinelObserver.unobserve(this.observedSentinel);
+        if (sentinel) this.sentinelObserver.observe(sentinel);
+        this.observedSentinel = sentinel;
+      }
+    }
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const chips = this.colorChipsEl?.nativeElement ?? null;
+      if (chips !== this.observedColorChips) {
+        this.colorChipsObserver ??= new ResizeObserver(() => this.measureColors());
+        if (this.observedColorChips) this.colorChipsObserver.unobserve(this.observedColorChips);
+        if (chips) this.colorChipsObserver.observe(chips);
+        this.observedColorChips = chips;
+      }
+    }
+  }
+
+  private observeHeader(): void {
+    if (typeof document === 'undefined' || typeof ResizeObserver === 'undefined') return;
+    const header = document.querySelector<HTMLElement>('.site-header');
+    if (!header) return;
+    const update = () => {
+      const h = Math.round(header.getBoundingClientRect().height);
+      if (h > 0 && h !== this.headerHeight()) this.headerHeight.set(h);
+    };
+    update();
+    this.headerObserver = new ResizeObserver(update);
+    this.headerObserver.observe(header);
+  }
+
+  /* ----- Gallery navigation ----------------------------------------------- */
+
+  /** Thumbnail click: show that image. */
   selectImage(index: number): void {
-    this.activeImageIndex.set(index);
+    this.goToSlide(index);
   }
 
   /** Keyboard handler for thumbnail buttons (Enter/Space). */
@@ -1485,6 +1830,99 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       this.selectImage(index);
     }
   }
+
+  /** Previous / next arrows on the stage (clamped at the ends). */
+  galleryPrev(): void {
+    this.goToSlide(this.activeImageIndex() - 1);
+  }
+
+  galleryNext(): void {
+    this.goToSlide(this.activeImageIndex() + 1);
+  }
+
+  /**
+   * Show slide `index` (clamped): updates the active index and scrolls the
+   * track to it. With `focus`, moves keyboard focus to that slide's button.
+   */
+  goToSlide(index: number, opts: { focus?: boolean; smooth?: boolean } = {}): void {
+    const n = this.slides().length;
+    if (n === 0) return;
+    const i = Math.max(0, Math.min(n - 1, index));
+    this.activeImageIndex.set(i);
+    this.scrollTrackTo(i, opts.smooth ?? true);
+    if (opts.focus) {
+      const buttons = this.trackEl?.nativeElement.querySelectorAll<HTMLElement>('.pdp-slide__btn');
+      buttons?.[i]?.focus({ preventScroll: true });
+    }
+  }
+
+  /**
+   * Arrow keys on the gallery move between slides (visual order: in RTL
+   * ArrowLeft is "next"); Home / End jump to the first / last image.
+   */
+  onGalleryKeydown(event: KeyboardEvent): void {
+    const n = this.slides().length;
+    if (n < 2) return;
+    const current = this.activeImageIndex();
+    let next: number | null = null;
+    if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = n - 1;
+    else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+      const forward = (event.key === 'ArrowRight') !== this.isRtl(this.trackEl?.nativeElement);
+      next = current + (forward ? 1 : -1);
+    }
+    if (next === null) return;
+    event.preventDefault();
+    this.goToSlide(next, { focus: true });
+  }
+
+  /** Track scrolled (swipe / trackpad / programmatic): sync the active index. */
+  onTrackScroll(): void {
+    if (typeof requestAnimationFrame === 'undefined') {
+      this.syncIndexFromTrack();
+      return;
+    }
+    if (this.trackRaf) return;
+    this.trackRaf = requestAnimationFrame(() => {
+      this.trackRaf = 0;
+      this.syncIndexFromTrack();
+    });
+  }
+
+  private syncIndexFromTrack(): void {
+    const el = this.trackEl?.nativeElement;
+    if (!el || el.clientWidth === 0) return;
+    const n = this.slides().length;
+    const idx = Math.max(0, Math.min(n - 1, Math.round(Math.abs(el.scrollLeft) / el.clientWidth)));
+    if (this.trackTarget !== null) {
+      /* Mid programmatic scroll: ignore the intermediate frames. */
+      if (idx !== this.trackTarget) return;
+      this.trackTarget = null;
+    }
+    if (idx !== this.activeImageIndex()) this.activeImageIndex.set(idx);
+  }
+
+  private scrollTrackTo(index: number, smooth: boolean): void {
+    const el = this.trackEl?.nativeElement;
+    if (!el) return;
+    const left = (this.isRtl(el) ? -1 : 1) * index * el.clientWidth;
+    this.trackTarget = index;
+    if (this.trackTargetTimer !== null) clearTimeout(this.trackTargetTimer);
+    this.trackTargetTimer = setTimeout(() => {
+      this.trackTarget = null;
+      this.trackTargetTimer = null;
+    }, 800);
+    const behavior: ScrollBehavior = smooth && !prefersReducedMotion() ? 'smooth' : 'auto';
+    if (typeof el.scrollTo === 'function') el.scrollTo({ left, behavior });
+    else el.scrollLeft = left;
+  }
+
+  private isRtl(el?: HTMLElement | null): boolean {
+    if (!el || typeof getComputedStyle !== 'function') return false;
+    return getComputedStyle(el).direction === 'rtl';
+  }
+
+  /* ----- Options + add to cart ------------------------------------------- */
 
   /** Select a size (ignored if that size is out of stock). */
   selectSize(size: ProductSize): void {
@@ -1510,15 +1948,21 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   }
 
   /**
-   * Add the current selection to the cart. No-ops unless the product is
-   * in stock and every required variant axis has a valid selection (the
-   * button is disabled in that state too, this is the belt-and-braces
-   * guard). On success the cart drawer opens; on failure an inline,
-   * actionable message is shown.
+   * Add the current selection to the cart. Shared by the main buy box and
+   * the sticky bottom bar. When a required selection is missing nothing is
+   * sent: the hints appear next to the options and the first missing one is
+   * scrolled into view and focused. On success the cart drawer opens; on
+   * failure an inline, actionable message is shown.
    */
   async addToCart(): Promise<void> {
     const p = this.product();
-    if (!p || !this.canAddToCart()) return;
+    if (!p || !p.in_stock || this.adding()) return;
+    if (!this.selectionValid()) {
+      this.attemptedAdd.set(true);
+      this.revealFirstMissing();
+      return;
+    }
+    if (!this.canAddToCart()) return;
 
     this.adding.set(true);
     this.addError.set(null);
@@ -1536,6 +1980,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
         extra_measurement: this.requiresExtraMeasurement() ? this.extraMeasurement().trim() : null,
         note: this.note().trim() || null,
       });
+      this.attemptedAdd.set(false);
       this.cartDrawer.open();
     } catch {
       this.addError.set('product.addError');
@@ -1544,8 +1989,46 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     }
   }
 
+  /** Scroll to (and focus) the first option that still needs a selection. */
+  private revealFirstMissing(): void {
+    let group: HTMLElement | undefined;
+    let focusTarget: HTMLElement | null = null;
+    if (this.sizeMissing() && this.sizeGroupEl) {
+      group = this.sizeGroupEl.nativeElement;
+      focusTarget = group.querySelector<HTMLElement>('.pdp-chip:not(:disabled)');
+    } else if (this.colorMissing() && this.colorGroupEl) {
+      group = this.colorGroupEl.nativeElement;
+      focusTarget = group.querySelector<HTMLElement>('.pdp-chip:not(:disabled):not(.is-hidden)');
+    } else if (this.measurementMissing() && this.measurementGroupEl) {
+      group = this.measurementGroupEl.nativeElement;
+      focusTarget = group.querySelector<HTMLElement>('textarea');
+    } else if (this.customMissing() && this.customGroupEl) {
+      group = this.customGroupEl.nativeElement;
+      focusTarget = group.querySelector<HTMLElement>('input, a[href]');
+    }
+    if (!group) return;
+    if (typeof group.scrollIntoView === 'function') {
+      group.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' });
+    }
+    focusTarget?.focus({ preventScroll: true });
+  }
+
+  /* ----- Complete the look (Ain) ------------------------------------------ */
+
   /** True while "Add the look" is looping cart adds. */
   readonly addingLook = signal(false);
+  /** Quick-add state per complement id. */
+  readonly ctlItemState = signal<Record<number, QuickAddState>>({});
+  /** Polite live announcement for the strip's quick adds. */
+  readonly ctlStatus = signal('');
+
+  ctlState(id: number): QuickAddState | null {
+    return this.ctlItemState()[id] ?? null;
+  }
+
+  private setCtlState(id: number, state: QuickAddState): void {
+    this.ctlItemState.update((s) => ({ ...s, [id]: state }));
+  }
 
   /**
    * Add every complement to the cart in one tap. Uses CartService.addItem
@@ -1563,6 +2046,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       for (const item of items) {
         try {
           await this.cart.addItem({ product_id: item.id, quantity: 1, size: null, color: null, is_custom: false });
+          this.setCtlState(item.id, 'added');
           this.ctlService.recordEvent('complete_look_item_added', {
             ...(result.interactionId ? { interaction_id: result.interactionId } : {}),
             product_id: item.id,
@@ -1582,6 +2066,30 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     }
   }
 
+  /**
+   * Quick-add a single complement (same cart contract + beacon as one step
+   * of "Add the look"). Announces the outcome politely and opens the drawer.
+   */
+  async quickAddComplement(item: CompleteLookItem): Promise<void> {
+    if (!item.in_stock || this.ctlState(item.id) === 'adding') return;
+    const result = this.completeTheLook();
+    this.setCtlState(item.id, 'adding');
+    try {
+      await this.cart.addItem({ product_id: item.id, quantity: 1, size: null, color: null, is_custom: false });
+      this.setCtlState(item.id, 'added');
+      this.ctlStatus.set(this.i18n.instant('product.ctl.added', { name: item.name }));
+      this.ctlService.recordEvent('complete_look_item_added', {
+        ...(result.interactionId ? { interaction_id: result.interactionId } : {}),
+        product_id: item.id,
+      });
+      this.analytics.event('complete_look_item_added', { product_id: item.id });
+      this.cartDrawer.open();
+    } catch {
+      this.setCtlState(item.id, 'error');
+      this.ctlStatus.set(this.i18n.instant('product.ctl.addFailed', { name: item.name }));
+    }
+  }
+
   /** Beacon a complement click (the card navigates itself). */
   onComplementClick(item: CompleteLookItem): void {
     const iid = this.completeTheLook().interactionId;
@@ -1589,6 +2097,31 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       ...(iid ? { interaction_id: iid } : {}),
       product_id: item.id,
     });
+  }
+
+  /** Whether a complement is on the shopper's wishlist (heart state). */
+  isComplementSaved(id: number): boolean {
+    return this.wishlist.isSaved(id);
+  }
+
+  /**
+   * Wishlist heart on a complement card (same behaviour as ProductCard's):
+   * toggles for signed-in shoppers; guests are sent to sign in, returning
+   * to this product afterwards.
+   */
+  toggleComplementSaved(item: CompleteLookItem): void {
+    if (!this.isAuthenticated()) {
+      void this.router.navigate(['/login'], { queryParams: { returnUrl: this.loginReturnUrl() } });
+      return;
+    }
+    void this.wishlist.toggle(item).catch(() => undefined);
+  }
+
+  /** Effective price of a complement (sale price when lower). */
+  complementPrice(item: CompleteLookItem): Money {
+    return item.sale_price?.amount && item.sale_price.amount < item.price.amount
+      ? item.sale_price
+      : item.price;
   }
 
   /** Bind the extra-measurement textarea to its signal. */
@@ -1649,7 +2182,12 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
 
   /** Letter for the image-fallback case (first code point, surrogate-safe). */
   initial(): string {
-    return (Array.from((this.product()?.name ?? '').trim())[0] ?? '?').toUpperCase();
+    return this.initialOf(this.product()?.name);
+  }
+
+  /** Same surrogate-safe first letter, for any name (e.g. Complete the Look items). */
+  initialOf(name: string | null | undefined): string {
+    return (Array.from((name ?? '').trim())[0] ?? '?').toUpperCase();
   }
 
   /**
@@ -1659,9 +2197,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
    *
    * Examples (rating = 4.6):
    *   pos 1 → 4.6 − 0 = 4.6, clamped → 1.0 (full)
-   *   pos 4 → 4.6 − 3 = 1.6, clamped → 1.0 (full)
    *   pos 5 → 4.6 − 4 = 0.6, clamped → 0.6 (60% filled)
-   *   pos 5 with rating = 3 → 3 − 4 = −1, clamped → 0.0 (empty)
    */
   starFillFor(position: number): number {
     const rating = this.aggregateRating()?.value ?? 0;
@@ -1737,13 +2273,13 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   }
 
   /** URL of the seller's storefront (/stores/:slug, slug only, never an id).
-   *  Used by the vendor line above the title and the "Sold by" store card. */
+   *  Used by the "Sold by · Visit store" row above the title. */
   vendorUrl(): string | null {
     const slug = this.product()?.vendor?.slug;
     return slug ? `/stores/${slug}` : null;
   }
 
-  /** Store-name initial for the "Sold by" card's avatar. Takes the first
+  /** Store-name initial for the "Sold by" row's avatar. Takes the first
    *  code point (Array.from), not the first UTF-16 unit, so a name starting
    *  with an emoji / astral character never renders half a surrogate pair. */
   vendorInitial(): string {

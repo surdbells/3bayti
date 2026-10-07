@@ -1612,8 +1612,7 @@
     },
     "store": {
       "soldBy": "Sold by",
-      "visit": "Visit store",
-      "visitAria": "Visit {{name}}'s store"
+      "visit": "Visit store"
     },
     "gallery": {
       "aria": "Product images",
@@ -1625,7 +1624,8 @@
       "viewerAria": "Product image viewer",
       "close": "Close image viewer",
       "prev": "Previous image",
-      "next": "Next image"
+      "next": "Next image",
+      "slideAria": "Image {{n}} of {{total}}"
     },
     "badges": {
       "new": "New",
@@ -1633,7 +1633,6 @@
       "sale": "Sale"
     },
     "infoAria": "Product details",
-    "skuLabel": "SKU:",
     "rating": {
       "aria": "Average rating {{value}} out of 5, {{count}}",
       "outOf5": "{{value}} out of 5",
@@ -1693,6 +1692,8 @@
     "outOfStock": "Out of stock",
     "size": "Size",
     "color": "Color",
+    "colorMore": "+{{count}} more",
+    "colorLess": "Show less",
     "optionOutAria": "{{label}} (out of stock)",
     "quantityAria": "Quantity",
     "decreaseQty": "Decrease quantity",
@@ -1724,6 +1725,7 @@
     "measurementTitle": "Extra measurements",
     "measurementPlaceholder": "Any extra measurements the seller needs (e.g. length in inches)",
     "noteTitle": "Note for the seller (optional)",
+    "noteToggle": "Add a note for the seller",
     "notePlaceholder": "Any special instructions, e.g. buttons from top to bottom, longer sleeves",
     "hintMeasurement": "Add the extra measurements to continue.",
     "customSizeTitle": "Your measurements",
@@ -1743,14 +1745,24 @@
     },
     "description": "Description",
     "details": "Details",
-    "sectionsAria": "Product information sections",
     "detailFabric": "Fabric",
     "detailMaterials": "Materials",
     "detailCare": "Care",
+    "detailSku": "SKU",
     "relatedHeading": "You may also like",
     "completeTheLookHeading": "Complete the look",
     "addTheLook": "Add the look",
-    "addingTheLook": "Adding…"
+    "addingTheLook": "Adding…",
+    "rail": {
+      "prev": "Show previous items",
+      "next": "Show more items"
+    },
+    "ctl": {
+      "quickAdd": "Add {{name}} to cart",
+      "save": "Save {{name}} to wishlist",
+      "added": "{{name}} added to your cart",
+      "addFailed": "Couldn't add {{name}}. Please try again."
+    }
   },
   "ui": {
     "loading": "Loading",
@@ -1839,6 +1851,8 @@
       "body": "Something went wrong while loading this category. Please try again.",
       "retryAria": "Retry loading this category"
     },
+    "pageBodyAria": "Category content",
+    "restored": "{{name}} loaded.",
     "eyebrow": "Category",
     "piece": "piece",
     "pieces": "pieces",
@@ -1851,8 +1865,6 @@
       "title": "Couldn't load products",
       "body": "Something went wrong while loading these pieces. Please check your connection and try again."
     },
-    "pageBodyAria": "Category content",
-    "restored": "{{name}} loaded.",
     "loadMoreError": "Couldn't load more products.",
     "retry": "Retry",
     "showing": "Showing {{shown}} of {{total}}",
@@ -1910,6 +1922,8 @@
       "body": "Something went wrong while loading this collection. Please try again.",
       "retryAria": "Retry loading this collection"
     },
+    "pageBodyAria": "Collection content",
+    "restored": "{{name}} loaded.",
     "eyebrow": "Collection",
     "piece": "piece",
     "pieces": "pieces",
@@ -1922,8 +1936,6 @@
     "emptyCollectionTitle": "No pieces in this collection yet",
     "emptyCollectionHint": "Browse other collections",
     "listError": {
-    "pageBodyAria": "Collection content",
-    "restored": "{{name}} loaded.",
       "title": "Couldn't load products",
       "body": "Something went wrong while loading this collection's pieces. Please check your connection and try again."
     },

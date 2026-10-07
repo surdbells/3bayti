@@ -16,18 +16,34 @@ import { ConciergeService } from '../ai-concierge/concierge.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
   template: `
-    <aside class="gcn" [attr.data-context]="context">
-      <span class="gcn__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    @if (variant === 'slim') {
+      <!-- Slim single-line variant (PDP): same copy, analytics + destination. -->
+      <p class="gcn-slim" [attr.data-context]="context" data-testid="gift-card-nudge-slim">
+        <svg class="gcn-slim__icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
         </svg>
-      </span>
-      <div class="gcn__body">
-        <strong class="gcn__title">{{ 'giftCardNudge.' + context + '.title' | translate }}</strong>
-        <span class="gcn__sub">{{ 'giftCardNudge.' + context + '.sub' | translate }}</span>
-      </div>
-      <button type="button" class="gcn__cta" (click)="open()">{{ 'giftCardNudge.cta' | translate }}</button>
-    </aside>
+        <span class="gcn-slim__text">{{ 'giftCardNudge.' + context + '.title' | translate }}</span>
+        <button type="button" class="gcn-slim__cta" (click)="open()">
+          {{ 'giftCardNudge.cta' | translate }}
+          <svg class="gcn-slim__arrow" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </p>
+    } @else {
+      <aside class="gcn" [attr.data-context]="context">
+        <span class="gcn__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+          </svg>
+        </span>
+        <div class="gcn__body">
+          <strong class="gcn__title">{{ 'giftCardNudge.' + context + '.title' | translate }}</strong>
+          <span class="gcn__sub">{{ 'giftCardNudge.' + context + '.sub' | translate }}</span>
+        </div>
+        <button type="button" class="gcn__cta" (click)="open()">{{ 'giftCardNudge.cta' | translate }}</button>
+      </aside>
+    }
   `,
   styles: [`
     .gcn {
@@ -69,6 +85,38 @@ import { ConciergeService } from '../ai-concierge/concierge.service';
       .gcn { flex-wrap: wrap; }
       .gcn__cta { width: 100%; }
     }
+    .gcn-slim {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.3rem 0.5rem;
+      margin: 0;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      color: var(--color-text-secondary, #5a4a3c);
+    }
+    .gcn-slim__icon { flex: 0 0 auto; color: var(--color-brand-500, #b18f1f); }
+    .gcn-slim__cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0;
+      border: 0;
+      background: none;
+      font: inherit;
+      font-weight: 600;
+      color: var(--color-brand-700, #5a3a2c);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      cursor: pointer;
+    }
+    .gcn-slim__cta:hover { color: var(--color-brand-600, #8c6f0f); }
+    .gcn-slim__cta:focus-visible {
+      outline: 2px solid var(--color-brand-500, #b18f1f);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    :host-context([dir='rtl']) .gcn-slim__arrow { transform: scaleX(-1); }
   `],
 })
 export class GiftCardNudgeComponent {
@@ -77,6 +125,9 @@ export class GiftCardNudgeComponent {
 
   /** Placement context, drives the copy + the analytics label. */
   @Input() context: 'pdp' | 'cart' = 'pdp';
+
+  /** `card` (default): the full nudge card. `slim`: one compact line (PDP). */
+  @Input() variant: 'card' | 'slim' = 'card';
 
   open(): void {
     this.concierge.recordEvent('ai_gift_card_recommended', { context: this.context, surface: 'web' });

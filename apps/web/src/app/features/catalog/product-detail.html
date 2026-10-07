@@ -1,4 +1,4 @@
-<main class="pdp-page">
+<main class="pdp-page" [style.--pdp-header-h]="headerHeight() ? headerHeight() + 'px' : null">
   <ui-container size="default">
 
     @if (loading()) {
@@ -18,9 +18,7 @@
 
       <!-- Breadcrumb (visual). The same trail is also emitted as
            BreadcrumbList JSON-LD via SeoService, they MUST stay in
-           lockstep (Google's rich-results guidelines reject
-           structured data that doesn't match visible content). The
-           shared `categoryLabel()` helper enforces that. -->
+           lockstep (the shared `categoryLabel()` helper enforces that). -->
       <nav class="pdp-breadcrumb" [attr.aria-label]="'product.breadcrumb.aria' | translate">
         <a href="/" class="crumb-link">{{ 'product.breadcrumb.home' | translate }}</a>
         <span class="crumb-sep" aria-hidden="true">›</span>
@@ -36,41 +34,76 @@
       <div class="pdp-grid">
 
         <!-- ======================================================== -->
-        <!-- LEFT COLUMN: Image gallery                                -->
+        <!-- Gallery: one scroll-snap track (swipe / trackpad / arrows  -->
+        <!-- / thumbnails), click-to-zoom lightbox.                     -->
         <!-- ======================================================== -->
         <section class="pdp-gallery" [attr.aria-label]="'product.gallery.aria' | translate">
-          <div class="pdp-main-image">
-            @if (activeImage(); as img) {
-              <button
-                type="button"
-                class="pdp-main-image__trigger"
-                (click)="openLightbox()"
-                [attr.aria-label]="'product.gallery.viewLarger' | translate"
+
+          @if (slides().length > 1) {
+            <ul class="pdp-thumbnails" [attr.aria-label]="'product.gallery.thumbsAria' | translate">
+              @for (s of slides(); track s.url; let i = $index) {
+                <li>
+                  <button
+                    type="button"
+                    class="pdp-thumb"
+                    [class.is-active]="i === activeImageIndex()"
+                    [attr.aria-label]="'product.gallery.thumbAria' | translate:{ n: i + 1, total: slides().length }"
+                    [attr.aria-pressed]="i === activeImageIndex()"
+                    (click)="selectImage(i)"
+                    (keydown)="onThumbnailKeydown($event, i)"
+                  >
+                    <img [src]="s.url | cfImage:'gallery'" alt="" width="64" height="85" loading="lazy" decoding="async" />
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+
+          <div class="pdp-stage">
+            @if (slides().length > 0) {
+              <div
+                #track
+                id="pdp-gallery-track"
+                class="pdp-track"
+                (scroll)="onTrackScroll()"
+                (keydown)="onGalleryKeydown($event)"
+                data-testid="pdp-gallery-track"
               >
-                <img
-                  [src]="img.url | cfImage:'detail'"
-                  [alt]="activeImageAlt()"
-                  [width]="img.width || 900"
-                  [height]="img.height || 1200"
-                  loading="eager"
-                  fetchpriority="high"
-                  decoding="async"
-                />
-                <span class="pdp-main-image__zoom" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="7"/>
-                    <path d="M21 21l-4.35-4.35"/>
-                    <path d="M11 8.5v5M8.5 11h5"/>
-                  </svg>
-                </span>
-              </button>
+                @for (s of slides(); track s.url; let i = $index; let first = $first) {
+                  <div
+                    class="pdp-slide"
+                    role="group"
+                    [attr.aria-label]="'product.gallery.slideAria' | translate:{ n: i + 1, total: slides().length }"
+                  >
+                    <button
+                      type="button"
+                      class="pdp-slide__btn"
+                      [attr.tabindex]="i === activeImageIndex() ? 0 : -1"
+                      (click)="openLightbox()"
+                      [attr.aria-label]="'product.gallery.viewLarger' | translate"
+                    >
+                      <img
+                        [src]="s.src"
+                        [attr.srcset]="s.srcset"
+                        [attr.sizes]="s.srcset ? gallerySizes : null"
+                        [alt]="s.alt || (first ? p.name : ('product.gallery.imageAlt' | translate:{ name: p.name, n: i + 1 }))"
+                        [attr.width]="s.width"
+                        [attr.height]="s.height"
+                        [attr.loading]="first ? 'eager' : 'lazy'"
+                        [attr.fetchpriority]="first ? 'high' : null"
+                        [attr.decoding]="first ? null : 'async'"
+                      />
+                    </button>
+                  </div>
+                }
+              </div>
             } @else {
               <div class="pdp-fallback" aria-hidden="true">
                 <span>{{ initial() }}</span>
               </div>
             }
 
-            <!-- Status pills (top-left of main image) -->
+            <!-- Status pills (top inline-start of the stage) -->
             @if (p.is_new || p.is_bestseller || isOnSale()) {
               <div class="pdp-pills">
                 @if (p.is_new) { <span class="pill pill-new">{{ 'product.badges.new' | translate }}</span> }
@@ -78,258 +111,398 @@
                 @if (isOnSale()) { <span class="pill pill-sale">{{ 'product.badges.sale' | translate }}</span> }
               </div>
             }
-          </div>
 
-          <!-- Thumbnails. Only render if there's more than one image. -->
-          @if (p.images && p.images.length > 1) {
-            <div class="pdp-thumbnails" role="list" [attr.aria-label]="'product.gallery.thumbsAria' | translate">
-              @for (img of p.images; track img.url; let i = $index) {
-                <button
-                  type="button"
-                  role="listitem"
-                  class="pdp-thumb"
-                  [class.is-active]="i === activeImageIndex()"
-                  [attr.aria-label]="'product.gallery.thumbAria' | translate:{ n: i + 1, total: p.images.length }"
-                  [attr.aria-pressed]="i === activeImageIndex()"
-                  (click)="selectImage(i)"
-                  (keydown)="onThumbnailKeydown($event, i)"
-                >
-                  <img
-                    [src]="img.url | cfImage:'detail'"
-                    [alt]="img.alt || ('product.gallery.imageAlt' | translate:{ name: p.name, n: i + 1 })"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </button>
+            @if (slides().length > 0) {
+              <span class="pdp-stage__zoom" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="7"/>
+                  <path d="M21 21l-4.35-4.35"/>
+                  <path d="M11 8.5v5M8.5 11h5"/>
+                </svg>
+              </span>
+            }
+
+            @if (slides().length > 1) {
+              <button
+                type="button"
+                class="pdp-stage__nav pdp-stage__nav--prev"
+                (click)="galleryPrev()"
+                [disabled]="activeImageIndex() === 0"
+                aria-controls="pdp-gallery-track"
+                [attr.aria-label]="'product.gallery.prev' | translate"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M15 5l-7 7 7 7"/>
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="pdp-stage__nav pdp-stage__nav--next"
+                (click)="galleryNext()"
+                [disabled]="activeImageIndex() === slides().length - 1"
+                aria-controls="pdp-gallery-track"
+                [attr.aria-label]="'product.gallery.next' | translate"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M9 5l7 7-7 7"/>
+                </svg>
+              </button>
+
+              <!-- Mobile position indicator (the thumbnails take over >= 768px). -->
+              @if (slides().length <= 10) {
+                <div class="pdp-stage__dots" aria-hidden="true">
+                  @for (s of slides(); track s.url; let i = $index) {
+                    <span class="pdp-stage__dot" [class.is-active]="i === activeImageIndex()"></span>
+                  }
+                </div>
               }
-            </div>
-          }
+              <span class="pdp-stage__count" aria-hidden="true" data-testid="pdp-gallery-count">
+                {{ activeImageIndex() + 1 }} / {{ slides().length }}
+              </span>
+            }
+          </div>
         </section>
 
         <!-- ======================================================== -->
-        <!-- RIGHT COLUMN: Product info                                -->
+        <!-- Info column                                               -->
         <!-- ======================================================== -->
         <section class="pdp-info" [attr.aria-label]="'product.infoAria' | translate">
 
-          @if (p.vendor && p.vendor.name) {
-            <p class="pdp-vendor">
-              @if (vendorUrl(); as vUrl) {
-                <a
-                  [href]="vUrl"
-                  class="pdp-vendor__link"
-                  [attr.aria-label]="'product.store.visitAria' | translate:{ name: p.vendor.name }"
-                  data-testid="pdp-vendor-link"
-                >
-                  <svg class="pdp-vendor__icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" />
-                    <path d="M2 9l2-5h16l2 5a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0z" />
-                    <path d="M9 20v-5h6v5" />
-                  </svg>
-                  <span>{{ p.vendor.name }}</span>
-                </a>
-              } @else {
-                {{ p.vendor.name }}
-              }
-            </p>
-          }
-
-          <ui-heading level="h1" size="xl">{{ p.name }}</ui-heading>
-
-          @if (p.sku) {
-            <p class="pdp-sku">{{ 'product.skuLabel' | translate }} {{ p.sku }}</p>
-          }
-
-          <!-- Aggregate rating. Only renders when there's a real
-               rating + at least one review. Mirrors what's emitted
-               in the schema.org JSON-LD AggregateRating block (W2.2b
-               Phase 2), Google requires the visible rating to match
-               the structured-data rating. -->
-          @if (aggregateRating(); as agg) {
-            <div class="pdp-rating" [attr.aria-label]="'product.rating.aria' | translate:{ value: agg.value, count: reviewCountLabel(agg.count) }">
-              <span class="pdp-rating__stars" aria-hidden="true">
-                @for (pos of starPositions; track pos) {
-                  <span class="star" [style.--fill]="starFillFor(pos)">
-                    <!-- Two stacked SVG stars: a muted track and a
-                         brand-colored fill clipped by the --fill
-                         CSS variable. Inline SVG is intentional so
-                         the page stays icon-library-free. -->
-                    <svg class="star__track" viewBox="0 0 20 20" aria-hidden="true">
-                      <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.6 7.7l5.8-.8z" />
-                    </svg>
-                    <svg class="star__fill" viewBox="0 0 20 20" aria-hidden="true">
-                      <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.6 7.7l5.8-.8z" />
-                    </svg>
-                  </span>
+          <div class="pdp-head">
+            <!-- One compact "Sold by <Store> · Visit store" row: the single
+                 link to the seller's storefront (/stores/:slug, slug-based).
+                 Plain [href] (like ProductCard): the router has no scroll
+                 restoration, so a routerLink would open the store mid-page. -->
+            @if (p.vendor && p.vendor.name) {
+              <p class="pdp-vendor">
+                @if (vendorUrl(); as vUrl) {
+                  <a class="pdp-store" [href]="vUrl" data-testid="pdp-store-card">
+                    <span class="pdp-store__avatar" aria-hidden="true">{{ vendorInitial() }}</span>
+                    <span class="pdp-store__label">{{ 'product.store.soldBy' | translate }}</span>
+                    <span class="pdp-store__name">{{ p.vendor.name }}</span>
+                    <span class="pdp-store__sep" aria-hidden="true">·</span>
+                    <span class="pdp-store__cta">
+                      {{ 'product.store.visit' | translate }}
+                      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                        <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </span>
+                  </a>
+                } @else {
+                  <span class="pdp-store__label">{{ 'product.store.soldBy' | translate }}</span>
+                  <span class="pdp-store__name">{{ p.vendor.name }}</span>
                 }
-              </span>
-              <span class="pdp-rating__text">
-                <span class="pdp-rating__value">{{ agg.value }}</span>
-                <span class="pdp-rating__sep" aria-hidden="true">·</span>
-                <a href="#reviews" class="pdp-rating__count">{{ reviewCountLabel(agg.count) }}</a>
-              </span>
-            </div>
-          }
-
-          <!-- Price -->
-          <div class="pdp-price">
-            @if (isOnSale() && p.sale_price) {
-              <span class="price-current">{{ formatMoney(p.sale_price) }}</span>
-              <span class="price-original">{{ formatMoney(p.price) }}</span>
-              @if (savingsPercent(); as pct) {
-                <span class="pdp-price__save">{{ 'product.savePercent' | translate:{ pct: pct } }}</span>
-              }
-            } @else {
-              <span class="price-current">{{ formatMoney(p.price) }}</span>
-            }
-          </div>
-
-          <!-- Stock state -->
-          <p class="pdp-stock" [class.pdp-stock--out]="!p.in_stock">
-            @if (p.in_stock) {
-              <span class="stock-dot stock-dot--in" aria-hidden="true"></span>
-              {{ 'product.inStock' | translate }}
-            } @else {
-              <span class="stock-dot stock-dot--out" aria-hidden="true"></span>
-              {{ 'product.outOfStock' | translate }}
-            }
-          </p>
-
-          <!-- Sizes -->
-          @if (p.sizes && p.sizes.length > 0 && !isBagOrAccessory()) {
-            <fieldset class="pdp-options">
-              <div class="pdp-options__legend-row">
-                <legend>{{ 'product.size' | translate }}</legend>
-                @if (showSizeGuide()) {
-                  <button
-                    type="button"
-                    class="pdp-size-guide-trigger"
-                    (click)="openSizeGuide()"
-                    data-testid="pdp-size-guide-trigger"
-                  >
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M3 7h18v10H3zM7 7v3M11 7v5M15 7v3M19 7v5"/>
-                    </svg>
-                    {{ 'product.sizeGuide.trigger' | translate }}
-                  </button>
-                }
-              </div>
-              <div class="pdp-chips">
-                @for (s of p.sizes; track s.label) {
-                  <button
-                    type="button"
-                    class="pdp-chip"
-                    [class.pdp-chip--out]="!s.in_stock"
-                    [class.pdp-chip--selected]="selectedSize() === s.label"
-                    [disabled]="!s.in_stock"
-                    [attr.aria-pressed]="selectedSize() === s.label"
-                    [attr.aria-label]="s.in_stock ? s.label : ('product.optionOutAria' | translate:{ label: s.label })"
-                    (click)="selectSize(s)"
-                  >
-                    {{ s.label }}
-                  </button>
-                }
-              </div>
-            </fieldset>
-          }
-
-          <!-- Colors -->
-          @if (p.colors && p.colors.length > 0 && !isBagOrAccessory()) {
-            <fieldset class="pdp-options">
-              <legend>{{ 'product.color' | translate }}</legend>
-              <div class="pdp-chips">
-                @for (c of p.colors; track c.label) {
-                  <button
-                    type="button"
-                    class="pdp-chip pdp-chip--color"
-                    [class.pdp-chip--out]="!c.in_stock"
-                    [class.pdp-chip--selected]="selectedColor() === c.label"
-                    [disabled]="!c.in_stock"
-                    [attr.aria-pressed]="selectedColor() === c.label"
-                    [attr.aria-label]="c.in_stock ? c.label : ('product.optionOutAria' | translate:{ label: c.label })"
-                    (click)="selectColor(c)"
-                  >
-                    @if (c.hex_code) {
-                      <span class="pdp-chip__swatch" [style.background]="c.hex_code" aria-hidden="true"></span>
-                    }
-                    {{ c.label }}
-                  </button>
-                }
-              </div>
-            </fieldset>
-          }
-
-          <!-- Vendor's extra measurement (reuses .pdp-options layout) -->
-          @if (requiresExtraMeasurement()) {
-            <fieldset class="pdp-options pdp-measurement" data-testid="pdp-measurement">
-              <legend>{{ 'product.measurementTitle' | translate }}</legend>
-              @if (measurementInstructions(); as guide) {
-                <p class="pdp-measurement__guide">{{ guide }}</p>
-              }
-              <textarea
-                class="pdp-measurement__input"
-                rows="3"
-                [value]="extraMeasurement()"
-                (input)="onExtraMeasurementInput($event)"
-                [attr.placeholder]="'product.measurementPlaceholder' | translate"
-                [attr.aria-label]="'product.measurementTitle' | translate"
-                data-testid="pdp-measurement-input"
-              ></textarea>
-            </fieldset>
-          }
-
-          <!-- CUSTOM size: body-measurement form (signed-in) or sign-in prompt.
-               Skipped for size-optional categories. -->
-          @if (isCustomSize() && !isSizeOptional()) {
-            @if (isAuthenticated()) {
-              <fieldset class="pdp-options pdp-measure" data-testid="pdp-custom-measurement">
-                <legend>{{ 'product.customSizeTitle' | translate }}</legend>
-                <div class="pdp-measure__grid">
-                  @for (f of measurementFields; track f) {
-                    <label class="pdp-measure__field">
-                      <span class="pdp-measure__label">{{ ('account.measurements.fields.' + f) | translate }}</span>
-                      <input
-                        type="number"
-                        inputmode="decimal"
-                        min="0"
-                        max="500"
-                        step="0.1"
-                        class="pdp-measure__input"
-                        [value]="customMeasurementValue(f)"
-                        (input)="onCustomMeasurementInput(f, $event)"
-                        [attr.aria-label]="('account.measurements.fields.' + f) | translate"
-                        [attr.data-testid]="'pdp-meas-' + f"
-                      />
-                    </label>
-                  }
-                </div>
-                <p class="pdp-measure__unit">{{ 'product.customSizeUnit' | translate }}</p>
-              </fieldset>
-            } @else {
-              <p class="pdp-measure__signin" data-testid="pdp-custom-signin">
-                {{ 'product.customSizeSignIn' | translate }}
-                <a routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl() }">{{ 'product.customSizeSignInLink' | translate }}</a>
               </p>
             }
-          }
 
-          <!-- Optional note / instructions for the seller (e.g. button placement).
-               Sent to the vendor with the order. -->
-          <fieldset class="pdp-options pdp-measurement" data-testid="pdp-note">
-            <legend>{{ 'product.noteTitle' | translate }}</legend>
-            <textarea
-              class="pdp-measurement__input"
-              rows="2"
-              maxlength="500"
-              [value]="note()"
-              (input)="onNoteInput($event)"
-              [attr.placeholder]="'product.notePlaceholder' | translate"
-              [attr.aria-label]="'product.noteTitle' | translate"
-              data-testid="pdp-note-input"
-            ></textarea>
-          </fieldset>
+            <ui-heading level="h1" size="lg" class="pdp-title">{{ p.name }}</ui-heading>
 
-          <!-- Buy box: quantity + add to cart -->
-          <div class="pdp-buybox">
+            <!-- Rating + stock. The rating mirrors the JSON-LD
+                 AggregateRating (Google requires the visible rating to
+                 match the structured data). -->
+            <div class="pdp-meta">
+              @if (aggregateRating(); as agg) {
+                <span class="pdp-rating">
+                  <span
+                    class="pdp-rating__stars"
+                    role="img"
+                    [attr.aria-label]="'product.rating.aria' | translate:{ value: agg.value, count: reviewCountLabel(agg.count) }"
+                  >
+                    @for (pos of starPositions; track pos) {
+                      <span class="star" [style.--fill]="starFillFor(pos)">
+                        <svg class="star__track" viewBox="0 0 20 20" aria-hidden="true">
+                          <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.6 7.7l5.8-.8z" />
+                        </svg>
+                        <svg class="star__fill" viewBox="0 0 20 20" aria-hidden="true">
+                          <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.6 7.7l5.8-.8z" />
+                        </svg>
+                      </span>
+                    }
+                  </span>
+                  <span class="pdp-rating__value" aria-hidden="true">{{ agg.value }}</span>
+                  <a
+                    [href]="'/product/' + p.slug + '#reviews'"
+                    class="pdp-rating__count"
+                    (click)="scrollToReviews($event)"
+                    data-testid="pdp-rating-link"
+                  >{{ reviewCountLabel(agg.count) }}</a>
+                </span>
+                <span class="pdp-meta__sep" aria-hidden="true">·</span>
+              }
+              <p class="pdp-stock" [class.pdp-stock--out]="!p.in_stock">
+                @if (p.in_stock) {
+                  <span class="stock-dot stock-dot--in" aria-hidden="true"></span>
+                  {{ 'product.inStock' | translate }}
+                } @else {
+                  <span class="stock-dot stock-dot--out" aria-hidden="true"></span>
+                  {{ 'product.outOfStock' | translate }}
+                }
+              </p>
+            </div>
+
+            <div class="pdp-price">
+              @if (isOnSale() && p.sale_price) {
+                <span class="price-current price-current--sale">{{ formatMoney(p.sale_price) }}</span>
+                <span class="price-original">{{ formatMoney(p.price) }}</span>
+                @if (savingsPercent(); as pct) {
+                  <span class="pdp-price__save">{{ 'product.savePercent' | translate:{ pct: pct } }}</span>
+                }
+              } @else {
+                <span class="price-current">{{ formatMoney(p.price) }}</span>
+              }
+            </div>
+          </div>
+
+          <div class="pdp-options">
+            <!-- Sizes -->
+            @if (p.sizes && p.sizes.length > 0 && !isBagOrAccessory()) {
+              <div
+                #sizeGroup
+                class="pdp-opt"
+                role="group"
+                aria-labelledby="pdp-size-label"
+                [attr.aria-describedby]="showSizeHint() ? 'pdp-size-hint' : null"
+                data-testid="pdp-size-group"
+              >
+                <div class="pdp-opt__head">
+                  <span id="pdp-size-label" class="pdp-opt__label">{{ 'product.size' | translate }}</span>
+                  @if (selectedSize(); as s) {
+                    <span class="pdp-opt__value">{{ s }}</span>
+                  }
+                  @if (showSizeGuide()) {
+                    <button
+                      type="button"
+                      class="pdp-size-guide-trigger pdp-opt__aside"
+                      (click)="openSizeGuide()"
+                      data-testid="pdp-size-guide-trigger"
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 7h18v10H3zM7 7v3M11 7v5M15 7v3M19 7v5"/>
+                      </svg>
+                      {{ 'product.sizeGuide.trigger' | translate }}
+                    </button>
+                  }
+                </div>
+                <div class="pdp-chips">
+                  @for (s of p.sizes; track s.label) {
+                    <button
+                      type="button"
+                      class="pdp-chip"
+                      [class.pdp-chip--out]="!s.in_stock"
+                      [class.pdp-chip--selected]="selectedSize() === s.label"
+                      [disabled]="!s.in_stock"
+                      [attr.aria-pressed]="selectedSize() === s.label"
+                      [attr.aria-label]="s.in_stock ? s.label : ('product.optionOutAria' | translate:{ label: s.label })"
+                      (click)="selectSize(s)"
+                    >
+                      {{ s.label }}
+                    </button>
+                  }
+                </div>
+                <div class="pdp-opt__live" aria-live="polite">
+                  @if (showSizeHint()) {
+                    <p id="pdp-size-hint" class="pdp-opt__hint" data-testid="pdp-hint-size">
+                      <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+                        <line x1="12" y1="7.5" x2="12" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></line>
+                        <circle cx="12" cy="16.5" r="1.1" fill="currentColor"></circle>
+                      </svg>
+                      <span>{{ 'product.hintSize' | translate }}</span>
+                    </p>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Colours: collapse to two rows behind "+N more" -->
+            @if (p.colors && p.colors.length > 0 && !isBagOrAccessory()) {
+              <div
+                #colorGroup
+                class="pdp-opt"
+                role="group"
+                aria-labelledby="pdp-color-label"
+                [attr.aria-describedby]="showColorHint() ? 'pdp-color-hint' : null"
+                data-testid="pdp-color-group"
+              >
+                <div class="pdp-opt__head">
+                  <span id="pdp-color-label" class="pdp-opt__label">{{ 'product.color' | translate }}</span>
+                  @if (selectedColor(); as c) {
+                    <span class="pdp-opt__value">{{ c }}</span>
+                  }
+                  @if (colorsCollapsible()) {
+                    <button
+                      type="button"
+                      class="pdp-opt__more pdp-opt__aside"
+                      [attr.aria-expanded]="colorsExpanded()"
+                      aria-controls="pdp-color-chips"
+                      (click)="toggleColors()"
+                      data-testid="pdp-colors-toggle"
+                    >
+                      {{ colorsExpanded() ? ('product.colorLess' | translate) : ('product.colorMore' | translate:{ count: hiddenColorCount() }) }}
+                    </button>
+                  }
+                </div>
+                <div
+                  #colorChips
+                  id="pdp-color-chips"
+                  class="pdp-chips pdp-chips--colors"
+                  [class.is-collapsed]="colorsCollapsible() && !colorsExpanded()"
+                  data-testid="pdp-color-chips"
+                >
+                  @for (c of orderedColors(); track c.label) {
+                    <button
+                      type="button"
+                      class="pdp-chip pdp-chip--color"
+                      [attr.data-color-label]="c.label"
+                      [class.is-hidden]="isColorHidden(c.label)"
+                      [class.pdp-chip--out]="!c.in_stock"
+                      [class.pdp-chip--selected]="selectedColor() === c.label"
+                      [disabled]="!c.in_stock"
+                      [attr.aria-pressed]="selectedColor() === c.label"
+                      [attr.aria-label]="c.in_stock ? c.label : ('product.optionOutAria' | translate:{ label: c.label })"
+                      (click)="selectColor(c)"
+                    >
+                      @if (c.hex_code) {
+                        <span class="pdp-chip__swatch" [style.background]="c.hex_code" aria-hidden="true"></span>
+                      }
+                      {{ c.label }}
+                    </button>
+                  }
+                </div>
+                <div class="pdp-opt__live" aria-live="polite">
+                  @if (showColorHint()) {
+                    <p id="pdp-color-hint" class="pdp-opt__hint" data-testid="pdp-hint-color">
+                      <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+                        <line x1="12" y1="7.5" x2="12" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></line>
+                        <circle cx="12" cy="16.5" r="1.1" fill="currentColor"></circle>
+                      </svg>
+                      <span>{{ 'product.hintColor' | translate }}</span>
+                    </p>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Vendor's extra measurement -->
+            @if (requiresExtraMeasurement()) {
+              <div #measurementGroup class="pdp-opt pdp-measurement" data-testid="pdp-measurement">
+                <label class="pdp-opt__label" for="pdp-measurement-input">{{ 'product.measurementTitle' | translate }}</label>
+                @if (measurementInstructions(); as guide) {
+                  <p id="pdp-measurement-guide" class="pdp-measurement__guide">{{ guide }}</p>
+                }
+                <textarea
+                  id="pdp-measurement-input"
+                  class="pdp-field"
+                  rows="2"
+                  [value]="extraMeasurement()"
+                  (input)="onExtraMeasurementInput($event)"
+                  [attr.placeholder]="'product.measurementPlaceholder' | translate"
+                  [attr.aria-describedby]="showMeasurementHint() ? 'pdp-measurement-hint' : (measurementInstructions() ? 'pdp-measurement-guide' : null)"
+                  [attr.aria-invalid]="showMeasurementHint() ? 'true' : null"
+                  data-testid="pdp-measurement-input"
+                ></textarea>
+                <div class="pdp-opt__live" aria-live="polite">
+                  @if (showMeasurementHint()) {
+                    <p id="pdp-measurement-hint" class="pdp-opt__hint" data-testid="pdp-hint-measurement">
+                      <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+                        <line x1="12" y1="7.5" x2="12" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></line>
+                        <circle cx="12" cy="16.5" r="1.1" fill="currentColor"></circle>
+                      </svg>
+                      <span>{{ 'product.hintMeasurement' | translate }}</span>
+                    </p>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- CUSTOM size: body-measurement form (signed-in) or sign-in
+                 prompt. Skipped for size-optional categories. -->
+            @if (isCustomSize() && !isSizeOptional()) {
+              <div #customGroup class="pdp-custom">
+                @if (isAuthenticated()) {
+                  <fieldset class="pdp-opt pdp-measure" data-testid="pdp-custom-measurement">
+                    <legend class="pdp-opt__label">{{ 'product.customSizeTitle' | translate }}</legend>
+                    <div class="pdp-measure__grid">
+                      @for (f of measurementFields; track f) {
+                        <label class="pdp-measure__field">
+                          <span class="pdp-measure__label">{{ ('account.measurements.fields.' + f) | translate }}</span>
+                          <input
+                            type="number"
+                            inputmode="decimal"
+                            min="0"
+                            max="500"
+                            step="0.1"
+                            class="pdp-field"
+                            [value]="customMeasurementValue(f)"
+                            (input)="onCustomMeasurementInput(f, $event)"
+                            [attr.aria-label]="('account.measurements.fields.' + f) | translate"
+                            [attr.data-testid]="'pdp-meas-' + f"
+                          />
+                        </label>
+                      }
+                    </div>
+                    <p class="pdp-measure__unit">{{ 'product.customSizeUnit' | translate }}</p>
+                    <div class="pdp-opt__live" aria-live="polite">
+                      @if (showCustomHint()) {
+                        <p class="pdp-opt__hint" data-testid="pdp-hint-custom">
+                          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+                            <line x1="12" y1="7.5" x2="12" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></line>
+                            <circle cx="12" cy="16.5" r="1.1" fill="currentColor"></circle>
+                          </svg>
+                          <span>{{ 'product.hintCustomMeasurement' | translate }}</span>
+                        </p>
+                      }
+                    </div>
+                  </fieldset>
+                } @else {
+                  <p class="pdp-measure__signin" data-testid="pdp-custom-signin">
+                    {{ 'product.customSizeSignIn' | translate }}
+                    <a routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl() }">{{ 'product.customSizeSignInLink' | translate }}</a>
+                  </p>
+                }
+              </div>
+            }
+
+            <!-- Optional note for the seller (e.g. button placement), sent with
+                 the order. Behind a disclosure; always open while it holds text. -->
+            <div class="pdp-note" data-testid="pdp-note">
+              <button
+                type="button"
+                class="pdp-textlink pdp-note__toggle"
+                [attr.aria-expanded]="noteOpen()"
+                aria-controls="pdp-note-panel"
+                (click)="toggleNote()"
+                data-testid="pdp-note-toggle"
+              >
+                <svg class="pdp-note__icon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                {{ 'product.noteToggle' | translate }}
+              </button>
+              <div id="pdp-note-panel" class="pdp-note__panel" [hidden]="!noteOpen()">
+                <label class="pdp-opt__label" for="pdp-note-input">{{ 'product.noteTitle' | translate }}</label>
+                <textarea
+                  #noteInput
+                  id="pdp-note-input"
+                  class="pdp-field"
+                  rows="2"
+                  maxlength="500"
+                  [value]="note()"
+                  (input)="onNoteInput($event)"
+                  [attr.placeholder]="'product.notePlaceholder' | translate"
+                  data-testid="pdp-note-input"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Buy box: quantity + add to cart (shared logic with the sticky bar).
+               The button stays enabled while a selection is missing: a tap
+               reveals the hints next to the options instead. -->
+          <div #buyBox class="pdp-buybox" data-testid="pdp-buybox">
             @if (p.in_stock) {
               <div class="pdp-qty" role="group" [attr.aria-label]="'product.quantityAria' | translate">
                 <button
@@ -350,306 +523,404 @@
               </div>
             }
             <ui-button
+              class="pdp-buybox__cta"
               variant="primary"
               size="lg"
-              [disabled]="!canAddToCart()"
+              [disabled]="adding() || !p.in_stock"
               (clicked)="addToCart()"
+              data-testid="pdp-add-to-cart"
             >
               {{ adding() ? ('product.adding' | translate) : (p.in_stock ? ('product.addToCart' | translate) : ('product.outOfStock' | translate)) }}
             </ui-button>
           </div>
-          @if (tryOnEnabled()) {
-            <button
-              type="button"
-              class="pdp-tryon-cta"
-              (click)="openTryOn()"
-              data-testid="pdp-tryon-trigger"
-            >
-              <svg class="pdp-tryon-cta__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                <path d="M12 3l1.6 3.9L17.5 8l-3.9 1.6L12 13.5 10.4 9.6 6.5 8l3.9-1.1L12 3z" fill="currentColor"></path>
-                <circle cx="18" cy="17" r="1.4" fill="currentColor"></circle>
-                <circle cx="6" cy="16" r="1" fill="currentColor"></circle>
-              </svg>
-              <span>{{ 'tryOn.cta' | translate }}</span>
-            </button>
-          }
-
-          <!-- ===== Request a bespoke customization (P5) ===== -->
-          <div class="pdp-customization" data-testid="pdp-customization">
-            @if (customizationSubmitted()) {
-              <div class="pdp-customization__done" role="status" data-testid="pdp-customization-done">
-                <p class="pdp-customization__done-title">{{ 'product.customization.sentTitle' | translate }}</p>
-                <p class="pdp-customization__done-note">{{ 'product.customization.sentNote' | translate }}</p>
-                <a class="pdp-customization__link" routerLink="/account/customization-requests">
-                  {{ 'product.customization.viewRequests' | translate }}
-                </a>
-              </div>
-            } @else if (!customizationOpen()) {
-              <button
-                type="button"
-                class="pdp-customization__cta"
-                (click)="openCustomizationForm()"
-                data-testid="pdp-customization-trigger"
-              >
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M14.7 6.3l3 3L7.5 19.5l-3.5.9.9-3.5z"></path>
-                  <path d="M13.5 7.5l3 3"></path>
-                </svg>
-                <span>{{ 'product.customization.cta' | translate }}</span>
-              </button>
-            } @else if (!isAuthenticated()) {
-              <p class="pdp-customization__signin" data-testid="pdp-customization-signin">
-                {{ 'product.customization.signInPrompt' | translate }}
-                <a routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl() }">
-                  {{ 'product.customization.signInLink' | translate }}
-                </a>
-              </p>
-            } @else {
-              <form class="pdp-customization__form" (submit)="$event.preventDefault(); submitCustomization()">
-                <h3 class="pdp-customization__heading">{{ 'product.customization.heading' | translate }}</h3>
-                <p class="pdp-customization__hint">{{ 'product.customization.formHint' | translate }}</p>
-                <label class="pdp-customization__field">
-                  <span class="pdp-customization__label">{{ 'product.customization.descLabel' | translate }}</span>
-                  <textarea
-                    class="pdp-customization__textarea"
-                    rows="4"
-                    maxlength="2000"
-                    [value]="customizationDescription()"
-                    (input)="onCustomizationDescriptionInput($event)"
-                    [attr.placeholder]="'product.customization.descPlaceholder' | translate"
-                    data-testid="pdp-customization-desc"
-                  ></textarea>
-                </label>
-                <label class="pdp-customization__check">
-                  <input
-                    type="checkbox"
-                    [checked]="customizationIncludeMeasurements()"
-                    (change)="onCustomizationMeasurementsToggle($event)"
-                  />
-                  <span>{{ 'product.customization.includeMeasurements' | translate }}</span>
-                </label>
-                @if (customizationError()) {
-                  <p class="pdp-customization__error" role="alert">{{ customizationError()! | translate }}</p>
-                }
-                <div class="pdp-customization__actions">
-                  <ui-button
-                    variant="primary"
-                    size="md"
-                    [disabled]="customizationSubmitting()"
-                    (clicked)="submitCustomization()"
-                  >
-                    {{ customizationSubmitting() ? ('product.customization.sending' | translate) : ('product.customization.submit' | translate) }}
-                  </ui-button>
-                  <button type="button" class="pdp-customization__cancel" (click)="closeCustomizationForm()">
-                    {{ 'product.customization.cancelForm' | translate }}
-                  </button>
-                </div>
-              </form>
-            }
-          </div>
-
-          @if (p.in_stock && hasSizes() && !selectedSize() && !isSizeOptional()) {
-            <p class="pdp-buybox__hint" data-testid="pdp-hint-size">
-              <svg class="pdp-buybox__hint-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
-                <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line>
-                <circle cx="12" cy="8" r="1" fill="currentColor"></circle>
-              </svg>
-              <span>{{ 'product.hintSize' | translate }}</span>
-            </p>
-          }
-          @if (p.in_stock && hasColors() && !selectedColor() && !isBagOrAccessory()) {
-            <p class="pdp-buybox__hint" data-testid="pdp-hint-color">
-              <svg class="pdp-buybox__hint-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
-                <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line>
-                <circle cx="12" cy="8" r="1" fill="currentColor"></circle>
-              </svg>
-              <span>{{ 'product.hintColor' | translate }}</span>
-            </p>
-          }
-          @if (p.in_stock && requiresExtraMeasurement() && extraMeasurement().trim() === '') {
-            <p class="pdp-buybox__hint" data-testid="pdp-hint-measurement">
-              <svg class="pdp-buybox__hint-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
-                <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line>
-                <circle cx="12" cy="8" r="1" fill="currentColor"></circle>
-              </svg>
-              <span>{{ 'product.hintMeasurement' | translate }}</span>
-            </p>
-          }
-          @if (p.in_stock && isCustomSize() && !isSizeOptional() && isAuthenticated() && !customMeasurementComplete()) {
-            <p class="pdp-buybox__hint" data-testid="pdp-hint-custom">
-              <svg class="pdp-buybox__hint-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
-                <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line>
-                <circle cx="12" cy="8" r="1" fill="currentColor"></circle>
-              </svg>
-              <span>{{ 'product.hintCustomMeasurement' | translate }}</span>
-            </p>
-          }
           @if (addError(); as err) {
             <p class="pdp-buybox__error" role="alert">{{ err | translate }}</p>
           }
 
-          <!-- Sold-by store card: one tap from the product to the seller's
-               storefront (/stores/:slug, slug-based). Hidden when the API
-               returns no vendor (or a vendor without a slug). Plain [href]
-               (like the vendor line above, StoreCard and ProductCard), not
-               routerLink: the router has no scroll restoration, so a
-               routerLink from this far down the PDP would open the store
-               mid-grid instead of at its header. -->
-          @if (p.vendor && p.vendor.name && vendorUrl(); as vUrl) {
-            <!-- No aria-label: the visible "Sold by <store> · Visit store"
-                 text is the accessible name (avatar initial is hidden). -->
-            <a
-              class="pdp-store"
-              [href]="vUrl"
-              data-testid="pdp-store-card"
-            >
-              <span class="pdp-store__avatar" aria-hidden="true">{{ vendorInitial() }}</span>
-              <span class="pdp-store__text">
-                <span class="pdp-store__label">{{ 'product.store.soldBy' | translate }}</span>
-                <span class="pdp-store__name">{{ p.vendor.name }}</span>
-              </span>
-              <span class="pdp-store__cta">
-                {{ 'product.store.visit' | translate }}
-                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                  <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Secondary actions: Ain try-on + bespoke customization (P5). -->
+          <div class="pdp-actions">
+            @if (tryOnEnabled()) {
+              <button
+                type="button"
+                class="pdp-tryon-cta"
+                (click)="openTryOn()"
+                data-testid="pdp-tryon-trigger"
+              >
+                <svg class="pdp-tryon-cta__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <path d="M12 3l1.6 3.9L17.5 8l-3.9 1.6L12 13.5 10.4 9.6 6.5 8l3.9-1.1L12 3z" fill="currentColor"></path>
+                  <circle cx="18" cy="17" r="1.4" fill="currentColor"></circle>
+                  <circle cx="6" cy="16" r="1" fill="currentColor"></circle>
                 </svg>
-              </span>
-            </a>
+                <span>{{ 'tryOn.cta' | translate }}</span>
+              </button>
+            }
+
+            <div
+              class="pdp-customization"
+              [class.is-expanded]="customizationOpen() || customizationSubmitted()"
+              data-testid="pdp-customization"
+            >
+              @if (customizationSubmitted()) {
+                <div class="pdp-customization__done" role="status" data-testid="pdp-customization-done">
+                  <p class="pdp-customization__done-title">{{ 'product.customization.sentTitle' | translate }}</p>
+                  <p class="pdp-customization__done-note">{{ 'product.customization.sentNote' | translate }}</p>
+                  <a class="pdp-customization__link" routerLink="/account/customization-requests">
+                    {{ 'product.customization.viewRequests' | translate }}
+                  </a>
+                </div>
+              } @else if (!customizationOpen()) {
+                <button
+                  type="button"
+                  class="pdp-textlink pdp-customization__cta"
+                  (click)="openCustomizationForm()"
+                  data-testid="pdp-customization-trigger"
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M14.7 6.3l3 3L7.5 19.5l-3.5.9.9-3.5z"></path>
+                    <path d="M13.5 7.5l3 3"></path>
+                  </svg>
+                  <span>{{ 'product.customization.cta' | translate }}</span>
+                </button>
+              } @else if (!isAuthenticated()) {
+                <p class="pdp-customization__signin" data-testid="pdp-customization-signin">
+                  {{ 'product.customization.signInPrompt' | translate }}
+                  <a routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl() }">
+                    {{ 'product.customization.signInLink' | translate }}
+                  </a>
+                </p>
+              } @else {
+                <form class="pdp-customization__form" (submit)="$event.preventDefault(); submitCustomization()">
+                  <h3 class="pdp-customization__heading">{{ 'product.customization.heading' | translate }}</h3>
+                  <p class="pdp-customization__hint">{{ 'product.customization.formHint' | translate }}</p>
+                  <label class="pdp-customization__field">
+                    <span class="pdp-customization__label">{{ 'product.customization.descLabel' | translate }}</span>
+                    <textarea
+                      class="pdp-field"
+                      rows="4"
+                      maxlength="2000"
+                      [value]="customizationDescription()"
+                      (input)="onCustomizationDescriptionInput($event)"
+                      [attr.placeholder]="'product.customization.descPlaceholder' | translate"
+                      data-testid="pdp-customization-desc"
+                    ></textarea>
+                  </label>
+                  <label class="pdp-customization__check">
+                    <input
+                      type="checkbox"
+                      [checked]="customizationIncludeMeasurements()"
+                      (change)="onCustomizationMeasurementsToggle($event)"
+                    />
+                    <span>{{ 'product.customization.includeMeasurements' | translate }}</span>
+                  </label>
+                  @if (customizationError()) {
+                    <p class="pdp-customization__error" role="alert">{{ customizationError()! | translate }}</p>
+                  }
+                  <div class="pdp-customization__actions">
+                    <ui-button
+                      variant="primary"
+                      size="md"
+                      [disabled]="customizationSubmitting()"
+                      (clicked)="submitCustomization()"
+                    >
+                      {{ customizationSubmitting() ? ('product.customization.sending' | translate) : ('product.customization.submit' | translate) }}
+                    </ui-button>
+                    <button type="button" class="pdp-textlink pdp-customization__cancel" (click)="closeCustomizationForm()">
+                      {{ 'product.customization.cancelForm' | translate }}
+                    </button>
+                  </div>
+                </form>
+              }
+            </div>
+          </div>
+
+          <!-- Ain "Complete the look": real, in-stock complements from other
+               categories, right under the buy area (before "You may also
+               like"). Silently omitted when there are none. -->
+          @if (completeTheLookItems().length > 0) {
+            <section class="pdp-ctl" aria-labelledby="pdp-ctl-heading" data-testid="pdp-ctl">
+              <div class="pdp-ctl__head">
+                <h2 id="pdp-ctl-heading" class="pdp-ctl__heading">
+                  <svg class="pdp-ctl__spark" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <path d="M12 3l1.6 3.9L17.5 8l-3.9 1.6L12 13.5 10.4 9.6 6.5 8l3.9-1.1L12 3z" fill="currentColor"></path>
+                    <circle cx="18" cy="17" r="1.4" fill="currentColor"></circle>
+                  </svg>
+                  {{ 'product.completeTheLookHeading' | translate }}
+                </h2>
+                <div class="pdp-ctl__tools">
+                  @if (ctlRail.overflowing()) {
+                    <button
+                      type="button"
+                      class="pdp-rail-btn pdp-rail-btn--prev"
+                      (click)="ctlRail.scroll(-1)"
+                      [disabled]="ctlRail.atStart()"
+                      aria-controls="pdp-ctl-rail"
+                      [attr.aria-label]="'product.rail.prev' | translate"
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="pdp-rail-btn pdp-rail-btn--next"
+                      (click)="ctlRail.scroll(1)"
+                      [disabled]="ctlRail.atEnd()"
+                      aria-controls="pdp-ctl-rail"
+                      [attr.aria-label]="'product.rail.next' | translate"
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    class="pdp-ctl__add"
+                    [disabled]="addingLook()"
+                    (click)="addTheLook()"
+                    data-testid="pdp-ctl-add-look"
+                  >
+                    {{ (addingLook() ? 'product.addingTheLook' : 'product.addTheLook') | translate }}
+                  </button>
+                </div>
+              </div>
+
+              <ul
+                appScrollRail
+                #ctlRail="scrollRail"
+                id="pdp-ctl-rail"
+                class="pdp-rail pdp-ctl__rail"
+                role="list"
+                data-testid="pdp-ctl-rail"
+              >
+                @for (item of completeTheLookItems(); track item.id) {
+                  <li class="pdp-ctl__item" data-rail-item>
+                    <a
+                      class="pdp-ctl__link"
+                      [attr.href]="item.slug ? '/product/' + item.slug : null"
+                      (click)="onComplementClick(item)"
+                      data-rail-focus
+                    >
+                      <span class="pdp-ctl__img">
+                        @if (item.primary_image?.url) {
+                          <img
+                            [src]="item.primary_image!.url | cfImage:ctlImage"
+                            alt=""
+                            width="112"
+                            height="149"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        } @else {
+                          <span class="pdp-ctl__fallback" aria-hidden="true">{{ initialOf(item.name) }}</span>
+                        }
+                      </span>
+                      <span class="pdp-ctl__name">{{ item.name }}</span>
+                      <span class="pdp-ctl__price" [class.is-sale]="complementPrice(item) !== item.price">{{ formatMoney(complementPrice(item)) }}</span>
+                    </a>
+                    <button
+                      type="button"
+                      class="pdp-ctl__save"
+                      [class.is-saved]="isComplementSaved(item.id)"
+                      [attr.aria-pressed]="isComplementSaved(item.id)"
+                      (click)="toggleComplementSaved(item)"
+                      [attr.aria-label]="'product.ctl.save' | translate:{ name: item.name }"
+                      [attr.data-testid]="'pdp-ctl-save-' + item.id"
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="pdp-ctl__quick"
+                      [class.is-added]="ctlState(item.id) === 'added'"
+                      [class.is-error]="ctlState(item.id) === 'error'"
+                      [disabled]="!item.in_stock || ctlState(item.id) === 'adding'"
+                      (click)="quickAddComplement(item)"
+                      [attr.aria-label]="'product.ctl.quickAdd' | translate:{ name: item.name }"
+                      [attr.data-testid]="'pdp-ctl-quick-' + item.id"
+                    >
+                      @if (ctlState(item.id) === 'added') {
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      } @else {
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                      }
+                    </button>
+                  </li>
+                }
+              </ul>
+              <p class="visually-hidden" aria-live="polite" data-testid="pdp-ctl-status">{{ ctlStatus() }}</p>
+            </section>
           }
 
-          <!-- Gift-card nudge: buying for someone else / unsure of size. -->
-          <app-gift-card-nudge context="pdp" class="pdp-gift-card-nudge" />
+          <div class="pdp-extras">
+            <!-- Gift-card nudge (one slim line): buying for someone else / unsure of size. -->
+            <app-gift-card-nudge context="pdp" variant="slim" class="pdp-gift-card-nudge" />
 
-          <!-- Social share, six channels (decision #5): WhatsApp, copy
-               link, native share, Facebook, X, Telegram. Shares the
-               canonical product URL. -->
-          <ui-share-buttons [url]="shareUrl()" [title]="p.name" />
+            <!-- Social share, six channels: WhatsApp, Facebook, X, Telegram,
+                 copy link, native share. Shares the canonical product URL. -->
+            <ui-share-buttons [url]="shareUrl()" [title]="p.name" [compact]="true" />
 
-          <!-- Trust / delivery / returns (PDP4a), grounded in real
-               capability: a UAE marketplace, a returns flow on orders, and
-               secured payment. No fabricated timeframes or thresholds. -->
-          <ul class="pdp-trust" [attr.aria-label]="'product.trust.aria' | translate">
-            <li class="pdp-trust__item">
-              <span class="pdp-trust__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/>
-                  <circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/>
-                </svg>
-              </span>
-              <span class="pdp-trust__text">
-                <span class="pdp-trust__title">{{ 'product.trust.deliveryTitle' | translate }}</span>
-                <span class="pdp-trust__sub">{{ 'product.trust.deliverySub' | translate }}</span>
-              </span>
-            </li>
-            <li class="pdp-trust__item">
-              <span class="pdp-trust__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 9a9 9 0 0 1 15-3l3 3"/><path d="M21 5v4h-4"/>
-                  <path d="M21 15a9 9 0 0 1-15 3l-3-3"/><path d="M3 19v-4h4"/>
-                </svg>
-              </span>
-              <span class="pdp-trust__text">
-                <span class="pdp-trust__title">{{ 'product.trust.returnsTitle' | translate }}</span>
-                <span class="pdp-trust__sub">{{ 'product.trust.returnsSub' | translate }}</span>
-              </span>
-            </li>
-            <li class="pdp-trust__item">
-              <span class="pdp-trust__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/>
-                  <path d="M9 12l2 2 4-4"/>
-                </svg>
-              </span>
-              <span class="pdp-trust__text">
-                <span class="pdp-trust__title">{{ 'product.trust.secureTitle' | translate }}</span>
-                <span class="pdp-trust__sub">{{ 'product.trust.secureSub' | translate }}</span>
-              </span>
-            </li>
-          </ul>
+            <!-- Trust / delivery / returns, one compact icon row. Grounded in
+                 real capability; no fabricated timeframes or thresholds. -->
+            <ul class="pdp-trust" [attr.aria-label]="'product.trust.aria' | translate">
+              <li class="pdp-trust__item">
+                <span class="pdp-trust__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/>
+                    <circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/>
+                  </svg>
+                </span>
+                <span class="pdp-trust__text">
+                  <span class="pdp-trust__title">{{ 'product.trust.deliveryTitle' | translate }}</span>
+                  <span class="pdp-trust__sub">{{ 'product.trust.deliverySub' | translate }}</span>
+                </span>
+              </li>
+              <li class="pdp-trust__item">
+                <span class="pdp-trust__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9a9 9 0 0 1 15-3l3 3"/><path d="M21 5v4h-4"/>
+                    <path d="M21 15a9 9 0 0 1-15 3l-3-3"/><path d="M3 19v-4h4"/>
+                  </svg>
+                </span>
+                <span class="pdp-trust__text">
+                  <span class="pdp-trust__title">{{ 'product.trust.returnsTitle' | translate }}</span>
+                  <span class="pdp-trust__sub">{{ 'product.trust.returnsSub' | translate }}</span>
+                </span>
+              </li>
+              <li class="pdp-trust__item">
+                <span class="pdp-trust__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/>
+                    <path d="M9 12l2 2 4-4"/>
+                  </svg>
+                </span>
+                <span class="pdp-trust__text">
+                  <span class="pdp-trust__title">{{ 'product.trust.secureTitle' | translate }}</span>
+                  <span class="pdp-trust__sub">{{ 'product.trust.secureSub' | translate }}</span>
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Description / Details accordions (disclosure buttons over
+               labelled regions; Description open by default). -->
+          @if (hasDescriptionContent() || hasDetailsContent()) {
+            <div class="pdp-accordions" data-testid="pdp-accordions">
+              @if (hasDescriptionContent()) {
+                <div class="pdp-acc">
+                  <h2 class="pdp-acc__heading">
+                    <button
+                      type="button"
+                      id="pdp-acc-description"
+                      class="pdp-acc__trigger"
+                      aria-controls="pdp-panel-description"
+                      [attr.aria-expanded]="isSectionOpen('description')"
+                      (click)="toggleSection('description')"
+                      data-testid="pdp-acc-description"
+                    >
+                      <span>{{ 'product.description' | translate }}</span>
+                      <svg class="pdp-acc__chev" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                        <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </h2>
+                  <div
+                    id="pdp-panel-description"
+                    role="region"
+                    aria-labelledby="pdp-acc-description"
+                    class="pdp-acc__panel pdp-description"
+                    [hidden]="!isSectionOpen('description')"
+                  >
+                    @for (para of descriptionParagraphs(); track $index) {
+                      <p>{{ para }}</p>
+                    }
+                  </div>
+                </div>
+              }
+              @if (hasDetailsContent()) {
+                <div class="pdp-acc">
+                  <h2 class="pdp-acc__heading">
+                    <button
+                      type="button"
+                      id="pdp-acc-details"
+                      class="pdp-acc__trigger"
+                      aria-controls="pdp-panel-details"
+                      [attr.aria-expanded]="isSectionOpen('details')"
+                      (click)="toggleSection('details')"
+                      data-testid="pdp-acc-details"
+                    >
+                      <span>{{ 'product.details' | translate }}</span>
+                      <svg class="pdp-acc__chev" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                        <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </h2>
+                  <div
+                    id="pdp-panel-details"
+                    role="region"
+                    aria-labelledby="pdp-acc-details"
+                    class="pdp-acc__panel"
+                    [hidden]="!isSectionOpen('details')"
+                  >
+                    <dl class="pdp-detail-list">
+                      @if (p.fabric) {
+                        <dt>{{ 'product.detailFabric' | translate }}</dt>
+                        <dd>{{ p.fabric }}</dd>
+                      }
+                      @if (p.materials && p.materials.length > 0) {
+                        <dt>{{ 'product.detailMaterials' | translate }}</dt>
+                        <dd>{{ p.materials.join(', ') }}</dd>
+                      }
+                      @if (p.care_instructions) {
+                        <dt>{{ 'product.detailCare' | translate }}</dt>
+                        <dd>{{ p.care_instructions }}</dd>
+                      }
+                      @if (p.sku) {
+                        <dt>{{ 'product.detailSku' | translate }}</dt>
+                        <dd class="pdp-sku">{{ p.sku }}</dd>
+                      }
+                    </dl>
+                  </div>
+                </div>
+              }
+            </div>
+          }
         </section>
       </div>
 
-      <!-- Product information, moved below the gallery + buy-box grid (PDP2)
-           so the buy box can stick alongside the gallery on desktop. -->
-      <div class="pdp-content">
-
-          <!-- Content tabs (#10e): Description · Reviews · Details -->
-          <div
-            class="pdp-tabs"
-            role="tablist"
-            [attr.aria-label]="'product.sectionsAria' | translate"
-            (keydown)="onContentTabKeydown($event)"
-          >
-            @if (hasDescriptionContent()) {
-              <button type="button" role="tab" id="pdp-tab-description" class="pdp-tab"
-                [class.pdp-tab--active]="effectiveContentTab() === 'description'"
-                [attr.aria-selected]="effectiveContentTab() === 'description'"
-                [attr.tabindex]="effectiveContentTab() === 'description' ? 0 : -1"
-                aria-controls="pdp-panel-description"
-                (click)="selectContentTab('description')">
-                {{ 'product.description' | translate }}
-              </button>
-            }
-            <button type="button" role="tab" id="reviews" class="pdp-tab"
-              [class.pdp-tab--active]="effectiveContentTab() === 'reviews'"
-              [attr.aria-selected]="effectiveContentTab() === 'reviews'"
-              [attr.tabindex]="effectiveContentTab() === 'reviews' ? 0 : -1"
-              aria-controls="pdp-panel-reviews"
-              (click)="selectContentTab('reviews')">
-              {{ 'product.reviews.heading' | translate }}
-            </button>
-            @if (hasDetailsContent()) {
-              <button type="button" role="tab" id="pdp-tab-details" class="pdp-tab"
-                [class.pdp-tab--active]="effectiveContentTab() === 'details'"
-                [attr.aria-selected]="effectiveContentTab() === 'details'"
-                [attr.tabindex]="effectiveContentTab() === 'details' ? 0 : -1"
-                aria-controls="pdp-panel-details"
-                (click)="selectContentTab('details')">
-                {{ 'product.details' | translate }}
-              </button>
-            }
-          </div>
-
-          @if (effectiveContentTab() === 'description' && hasDescriptionContent()) {
-            <div id="pdp-panel-description" role="tabpanel" aria-labelledby="pdp-tab-description" class="pdp-tabpanel pdp-description">
-                @for (para of descriptionParagraphs(); track $index) {
-                  <p>{{ para }}</p>
-                }
-            </div>
+      <!-- ===== Reviews (below the fold). The heading + summary render
+           eagerly (anchor target for #reviews); the list + write form are
+           deferred until the section nears the viewport. ===== -->
+      <section
+        #reviewsSection
+        id="reviews"
+        class="pdp-section pdp-reviews-section"
+        tabindex="-1"
+        aria-labelledby="pdp-reviews-heading"
+      >
+        <div class="pdp-section__head">
+          <h2 id="pdp-reviews-heading" class="pdp-section__title">{{ 'product.reviews.heading' | translate }}</h2>
+          @if (aggregateRating(); as agg) {
+            <p class="pdp-reviews__summary">
+              <span class="pdp-reviews__avg">{{ 'product.rating.outOf5' | translate:{ value: agg.value } }}</span>
+              <span aria-hidden="true">·</span>
+              <span>{{ reviewCountLabel(agg.count) }}</span>
+            </p>
           }
+        </div>
 
-          @if (effectiveContentTab() === 'reviews') {
-            <div id="pdp-panel-reviews" role="tabpanel" aria-labelledby="reviews" class="pdp-tabpanel pdp-reviews">
-
-              <!-- Aggregate summary repeated here so the section is
-                   self-contained (helps when the user navigates
-                   directly via the #reviews anchor). -->
-              @if (aggregateRating(); as agg) {
-                <p class="pdp-reviews__summary">
-                  <span class="pdp-reviews__avg">{{ 'product.rating.outOf5' | translate:{ value: agg.value } }}</span>
-                  <span aria-hidden="true">·</span>
-                  <span>{{ reviewCountLabel(agg.count) }}</span>
-                </p>
-              }
-
-              @if (reviews().length > 0) {
+        @defer (on viewport; prefetch on idle) {
+          <div class="pdp-reviews" data-testid="pdp-reviews-body">
+            @if (reviews().length > 0) {
               <ul class="pdp-reviews__list">
                 @for (review of reviews(); track review.id) {
                   <li class="pdp-review">
                     <header class="pdp-review__head">
                       <span
                         class="pdp-review__stars"
+                        role="img"
                         [attr.aria-label]="'product.rating.starsAria' | translate:{ rating: review.rating }"
                       >
                         @for (pos of starPositions; track pos) {
-                          <span
-                            class="star star--sm"
-                            [style.--fill]="pos <= review.rating ? 1 : 0"
-                          >
+                          <span class="star star--sm" [style.--fill]="pos <= review.rating ? 1 : 0">
                             <svg class="star__track" viewBox="0 0 20 20" aria-hidden="true">
                               <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.6 7.7l5.8-.8z" />
                             </svg>
@@ -687,9 +958,7 @@
               </ul>
 
               <!-- Paginated "see all reviews", pages the rest in from
-                   GET /products/:productId/reviews (approved-only). Shown
-                   only when the server has more approved reviews than the
-                   embedded first render. -->
+                   GET /products/:productId/reviews (approved-only). -->
               @if (reviewsError()) {
                 <p class="pdp-reviews__status pdp-reviews__status--error" role="alert" data-testid="pdp-reviews-error">
                   {{ 'product.reviews.loadError' | translate }}
@@ -707,191 +976,191 @@
                   </ui-button>
                 </div>
               }
-              } @else {
-                <div class="pdp-reviews__empty" data-testid="pdp-reviews-empty">
-                  <svg class="pdp-reviews__empty-icon" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                  </svg>
-                  <p class="pdp-reviews__empty-title">{{ 'product.reviews.emptyTitle' | translate }}</p>
-                  <p class="pdp-reviews__empty-hint">{{ 'product.reviews.emptyHint' | translate }}</p>
-                </div>
-              }
+            } @else {
+              <div class="pdp-reviews__empty" data-testid="pdp-reviews-empty">
+                <svg class="pdp-reviews__empty-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <p class="pdp-reviews__empty-title">{{ 'product.reviews.emptyTitle' | translate }}</p>
+                <p class="pdp-reviews__empty-hint">{{ 'product.reviews.emptyHint' | translate }}</p>
+              </div>
+            }
 
-              <!-- ===== Write a review (auth-gated) =================== -->
-              <div class="pdp-write-review" data-testid="pdp-write-review">
-                @if (reviewSubmitted()) {
-                  <!-- Submitted → moderation confirmation. -->
-                  <div class="pdp-write-review__done" role="status" data-testid="pdp-review-submitted">
-                    <svg class="pdp-write-review__done-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <circle cx="12" cy="12" r="9"/>
-                      <path d="M8.5 12.5l2.4 2.4 4.6-4.8"/>
-                    </svg>
-                    <p class="pdp-write-review__done-title">{{ 'product.reviews.form.thanksTitle' | translate }}</p>
-                    <p class="pdp-write-review__done-note">{{ 'product.reviews.form.pendingNote' | translate }}</p>
-                  </div>
-                } @else if (!isAuthenticated()) {
-                  <!-- Guest → sign-in prompt. -->
-                  <p class="pdp-write-review__signin" data-testid="pdp-review-signin">
-                    {{ 'product.reviews.form.signInPrompt' | translate }}
-                    <a routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl() }">{{ 'product.reviews.form.signInLink' | translate }}</a>
-                  </p>
-                } @else if (!reviewFormOpen()) {
-                  <!-- Signed-in, collapsed → call to action. -->
-                  <div class="pdp-write-review__cta">
-                    <ui-button variant="secondary" size="md" (clicked)="openReviewForm()">
-                      {{ 'product.reviews.form.writeCta' | translate }}
+            <!-- ===== Write a review (auth-gated) =================== -->
+            <div class="pdp-write-review" data-testid="pdp-write-review">
+              @if (reviewSubmitted()) {
+                <div class="pdp-write-review__done" role="status" data-testid="pdp-review-submitted">
+                  <svg class="pdp-write-review__done-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M8.5 12.5l2.4 2.4 4.6-4.8"/>
+                  </svg>
+                  <p class="pdp-write-review__done-title">{{ 'product.reviews.form.thanksTitle' | translate }}</p>
+                  <p class="pdp-write-review__done-note">{{ 'product.reviews.form.pendingNote' | translate }}</p>
+                </div>
+              } @else if (!isAuthenticated()) {
+                <p class="pdp-write-review__signin" data-testid="pdp-review-signin">
+                  {{ 'product.reviews.form.signInPrompt' | translate }}
+                  <a routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl() }">{{ 'product.reviews.form.signInLink' | translate }}</a>
+                </p>
+              } @else if (!reviewFormOpen()) {
+                <div class="pdp-write-review__cta">
+                  <ui-button variant="secondary" size="md" (clicked)="openReviewForm()">
+                    {{ 'product.reviews.form.writeCta' | translate }}
+                  </ui-button>
+                </div>
+              } @else {
+                <form class="pdp-review-form" (submit)="$event.preventDefault(); submitReview()">
+                  <h3 class="pdp-review-form__heading">{{ 'product.reviews.form.heading' | translate }}</h3>
+
+                  <fieldset class="pdp-review-form__rating">
+                    <legend>{{ 'product.reviews.form.ratingLabel' | translate }}</legend>
+                    <div
+                      class="pdp-review-form__stars"
+                      role="radiogroup"
+                      [attr.aria-label]="'product.reviews.form.ratingLabel' | translate"
+                      (mouseleave)="hoverReviewStar(0)"
+                    >
+                      @for (pos of starPositions; track pos) {
+                        <button
+                          type="button"
+                          class="pdp-review-form__star"
+                          [class.is-active]="reviewFormStarActive(pos)"
+                          role="radio"
+                          [attr.aria-checked]="reviewStar() === pos"
+                          [attr.aria-label]="'product.reviews.form.starAria' | translate:{ n: pos }"
+                          (click)="setReviewStar(pos)"
+                          (mouseenter)="hoverReviewStar(pos)"
+                          (focus)="hoverReviewStar(pos)"
+                          (blur)="hoverReviewStar(0)"
+                        >
+                          <svg viewBox="0 0 20 20" width="28" height="28" aria-hidden="true">
+                            <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.6 7.7l5.8-.8z" fill="currentColor"/>
+                          </svg>
+                        </button>
+                      }
+                    </div>
+                  </fieldset>
+
+                  <label class="pdp-review-form__field">
+                    <span class="pdp-review-form__label">{{ 'product.reviews.form.titleLabel' | translate }}</span>
+                    <input
+                      type="text"
+                      class="pdp-field"
+                      maxlength="120"
+                      [value]="reviewTitle()"
+                      (input)="onReviewTitleInput($event)"
+                      [attr.placeholder]="'product.reviews.form.titlePlaceholder' | translate"
+                    />
+                  </label>
+
+                  <label class="pdp-review-form__field">
+                    <span class="pdp-review-form__label">{{ 'product.reviews.form.commentLabel' | translate }}</span>
+                    <textarea
+                      class="pdp-field pdp-review-form__textarea"
+                      rows="4"
+                      maxlength="2000"
+                      [value]="reviewComment()"
+                      (input)="onReviewCommentInput($event)"
+                      [attr.placeholder]="'product.reviews.form.commentPlaceholder' | translate"
+                    ></textarea>
+                  </label>
+
+                  @if (reviewFormError(); as err) {
+                    <p class="pdp-review-form__error" role="alert" data-testid="pdp-review-error">{{ err | translate }}</p>
+                  }
+
+                  <div class="pdp-review-form__actions">
+                    <ui-button
+                      variant="primary"
+                      size="md"
+                      [disabled]="reviewSubmitting()"
+                      (clicked)="submitReview()"
+                    >
+                      {{ reviewSubmitting() ? ('product.reviews.form.submitting' | translate) : ('product.reviews.form.submit' | translate) }}
                     </ui-button>
                   </div>
-                } @else {
-                  <!-- Signed-in, open → the form. -->
-                  <form class="pdp-review-form" (submit)="$event.preventDefault(); submitReview()">
-                    <h3 class="pdp-review-form__heading">{{ 'product.reviews.form.heading' | translate }}</h3>
-
-                    <!-- Star rating (required). -->
-                    <fieldset class="pdp-review-form__rating">
-                      <legend>{{ 'product.reviews.form.ratingLabel' | translate }}</legend>
-                      <div
-                        class="pdp-review-form__stars"
-                        role="radiogroup"
-                        [attr.aria-label]="'product.reviews.form.ratingLabel' | translate"
-                        (mouseleave)="hoverReviewStar(0)"
-                      >
-                        @for (pos of starPositions; track pos) {
-                          <button
-                            type="button"
-                            class="pdp-review-form__star"
-                            [class.is-active]="reviewFormStarActive(pos)"
-                            role="radio"
-                            [attr.aria-checked]="reviewStar() === pos"
-                            [attr.aria-label]="'product.reviews.form.starAria' | translate:{ n: pos }"
-                            (click)="setReviewStar(pos)"
-                            (mouseenter)="hoverReviewStar(pos)"
-                            (focus)="hoverReviewStar(pos)"
-                            (blur)="hoverReviewStar(0)"
-                          >
-                            <svg viewBox="0 0 20 20" width="28" height="28" aria-hidden="true">
-                              <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.6 7.7l5.8-.8z" fill="currentColor"/>
-                            </svg>
-                          </button>
-                        }
-                      </div>
-                    </fieldset>
-
-                    <!-- Optional title. -->
-                    <label class="pdp-review-form__field">
-                      <span class="pdp-review-form__label">{{ 'product.reviews.form.titleLabel' | translate }}</span>
-                      <input
-                        type="text"
-                        class="pdp-review-form__input"
-                        maxlength="120"
-                        [value]="reviewTitle()"
-                        (input)="onReviewTitleInput($event)"
-                        [attr.placeholder]="'product.reviews.form.titlePlaceholder' | translate"
-                      />
-                    </label>
-
-                    <!-- Comment. -->
-                    <label class="pdp-review-form__field">
-                      <span class="pdp-review-form__label">{{ 'product.reviews.form.commentLabel' | translate }}</span>
-                      <textarea
-                        class="pdp-review-form__textarea"
-                        rows="4"
-                        maxlength="2000"
-                        [value]="reviewComment()"
-                        (input)="onReviewCommentInput($event)"
-                        [attr.placeholder]="'product.reviews.form.commentPlaceholder' | translate"
-                      ></textarea>
-                    </label>
-
-                    @if (reviewFormError(); as err) {
-                      <p class="pdp-review-form__error" role="alert" data-testid="pdp-review-error">{{ err | translate }}</p>
-                    }
-
-                    <div class="pdp-review-form__actions">
-                      <ui-button
-                        variant="primary"
-                        size="md"
-                        [disabled]="reviewSubmitting()"
-                        (clicked)="submitReview()"
-                      >
-                        {{ reviewSubmitting() ? ('product.reviews.form.submitting' | translate) : ('product.reviews.form.submit' | translate) }}
-                      </ui-button>
-                    </div>
-                  </form>
-                }
-              </div>
+                </form>
+              }
             </div>
-          }
+          </div>
+        } @placeholder {
+          <div class="pdp-reviews__placeholder" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+        }
+      </section>
 
-          @if (effectiveContentTab() === 'details' && hasDetailsContent()) {
-            <div id="pdp-panel-details" role="tabpanel" aria-labelledby="pdp-tab-details" class="pdp-tabpanel pdp-details">
-                <dl class="pdp-detail-list">
-                  @if (p.fabric) {
-                    <dt>{{ 'product.detailFabric' | translate }}</dt>
-                    <dd>{{ p.fabric }}</dd>
-                  }
-                  @if (p.materials && p.materials.length > 0) {
-                    <dt>{{ 'product.detailMaterials' | translate }}</dt>
-                    <dd>{{ p.materials.join(', ') }}</dd>
-                  }
-                  @if (p.care_instructions) {
-                    <dt>{{ 'product.detailCare' | translate }}</dt>
-                    <dd>{{ p.care_instructions }}</dd>
-                  }
-                </dl>
-            </div>
-          }
-      </div>
-
-      <!-- Related products, "You may also like".
-           Prefers the X.12 recommendations engine (co-purchase /
-           category / popular), loaded client-side via
-           relatedProducts(); falls back to the product's own
-           related_products from the single PDP fetch when the engine
-           returns nothing. Rendered as a wrapping 5×2 grid of the shared
-           ui-product-card (capped at 10; 2 per row on mobile). Silently
+      <!-- "You may also like": engine recommendations (falls back to the
+           product's related_products), one horizontally scrollable row of
+           the shared ui-product-card. Deferred until near the viewport;
            omitted when there's nothing to show. -->
       @if (relatedProducts().length > 0) {
-        <section class="pdp-related" [attr.aria-label]="'product.relatedHeading' | translate">
-          <h2 class="pdp-related__heading">{{ 'product.relatedHeading' | translate }}</h2>
-          <div class="pdp-related__grid">
-            @for (rp of relatedProducts(); track rp.id) {
-              <ui-product-card [product]="rp" />
-            }
+        <section class="pdp-section pdp-related" aria-labelledby="pdp-related-heading" data-testid="pdp-related">
+          <div class="pdp-section__head">
+            <h2 id="pdp-related-heading" class="pdp-section__title pdp-related__heading">{{ 'product.relatedHeading' | translate }}</h2>
           </div>
+          @defer (on viewport; prefetch on idle) {
+            <div class="pdp-rail-wrap">
+              <ul
+                appScrollRail
+                #relRail="scrollRail"
+                id="pdp-related-rail"
+                class="pdp-rail pdp-related__rail"
+                role="list"
+              >
+                @for (rp of relatedProducts(); track rp.id) {
+                  <li class="pdp-related__item" data-rail-item>
+                    <ui-product-card [product]="rp" />
+                  </li>
+                }
+              </ul>
+              @if (relRail.overflowing()) {
+                <button
+                  type="button"
+                  class="pdp-rail-btn pdp-rail-btn--overlay pdp-rail-btn--prev"
+                  (click)="relRail.scroll(-1)"
+                  [disabled]="relRail.atStart()"
+                  aria-controls="pdp-related-rail"
+                  [attr.aria-label]="'product.rail.prev' | translate"
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+                </button>
+                <button
+                  type="button"
+                  class="pdp-rail-btn pdp-rail-btn--overlay pdp-rail-btn--next"
+                  (click)="relRail.scroll(1)"
+                  [disabled]="relRail.atEnd()"
+                  aria-controls="pdp-related-rail"
+                  [attr.aria-label]="'product.rail.next' | translate"
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+                </button>
+              }
+            </div>
+          } @placeholder {
+            <div class="pdp-related__placeholder" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+          }
         </section>
       }
 
-      <!-- Ain "Complete the look": real, in-stock complements from other
-           categories. Silently omitted when there are none. -->
-      @if (completeTheLookItems().length > 0) {
-        <section class="pdp-ctl" [attr.aria-label]="'product.completeTheLookHeading' | translate">
-          <div class="pdp-ctl__head">
-            <h2 class="pdp-ctl__heading">{{ 'product.completeTheLookHeading' | translate }}</h2>
-            <button type="button" class="pdp-ctl__add" [disabled]="addingLook()" (click)="addTheLook()">
-              {{ (addingLook() ? 'product.addingTheLook' : 'product.addTheLook') | translate }}
-            </button>
-          </div>
-          <div class="pdp-ctl__grid">
-            @for (item of completeTheLookItems(); track item.id) {
-              <div class="pdp-ctl__cell" (click)="onComplementClick(item)">
-                <ui-product-card [product]="item" />
-              </div>
-            }
-          </div>
-        </section>
-      }
-
-      <!-- End-of-content sentinel: when this scrolls into view the mobile
-           sticky bar hides so it never overlaps the footer (see component). -->
+      <!-- End-of-content sentinel: when this scrolls into view the sticky
+           bottom bar hides so it never overlaps the footer. -->
       <div #ctaSentinel class="pdp-cta-sentinel" aria-hidden="true"></div>
 
-      <!-- Mobile sticky add-to-cart, fixed to the viewport bottom on small
-           screens so the price + primary action stay reachable while
-           scrolling; hidden on desktop, where the in-page buy box suffices.
-           Mirrors the main buy box's enabled/disabled logic. -->
+      <!-- Sticky bottom bar (single-column layouts): price + Add to cart,
+           shown only once the main buy box has scrolled out of view. Runs
+           the same addToCart() (incl. the required-selection reveal). -->
       @if (p.in_stock) {
-        <div class="pdp-sticky-cta" [class.is-hidden]="stickyCtaHidden()" role="region" [attr.aria-label]="'product.addToCart' | translate">
+        <div
+          class="pdp-sticky-cta"
+          [class.is-visible]="stickyCtaVisible()"
+          [attr.inert]="stickyCtaVisible() ? null : ''"
+          role="region"
+          [attr.aria-label]="'product.addToCart' | translate"
+          data-testid="pdp-sticky-cta"
+        >
           <span class="pdp-sticky-cta__price">
             @if (isOnSale() && p.sale_price) {
               <span class="pdp-sticky-cta__now">{{ formatMoney(p.sale_price) }}</span>
@@ -903,9 +1172,10 @@
             }
           </span>
           <ui-button
+            class="pdp-sticky-cta__btn"
             variant="primary"
             size="md"
-            [disabled]="!canAddToCart()"
+            [disabled]="adding()"
             (clicked)="addToCart()"
           >
             {{ adding() ? ('product.adding' | translate) : ('product.addToCart' | translate) }}

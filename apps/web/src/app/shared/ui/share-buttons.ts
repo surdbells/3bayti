@@ -36,7 +36,7 @@ import { TranslatePipe } from '@ngx-translate/core';
   imports: [TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="share">
+    <div class="share" [class.share--compact]="compact">
       <span class="share__label">{{ 'ui.share.label' | translate }}</span>
 
       <a
@@ -223,6 +223,21 @@ import { TranslatePipe } from '@ngx-translate/core';
         color: #16a34a;
         min-width: 0;
       }
+      /* Compact density (PDP info column): smaller round buttons. */
+      .share--compact {
+        gap: 6px;
+      }
+      .share--compact .share__label {
+        font-size: 12px;
+      }
+      .share--compact .share__btn {
+        width: 32px;
+        height: 32px;
+      }
+      .share--compact .share__btn svg {
+        width: 15px;
+        height: 15px;
+      }
     `,
   ],
 })
@@ -231,6 +246,8 @@ export class ShareButtonsComponent implements OnDestroy {
   @Input({ required: true }) url!: string;
   /** Share text / title, usually the product name. */
   @Input() title = '';
+  /** Compact density: 32px buttons instead of 40px. */
+  @Input() compact = false;
 
   private readonly platformId = inject(PLATFORM_ID);
   /** Transient "copied" confirmation state. */

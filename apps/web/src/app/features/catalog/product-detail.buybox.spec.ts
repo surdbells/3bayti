@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
@@ -48,6 +48,15 @@ function makeProduct(overrides: Partial<ProductDetail> = {}): ProductDetail {
   } as ProductDetail;
 }
 
+/** jsdom has no IntersectionObserver; the PDP's @defer (on viewport) blocks
+ *  and sticky-bar observers need one. This inert stub never reports. */
+class InertIntersectionObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+  takeRecords(): IntersectionObserverEntry[] { return []; }
+}
+
 let addItemMock: ReturnType<typeof vi.fn>;
 let openDrawerMock: ReturnType<typeof vi.fn>;
 
@@ -56,14 +65,15 @@ interface SetupOpts {
   savedMeasurement?: Record<string, number> | null;
 }
 
-function setup(
+async function setup(
   product: ProductDetail = makeProduct(),
   opts: SetupOpts = {},
-): ComponentFixture<ProductDetailComponent> {
+): Promise<ComponentFixture<ProductDetailComponent>> {
   addItemMock = vi.fn(() => Promise.resolve({}));
   openDrawerMock = vi.fn();
 
   TestBed.configureTestingModule({
+    imports: [ProductDetailComponent],
     providers: [
       provideRouter([]),
       provideHttpClient(),
@@ -88,6 +98,7 @@ function setup(
     ],
   });
 
+  await TestBed.compileComponents();
   const fixture = TestBed.createComponent(ProductDetailComponent);
   fixture.detectChanges();
   return fixture;
@@ -96,30 +107,35 @@ function setup(
 describe('ProductDetail buy box', () => {
   beforeEach(() => {
     TestBed.resetTestingModule();
+    vi.stubGlobal('IntersectionObserver', InertIntersectionObserver);
   });
 
-  it('loads the product through the route pipeline', () => {
-    const c = setup().componentInstance;
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('loads the product through the route pipeline', async () => {
+    const c = (await setup()).componentInstance;
     expect(c.product()?.id).toBe(100);
   });
 
   describe('variant selection', () => {
-    it('selects an in-stock size and toggles it off on reselect', () => {
-      const c = setup().componentInstance;
+    it('selects an in-stock size and toggles it off on reselect', async () => {
+      const c = (await setup()).componentInstance;
       c.selectSize({ label: 'M', in_stock: true });
       expect(c.selectedSize()).toBe('M');
       c.selectSize({ label: 'M', in_stock: true });
       expect(c.selectedSize()).toBeNull();
     });
 
-    it('ignores an out-of-stock size', () => {
-      const c = setup().componentInstance;
+    it('ignores an out-of-stock size', async () => {
+      const c = (await setup()).componentInstance;
       c.selectSize({ label: 'L', in_stock: false });
       expect(c.selectedSize()).toBeNull();
     });
 
-    it('selects an in-stock colour and ignores an out-of-stock one', () => {
-      const c = setup().componentInstance;
+    it('selects an in-stock colour and ignores an out-of-stock one', async () => {
+      const c = (await setup()).componentInstance;
       c.selectColor({ label: 'Black', in_stock: true });
       expect(c.selectedColor()).toBe('Black');
       c.selectColor({ label: 'Red', in_stock: false });
@@ -128,8 +144,8 @@ describe('ProductDetail buy box', () => {
   });
 
   describe('quantity stepper', () => {
-    it('clamps between 1 and 99', () => {
-      const c = setup().componentInstance;
+    it('clamps between 1 and 99', async () => {
+      const c = (await setup()).componentInstance;
       expect(c.quantity()).toBe(1);
       c.decrementQuantity();
       expect(c.quantity()).toBe(1); // floor
@@ -141,8 +157,8 @@ describe('ProductDetail buy box', () => {
   });
 
   describe('selectionValid + canAddToCart', () => {
-    it('requires an in-stock selection on every present axis', () => {
-      const c = setup().componentInstance;
+    it('requires an in-stock selection on every present axis', async () => {
+      const c = (await setup()).componentInstance;
       expect(c.selectionValid()).toBe(false);
       c.selectSize({ label: 'M', in_stock: true });
       expect(c.selectionValid()).toBe(false); // colour still unselected
@@ -151,28 +167,28 @@ describe('ProductDetail buy box', () => {
       expect(c.canAddToCart()).toBe(true);
     });
 
-    it('rejects a stale selection not present in the current product', () => {
-      const c = setup().componentInstance;
+    it('rejects a stale selection not present in the current product', async () => {
+      const c = (await setup()).componentInstance;
       c.selectedSize.set('XXL'); // not an option on this product
       c.selectColor({ label: 'Black', in_stock: true });
       expect(c.selectionValid()).toBe(false);
     });
 
-    it('is valid with no variant axes (simple product)', () => {
-      const c = setup(makeProduct({ sizes: [], colors: [] })).componentInstance;
+    it('is valid with no variant axes (simple product)', async () => {
+      const c = (await setup(makeProduct({ sizes: [], colors: [] }))).componentInstance;
       expect(c.selectionValid()).toBe(true);
       expect(c.canAddToCart()).toBe(true);
     });
 
-    it('cannot add when the product is out of stock', () => {
-      const c = setup(makeProduct({ in_stock: false, sizes: [], colors: [] })).componentInstance;
+    it('cannot add when the product is out of stock', async () => {
+      const c = (await setup(makeProduct({ in_stock: false, sizes: [], colors: [] }))).componentInstance;
       expect(c.canAddToCart()).toBe(false);
     });
   });
 
   describe('addToCart', () => {
     it('sends the exact cart payload and opens the drawer on success', async () => {
-      const c = setup().componentInstance;
+      const c = (await setup()).componentInstance;
       c.selectSize({ label: 'M', in_stock: true });
       c.selectColor({ label: 'Black', in_stock: true });
       c.incrementQuantity(); // 2
@@ -193,7 +209,7 @@ describe('ProductDetail buy box', () => {
     });
 
     it('sends null variant axes for a simple product', async () => {
-      const c = setup(makeProduct({ sizes: [], colors: [] })).componentInstance;
+      const c = (await setup(makeProduct({ sizes: [], colors: [] }))).componentInstance;
       await c.addToCart();
       expect(addItemMock).toHaveBeenCalledWith({
         product_id: 100,
@@ -208,7 +224,7 @@ describe('ProductDetail buy box', () => {
     });
 
     it('surfaces an error and does not open the drawer on failure', async () => {
-      const c = setup().componentInstance;
+      const c = (await setup()).componentInstance;
       addItemMock.mockRejectedValueOnce(new Error('network'));
       c.selectSize({ label: 'M', in_stock: true });
       c.selectColor({ label: 'Black', in_stock: true });
@@ -218,14 +234,19 @@ describe('ProductDetail buy box', () => {
       expect(c.adding()).toBe(false);
     });
 
-    it('does nothing when the selection is invalid', async () => {
-      const c = setup().componentInstance;
+    it('sends nothing when the selection is invalid (it reveals the missing-option hints instead)', async () => {
+      const c = (await setup()).componentInstance;
+      expect(c.attemptedAdd()).toBe(false);
       await c.addToCart(); // nothing selected
       expect(addItemMock).not.toHaveBeenCalled();
+      expect(openDrawerMock).not.toHaveBeenCalled();
+      expect(c.attemptedAdd()).toBe(true);
+      expect(c.showSizeHint()).toBe(true);
+      expect(c.showColorHint()).toBe(true);
     });
 
     it('reflects an in-flight state while the request is pending', async () => {
-      const c = setup().componentInstance;
+      const c = (await setup()).componentInstance;
       let resolveAdd!: (v: unknown) => void;
       addItemMock.mockReturnValueOnce(new Promise((res) => (resolveAdd = res)));
       c.selectSize({ label: 'M', in_stock: true });
@@ -240,8 +261,8 @@ describe('ProductDetail buy box', () => {
   });
 
   describe('extra measurement', () => {
-    it('blocks add-to-cart until the extra measurement is entered', () => {
-      const c = setup(makeProduct({ requires_measurement: true, sizes: [], colors: [] })).componentInstance;
+    it('blocks add-to-cart until the extra measurement is entered', async () => {
+      const c = (await setup(makeProduct({ requires_measurement: true, sizes: [], colors: [] }))).componentInstance;
       expect(c.requiresExtraMeasurement()).toBe(true);
       expect(c.selectionValid()).toBe(false);
       expect(c.canAddToCart()).toBe(false);
@@ -251,14 +272,14 @@ describe('ProductDetail buy box', () => {
       expect(c.canAddToCart()).toBe(true);
     });
 
-    it('treats a whitespace-only extra measurement as empty', () => {
-      const c = setup(makeProduct({ requires_measurement: true, sizes: [], colors: [] })).componentInstance;
+    it('treats a whitespace-only extra measurement as empty', async () => {
+      const c = (await setup(makeProduct({ requires_measurement: true, sizes: [], colors: [] }))).componentInstance;
       c.extraMeasurement.set('   ');
       expect(c.selectionValid()).toBe(false);
     });
 
     it('sends the trimmed extra_measurement on add-to-cart', async () => {
-      const c = setup(makeProduct({ requires_measurement: true, sizes: [], colors: [] })).componentInstance;
+      const c = (await setup(makeProduct({ requires_measurement: true, sizes: [], colors: [] }))).componentInstance;
       c.extraMeasurement.set('  Length 56 inches  ');
       await c.addToCart();
       expect(addItemMock).toHaveBeenCalledWith({
@@ -284,8 +305,8 @@ describe('ProductDetail buy box', () => {
       }
     }
 
-    it('blocks add-to-cart and shows a sign-in prompt when not signed in', () => {
-      const fix = setup(customProduct(), { authenticated: false });
+    it('blocks add-to-cart and shows a sign-in prompt when not signed in', async () => {
+      const fix = await setup(customProduct(), { authenticated: false });
       const c = fix.componentInstance;
       c.selectSize({ label: 'CUSTOM', in_stock: true });
       fix.detectChanges();
@@ -296,8 +317,8 @@ describe('ProductDetail buy box', () => {
       ).not.toBeNull();
     });
 
-    it('requires a complete measurement before add-to-cart when signed in', () => {
-      const c = setup(customProduct(), { authenticated: true }).componentInstance;
+    it('requires a complete measurement before add-to-cart when signed in', async () => {
+      const c = (await setup(customProduct(), { authenticated: true })).componentInstance;
       c.selectSize({ label: 'CUSTOM', in_stock: true });
       expect(c.canAddToCart()).toBe(false);
       fillMeasurements(c);
@@ -306,7 +327,7 @@ describe('ProductDetail buy box', () => {
     });
 
     it('snapshots is_custom + the measurement JSON on add-to-cart', async () => {
-      const c = setup(customProduct(), { authenticated: true }).componentInstance;
+      const c = (await setup(customProduct(), { authenticated: true })).componentInstance;
       c.selectSize({ label: 'CUSTOM', in_stock: true });
       fillMeasurements(c);
       await c.addToCart();
@@ -320,7 +341,7 @@ describe('ProductDetail buy box', () => {
     });
 
     it('prefills the form from the saved account default', async () => {
-      const fix = setup(customProduct(), {
+      const fix = await setup(customProduct(), {
         authenticated: true,
         savedMeasurement: { bust_chest: 92, waist: 74, hips: 96, shoulder: 38, sleeve_length: 58, height: 165 },
       });
@@ -335,8 +356,8 @@ describe('ProductDetail buy box', () => {
   });
 
   describe('size-optional categories', () => {
-    it('does not require a size (even with CUSTOM available) for an exempt category', () => {
-      const c = setup(
+    it('does not require a size (even with CUSTOM available) for an exempt category', async () => {
+      const c = (await setup(
         makeProduct({
           category_slug: 'kaftans-3',
           sizes: [
@@ -346,21 +367,21 @@ describe('ProductDetail buy box', () => {
           colors: [],
         }),
         { authenticated: false },
-      ).componentInstance;
+      )).componentInstance;
       expect(c.isSizeOptional()).toBe(true);
       // No size selected, not signed in, still addable.
       expect(c.canAddToCart()).toBe(true);
     });
 
-    it('allows CUSTOM in an exempt category without measurements or sign-in', () => {
-      const c = setup(
+    it('allows CUSTOM in an exempt category without measurements or sign-in', async () => {
+      const c = (await setup(
         makeProduct({
           category_slug: 'bags-2',
           sizes: [{ label: 'CUSTOM', in_stock: true }],
           colors: [],
         }),
         { authenticated: false },
-      ).componentInstance;
+      )).componentInstance;
       c.selectSize({ label: 'CUSTOM', in_stock: true });
       expect(c.isCustomSize()).toBe(true);
       expect(c.isSizeOptional()).toBe(true);

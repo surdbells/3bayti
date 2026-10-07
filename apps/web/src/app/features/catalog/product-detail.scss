@@ -1,95 +1,194 @@
 /* PDP page, `/product/:slug`.
 
-   Two-column layout on desktop (gallery left, info right).
-   Single column stacked on mobile (gallery first, info below). */
+   Compact / modern layout:
+   - < 768px    single column, full-bleed swipeable gallery (dots + count),
+                sticky bottom bar once the buy box scrolls away.
+   - 768-1023px single column, centred gallery with a thumbnail rail.
+   - >= 1024px  gallery | info. The gallery stage is height-capped to the
+                viewport below the header (sized from its constant RESTING
+                height, --pdp-header-rest, so the columns never reflow as the
+                header condenses on scroll) and both columns are sticky
+                (offset by the MEASURED header, --pdp-header-h), so the
+                shorter one stays in view while the other scrolls.
+   Logical properties throughout (RTL-safe); colours, spacing, radii and
+   motion come from the global tokens in styles.scss. */
 
 .pdp-page {
-  padding-block: 32px 96px;
+  /* Resting (tallest, un-condensed) desktop site-header height. Layout sizes
+     derive from this constant; only offsets use the measured height. */
+  --pdp-header-rest: 112px;
+  /* Sticky offset: the measured site header (fallback: its resting height). */
+  --pdp-sticky-top: calc(var(--pdp-header-h, var(--pdp-header-rest)) + var(--space-md));
+  padding-block: var(--space-sm) var(--space-2xl);
 }
 
-/* ----- Breadcrumb (visual) ------------------------------------------- */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ----- Breadcrumb (one line, the product name truncates) ------------- */
 
 .pdp-breadcrumb {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--color-text-tertiary);
+  gap: 6px;
+  min-width: 0;
+  margin-block-end: var(--space-sm);
+  font-size: 12.5px;
   letter-spacing: 0.01em;
-  flex-wrap: wrap;
-  margin-bottom: 32px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.crumb-link,
+.crumb-sep {
+  flex: 0 0 auto;
+}
+
+/* The "›" separator points the reading direction in RTL too. */
+:host-context([dir='rtl']) .crumb-sep {
+  display: inline-block;
+  transform: scaleX(-1);
 }
 
 .crumb-link {
   color: var(--color-text-secondary);
   text-decoration: none;
-  transition: color 0.15s ease;
+  transition: color var(--duration-fast) ease;
 }
 
 .crumb-link:hover,
 .crumb-link:focus-visible {
   color: var(--color-brand-700);
-  outline: none;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.crumb-sep {
-  color: var(--color-text-tertiary);
-  font-size: 14px;
+.crumb-link:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .crumb-current {
-  color: var(--color-text-primary);
-  font-weight: 500;
-  /* Truncate ridiculously long product names */
-  max-width: 240px;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--color-text-primary);
+  font-weight: 500;
 }
 
-/* ----- Two-column grid ------------------------------------------------ */
+/* ----- Grid ------------------------------------------------------------ */
 
 .pdp-grid {
   display: grid;
-  gap: 48px;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-lg);
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .pdp-grid {
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-    gap: 64px;
+    /* Stage width that keeps the 3:4 image inside the viewport height.
+       Deliberately NOT derived from the measured --pdp-header-h: the header
+       condenses once the page scrolls, and a width that tracked it would
+       reflow both columns (a layout shift) on the first scroll. */
+    --pdp-stage-w: max(340px, calc((100vh - var(--pdp-header-rest) - 48px) * 3 / 4));
+    grid-template-columns:
+      minmax(0, min(58%, calc(var(--pdp-stage-w) + 72px)))
+      minmax(0, 1fr);
+    gap: clamp(32px, 4vw, 56px);
     align-items: start;
+  }
+
+  .pdp-gallery,
+  .pdp-info {
+    position: sticky;
+    top: var(--pdp-sticky-top);
+  }
+
+  .pdp-info {
+    max-width: 620px;
   }
 }
 
-/* ----- Gallery ------------------------------------------------------- */
+/* ----- Gallery --------------------------------------------------------- */
 
 .pdp-gallery {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  min-width: 0;
 }
 
-.pdp-main-image {
+.pdp-stage {
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
   aspect-ratio: 3 / 4;
-  background: var(--color-bg-muted);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 14px;
   overflow: hidden;
-  /* Float like the gilded product cards so the hero image reads as part
-     of the same family (same soft, tinted-brown resting shadow). */
-  box-shadow: var(--shadow-card-resting);
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-md);
 }
 
-.pdp-main-image img {
+/* Mobile: edge-to-edge (cancels the container gutter). */
+@media (max-width: 767.98px) {
+  .pdp-stage {
+    margin-inline: calc(-1 * var(--page-padding-x, 20px));
+    border-radius: 0;
+  }
+}
+
+.pdp-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.pdp-track::-webkit-scrollbar {
+  display: none;
+}
+
+.pdp-slide {
+  flex: 0 0 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.pdp-slide__btn {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.pdp-slide__btn img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
+}
+
+.pdp-slide__btn:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: -4px;
 }
 
 .pdp-fallback {
@@ -105,26 +204,26 @@
   font-weight: 600;
 }
 
-/* Status pills on PDP main image */
+/* Status pills (top inline-start of the stage) */
 .pdp-pills {
   position: absolute;
-  top: 16px;
-  inset-inline-start: 16px;
+  inset-block-start: var(--space-sm);
+  inset-inline-start: var(--space-sm);
   display: flex;
   flex-direction: column;
-  gap: 8px;
   align-items: flex-start;
+  gap: 6px;
+  pointer-events: none;
 }
 
 .pill {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-floating);
 }
 
 .pill-new {
@@ -134,364 +233,702 @@
 
 .pill-bestseller {
   background: var(--color-brand-500);
-  color: white;
+  color: var(--color-text-inverse);
 }
 
 .pill-sale {
-  background: #b91c1c;
-  color: white;
+  background: var(--color-sale);
+  color: var(--color-text-inverse);
 }
 
-/* ----- Thumbnails ----------------------------------------------------- */
+/* Zoom hint (pointer devices, on hover / keyboard focus) */
+.pdp-stage__zoom {
+  position: absolute;
+  inset-block-start: var(--space-sm);
+  inset-inline-end: var(--space-sm);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-bg-surface) 92%, transparent);
+  color: var(--color-brand-700);
+  box-shadow: var(--shadow-floating);
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-out);
+  pointer-events: none;
+}
 
+/* Prev / next arrows (pointer devices; touch swipes) */
+.pdp-stage__nav {
+  position: absolute;
+  inset-block-start: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin-block-start: -19px;
+  padding: 0;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-bg-surface) 94%, transparent);
+  color: var(--color-brand-700);
+  box-shadow: var(--shadow-floating);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-out), background var(--duration-fast) ease;
+}
+
+.pdp-stage__nav--prev { inset-inline-start: var(--space-sm); }
+.pdp-stage__nav--next { inset-inline-end: var(--space-sm); }
+
+.pdp-stage__nav:hover:not(:disabled) {
+  background: var(--color-bg-surface);
+}
+
+.pdp-stage__nav:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.pdp-stage__nav:disabled {
+  cursor: default;
+  visibility: hidden;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pdp-stage__zoom,
+  .pdp-stage__nav {
+    display: inline-flex;
+  }
+
+  .pdp-stage:hover .pdp-stage__zoom,
+  .pdp-stage:hover .pdp-stage__nav,
+  .pdp-stage:focus-within .pdp-stage__nav {
+    opacity: 1;
+  }
+}
+
+/* Position indicator (mobile): dots + "2 / 5" */
+.pdp-stage__dots {
+  position: absolute;
+  inset-block-end: var(--space-sm);
+  inset-inline: 0;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.pdp-stage__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-bg-surface) 70%, transparent);
+  box-shadow: 0 0 0 1px rgba(46, 36, 28, 0.12);
+  transition: width var(--duration-base) var(--ease-out), background var(--duration-base) ease;
+}
+
+.pdp-stage__dot.is-active {
+  width: 16px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-surface);
+}
+
+.pdp-stage__count {
+  position: absolute;
+  inset-block-end: var(--space-sm);
+  inset-inline-end: var(--space-sm);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(28, 20, 16, 0.55);
+  color: var(--color-text-inverse);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* Thumbnails: hidden on phones (dots instead), a compact rail beside the
+   stage from 768px. `order: -1` puts the rail at the inline-start, which
+   mirrors automatically in RTL. */
 .pdp-thumbnails {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .pdp-thumb {
-  appearance: none;
-  background: var(--color-bg-muted);
-  border: 2px solid transparent;
-  border-radius: 8px;
+  display: block;
+  width: 64px;
+  aspect-ratio: 3 / 4;
   padding: 0;
   overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-muted);
   cursor: pointer;
-  aspect-ratio: 3 / 4;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  opacity: 0.78;
+  transition: border-color var(--duration-fast) ease, opacity var(--duration-fast) ease;
 }
 
 .pdp-thumb img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
 }
 
-.pdp-thumb:hover {
-  transform: translateY(-1px);
-}
-
-.pdp-thumb:focus-visible {
-  outline: 2px solid var(--color-brand-700);
-  outline-offset: 2px;
+.pdp-thumb:hover,
+.pdp-thumb.is-active {
+  opacity: 1;
 }
 
 .pdp-thumb.is-active {
   border-color: var(--color-brand-700);
 }
 
-/* Desktop: thumbnails become a vertical rail on the inline-start of the
-   main image (web-uplift #10b). `order: -1` moves the rail visually ahead
-   of the main image; because the flex row follows the inline axis, RTL
-   mirrors the rail to the inline-end automatically. The rail caps its
-   height and scrolls so a long image set never out-grows the hero. */
+.pdp-thumb:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
 @media (min-width: 768px) {
   .pdp-gallery {
     flex-direction: row;
     align-items: flex-start;
-    gap: 12px;
+    gap: var(--space-xs);
   }
 
   .pdp-thumbnails {
     order: -1;
-    flex: 0 0 84px;
+    flex: 0 0 64px;
     display: flex;
     flex-direction: column;
-    grid-template-columns: none;
-    gap: 10px;
-    max-height: 600px;
+    gap: var(--space-xs);
+    max-height: min(650px, calc(var(--pdp-stage-w, 488px) * 4 / 3));
     overflow-y: auto;
-    /* Hide the scrollbar chrome: a visible thin scrollbar ate into the
-       fixed 84px rail and squeezed the thumbnails. Rail still scrolls. */
     scrollbar-width: none;
   }
 
   .pdp-thumbnails::-webkit-scrollbar {
-    width: 0;
-    height: 0;
+    display: none;
   }
 
-  .pdp-thumb {
-    flex: 0 0 auto;
-    width: 84px;
-  }
-
-  .pdp-main-image {
-    flex: 1 1 auto;
-    min-width: 0;
+  .pdp-stage__dots,
+  .pdp-stage__count {
+    display: none;
   }
 }
 
-/* ----- Info column --------------------------------------------------- */
+/* Tablet: single column, so cap + centre the gallery. */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .pdp-gallery {
+    width: 100%;
+    max-width: 560px;
+    margin-inline: auto;
+  }
+}
+
+:host-context([dir='rtl']) .pdp-stage__nav svg,
+:host-context([dir='rtl']) .pdp-rail-btn svg,
+:host-context([dir='rtl']) .pdp-store__cta svg {
+  transform: scaleX(-1);
+}
+
+/* ----- Info column ------------------------------------------------------ */
 
 .pdp-info {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding-top: 8px;
+  gap: var(--space-md);
+  min-width: 0;
 }
 
-/* Desktop: the buy box sticks alongside the gallery while it scrolls.
-   Sticks just below the sticky site header (~68px). The grid uses
-   align-items:start so this column isn't stretched to the gallery's
-   height (which would defeat sticky). */
-@media (min-width: 900px) {
-  .pdp-info {
-    position: sticky;
-    top: 88px;
-    align-self: start;
-  }
+.pdp-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
 }
 
+/* "Sold by <Store> · Visit store": one compact, clearly-a-link pill. */
 .pdp-vendor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-text-tertiary);
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }
 
-.pdp-vendor a {
-  color: var(--color-brand-700);
-  text-decoration: none;
-}
-
-/* Store link above the title: storefront glyph + name, clearly a link. */
-.pdp-vendor__link {
+.pdp-store {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border-radius: 4px;
-}
-
-.pdp-vendor__icon {
-  flex: 0 0 auto;
-  color: var(--color-brand-500);
-}
-
-.pdp-vendor a:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.pdp-vendor a:focus-visible {
-  outline: 2px solid var(--color-brand-500);
-  outline-offset: 3px;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-/* ----- "Sold by" store card (purchase area) ------------------------ */
-
-.pdp-store {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-md, 12px);
-  box-shadow: var(--shadow-card-resting);
+  min-width: 0;
+  max-width: 100%;
+  padding-block: 2px;
+  padding-inline: 2px 10px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-muted);
   color: inherit;
   text-decoration: none;
-  transition:
-    border-color var(--duration-fast, 150ms) ease,
-    box-shadow var(--duration-base, 250ms) var(--ease-out, ease-out),
-    transform var(--duration-base, 250ms) var(--ease-out, ease-out);
+  transition: border-color var(--duration-fast) ease, background var(--duration-fast) ease;
 }
 
 .pdp-store:hover {
   border-color: var(--color-brand-400);
-  box-shadow: var(--shadow-card-hover);
-  transform: translateY(-1px);
+  background: var(--color-brand-50);
 }
 
 .pdp-store:focus-visible {
   outline: 2px solid var(--color-brand-500);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
 .pdp-store__avatar {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
   display: grid;
   place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
   background: linear-gradient(135deg, var(--color-brand-100), var(--color-brand-200));
   color: var(--color-brand-700);
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 20px;
+  font-size: 12px;
   font-weight: 600;
 }
 
-.pdp-store__text {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
+/* Text colours meet WCAG AA (>= 4.5:1) on the muted pill and its hover tint. */
 .pdp-store__label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-text-tertiary);
+  flex: 0 0 auto;
+  color: var(--color-text-secondary);
 }
 
 .pdp-store__name {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--color-brand-700);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 600;
+  color: var(--color-brand-700);
+}
+
+.pdp-store__sep {
+  flex: 0 0 auto;
+  color: var(--color-text-tertiary);
 }
 
 .pdp-store__cta {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: var(--radius-pill, 999px);
-  background: var(--color-brand-700);
-  color: var(--color-text-inverse, #fff);
-  font-size: 13px;
+  gap: 3px;
   font-weight: 600;
+  color: var(--color-brand-700);
   white-space: nowrap;
-  transition: background-color var(--duration-fast, 150ms) ease;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--duration-fast) ease;
 }
 
-.pdp-store:hover .pdp-store__cta {
-  background: var(--color-brand-600);
+.pdp-store:hover .pdp-store__cta,
+.pdp-store:focus-visible .pdp-store__cta {
+  text-decoration-color: currentColor;
 }
 
-:host-context([dir='rtl']) .pdp-store__cta svg {
-  transform: scaleX(-1);
+/* Title (ui-heading lg: 22-28px Playfair) */
+.pdp-title {
+  overflow-wrap: anywhere;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .pdp-store,
-  .pdp-store:hover {
-    transform: none;
-    transition: none;
-  }
+/* Rating + stock row */
+.pdp-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }
 
-.pdp-sku {
-  margin: -8px 0 0;
-  font-size: 12px;
+.pdp-meta__sep {
   color: var(--color-text-tertiary);
-  font-variant-numeric: tabular-nums;
 }
 
-/* ----- Price --------------------------------------------------------- */
+.pdp-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 
+.pdp-rating__stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 14px;
+  line-height: 0;
+}
+
+.pdp-rating__value {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-rating__count {
+  color: var(--color-text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-border-default);
+}
+
+.pdp-rating__count:hover,
+.pdp-rating__count:focus-visible {
+  color: var(--color-brand-700);
+  text-decoration-color: currentColor;
+}
+
+.pdp-rating__count:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Star primitive (aggregate + per-review). Two stacked SVG stars: a muted
+   track and a brand-coloured fill clipped by --fill (0-1), so fractional
+   ratings (4.6) render without half-star icons. Sized by font-size. */
+.star {
+  --fill: 0;
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+}
+
+.star__track,
+.star__fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.star__track {
+  fill: var(--color-border-default);
+}
+
+.star__fill {
+  fill: var(--color-brand-500);
+  clip-path: inset(0 calc((1 - var(--fill)) * 100%) 0 0);
+}
+
+:host-context([dir='rtl']) .star__fill {
+  clip-path: inset(0 0 0 calc((1 - var(--fill)) * 100%));
+}
+
+.star--sm {
+  font-size: inherit;
+}
+
+/* Stock */
+.pdp-stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.pdp-stock--out {
+  color: var(--color-sale);
+  font-weight: 600;
+}
+
+.stock-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.stock-dot--in {
+  background: var(--color-success);
+  box-shadow: 0 0 0 3px var(--color-success-bg);
+}
+
+.stock-dot--out {
+  background: var(--color-sale);
+  box-shadow: 0 0 0 3px var(--color-sale-bg);
+}
+
+/* Price */
 .pdp-price {
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  margin-top: 8px;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   font-variant-numeric: tabular-nums;
 }
 
 .price-current {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
   color: var(--color-brand-700);
 }
 
+.price-current--sale {
+  color: var(--color-sale);
+}
+
 .price-original {
-  font-size: 18px;
+  font-size: 15px;
   color: var(--color-text-tertiary);
   text-decoration: line-through;
 }
 
-/* ----- Stock --------------------------------------------------------- */
-
-.pdp-stock {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--color-text-secondary);
+.pdp-price__save {
+  align-self: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-sale-bg);
+  color: var(--color-sale);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
-.pdp-stock--out {
-  color: var(--color-text-tertiary);
-}
-
-.stock-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.stock-dot--in {
-  background: #16a34a;     /* green */
-  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
-}
-
-.stock-dot--out {
-  background: #b91c1c;     /* red */
-  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.15);
-}
-
-/* ----- Options (sizes, colors) --------------------------------------- */
+/* ----- Options ---------------------------------------------------------- */
 
 .pdp-options {
-  margin: 0;
-  border: 0;
-  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 14px;
 }
 
-.pdp-options legend {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.pdp-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
   margin: 0;
   padding: 0;
+  border: 0;
 }
 
-/* Made-to-measure measurement field (layout + legend from .pdp-options) */
+.pdp-opt__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  min-height: 20px;
+}
+
+.pdp-opt__label {
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.pdp-opt__value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  text-transform: capitalize;
+}
+
+/* Size guide / "+N more" sit at the inline end of the label row. */
+.pdp-opt__aside {
+  margin-inline-start: auto;
+}
+
+.pdp-size-guide-trigger,
+.pdp-opt__more,
+.pdp-textlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-brand-700);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: color var(--duration-fast) ease, text-decoration-color var(--duration-fast) ease;
+}
+
+.pdp-size-guide-trigger:hover,
+.pdp-opt__more:hover,
+.pdp-textlink:hover {
+  color: var(--color-brand-600);
+  text-decoration-color: currentColor;
+}
+
+.pdp-size-guide-trigger:focus-visible,
+.pdp-opt__more:focus-visible,
+.pdp-textlink:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.pdp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Colours collapse to two rows. The 3px padding (cancelled by the negative
+   margin) keeps the chips' focus rings inside the clipped box. */
+.pdp-chips--colors {
+  margin: -3px;
+  padding: 3px;
+}
+
+.pdp-chips--colors.is-collapsed {
+  max-height: calc(2 * 34px + 6px + 6px);
+  overflow: hidden;
+}
+
+.pdp-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 42px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: capitalize;
+  cursor: pointer;
+  appearance: none;
+  transition:
+    border-color var(--duration-fast) ease,
+    background var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease;
+}
+
+.pdp-chip:hover:not(:disabled):not(.pdp-chip--selected) {
+  border-color: var(--color-brand-500);
+}
+
+.pdp-chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg-surface), 0 0 0 4px var(--color-brand-500);
+}
+
+.pdp-chip--selected {
+  border-color: var(--color-brand-700);
+  background: color-mix(in srgb, var(--color-brand-500) 10%, var(--color-bg-surface));
+  color: var(--color-brand-700);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--color-brand-700);
+}
+
+.pdp-chip:disabled {
+  cursor: not-allowed;
+}
+
+.pdp-chip--out {
+  color: var(--color-text-tertiary);
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* Laid out (so rows can be measured) but invisible + unfocusable. */
+.pdp-chip.is-hidden {
+  visibility: hidden;
+}
+
+.pdp-chip__swatch {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 50%;
+}
+
+/* The live region is always present (so screen readers announce the hint
+   when it appears) but takes no space while empty: cancel the group gap. */
+.pdp-opt__live {
+  margin-block-start: -6px;
+}
+
+/* Required-selection hint: only after an add-to-cart attempt. */
+.pdp-opt__hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-sale);
+}
+
+.pdp-opt__hint svg {
+  flex: 0 0 auto;
+}
+
+/* Text inputs (measurements, note, customization, review form) */
+.pdp-field {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+textarea.pdp-field {
+  resize: vertical;
+}
+
+.pdp-field:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 1px;
+  border-color: var(--color-brand-500);
+}
+
+.pdp-field[aria-invalid='true'] {
+  border-color: var(--color-sale);
+}
+
 .pdp-measurement__guide {
   margin: 0;
   font-size: 13px;
   color: var(--color-text-tertiary);
 }
 
-.pdp-measurement__input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px;
-  font: inherit;
-  color: var(--color-text-primary);
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-default);
-  border-radius: 8px;
-}
-
-/* Custom-size body-measurement form */
 .pdp-measure__grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-xs) var(--space-sm);
 }
 
 .pdp-measure__field {
@@ -505,19 +942,8 @@
   color: var(--color-text-secondary);
 }
 
-.pdp-measure__input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 8px 10px;
-  font: inherit;
-  color: var(--color-text-primary);
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-default);
-  border-radius: 8px;
-}
-
 .pdp-measure__unit {
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 12px;
   color: var(--color-text-tertiary);
 }
@@ -528,118 +954,83 @@
   color: var(--color-text-secondary);
 }
 
-.pdp-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.pdp-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-width: 44px;
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 6px;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  background: var(--color-bg-surface);
-  text-transform: capitalize;
-  appearance: none;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.pdp-chip:hover:not(:disabled):not(.pdp-chip--selected) {
-  border-color: var(--color-brand-500);
-}
-
-.pdp-chip:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--color-bg-surface), 0 0 0 4px var(--color-brand-500);
-}
-
-.pdp-chip--selected {
-  border-color: var(--color-brand-500);
-  background: color-mix(in srgb, var(--color-brand-500) 10%, var(--color-bg-surface));
-  color: var(--color-brand-700, var(--color-text-primary));
+.pdp-measure__signin a,
+.pdp-customization__signin a,
+.pdp-write-review__signin a {
+  color: var(--color-brand-700);
   font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.pdp-chip:disabled {
-  cursor: not-allowed;
+/* Seller-note disclosure */
+.pdp-note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
 }
 
-.pdp-chip__swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border-default);
-  flex: 0 0 auto;
+.pdp-note__icon {
+  transition: transform var(--duration-base) var(--ease-out);
 }
 
-.pdp-chip--color {
-  text-transform: capitalize;
-  letter-spacing: 0.01em;
+.pdp-note__toggle[aria-expanded='true'] .pdp-note__icon {
+  transform: rotate(45deg);
 }
 
-.pdp-chip--out {
-  color: var(--color-text-tertiary);
-  text-decoration: line-through;
-  opacity: 0.6;
+.pdp-note__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
 }
 
-/* ----- Buy box (quantity + add to cart) ------------------------------ */
+/* ----- Buy box ---------------------------------------------------------- */
 
 .pdp-buybox {
   display: flex;
   align-items: stretch;
-  gap: 12px;
-  margin-block-start: 20px;
-  flex-wrap: wrap;
+  gap: var(--space-sm);
 }
 
-.pdp-buybox ui-button {
-  flex: 1 1 200px;
+.pdp-buybox__cta {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pdp-buybox__cta ::ng-deep .ui-btn {
+  width: 100%;
 }
 
 .pdp-qty {
   display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--color-border-default);
-  border-radius: 8px;
-  overflow: hidden;
   flex: 0 0 auto;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-pill);
 }
 
 .pdp-qty__btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
+  width: 40px;
   height: 100%;
   min-height: 44px;
-  border: none;
+  border: 0;
   background: var(--color-bg-surface);
   color: var(--color-text-primary);
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
   cursor: pointer;
   appearance: none;
-  transition: background 0.15s ease;
+  transition: background var(--duration-fast) ease;
 }
 
 .pdp-qty__btn:hover:not(:disabled) {
-  background: var(--color-bg-muted, color-mix(in srgb, var(--color-text-primary) 6%, transparent));
+  background: var(--color-bg-muted);
 }
 
 .pdp-qty__btn:focus-visible {
@@ -653,7 +1044,7 @@
 }
 
 .pdp-qty__value {
-  min-width: 40px;
+  min-width: 32px;
   text-align: center;
   font-size: 15px;
   font-weight: 600;
@@ -661,60 +1052,586 @@
   color: var(--color-text-primary);
 }
 
-.pdp-buybox__hint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-block: 10px 0;
-  padding: 9px 12px;
-  font-size: 13px;
-  color: var(--color-brand-700);
-  background: var(--color-brand-50);
-  border: 1px solid color-mix(in srgb, var(--color-brand-300) 60%, transparent);
-  border-radius: var(--radius-md, 12px);
-}
-
-.pdp-buybox__hint-icon {
-  flex-shrink: 0;
-  color: var(--color-brand-600);
-}
-
 .pdp-buybox__error {
-  margin-block: 8px 0;
+  margin: -6px 0 0;
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-danger, #c0392b);
+  color: var(--color-sale);
 }
 
-/* ----- Description --------------------------------------------------- */
+/* ----- Secondary actions (try-on + customization) ----------------------- */
 
-.pdp-description {
-  margin-top: 6px;
+.pdp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-md);
+}
+
+.pdp-tryon-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--color-brand-400);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(120deg, var(--color-brand-50), var(--color-bg-surface) 70%);
+  color: var(--color-brand-700);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+
+.pdp-tryon-cta__icon {
+  flex: none;
+  color: var(--color-brand-500);
+}
+
+.pdp-tryon-cta:hover,
+.pdp-tryon-cta:focus-visible {
+  background: var(--color-brand-500);
+  color: var(--color-text-inverse);
+}
+
+.pdp-tryon-cta:focus-visible {
+  outline: 2px solid var(--color-brand-700);
+  outline-offset: 2px;
+}
+
+.pdp-tryon-cta:hover .pdp-tryon-cta__icon,
+.pdp-tryon-cta:focus-visible .pdp-tryon-cta__icon {
+  color: var(--color-text-inverse);
+}
+
+.pdp-customization {
+  min-width: 0;
+}
+
+.pdp-customization.is-expanded {
+  flex-basis: 100%;
+}
+
+.pdp-customization__signin {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.pdp-customization__form,
+.pdp-customization__done {
   display: flex;
   flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.pdp-customization__done {
+  gap: 4px;
+  background: var(--color-bg-muted);
+}
+
+.pdp-customization__heading {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-customization__hint,
+.pdp-customization__done-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.pdp-customization__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pdp-customization__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-customization__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.pdp-customization__check input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: var(--color-brand-700);
+  cursor: pointer;
+}
+
+.pdp-customization__error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-sale);
+}
+
+.pdp-customization__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.pdp-customization__cancel {
+  color: var(--color-text-secondary);
+}
+
+.pdp-customization__done-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-customization__link {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-brand-700);
+  text-decoration: none;
+}
+
+.pdp-customization__link:hover {
+  text-decoration: underline;
+}
+
+/* ----- Horizontal rails (Complete the look, You may also like) ---------- */
+
+.pdp-rail {
+  display: flex;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 2px 2px 6px;
+  list-style: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2px;
+  scrollbar-width: none;
+}
+
+.pdp-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.pdp-rail > li {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.pdp-rail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--color-border-default);
+  border-radius: 50%;
+  background: var(--color-bg-surface);
+  color: var(--color-brand-700);
+  cursor: pointer;
+  transition: background var(--duration-fast) ease, opacity var(--duration-fast) ease;
+}
+
+.pdp-rail-btn:hover:not(:disabled) {
+  background: var(--color-brand-50);
+}
+
+.pdp-rail-btn:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.pdp-rail-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ----- Ain "Complete the look" (compact strip under the buy area) ------- */
+
+.pdp-ctl {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 10px;
+  border: 1px solid color-mix(in srgb, var(--color-brand-300) 55%, transparent);
+  border-radius: var(--radius-md);
+  background: linear-gradient(160deg, var(--color-brand-50), var(--color-bg-surface) 75%);
+}
+
+.pdp-ctl__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.pdp-ctl__heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-brand-700);
+}
+
+.pdp-ctl__spark {
+  color: var(--color-brand-500);
+}
+
+.pdp-ctl__tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pdp-ctl__add {
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--color-brand-700);
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-700);
+  color: var(--color-text-inverse);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease;
+}
+
+.pdp-ctl__add:hover:not(:disabled) {
+  background: var(--color-brand-600);
+  border-color: var(--color-brand-600);
+}
+
+.pdp-ctl__add:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.pdp-ctl__add:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.pdp-ctl__item {
+  position: relative;
+  width: 112px;
+}
+
+.pdp-ctl__link {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+
+.pdp-ctl__link:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.pdp-ctl__img {
+  display: block;
+  width: 112px;
+  aspect-ratio: 3 / 4;
+  margin-block-end: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-muted);
+}
+
+.pdp-ctl__img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  transition: transform var(--duration-slow) var(--ease-out);
+}
+
+.pdp-ctl__link:hover .pdp-ctl__img img {
+  transform: scale(1.04);
+}
+
+.pdp-ctl__fallback {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28px;
+  color: var(--color-brand-700);
+  background: var(--color-brand-100);
+}
+
+.pdp-ctl__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--color-text-primary);
+}
+
+.pdp-ctl__price {
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-brand-700);
+}
+
+.pdp-ctl__price.is-sale {
+  color: var(--color-sale);
+}
+
+/* Quick add: overlaid on the image's bottom inline-end corner (outside the
+   link, so no nested interactive content). */
+.pdp-ctl__quick {
+  position: absolute;
+  inset-block-start: calc(112px * 4 / 3 - 36px);
+  inset-inline-end: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-bg-surface);
+  color: var(--color-brand-700);
+  box-shadow: var(--shadow-floating);
+  cursor: pointer;
+  transition: background var(--duration-fast) ease, color var(--duration-fast) ease;
+}
+
+.pdp-ctl__quick:hover:not(:disabled) {
+  background: var(--color-brand-700);
+  color: var(--color-text-inverse);
+}
+
+.pdp-ctl__quick:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.pdp-ctl__quick.is-added {
+  background: var(--color-success);
+  color: var(--color-text-inverse);
+}
+
+.pdp-ctl__quick.is-error {
+  box-shadow: 0 0 0 2px var(--color-sale);
+}
+
+/* Wishlist heart (top inline-end of the image, like the product cards). */
+.pdp-ctl__save {
+  position: absolute;
+  inset-block-start: 6px;
+  inset-inline-end: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-bg-surface) 90%, transparent);
+  color: var(--color-brand-700);
+  box-shadow: var(--shadow-floating);
+  cursor: pointer;
+}
+
+.pdp-ctl__save svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pdp-ctl__save.is-saved svg {
+  fill: currentColor;
+}
+
+.pdp-ctl__save:hover {
+  color: var(--color-sale);
+}
+
+.pdp-ctl__save:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.pdp-ctl__quick:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ----- Extras: gift-card line, share, trust ----------------------------- */
+
+.pdp-extras {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.pdp-trust {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-xs);
+  margin: 0;
+  padding: var(--space-sm) 0 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.pdp-trust__item {
+  display: flex;
+  align-items: flex-start;
   gap: 8px;
+  min-width: 0;
+}
+
+.pdp-trust__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-brand-50);
+  color: var(--color-brand-700);
+}
+
+.pdp-trust__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.pdp-trust__title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-trust__sub {
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
+/* Narrow phones: titles only (subs stay available to assistive tech). */
+@media (max-width: 479.98px) {
+  .pdp-trust__sub {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+/* ----- Accordions (Description / Details) ------------------------------- */
+
+.pdp-accordions {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.pdp-acc {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.pdp-acc__heading {
+  margin: 0;
+  font: inherit;
+}
+
+.pdp-acc__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 14px 0;
+  border: 0;
+  background: none;
+  color: var(--color-brand-700);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+
+.pdp-acc__trigger:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.pdp-acc__chev {
+  flex: 0 0 auto;
+  color: var(--color-text-tertiary);
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.pdp-acc__trigger[aria-expanded='true'] .pdp-acc__chev {
+  transform: rotate(180deg);
+}
+
+.pdp-acc__panel {
+  padding-block-end: var(--space-md);
+}
+
+.pdp-description {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
 }
 
 .pdp-description p {
   margin: 0;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--color-text-secondary);
-}
-
-/* ----- Detail list (fabric, materials, care) ------------------------- */
-
-.pdp-details {
-  margin-top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .pdp-detail-list {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 8px 16px;
+  gap: var(--space-xs) var(--space-md);
   margin: 0;
   font-size: 14px;
 }
@@ -729,138 +1646,59 @@
   color: var(--color-text-secondary);
 }
 
-/* ----- 404 / not-found state ----------------------------------------- */
-
-.pdp-not-found {
-  padding: 48px 0;
-  max-width: 560px;
+.pdp-sku {
+  font-variant-numeric: tabular-nums;
 }
 
-.eyebrow {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--color-brand-500);
+/* ----- Below-the-fold sections ------------------------------------------ */
+
+.pdp-section {
+  margin-block-start: var(--space-xl);
+  scroll-margin-top: var(--pdp-sticky-top);
 }
 
-.back-link {
-  font-size: 14px;
-  color: var(--color-brand-700);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.back-link:hover,
-.back-link:focus-visible {
+.pdp-section:focus {
   outline: none;
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
-/* ----- Aggregate rating (under H1) ----------------------------------- */
-
-/* Star primitive used by both the aggregate-rating block and per-review
-   ratings in the Reviews section. The visual is two stacked SVG paths:
-   a muted "track" star outline behind, a brand-colored "fill" star on
-   top whose visible portion is controlled by the --fill CSS variable
-   (0–1). This lets us render fractional ratings (e.g. 4.6) cleanly
-   without needing half-star icons.
-
-   Sized via `font-size` on the parent so the stars scale with text;
-   the `.star--sm` modifier produces the smaller size used in review
-   cards. */
-
-.star {
-  --fill: 0;
-  position: relative;
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  flex-shrink: 0;
+@media (min-width: 1024px) {
+  .pdp-section {
+    margin-block-start: var(--space-2xl);
+  }
 }
 
-.star__track,
-.star__fill {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.star__track {
-  fill: var(--color-border-subtle);
-}
-
-.star__fill {
-  fill: var(--color-brand-500);
-  /* Reveal only the leftmost (--fill * 100)% of the star. */
-  clip-path: inset(0 calc((1 - var(--fill)) * 100%) 0 0);
-}
-
-.pdp-rating {
+.pdp-section__head {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 4px;
-  font-size: 14px;
-  color: var(--color-text-secondary);
-}
-
-.pdp-rating__stars {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 18px;
-  /* Inherit color so star fill via currentColor would also work; but
-     we explicitly use brand-500 in .star__fill, so this is mostly for
-     consistency. */
-  line-height: 0;
-}
-
-.pdp-rating__text {
-  display: inline-flex;
   align-items: baseline;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 4px var(--space-md);
+  margin-block-end: var(--space-md);
 }
 
-.pdp-rating__value {
+.pdp-section__title {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.375rem;
   font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.pdp-rating__sep {
-  color: var(--color-text-tertiary);
-}
-
-.pdp-rating__count {
-  color: var(--color-text-secondary);
-  text-decoration: none;
-}
-
-.pdp-rating__count:hover,
-.pdp-rating__count:focus-visible {
+  letter-spacing: -0.01em;
   color: var(--color-brand-700);
-  outline: none;
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
-/* ----- Reviews section ----------------------------------------------- */
+/* Reviews */
+.pdp-reviews-section {
+  max-width: 820px;
+}
 
 .pdp-reviews {
-  margin-top: 8px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  scroll-margin-top: 80px; /* Sticky header offset for #reviews anchor */
+  gap: var(--space-md);
 }
 
 .pdp-reviews__summary {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
   font-size: 14px;
   color: var(--color-text-secondary);
@@ -871,30 +1709,43 @@
   color: var(--color-text-primary);
 }
 
-.pdp-reviews__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.pdp-reviews__placeholder {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-sm);
+  min-height: 180px;
+}
+
+.pdp-reviews__placeholder span {
+  height: 52px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-muted);
+}
+
+.pdp-reviews__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .pdp-review {
-  padding: 16px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 8px;
-  background: var(--color-bg-surface);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface);
 }
 
 .pdp-review__head {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--space-sm);
 }
 
 .pdp-review__stars {
@@ -905,30 +1756,24 @@
   line-height: 0;
 }
 
-.star--sm {
-  font-size: inherit;
-}
-
 .pdp-review__verified {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-50);
+  color: var(--color-brand-700);
   font-size: 12px;
   font-weight: 500;
-  color: var(--color-brand-700);
-  /* Subtle brand-tinted pill, keeps the badge from competing with
-     the star rating but signals trust at a glance. */
-  background: var(--color-brand-50);
-  padding: 2px 8px;
-  border-radius: 999px;
 }
 
 .pdp-review__title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-text-primary);
   line-height: 1.4;
+  color: var(--color-text-primary);
 }
 
 .pdp-review__body {
@@ -951,117 +1796,270 @@
   color: var(--color-text-secondary);
 }
 
-/* ----- Related products grid ('You may also like') ------------------- */
-
-/* Lives below the 2-column pdp-grid. Reuses the same auto-fill
-   minmax pattern as /category/:slug so the visual rhythm matches.
-   Larger top margin separates it from the info column above. */
-
-.pdp-related {
-  margin-top: 80px;
+.pdp-reviews__empty {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-}
-
-.pdp-related__heading {
-  margin: 0;
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--color-brand-700);
-}
-
-/* "You may also like", wrapping 5×2 grid (decision #5): 2 per row on
-   mobile, 3 on tablet, 5 across at the 1280 desktop breakpoint so 10
-   items read as two tidy rows. Uses the compact ui-product-card. */
-.pdp-related__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px 14px;
-}
-
-@media (min-width: 600px) {
-  .pdp-related__grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1280px) {
-  .pdp-related__grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 28px 20px;
-  }
-}
-
-/* ----- Ain "Complete the look" --------------------------------------- */
-.pdp-ctl {
-  margin-top: 64px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-.pdp-ctl__head {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  gap: 6px;
+  padding: var(--space-lg) var(--space-md);
+  text-align: center;
+  color: var(--color-text-secondary);
 }
-.pdp-ctl__heading {
+
+.pdp-reviews__empty-icon {
+  color: var(--color-brand-300);
+}
+
+.pdp-reviews__empty-title {
   margin: 0;
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.5rem;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+}
+
+.pdp-reviews__empty-hint {
+  max-width: 360px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.pdp-reviews__more {
+  display: flex;
+  justify-content: center;
+}
+
+.pdp-reviews__status {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.pdp-reviews__status--error {
+  color: var(--color-sale);
+}
+
+/* Write a review */
+.pdp-write-review {
+  padding-block-start: var(--space-md);
+  border-block-start: 1px solid var(--color-border-subtle);
+}
+
+.pdp-write-review__signin {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.pdp-write-review__cta {
+  display: flex;
+}
+
+.pdp-write-review__done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-lg) var(--space-md);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-brand-50);
+  text-align: center;
+}
+
+.pdp-write-review__done-icon {
   color: var(--color-brand-700);
 }
-.pdp-ctl__add {
-  border: 1px solid var(--color-brand-700, #5a3a2c);
-  background: var(--color-brand-700, #5a3a2c);
-  color: #fff;
-  border-radius: var(--radius-pill, 999px);
-  padding: 0.6rem 1.3rem;
-  font-size: 0.9rem;
+
+.pdp-write-review__done-title {
+  margin: 0;
+  font-size: 16px;
   font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-write-review__done-note {
+  max-width: 420px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.pdp-review-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-width: 560px;
+}
+
+.pdp-review-form__heading {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-review-form__rating {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.pdp-review-form__rating legend {
+  margin-block-end: 6px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-review-form__stars {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.pdp-review-form__star {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--color-border-default);
   cursor: pointer;
-  transition: background 0.15s ease, opacity 0.15s ease;
-}
-.pdp-ctl__add:hover:not(:disabled) { background: var(--color-brand-500, #b18f1f); border-color: var(--color-brand-500, #b18f1f); }
-.pdp-ctl__add:disabled { opacity: 0.5; cursor: default; }
-.pdp-ctl__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px 14px;
-}
-.pdp-ctl__cell { display: flex; }
-.pdp-ctl__cell > * { width: 100%; }
-@media (min-width: 600px) {
-  .pdp-ctl__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-@media (min-width: 1280px) {
-  .pdp-ctl__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px 20px; }
+  transition: color var(--duration-fast) ease;
 }
 
-/* ----- Savings badge (PDP1) ------------------------------------------ */
-.pdp-price__save {
-  align-self: center;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  background: var(--color-sale-bg);
+.pdp-review-form__star.is-active {
+  color: var(--color-brand-500);
+}
+
+.pdp-review-form__star:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.pdp-review-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pdp-review-form__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-review-form__textarea {
+  min-height: 96px;
+}
+
+.pdp-review-form__error {
+  margin: 0;
+  font-size: 14px;
   color: var(--color-sale);
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
 }
 
-/* ----- Mobile sticky add-to-cart (PDP1) ------------------------------
-   Fixed to the viewport bottom on small screens; hidden at the PDP's
-   desktop breakpoint (900px), where the in-page buy box is always
-   visible. The page already reserves 96px bottom padding, which clears
-   the bar so content isn't obscured. */
+.pdp-review-form__actions {
+  display: flex;
+}
+
+/* You may also like: one scrollable row of compact product cards. */
+.pdp-rail-wrap {
+  position: relative;
+}
+
+.pdp-related__item {
+  width: 168px;
+}
+
+@media (min-width: 768px) {
+  .pdp-related__item {
+    width: 196px;
+  }
+}
+
+.pdp-related__item > ui-product-card {
+  display: block;
+  height: 100%;
+}
+
+.pdp-rail-btn--overlay {
+  position: absolute;
+  inset-block-start: 38%;
+  z-index: 2;
+  display: none;
+  width: 38px;
+  height: 38px;
+  box-shadow: var(--shadow-floating);
+}
+
+.pdp-rail-btn--overlay.pdp-rail-btn--prev { inset-inline-start: -8px; }
+.pdp-rail-btn--overlay.pdp-rail-btn--next { inset-inline-end: -8px; }
+
+.pdp-rail-btn--overlay:disabled {
+  visibility: hidden;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pdp-rail-btn--overlay {
+    display: inline-flex;
+  }
+}
+
+.pdp-related__placeholder {
+  display: flex;
+  gap: var(--space-sm);
+  overflow: hidden;
+}
+
+.pdp-related__placeholder span {
+  flex: 0 0 168px;
+  aspect-ratio: 3 / 4.7;
+  border-radius: 14px;
+  background: var(--color-bg-muted);
+}
+
+@media (min-width: 768px) {
+  .pdp-related__placeholder span {
+    flex-basis: 196px;
+  }
+}
+
+/* ----- 404 / not-found state ------------------------------------------- */
+
+.pdp-not-found {
+  max-width: 560px;
+  padding: 48px 0;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-brand-500);
+}
+
+.back-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-brand-700);
+  text-decoration: none;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ----- Sticky bottom bar (single-column layouts) ------------------------
+   Appears only once the main buy box has scrolled above the viewport, and
+   hides near the end of the page. visibility:hidden (plus [inert]) keeps it
+   out of the tab order while hidden. Safe-area aware. */
 .pdp-sticky-cta {
   position: fixed;
   inset-inline: 0;
@@ -1071,10 +2069,29 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  padding: var(--space-sm) var(--page-padding-x);
+  padding: var(--space-sm) var(--page-padding-x) calc(var(--space-sm) + env(safe-area-inset-bottom, 0px));
   background: var(--color-bg-surface);
   border-block-start: 1px solid var(--color-border-default);
-  box-shadow: 0 -4px 18px rgba(90, 58, 44, 0.10);
+  box-shadow: 0 -4px 18px rgba(90, 58, 44, 0.1);
+  transform: translateY(110%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    opacity var(--duration-base) var(--ease-out),
+    visibility 0s linear var(--duration-base);
+}
+
+.pdp-sticky-cta.is-visible {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    opacity var(--duration-base) var(--ease-out),
+    visibility 0s;
 }
 
 .pdp-sticky-cta__price {
@@ -1086,8 +2103,8 @@
 
 .pdp-sticky-cta__now {
   font-family: 'Playfair Display', Georgia, serif;
-  font-weight: 600;
   font-size: 1.15rem;
+  font-weight: 600;
   color: var(--color-brand-700);
   white-space: nowrap;
 }
@@ -1102,84 +2119,26 @@
   white-space: nowrap;
 }
 
-@media (min-width: 900px) {
-  .pdp-sticky-cta { display: none; }
+.pdp-sticky-cta__btn {
+  flex: 0 1 220px;
 }
 
-/* ----- Product information block (moved full-width below the grid, PDP2)
-   Holds description, reviews, and material/care details. Separated from
-   the buy area by a hairline rule. The buy box (sticky on desktop) lives
-   in the grid above; this region spans the page so the sticky column has
-   somewhere to scroll past. */
-.pdp-content {
-  margin-top: 48px;
-  padding-top: 40px;
-  border-top: 1px solid var(--color-border-subtle);
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+.pdp-sticky-cta__btn ::ng-deep .ui-btn {
+  width: 100%;
 }
 
-@media (min-width: 900px) {
-  .pdp-content {
-    margin-top: 64px;
+.pdp-cta-sentinel {
+  height: 1px;
+}
+
+@media (min-width: 1024px) {
+  .pdp-sticky-cta {
+    display: none;
   }
 }
 
-/* The content tabs read better as a constrained column than full page
-   width. */
-.pdp-tabs,
-.pdp-tabpanel {
-  max-width: 820px;
-}
+/* ----- Lightbox (PDP3) ------------------------------------------------- */
 
-/* ----- Main image zoom trigger (PDP3) -------------------------------- */
-.pdp-main-image__trigger {
-  display: block;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: zoom-in;
-}
-
-.pdp-main-image__trigger img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.pdp-main-image__zoom {
-  position: absolute;
-  inset-block-end: 12px;
-  inset-inline-end: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(250, 248, 245, 0.92);
-  color: var(--color-brand-700);
-  border: 1px solid var(--color-border-subtle);
-  box-shadow: 0 2px 8px rgba(90, 58, 44, 0.12);
-  opacity: 0;
-  transform: translateY(4px);
-  transition: opacity var(--duration-base) var(--ease-out),
-              transform var(--duration-base) var(--ease-out);
-  pointer-events: none;
-}
-
-.pdp-main-image:hover .pdp-main-image__zoom,
-.pdp-main-image__trigger:focus-visible .pdp-main-image__zoom {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* ----- Lightbox (PDP3) ----------------------------------------------- */
 .pdp-lightbox {
   position: fixed;
   inset: 0;
@@ -1189,23 +2148,23 @@
   justify-content: center;
   padding: clamp(16px, 4vw, 48px);
   background: rgba(28, 20, 16, 0.86);
-  animation: pdp-lightbox-in var(--duration-base) var(--ease-out);
+  animation: pdp-fade-in var(--duration-base) var(--ease-out);
 }
 
 .pdp-lightbox__dialog {
   position: relative;
-  max-width: min(1200px, 100%);
-  max-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  max-width: min(1200px, 100%);
+  max-height: 100%;
 }
 
 .pdp-lightbox__img {
-  max-width: 100%;
-  max-height: 88vh;
   width: auto;
   height: auto;
+  max-width: 100%;
+  max-height: 88vh;
   object-fit: contain;
   border-radius: 8px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
@@ -1217,8 +2176,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
   cursor: pointer;
@@ -1243,15 +2202,14 @@
 
 .pdp-lightbox__nav {
   inset-block-start: 50%;
-  transform: translateY(-50%);
   width: 48px;
   height: 48px;
+  transform: translateY(-50%);
 }
 
 .pdp-lightbox__nav--prev { inset-inline-start: clamp(8px, 2vw, 24px); }
 .pdp-lightbox__nav--next { inset-inline-end: clamp(8px, 2vw, 24px); }
 
-/* Mirror the chevrons in RTL so prev/next point the correct way. */
 :host-context([dir='rtl']) .pdp-lightbox__nav svg {
   transform: scaleX(-1);
 }
@@ -1260,7 +2218,6 @@
   position: fixed;
   inset-block-end: clamp(12px, 3vw, 28px);
   inset-inline-start: 50%;
-  transform: translateX(-50%);
   padding: 4px 12px;
   border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.12);
@@ -1268,374 +2225,18 @@
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
+  transform: translateX(-50%);
 }
 
-@keyframes pdp-lightbox-in {
+@keyframes pdp-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .pdp-lightbox { animation: none; }
-  .pdp-main-image__zoom { transition: none; transform: none; }
-}
+/* ----- Modals: size guide + virtual try-on ------------------------------ */
 
-/* ----- Trust / delivery / returns (PDP4a) ---------------------------- */
-.pdp-trust {
-  list-style: none;
-  margin: 8px 0 0;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-muted);
-}
-
-.pdp-trust__item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.pdp-trust__icon {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--color-bg-surface);
-  color: var(--color-brand-700);
-  border: 1px solid var(--color-border-subtle);
-}
-
-.pdp-trust__text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.pdp-trust__title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.pdp-trust__sub {
-  font-size: 0.8rem;
-  color: var(--color-text-tertiary);
-}
-
-/* ----- Content disclosures / accordion (PDP4b) ----------------------- */
-/* ----- Content tabs (#10e) ------------------------------------------- */
-.pdp-tabs {
-  display: flex;
-  gap: 4px;
-  margin-block-end: 8px;
-  border-bottom: 1px solid var(--color-border-subtle);
-}
-
-.pdp-tab {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  padding: 14px 16px;
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  cursor: pointer;
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--color-text-tertiary);
-  text-align: start;
-  transition: color var(--duration-fast) var(--ease-out),
-    border-color var(--duration-fast) var(--ease-out);
-}
-
-.pdp-tab:hover {
-  color: var(--color-text-secondary);
-}
-
-.pdp-tab:focus-visible {
-  outline: 2px solid var(--color-brand-500);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-.pdp-tab--active {
-  color: var(--color-brand-700);
-  border-bottom-color: var(--color-brand-500);
-}
-
-.pdp-tabpanel {
-  padding-block: 8px 24px;
-}
-
-/* The reused content classes add their own top margin; neutralise it so
-   the panel hugs the tab strip. */
-.pdp-tabpanel.pdp-description { margin-top: 0; }
-
-/* ----- Sticky CTA hide-near-footer (follow-up) ----------------------- */
-.pdp-sticky-cta {
-  transition: transform var(--duration-base) var(--ease-out),
-              opacity var(--duration-base) var(--ease-out);
-}
-.pdp-sticky-cta.is-hidden {
-  transform: translateY(110%);
-  opacity: 0;
-  pointer-events: none;
-}
-.pdp-cta-sentinel {
-  height: 1px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .pdp-sticky-cta { transition: none; }
-}
-
-/* Empty reviews state (#4), shown when a product has no reviews yet, so
-   the Reviews section is present + inviting rather than missing. */
-.pdp-reviews__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 8px;
-  padding: 32px 16px;
-  color: rgba(46, 36, 28, 0.7);
-}
-
-.pdp-reviews__empty-icon {
-  color: var(--color-brand-300, #d6b988);
-}
-
-.pdp-reviews__empty-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text-primary, #2e241c);
-  margin: 0;
-}
-
-.pdp-reviews__empty-hint {
-  font-size: 14px;
-  margin: 0;
-  max-width: 360px;
-  line-height: 1.5;
-}
-
-/* ----- Reviews: load-more + status ----------------------------------- */
-.pdp-reviews__more {
-  display: flex;
-  justify-content: center;
-  margin-block-start: 8px;
-}
-
-.pdp-reviews__status {
-  margin: 0;
-  font-size: 14px;
-  color: var(--color-text-secondary);
-}
-
-.pdp-reviews__status--error {
-  color: var(--color-danger-600, #b3261e);
-}
-
-/* ----- Write a review ------------------------------------------------- */
-.pdp-write-review {
-  margin-block-start: 24px;
-  padding-block-start: 24px;
-  border-block-start: 1px solid var(--color-border-subtle);
-}
-
-.pdp-write-review__signin {
-  margin: 0;
-  font-size: 14px;
-  color: var(--color-text-secondary);
-
-  a {
-    color: var(--color-brand-700);
-    font-weight: 600;
-    text-decoration: underline;
-  }
-}
-
-.pdp-write-review__cta {
-  display: flex;
-}
-
-.pdp-write-review__done {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 6px;
-  padding: 24px 16px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 10px;
-  background: var(--color-brand-50);
-}
-
-.pdp-write-review__done-icon {
-  color: var(--color-brand-700);
-}
-
-.pdp-write-review__done-title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.pdp-write-review__done-note {
-  margin: 0;
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  max-width: 420px;
-  line-height: 1.5;
-}
-
-.pdp-review-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 560px;
-}
-
-.pdp-review-form__heading {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.pdp-review-form__rating {
-  border: 0;
-  padding: 0;
-  margin: 0;
-
-  legend {
-    padding: 0;
-    margin-block-end: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--color-text-primary);
-  }
-}
-
-.pdp-review-form__stars {
-  display: inline-flex;
-  gap: 4px;
-}
-
-.pdp-review-form__star {
-  display: inline-flex;
-  padding: 2px;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  color: var(--color-border-default, #d9cfc4);
-  transition: color 120ms ease;
-
-  &.is-active {
-    color: var(--color-brand-500, #c79a4b);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-brand-500, #c79a4b);
-    outline-offset: 2px;
-    border-radius: 4px;
-  }
-}
-
-.pdp-review-form__field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.pdp-review-form__label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.pdp-review-form__input,
-.pdp-review-form__textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  font: inherit;
-  color: var(--color-text-primary);
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-default);
-  border-radius: 8px;
-
-  &:focus-visible {
-    outline: 2px solid var(--color-brand-500, #c79a4b);
-    outline-offset: 1px;
-    border-color: var(--color-brand-500, #c79a4b);
-  }
-}
-
-.pdp-review-form__textarea {
-  resize: vertical;
-  min-height: 96px;
-  line-height: 1.5;
-}
-
-.pdp-review-form__error {
-  margin: 0;
-  font-size: 14px;
-  color: var(--color-danger-600, #b3261e);
-}
-
-.pdp-review-form__actions {
-  display: flex;
-}
-
-/* ----- Size guide (store size chart) -------------------------------- */
-.pdp-options__legend-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.pdp-size-guide-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--color-brand-700);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  transition: color var(--duration-fast) var(--ease-out);
-}
-
-.pdp-size-guide-trigger:hover,
-.pdp-size-guide-trigger:focus-visible {
-  color: var(--color-brand-500);
-}
-
-.pdp-size-guide-trigger:focus-visible {
-  outline: 2px solid var(--color-brand-700);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-.pdp-size-guide {
+.pdp-size-guide,
+.pdp-tryon {
   position: fixed;
   inset: 0;
   z-index: 110;
@@ -1644,46 +2245,58 @@
   justify-content: center;
   padding: clamp(16px, 4vw, 48px);
   background: rgba(28, 20, 16, 0.6);
-  animation: pdp-lightbox-in var(--duration-base) var(--ease-out);
+  animation: pdp-fade-in var(--duration-base) var(--ease-out);
+}
+
+.pdp-size-guide__dialog,
+.pdp-tryon__dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
 }
 
 .pdp-size-guide__dialog {
-  position: relative;
   width: min(640px, 100%);
   max-height: min(80vh, 720px);
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 12px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
-  overflow: hidden;
 }
 
-.pdp-size-guide__head {
+.pdp-tryon__dialog {
+  width: min(520px, 100%);
+  max-height: min(88vh, 820px);
+}
+
+.pdp-size-guide__head,
+.pdp-tryon__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-sm);
   padding: 18px 20px;
   border-block-end: 1px solid var(--color-border-subtle);
 }
 
-.pdp-size-guide__title {
+.pdp-size-guide__title,
+.pdp-tryon__title {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
-.pdp-size-guide__close {
+.pdp-size-guide__close,
+.pdp-tryon__close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 38px;
   height: 38px;
-  border-radius: 50%;
   border: 1px solid var(--color-border-subtle);
+  border-radius: 50%;
   background: var(--color-bg-muted);
   color: var(--color-text-secondary);
   cursor: pointer;
@@ -1691,7 +2304,9 @@
 }
 
 .pdp-size-guide__close:hover,
-.pdp-size-guide__close:focus-visible {
+.pdp-size-guide__close:focus-visible,
+.pdp-tryon__close:hover,
+.pdp-tryon__close:focus-visible {
   background: var(--color-brand-100);
   color: var(--color-brand-700);
   outline: 2px solid var(--color-brand-700);
@@ -1707,15 +2322,15 @@
   margin: 0;
   padding: 24px 0;
   text-align: center;
-  color: var(--color-text-tertiary);
   font-size: 14px;
+  color: var(--color-text-tertiary);
 }
 
 .pdp-size-guide__note {
   margin: 0 0 14px;
-  color: var(--color-text-tertiary);
   font-size: 13px;
   line-height: 1.5;
+  color: var(--color-text-tertiary);
 }
 
 .pdp-size-guide__table-wrap {
@@ -1732,18 +2347,18 @@
 .pdp-size-guide__table th,
 .pdp-size-guide__table td {
   padding: 10px 12px;
-  text-align: start;
   border-block-end: 1px solid var(--color-border-subtle);
+  text-align: start;
   white-space: nowrap;
 }
 
 .pdp-size-guide__table thead th {
+  background: var(--color-bg-muted);
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--color-text-secondary);
-  background: var(--color-bg-muted);
 }
 
 .pdp-size-guide__table tbody th {
@@ -1760,123 +2375,19 @@
   border-block-end: 0;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .pdp-size-guide { animation: none; }
-}
-
-/* ===== Virtual try-on (Ain) ============================================= */
-
-.pdp-tryon-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  margin-block-start: 10px;
-  padding: 12px 18px;
-  border-radius: 999px;
-  border: 1px solid var(--color-brand-500);
-  background: linear-gradient(120deg, var(--color-brand-50), var(--color-bg-surface) 60%);
-  color: var(--color-brand-700);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-  transition:
-    background var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out);
-}
-
-.pdp-tryon-cta__icon { color: var(--color-brand-500); flex: none; }
-
-.pdp-tryon-cta:hover,
-.pdp-tryon-cta:focus-visible {
-  background: var(--color-brand-500);
-  color: var(--color-text-inverse);
-  box-shadow: 0 6px 18px rgba(177, 143, 31, 0.28);
-  outline: none;
-}
-
-.pdp-tryon-cta:hover .pdp-tryon-cta__icon,
-.pdp-tryon-cta:focus-visible .pdp-tryon-cta__icon { color: var(--color-text-inverse); }
-
-.pdp-tryon {
-  position: fixed;
-  inset: 0;
-  z-index: 110;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(16px, 4vw, 48px);
-  background: rgba(28, 20, 16, 0.6);
-  animation: pdp-lightbox-in var(--duration-base) var(--ease-out);
-}
-
-.pdp-tryon__dialog {
-  position: relative;
-  width: min(520px, 100%);
-  max-height: min(88vh, 820px);
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 12px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
-  overflow: hidden;
-}
-
-.pdp-tryon__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 18px 20px;
-  border-block-end: 1px solid var(--color-border-subtle);
-}
-
-.pdp-tryon__title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.pdp-tryon__close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-bg-muted);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-out);
-}
-
-.pdp-tryon__close:hover,
-.pdp-tryon__close:focus-visible {
-  background: var(--color-brand-100);
-  color: var(--color-brand-700);
-  outline: 2px solid var(--color-brand-700);
-  outline-offset: 2px;
-}
-
 .pdp-tryon__body {
-  padding: 20px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .pdp-tryon__intro {
   margin: 0;
-  color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 1.5;
+  color: var(--color-text-secondary);
 }
 
 .pdp-tryon__upload {
@@ -1897,32 +2408,35 @@
   position: absolute;
   width: 1px;
   height: 1px;
-  opacity: 0;
   overflow: hidden;
+  opacity: 0;
 }
 
 .pdp-tryon__consent {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.5;
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
-.pdp-tryon__consent input { margin-block-start: 2px; flex: none; }
+.pdp-tryon__consent input {
+  flex: none;
+  margin-block-start: 2px;
+}
 
 .pdp-tryon__error {
   margin: 0;
-  color: var(--color-feedback-error, #b3261e);
   font-size: 13px;
+  color: var(--color-sale);
 }
 
 .pdp-tryon__generate {
   padding: 12px 18px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-brand-700);
   color: var(--color-text-inverse);
   font-size: 15px;
@@ -1932,9 +2446,14 @@
 }
 
 .pdp-tryon__generate:hover:not([disabled]),
-.pdp-tryon__generate:focus-visible:not([disabled]) { background: var(--color-brand-500); }
+.pdp-tryon__generate:focus-visible:not([disabled]) {
+  background: var(--color-brand-500);
+}
 
-.pdp-tryon__generate[disabled] { opacity: 0.5; cursor: not-allowed; }
+.pdp-tryon__generate[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .pdp-tryon__loading {
   display: flex;
@@ -1942,37 +2461,37 @@
   align-items: center;
   gap: 14px;
   padding: 32px 0;
-  color: var(--color-text-secondary);
   font-size: 14px;
+  color: var(--color-text-secondary);
 }
 
 .pdp-tryon__spinner {
   width: 34px;
   height: 34px;
-  border-radius: 50%;
   border: 3px solid var(--color-brand-100);
   border-top-color: var(--color-brand-500);
-  animation: pdp-tryon-spin 0.8s linear infinite;
+  border-radius: 50%;
+  animation: pdp-spin 0.8s linear infinite;
 }
 
 .pdp-tryon__result {
   width: 100%;
-  border-radius: 10px;
   border: 1px solid var(--color-border-subtle);
+  border-radius: 10px;
 }
 
 .pdp-tryon__disclaimer {
   margin: 0;
-  color: var(--color-text-tertiary);
-  font-size: 12px;
   text-align: center;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
 }
 
 .pdp-tryon__again {
   align-self: center;
   padding: 10px 18px;
-  border-radius: 999px;
   border: 1px solid var(--color-brand-500);
+  border-radius: var(--radius-pill);
   background: transparent;
   color: var(--color-brand-700);
   font-size: 14px;
@@ -1980,182 +2499,29 @@
   cursor: pointer;
 }
 
-@keyframes pdp-tryon-spin { to { transform: rotate(360deg); } }
+@keyframes pdp-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ----- Reduced motion ---------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .pdp-tryon { animation: none; }
-  .pdp-tryon__spinner { animation-duration: 2s; }
-}
-
-/* ===== Request a bespoke customization (P5) ===== */
-.pdp-customization {
-  margin-block-start: 10px;
-}
-
-.pdp-customization__cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 12px 18px;
-  border-radius: 999px;
-  border: 1px solid var(--color-border-default, #d8cfc1);
-  background: var(--color-bg-surface, #fff);
-  color: var(--color-text-primary, #2e241c);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
-
-  &:hover,
-  &:focus-visible {
-    border-color: var(--color-brand-500, #b18f1f);
-    color: var(--color-brand-700, #5a3a2c);
-    outline: none;
+  .pdp-lightbox,
+  .pdp-size-guide,
+  .pdp-tryon {
+    animation: none;
   }
-}
 
-.pdp-customization__signin {
-  margin: 12px 0 0;
-  font-size: 14px;
-  color: var(--color-text-secondary, #6b6056);
-
-  a {
-    color: var(--color-brand-700, #5a3a2c);
-    font-weight: 600;
+  .pdp-tryon__spinner {
+    animation-duration: 2s;
   }
-}
 
-.pdp-customization__form {
-  margin-block-start: 12px;
-  padding: 16px;
-  border: 1px solid var(--color-border-subtle, #e4dccb);
-  border-radius: 14px;
-  background: var(--color-bg-surface, #fff);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.pdp-customization__heading {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text-primary, #2e241c);
-}
-
-.pdp-customization__hint {
-  margin: -4px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--color-text-secondary, #6b6056);
-}
-
-.pdp-customization__field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.pdp-customization__label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-primary, #2e241c);
-}
-
-.pdp-customization__textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border-default, #d8cfc1);
-  border-radius: 10px;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.5;
-  resize: vertical;
-  color: var(--color-text-primary, #2e241c);
-  background: var(--color-bg-surface, #fff);
-
-  &:focus-visible {
-    outline: none;
-    border-color: var(--color-brand-500, #b18f1f);
+  .pdp-sticky-cta,
+  .pdp-sticky-cta.is-visible,
+  .pdp-stage__dot,
+  .pdp-acc__chev,
+  .pdp-note__icon,
+  .pdp-ctl__img img {
+    transition: none;
   }
-}
-
-.pdp-customization__check {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--color-text-primary, #2e241c);
-  cursor: pointer;
-
-  input {
-    margin-top: 2px;
-    width: 16px;
-    height: 16px;
-    accent-color: var(--color-brand-700, #5a3a2c);
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-}
-
-.pdp-customization__error {
-  margin: 0;
-  font-size: 13px;
-  color: var(--color-feedback-error, #b42218);
-}
-
-.pdp-customization__actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.pdp-customization__cancel {
-  appearance: none;
-  background: transparent;
-  border: none;
-  color: var(--color-text-secondary, #6b6056);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:hover { text-decoration: underline; }
-}
-
-.pdp-customization__done {
-  margin-block-start: 12px;
-  padding: 16px;
-  border: 1px solid var(--color-border-subtle, #e4dccb);
-  border-radius: 14px;
-  background: var(--color-bg-muted, #f6f1e8);
-}
-
-.pdp-customization__done-title {
-  margin: 0 0 4px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text-primary, #2e241c);
-}
-
-.pdp-customization__done-note {
-  margin: 0 0 10px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--color-text-secondary, #6b6056);
-}
-
-.pdp-customization__link {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-brand-700, #5a3a2c);
-  text-decoration: none;
-
-  &:hover { text-decoration: underline; }
 }
