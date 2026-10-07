@@ -20,7 +20,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** POST /v3/admin/products, Create a product on behalf of a vendor. Requires vendor_id in body. */
+/**
+ * POST /v3/admin/products, Create a product on behalf of a vendor. Requires vendor_id in body.
+ * Optional label_id must be an active label of that vendor (see AdminProductLabelValidator).
+ */
 final class CreateAdminProductController
 {
     use Responder;
@@ -29,6 +32,7 @@ final class CreateAdminProductController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $serializer,
+        private readonly AdminProductLabelValidator $labels,
     ) {}
     protected function getResponseFactory(): ResponseFactoryInterface { return $this->responseFactory; }
 
@@ -52,6 +56,10 @@ final class CreateAdminProductController
         $vendor = $vRepo->find($vendorId);
         if ($vendor === null) throw HttpException::badRequest('vendor_id is required and must reference a valid vendor.');
 
+        // The store label must be one of the TARGET store's active labels (422
+        // otherwise); validated before anything is built so nothing persists.
+        $labelId = $this->labels->resolve($input->label_id, $vendor);
+
         /** @var CategoryRepository $cRepo */
         $cRepo    = $this->em->getRepository(Category::class);
         $category = $input->category_id !== null ? $cRepo->find($input->category_id) : null;
@@ -70,6 +78,7 @@ final class CreateAdminProductController
         if ($input->colors !== null)       $product->setAvailableColors($input->colors);
         if ($category !== null)            $product->setCategory($category);
         if ($input->delivery_info !== null) $product->setDeliveryInfo($input->normalizedDeliveryInfo());
+        if ($labelId !== null)             $product->setLabelId($labelId);
 
         /** @var ProductRepository $pRepo */
         $pRepo = $this->em->getRepository(Product::class);

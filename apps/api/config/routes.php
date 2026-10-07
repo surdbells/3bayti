@@ -1118,6 +1118,15 @@ return function (App $app): void {
         $group->get('/vendors/{id:[0-9]+}/products',
             \Bayti\Api\Http\Controllers\Admin\Product\ListAdminVendorProductsController::class)->add($perm->for('products.view'));
 
+        // A store's labels for the admin product form's label picker, keyed by
+        // v3 vendor id (GET/POST /v3/vendor/labels are scoped to the CALLER's own
+        // store, so an admin used to read/create labels under the wrong store).
+        // Same active-only list + management shape as the vendor endpoints.
+        $group->get('/vendors/{id:[0-9]+}/labels',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\ListAdminVendorLabelsController::class)->add($perm->for('products.view'));
+        $group->post('/vendors/{id:[0-9]+}/labels',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\CreateAdminVendorLabelController::class)->add($perm->for('products.edit'));
+
         // M3.2.X.8-E, Promo code CRUD. Soft-delete preserves
         // promo_redemptions FK; hard-delete only when zero redemptions.
         $group->get('/promo-codes',

@@ -2060,6 +2060,16 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/vendors/:id/products': {
     target: 'new', oldPath: '', newPath: '/v3/admin/vendors/:id/products', shape: 'v3-envelope',
   },
+  // A store's labels for the admin product form's label picker, keyed by v3
+  // vendor id (the /vendor/labels routes are scoped to the caller's own store).
+  // Same active-only list + { id, label, name, slug, display_order, is_active }
+  // shape as GET/POST /vendor/labels. GET = products.view, POST = products.edit.
+  'GET /admin/vendors/:id/labels': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/vendors/:id/labels', shape: 'v3-envelope',
+  },
+  'POST /admin/vendors/:id/labels': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/vendors/:id/labels', shape: 'v3-envelope',
+  },
   // Platform-wide admin analytics dashboard
   'GET /admin/analytics': {
     target: 'new', oldPath: '/admin/common/dashboard', newPath: '/v3/admin/analytics', shape: 'v3-envelope',

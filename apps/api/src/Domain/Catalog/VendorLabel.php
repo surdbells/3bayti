@@ -93,6 +93,10 @@ class VendorLabel
     #[ORM\Column(name: 'is_active', type: 'boolean')]
     private bool $isActive = true;
 
+    /** Column widths (vendor_labels.name VARCHAR(150), slug VARCHAR(120)). */
+    public const MAX_NAME_LENGTH = 150;
+    private const MAX_SLUG_LENGTH = 120;
+
     public function __construct(Vendor $vendor, string $slug, string $name)
     {
         $this->vendor = $vendor;
@@ -100,6 +104,21 @@ class VendorLabel
         $this->name = $name;
         $this->createdAt = new DateTimeImmutable();
         $this->updatedAt = $this->createdAt;
+    }
+
+    /**
+     * Slug for a newly created label: the name, kebab-cased, plus a short
+     * random suffix so two labels with the same name never collide on the
+     * per-vendor (vendor_id, slug) UNIQUE. Shared by the vendor and admin
+     * create endpoints so both mint slugs the same way. The base is capped so
+     * the result always fits the VARCHAR(120) column.
+     */
+    public static function generateSlug(string $name): string
+    {
+        $suffix = '-' . substr(bin2hex(random_bytes(3)), 0, 6);
+        $base = strtolower(trim(preg_replace('/[^a-z0-9]+/i', '-', $name) ?? '', '-'));
+        $base = rtrim(substr($base, 0, self::MAX_SLUG_LENGTH - strlen($suffix)), '-');
+        return ($base !== '' ? $base : 'label') . $suffix;
     }
 
     public function getId(): ?int

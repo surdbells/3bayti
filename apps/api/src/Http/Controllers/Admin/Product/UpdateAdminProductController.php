@@ -17,7 +17,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** PUT /v3/admin/products/{id} */
+/**
+ * PUT /v3/admin/products/{id}
+ * Optional label_id must be an active label of the product's store (see AdminProductLabelValidator).
+ */
 final class UpdateAdminProductController
 {
     use Responder;
@@ -26,6 +29,7 @@ final class UpdateAdminProductController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $serializer,
+        private readonly AdminProductLabelValidator $labels,
     ) {}
     protected function getResponseFactory(): ResponseFactoryInterface { return $this->responseFactory; }
 
@@ -39,6 +43,12 @@ final class UpdateAdminProductController
 
         $input = $this->validator->parse($request, VendorProductInput::class);
         $body  = (array) ($request->getParsedBody() ?? []);
+
+        // The store label must be an active label of the PRODUCT's own store
+        // (a product's store can't be reassigned on edit). Validated before any
+        // field is touched so a 422 leaves the product unchanged.
+        $labelId = $this->labels->resolve($input->label_id, $product->getVendor(), $product->getLabelId());
+
         /** @var CategoryRepository $cRepo */
         $cRepo = $this->em->getRepository(Category::class);
         $cat   = $input->category_id !== null ? $cRepo->find($input->category_id) : null;
@@ -58,6 +68,8 @@ final class UpdateAdminProductController
         if ($input->colors !== null)          $product->setAvailableColors($input->colors);
         if ($cat !== null)                    $product->setCategory($cat);
         if ($input->delivery_info !== null)   $product->setDeliveryInfo($input->normalizedDeliveryInfo());
+        // Absent/null label_id (or the unchanged current one) keeps the stored label.
+        if ($labelId !== null)                $product->setLabelId($labelId);
 
         $repo->save($product);
         return $this->ok(PaginatedEnvelope::single($this->serializer->detailShape($product)));

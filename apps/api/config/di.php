@@ -969,6 +969,15 @@ return [
     \Bayti\Api\Http\Controllers\Admin\Vendor\UpdateVendorController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\DeleteVendorController::class => \DI\autowire(),
 
+    // Admin store-label management for the product form (GET/POST
+    // /v3/admin/vendors/{id}/labels) + label_id validation on admin product writes.
+    \Bayti\Api\Http\Serializers\VendorLabelSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Vendor\ListAdminVendorLabelsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Vendor\CreateAdminVendorLabelController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Product\AdminProductLabelValidator::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Product\CreateAdminProductController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Product\UpdateAdminProductController::class => \DI\autowire(),
+
     // M3.2.X.6-C, Vendor lifecycle state transition controllers
     \Bayti\Api\Http\Controllers\Admin\Vendor\ApproveVendorController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\SuspendVendorController::class => \DI\autowire(),

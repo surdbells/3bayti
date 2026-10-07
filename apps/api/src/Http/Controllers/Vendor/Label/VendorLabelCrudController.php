@@ -10,6 +10,7 @@ use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Responder;
+use Bayti\Api\Http\Serializers\VendorLabelSerializer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -31,6 +32,7 @@ final class VendorLabelCrudController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
+        private readonly VendorLabelSerializer $serializer,
     ) {}
 
     protected function getResponseFactory(): ResponseFactoryInterface { return $this->responseFactory; }
@@ -51,9 +53,7 @@ final class VendorLabelCrudController
         $name   = trim((string) ($body['label'] ?? $body['name'] ?? ''));
         if ($name === '') throw HttpException::badRequest('label name is required.');
 
-        $slug  = strtolower(trim(preg_replace('/[^a-z0-9]+/i', '-', $name) ?? '', '-'));
-        $slug  = ($slug !== '' ? $slug : 'label') . '-' . substr(bin2hex(random_bytes(3)), 0, 6);
-        $label = new VendorLabel($vendor, $slug, $name);
+        $label = new VendorLabel($vendor, VendorLabel::generateSlug($name), $name);
 
         /** @var VendorLabelRepository $repo */
         $repo = $this->em->getRepository(VendorLabel::class);
@@ -119,13 +119,8 @@ final class VendorLabelCrudController
     /** @return array<string,mixed> */
     private function shape(VendorLabel $l): array
     {
-        return [
-            'id'           => $l->getId(),
-            'label'        => $l->getName(),
-            'name'         => $l->getName(),
-            'slug'         => $l->getSlug(),
-            'display_order'=> $l->getDisplayOrder(),
-            'is_active'    => $l->isActive(),
-        ];
+        // Shared with the admin label endpoints (GET/POST
+        // /v3/admin/vendors/{id}/labels) so both return the identical shape.
+        return $this->serializer->manageShape($l);
     }
 }

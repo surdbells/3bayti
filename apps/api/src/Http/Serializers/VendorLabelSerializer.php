@@ -10,6 +10,7 @@ use Bayti\Api\Domain\Catalog\VendorLabel;
  * Serialize VendorLabel entities for API responses.
  *
  * publicShape: storefront-facing view (id, slug, name, display_order).
+ * manageShape: vendor/admin label-management view (adds label, is_active).
  *
  * The vendor reference is intentionally omitted, labels are always
  * listed in the context of a vendor (the GET /v3/vendors/{slug}/labels
@@ -44,5 +45,34 @@ final class VendorLabelSerializer
             fn (VendorLabel $l) => $this->publicShape($l, $counts[$l->getId()] ?? 0),
             $labels,
         );
+    }
+
+    /**
+     * Management shape, the label-picker / label-settings view used by the
+     * portal: GET+POST /v3/vendor/labels (the vendor's own store) and
+     * GET+POST /v3/admin/vendors/{id}/labels (an admin managing any store).
+     * `label` duplicates `name` because the portal's Labels model reads `label`.
+     *
+     * @return array{id: ?int, label: string, name: string, slug: string, display_order: ?int, is_active: bool}
+     */
+    public function manageShape(VendorLabel $l): array
+    {
+        return [
+            'id'            => $l->getId(),
+            'label'         => $l->getName(),
+            'name'          => $l->getName(),
+            'slug'          => $l->getSlug(),
+            'display_order' => $l->getDisplayOrder(),
+            'is_active'     => $l->isActive(),
+        ];
+    }
+
+    /**
+     * @param list<VendorLabel> $labels
+     * @return list<array{id: ?int, label: string, name: string, slug: string, display_order: ?int, is_active: bool}>
+     */
+    public function manageShapeMany(array $labels): array
+    {
+        return array_map(fn (VendorLabel $l) => $this->manageShape($l), $labels);
     }
 }
