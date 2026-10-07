@@ -301,16 +301,36 @@ describe('CollectionDetailComponent', () => {
     expect(el.querySelector('[data-testid="collection-not-found"]')).toBeNull();
   });
 
-  it('does not request the listing or facets when the collection fetch fails (5xx or 404)', () => {
+  it('renders no listing products when the collection fetch fails (5xx or 404), and ignores listing results that land late', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const failed = setup({ detail: '500' });
-    expect(failed.catalog.loadCalls).toHaveLength(0);
-    expect(failed.catalog.facetCalls).toHaveLength(0);
-    TestBed.resetTestingModule();
+    for (const status of [500, 404] as const) {
+      TestBed.resetTestingModule();
+      // The listing + facets are requested in parallel with the header, so
+      // they can already be in flight when the header fails.
+      const { fixture, catalog, header } = setup({
+        deferHeader: true,
+        holdLoads: true,
+        catalogItems: [makeProduct({ id: 9, slug: 'late-9' })],
+      });
+      expect(catalog.loadCalls.length).toBeLessThanOrEqual(1);
+      expect(catalog.facetCalls.length).toBeLessThanOrEqual(1);
 
-    const missing = setup({ detail: '404' });
-    expect(missing.catalog.loadCalls).toHaveLength(0);
-    expect(missing.catalog.facetCalls).toHaveLength(0);
+      header.pending!.error(new HttpErrorResponse({ status }));
+      fixture.detectChanges();
+      expect(q(fixture, status === 404 ? 'collection-not-found' : 'collection-load-error')).not.toBeNull();
+      expect(q(fixture, 'collection-grid')).toBeNull();
+      expect(fixture.componentInstance.products()).toEqual([]);
+
+      // The in-flight listing answers after the failure: it is discarded.
+      catalog.releaseLoads();
+      await settle();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(q(fixture, status === 404 ? 'collection-not-found' : 'collection-load-error')).not.toBeNull();
+      expect(q(fixture, 'collection-grid')).toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('ui-product-card')).toHaveLength(0);
+      expect(fixture.componentInstance.products()).toEqual([]);
+    }
   });
 
   it('fully resets the shared catalog (incl. facets) on entering the collection', () => {
@@ -469,6 +489,32 @@ describe('CollectionDetailComponent', () => {
       expect(q(fixture, 'collection-load-error-retry')).not.toBeNull();
       expect(document.activeElement).toBe(q(fixture, 'collection-page-body'));
       expect(catalog.loadCalls).toHaveLength(0);
+      // The repeated failure is announced (the content under focus did not change).
+      expect(q(fixture, 'collection-retry-status')?.textContent?.trim()).toBe(en.collections.loadError.title);
+    });
+
+    it('focuses a named region on Retry and announces the restored collection', () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const { fixture, header } = setup({ detail: '500' });
+      const body = q(fixture, 'collection-page-body')!;
+      expect(body.getAttribute('role')).toBe('region');
+      expect(body.getAttribute('aria-label')).toBe(en.collections.pageBodyAria);
+      const status = q(fixture, 'collection-retry-status')!;
+      expect(status.getAttribute('role')).toBe('status');
+      expect(status.textContent?.trim()).toBe(''); // nothing to announce before a Retry
+
+      header.fail = undefined;
+      header.pending = new Subject<unknown>(); // the retried header is slow
+      (q(fixture, 'collection-load-error-retry') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(document.activeElement).toBe(body);
+      expect(body.getAttribute('aria-busy')).toBe('true');
+      expect(status.textContent?.trim()).toBe(en.collections.loading);
+
+      header.pending.next(envelope(makeCollection()));
+      fixture.detectChanges();
+      expect(body.getAttribute('aria-busy')).toBeNull();
+      expect(status.textContent?.trim()).toBe('Eid Edit loaded.');
     });
 
     it('offers no Retry for an unknown collection (404)', () => {

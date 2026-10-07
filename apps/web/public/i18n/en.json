@@ -1836,7 +1836,7 @@
     },
     "loadError": {
       "title": "We couldn't load this category",
-      "body": "Something went wrong on our side. Please check your connection and try again.",
+      "body": "Something went wrong while loading this category. Please try again.",
       "retryAria": "Retry loading this category"
     },
     "eyebrow": "Category",
@@ -1851,6 +1851,8 @@
       "title": "Couldn't load products",
       "body": "Something went wrong while loading these pieces. Please check your connection and try again."
     },
+    "pageBodyAria": "Category content",
+    "restored": "{{name}} loaded.",
     "loadMoreError": "Couldn't load more products.",
     "retry": "Retry",
     "showing": "Showing {{shown}} of {{total}}",
@@ -1905,7 +1907,7 @@
     },
     "loadError": {
       "title": "We couldn't load this collection",
-      "body": "Something went wrong on our side. Please check your connection and try again.",
+      "body": "Something went wrong while loading this collection. Please try again.",
       "retryAria": "Retry loading this collection"
     },
     "eyebrow": "Collection",
@@ -1920,6 +1922,8 @@
     "emptyCollectionTitle": "No pieces in this collection yet",
     "emptyCollectionHint": "Browse other collections",
     "listError": {
+    "pageBodyAria": "Collection content",
+    "restored": "{{name}} loaded.",
       "title": "Couldn't load products",
       "body": "Something went wrong while loading this collection's pieces. Please check your connection and try again."
     },

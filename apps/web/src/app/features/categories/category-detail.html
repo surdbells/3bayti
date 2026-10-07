@@ -13,14 +13,30 @@
         }
       </nav>
 
-      <!-- Everything below the breadcrumb. tabindex="-1": a header retry
-           moves focus here (the Retry button itself gives way to the
-           loading state), so it never drops to <body>. -->
+      <!-- After a header Retry, announce how it went (loading → restored /
+           failed again): the content under focus is swapped, which screen
+           readers would not otherwise report. -->
+      <p class="visually-hidden" role="status" data-testid="category-retry-status">
+        @switch (retryAnnouncement()) {
+          @case ('loading') { {{ 'categories.loading' | translate }} }
+          @case ('restored') { {{ 'categories.restored' | translate:{ name: category()?.name } }} }
+          @case ('error') { {{ 'categories.loadError.title' | translate }} }
+          @case ('notFound') { {{ 'categories.notFound.title' | translate }} }
+        }
+      </p>
+
+      <!-- Everything below the breadcrumb: a named region. tabindex="-1": a
+           header retry moves focus here (the Retry button itself gives way to
+           the loading state), so it never drops to <body>; aria-busy while
+           the header reloads. -->
       <ui-stack
         #pageBody
         gap="2xl"
         class="page-body"
         tabindex="-1"
+        role="region"
+        [attr.aria-label]="'categories.pageBodyAria' | translate"
+        [attr.aria-busy]="loading() ? 'true' : null"
         data-testid="category-page-body">
 
         @if (loading()) {

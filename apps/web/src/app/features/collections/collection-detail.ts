@@ -118,6 +118,24 @@ export class CollectionDetailComponent {
     () => this.response() === null && !this.notFound() && !this.loadError(),
   );
 
+  /** Slug a header Retry was made for (its outcome is announced politely). */
+  private readonly retriedSlug = signal<string | null>(null);
+
+  /**
+   * What the status region announces after a header Retry: the content
+   * under the (focused) page body is swapped, which screen readers would
+   * otherwise not report. Empty until a Retry, and for any other slug.
+   */
+  readonly retryAnnouncement = computed<'' | 'loading' | 'restored' | 'error' | 'notFound'>(() => {
+    const retried = this.retriedSlug();
+    if (retried === null || retried !== this.slug()) return '';
+    if (this.loading()) return 'loading';
+    if (this.collection()) return 'restored';
+    if (this.loadError()) return 'error';
+    if (this.notFound()) return 'notFound';
+    return '';
+  });
+
   // ── Filter state (URL-driven) ─────────────────────────────────────
 
   /**
@@ -355,6 +373,7 @@ export class CollectionDetailComponent {
    * stable page body rather than dropping to <body>.
    */
   retryHeader(): void {
+    this.retriedSlug.set(this.slug());
     this.headerReload$.next(this.headerReload$.value + 1);
     this.pageBody()?.nativeElement.focus({ preventScroll: true });
   }

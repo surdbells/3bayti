@@ -307,20 +307,64 @@ describe('CategoryDetailComponent', () => {
   });
 
   describe('category header failures', () => {
-    it('renders the not-found state (not an endless "loading") for an unknown slug, without listing calls', () => {
-      const { fixture, catalog } = setup({ detail: '404' });
+    it('renders the not-found state (not an endless "loading") for an unknown slug, with no listing products even when the listing answers late', async () => {
+      // The listing + facets start in parallel with the header (their scope is
+      // the route slug), so they can already be in flight when it 404s.
+      const { fixture, catalog, header } = setup({
+        deferHeader: true,
+        holdLoads: true,
+        catalogItems: [makeProduct({ id: 9, slug: 'abaya-9' })],
+      });
+      expect(catalog.loadCalls.length).toBeLessThanOrEqual(1);
+      expect(catalog.facetCalls.length).toBeLessThanOrEqual(1);
+
+      header.pending!.error(new HttpErrorResponse({ status: 404 }));
+      fixture.detectChanges();
       expect(q(fixture, 'category-not-found')).not.toBeNull();
       expect(q(fixture, 'category-header')).toBeNull();
-      expect(catalog.loadCalls).toHaveLength(0);
-      expect(catalog.facetCalls).toHaveLength(0);
+      expect(fixture.componentInstance.products()).toEqual([]);
+
+      // The in-flight listing lands after the 404: it is ignored.
+      catalog.releaseLoads();
+      await settle();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(q(fixture, 'category-not-found')).not.toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('ui-product-card')).toHaveLength(0);
+      expect(fixture.componentInstance.products()).toEqual([]);
     });
 
-    it('renders a load-error state (not "not found") for other failures', () => {
+    it('renders a load-error state (not "not found") for other failures, with no listing products', () => {
       vi.spyOn(console, 'error').mockImplementation(() => undefined);
-      const { fixture, catalog } = setup({ detail: '500' });
+      const { fixture } = setup({ detail: '500' });
       expect(q(fixture, 'category-load-error')).not.toBeNull();
       expect(q(fixture, 'category-not-found')).toBeNull();
-      expect(catalog.loadCalls).toHaveLength(0);
+      expect(fixture.nativeElement.querySelectorAll('ui-product-card')).toHaveLength(0);
+      expect(fixture.componentInstance.products()).toEqual([]);
+    });
+
+    it('focuses a named region on Retry and announces the restored category', () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const { fixture, header } = setup({ detail: '500' });
+      const body = q(fixture, 'category-page-body')!;
+      expect(body.getAttribute('role')).toBe('region');
+      expect(body.getAttribute('aria-label')).toBe(en.categories.pageBodyAria);
+      const status = q(fixture, 'category-retry-status')!;
+      expect(status.getAttribute('role')).toBe('status');
+      expect(status.textContent?.trim()).toBe(''); // nothing to announce before a Retry
+
+      header.fail = undefined;
+      header.pending = new Subject<unknown>(); // the retried header is slow
+      (q(fixture, 'category-load-error-retry') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(document.activeElement).toBe(body);
+      expect(body.getAttribute('aria-busy')).toBe('true');
+      expect(status.textContent?.trim()).toBe(en.categories.loading);
+
+      header.pending.next(envelope(ABAYAS));
+      fixture.detectChanges();
+      expect(body.getAttribute('aria-busy')).toBeNull();
+      expect(status.textContent?.trim()).toBe(`${ABAYAS.name} loaded.`);
     });
 
     it('offers a Retry on a header load error that re-requests the header + listing, keeping focus on the page', async () => {
@@ -373,6 +417,8 @@ describe('CategoryDetailComponent', () => {
       expect(q(fixture, 'category-load-error-retry')).not.toBeNull();
       expect(document.activeElement).toBe(q(fixture, 'category-page-body'));
       expect(catalog.loadCalls).toHaveLength(0);
+      // The repeated failure is announced (the content under focus did not change).
+      expect(q(fixture, 'category-retry-status')?.textContent?.trim()).toBe(en.categories.loadError.title);
     });
 
     it('localises the header Retry (en + ar), its accessible name containing the visible label', () => {
