@@ -104,15 +104,6 @@
           <button type="button" class="ou-btn ou-btn--solid" [disabled]="isAdding" (click)="addLook()">
             @if (isAdding) { {{ 'outfit_adding_look' | translate }} } @else { {{ 'outfit_add_look' | translate }} }
           </button>
-          @if (saved) {
-            <span class="ou-saved"><ax-icon name="check" /> {{ 'outfit_saved_look' | translate }}</span>
-          } @else {
-            <button type="button" class="ou-btn ou-btn--ghost" [disabled]="isSaving" (click)="saveLook()">
-              @if (isSaving) { {{ 'outfit_saving_look' | translate }} }
-              @else if (!isSignedIn) { {{ 'outfit_sign_in_to_save' | translate }} }
-              @else { {{ 'outfit_save_look' | translate }} }
-            </button>
-          }
         </div>
       </div>
 

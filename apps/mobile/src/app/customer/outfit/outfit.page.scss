@@ -127,14 +127,7 @@
   text-align: center;
 }
 .ou-btn--solid { border: none; background: var(--brand); color: #fff; }
-.ou-btn--ghost { background: var(--ax-ain-surface); border: 1px solid #c69d63; color: var(--ax-ain-accent); }
 .ou-btn:disabled { opacity: .55; }
-.ou-saved {
-  flex: 1 1 auto;
-  display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
-  color: var(--ax-ain-gold); font-weight: 600; font-size: 0.86rem;
-}
-.ou-saved ax-icon { --ax-icon-size: 1rem; }
 
 .ou-board {
   display: grid;

@@ -464,10 +464,6 @@ export class SettingsPage implements OnInit, OnDestroy {
     this.router.navigate(['/my-orders']);
   }
 
-  user_styles(): void {
-    this.router.navigate(['/styles']);
-  }
-
   openFollowing(): void {
     this.router.navigate(['/following']);
   }

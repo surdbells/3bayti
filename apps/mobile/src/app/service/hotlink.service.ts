@@ -3,11 +3,11 @@ import { firstValueFrom } from 'rxjs';
 import { MobileNetworkAdapter } from '../core/http/mobile-network-adapter';
 import { environment } from '../../environments/environment';
 
-export type HotlinkTargetType = 'store' | 'style';
+export type HotlinkTargetType = 'store';
 
 /**
- * Store hotlinks & Style-Me codes (P9). Get-or-create the canonical tracked
- * short link for a store/look, so a share carries click + conversion tracking.
+ * Store hotlinks (P9). Get-or-create the canonical tracked short link for a
+ * store, so a share carries click + conversion tracking.
  * Auth-only; returns null on failure so callers fall back to the plain URL.
  *
  * Note: the shared link opens the WEB storefront. Opening the app from an

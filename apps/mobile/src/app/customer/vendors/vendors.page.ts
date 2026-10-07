@@ -142,7 +142,7 @@ goToReviews(slug: string, vendorId: number, name: string) {
   /**
    * Share this store (P9). Prefers a tracked hotlink (signed-in) → falls back
    * to the plain storefront URL. Web Share API with a clipboard fallback, no
-   * @capacitor/share dependency (OTA-safe). Mirrors style-view shareStyle().
+   * @capacitor/share dependency (OTA-safe).
    */
   async shareStore(): Promise<void> {
     const slug = this.rqst_param.store_slug;

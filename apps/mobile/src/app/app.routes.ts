@@ -137,27 +137,14 @@ export const routes: Routes = [
     path: 'home',
     loadComponent: () => import('./public/home/home.page').then( m => m.HomePage)
   },
-  {
-    path: 'styles',
-    loadComponent: () => import('./customer/styles/styles.page').then( m => m.StylesPage)
-  },
-  {
-    // :slug makes the page deep-linkable + hard-reload-safe. When navigated
-    // from the list, the style still comes via router state (fast path); on
-    // a hard reload / shared link, the page re-fetches by this slug.
-    path: 'style-view/:slug',
-    loadComponent: () => import('./customer/styles/style-view/style-view.page').then( m => m.StyleViewPage)
-  },
-  {
-    path: 'create',
-    loadComponent: () => import('./customer/styles/create/create.page').then( m => m.CreatePage)
-  },
-  {
-    // Edit a saved look: reuses the create page in edit mode (prefills from
-    // the passed style / a slug re-fetch, saves via PUT /me/styles/:id).
-    path: 'style-edit/:slug',
-    loadComponent: () => import('./customer/styles/create/create.page').then( m => m.CreatePage)
-  },
+  // The Style Hub was removed. Its old URLs (in-app history, OTA-cached
+  // navigation, links people kept) land on the customer home tab instead of
+  // failing to match. `style-view` without a slug is the pre-slug form.
+  { path: 'styles', redirectTo: 'account', pathMatch: 'full' },
+  { path: 'style-view', redirectTo: 'account', pathMatch: 'full' },
+  { path: 'style-view/:slug', redirectTo: 'account', pathMatch: 'full' },
+  { path: 'style-edit/:slug', redirectTo: 'account', pathMatch: 'full' },
+  { path: 'create', redirectTo: 'account', pathMatch: 'full' },
   {
     // Stores the user follows (Phase 10).
     path: 'following',

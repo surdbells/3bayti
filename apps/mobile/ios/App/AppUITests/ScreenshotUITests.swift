@@ -34,10 +34,9 @@ final class ScreenshotUITests: XCTestCase {
         // The screens that make the strongest listing. Reorder/trim freely —
         // the first screenshot is the one most people see, so lead with Explore.
         goToExplore();   snapshot("01_Explore")
-        goToStyles();    snapshot("02_Styles")
-        goToGiftCards(); snapshot("03_GiftCards")
-        goToAccount();   snapshot("04_Account")
-        goToCart();      snapshot("05_Cart")
+        goToGiftCards(); snapshot("02_GiftCards")
+        goToAccount();   snapshot("03_Account")
+        goToCart();      snapshot("04_Cart")
     }
 
     // MARK: - Navigation (tune the labels to the live WebView UI)
@@ -72,7 +71,6 @@ final class ScreenshotUITests: XCTestCase {
     // Bottom-tab labels come from the app's i18n (home/explore/cart/gift/profile).
     // Adjust to the visible English strings if they differ.
     private func goToExplore()   { tapInWeb("Explore") }
-    private func goToStyles()    { tapInWeb("Sketch") }   // "Styles" tab
     private func goToGiftCards() { tapInWeb("Gift") }
     private func goToAccount()   { tapInWeb("Profile") }
     private func goToCart()      { tapInWeb("Cart") }

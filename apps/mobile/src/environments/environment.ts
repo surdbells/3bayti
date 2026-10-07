@@ -65,8 +65,8 @@ export const environment = {
     iosCountry: 'ae'
   },
 
-  /* Canonical PUBLIC storefront origin used to build shareable links (store /
-   * Style-Me hotlinks). Always the production storefront regardless of which
+  /* Canonical PUBLIC storefront origin used to build shareable links (store
+   * hotlinks). Always the production storefront regardless of which
    * API this build talks to — a shared link must be openable by anyone, so it
    * must never leak a staging host. No trailing slash. */
   publicWebUrl: 'https://3bayti.ae'

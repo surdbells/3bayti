@@ -71,9 +71,6 @@ export class GlobalComponent {
   public static store_reviews = GlobalComponent.baseURL + 'customer/store-reviews';
   public static add_review = GlobalComponent.baseURL + 'customer/add-review';
   public static make_helpful = GlobalComponent.baseURL + 'customer/helpful';
-  public static vendors_listing = GlobalComponent.baseURL + 'customer/vendors_list';
-  public static styles_list = GlobalComponent.baseURL + 'customer/styles_list';
-  public static create_style = GlobalComponent.baseURL + 'customer/create_style';
   public static vendors_products_listing = GlobalComponent.baseURL + 'customer/vendors_products';
   public static read_orders_listing = GlobalComponent.baseURL + 'customer/read_orders_listing';
 

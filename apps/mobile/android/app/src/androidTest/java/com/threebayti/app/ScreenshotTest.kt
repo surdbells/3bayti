@@ -52,10 +52,9 @@ class ScreenshotTest {
         logInIfNeeded()
 
         tapByText("Explore"); Screengrab.screenshot("01_Explore")
-        tapByText("Sketch");  Screengrab.screenshot("02_Styles")
-        tapByText("Gift");    Screengrab.screenshot("03_GiftCards")
-        tapByText("Profile"); Screengrab.screenshot("04_Account")
-        tapByText("Cart");    Screengrab.screenshot("05_Cart")
+        tapByText("Gift");    Screengrab.screenshot("02_GiftCards")
+        tapByText("Profile"); Screengrab.screenshot("03_Account")
+        tapByText("Cart");    Screengrab.screenshot("04_Cart")
     }
 
     private fun logInIfNeeded() {

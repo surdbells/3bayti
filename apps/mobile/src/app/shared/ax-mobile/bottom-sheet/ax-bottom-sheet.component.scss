@@ -82,7 +82,7 @@
 
 /* ----- Full-height opt-out mode ------------------------- */
 /* Edge-to-edge, top-corners-only rounded, the legacy behaviour, used by
-   sheets that genuinely need full height (styles/create product picker). */
+   sheets that genuinely need full height (e.g. a long product picker). */
 
 .ax-sheet--fullscreen {
   border-radius: 0;

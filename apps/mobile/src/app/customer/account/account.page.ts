@@ -550,9 +550,6 @@ export class AccountPage implements OnInit, OnDestroy {
   user_search() {
     this.router.navigate(['/', 'search']);
   }
-  user_styles() {
-    this.router.navigate(['/', 'styles']);
-  }
   open_product(id: number) {
     this.router.navigate(
       ['/', 'product'],

@@ -8,8 +8,8 @@
  * By default the sheet is a PREMIUM FLOATING card: inset from the screen
  * edges (horizontal + bottom margin), all four corners rounded, centered
  * with a max-width, and a content-ish default height (NOT full-screen).
- * For sheets that genuinely need full height (e.g. the styles/create
- * product picker), opt out with [fullscreen]="true" (alias [inset]="false")
+ * For sheets that genuinely need full height (e.g. a long product
+ * picker), opt out with [fullscreen]="true" (alias [inset]="false")
  * to restore the edge-to-edge, top-rounded, full-height behaviour.
  *
  * USAGE (floating list picker with built-in search):

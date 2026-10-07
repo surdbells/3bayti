@@ -64,9 +64,9 @@ interface StoredUser {
 /**
  * "Style me with Ain": a guided mobile outfit generator. Occasion / hero garment
  * / vibe / colours / budget → a coordinated multi-piece look via POST /ai/outfit,
- * with "add the look to bag" and "save the look" (a signed-in Style). A gift-card
- * nudge is offered when no coherent look fits. Works logged-out; personalises
- * when signed in. v3-id / slug navigation only.
+ * with "add the look to bag". A gift-card nudge is offered when no coherent look
+ * fits. Works logged-out; personalises when signed in. v3-id / slug navigation
+ * only.
  */
 @Component({
   selector: 'app-outfit',
@@ -118,8 +118,6 @@ export class OutfitPage implements OnInit {
   isSending = false;
   hasSearched = false;
   isAdding = false;
-  isSaving = false;
-  saved = false;
   imageLoaded: { [key: number]: boolean } = {};
 
   @ViewChild(IonContent) private content?: IonContent;
@@ -151,10 +149,6 @@ export class OutfitPage implements OnInit {
 
   goBack(): void {
     this.nav.back();
-  }
-
-  get isSignedIn(): boolean {
-    return !!this.user?.token;
   }
 
   colourHex(name: string): string {
@@ -216,7 +210,6 @@ export class OutfitPage implements OnInit {
 
     this.isSending = true;
     this.hasSearched = true;
-    this.saved = false;
     this.pieces = [];
     this.rationale = '';
     this.giftCard = null;
@@ -255,7 +248,6 @@ export class OutfitPage implements OnInit {
     this.rationale = '';
     this.giftCard = null;
     this.totalPrice = null;
-    this.saved = false;
   }
 
   /** Snap the content to the top on response. IonContent always exists, so this
@@ -320,59 +312,9 @@ export class OutfitPage implements OnInit {
     }
   }
 
-  /** Save the composed look as an Ain Style (signed-in only, <= 4 pieces). */
-  saveLook(): void {
-    if (!this.user?.token) {
-      this.router.navigate(['/', 'login']);
-      return;
-    }
-    if (this.pieces.length === 0 || this.isSaving) {
-      return;
-    }
-    this.isSaving = true;
-    const body = {
-      name: this.lookName(),
-      products: this.pieces.slice(0, 4).map((p) => p.product.id),
-      source: 'ai',
-      prompt: this.promptSummary(),
-      rationale: this.rationale,
-    };
-    this.networkAdapter.post_v3('POST /me/styles', body, { authToken: this.user.token }).subscribe({
-      next: (res: any) => {
-        this.isSaving = false;
-        if ((res?.response_code === 201 || res?.response_code === 200) && res?.status === 'success') {
-          this.saved = true;
-          this.recordEvent('ai_outfit_saved', { count: this.pieces.length });
-          this.success_notification(this.i18n.t('outfit_saved_toast'));
-        } else {
-          this.error_notification(this.i18n.t('outfit_save_failed_toast'));
-        }
-      },
-      error: () => {
-        this.isSaving = false;
-        this.error_notification(this.i18n.t('outfit_save_failed_toast'));
-      },
-    });
-  }
-
   openGiftCards(): void {
     this.recordEvent('ai_gift_card_recommended', { context: 'outfit', surface: 'mobile' });
     this.router.navigate(['/', 'gift-cards']);
-  }
-
-  private lookName(): string {
-    const parts = [this.selectedStyles[0], this.occasion].filter((s) => !!s);
-    const label = parts.join(' ').trim();
-    return label !== '' ? label.charAt(0).toUpperCase() + label.slice(1) + ' look' : 'My Ain outfit';
-  }
-
-  private promptSummary(): string {
-    const b: string[] = [];
-    if (this.occasion) b.push(this.occasion);
-    if (this.selectedStyles.length) b.push(this.selectedStyles.join(', '));
-    if (this.selectedColours.length) b.push('in ' + this.selectedColours.join(', '));
-    if (this.heroType) b.push('around a ' + this.heroType);
-    return b.join(' · ');
   }
 
   private recordEvent(event: string, extra: Record<string, unknown> = {}): void {

@@ -23,7 +23,7 @@ import { PendingOrdersService } from '../../core/services/pending-orders.service
  * pull-to-refresh instead of routing, that page keeps its
  * footer inline rather than using this component.
  */
-export type AppTabBarTab = 'home' | 'explore' | 'cart' | 'sketch' | 'gift' | 'profile';
+export type AppTabBarTab = 'home' | 'explore' | 'cart' | 'gift' | 'profile';
 
 @Component({
   selector: 'app-tab-bar',
@@ -62,14 +62,6 @@ export type AppTabBarTab = 'home' | 'explore' | 'cart' | 'sketch' | 'gift' | 'pr
           [class.m6f-tab--active]="active === 'cart'">
           <ax-icon name="shopping-cart" />
           <ion-label>{{ 'title_my_cart' | translate }}</ion-label>
-        </ion-tab-button>
-        <ion-tab-button
-          (click)="go('sketch')"
-          tab="sketch"
-          class="m6f-tab"
-          [class.m6f-tab--active]="active === 'sketch'">
-          <ax-icon name="blocks" />
-          <ion-label>{{ 'nav_style_hub' | translate }}</ion-label>
         </ion-tab-button>
         <ion-tab-button
           (click)="go('gift')"
@@ -117,7 +109,6 @@ export class AppTabBarComponent implements OnInit {
    *    home    -> /account (customer landing page)
    *    explore -> /explore
    *    cart    -> /cart
-   *    sketch  -> /styles
    *    gift    -> /gift-cards (gift-card purchase landing)
    *    profile -> /settings
    */
@@ -125,7 +116,6 @@ export class AppTabBarComponent implements OnInit {
     home: '/account',
     explore: '/explore',
     cart: '/cart',
-    sketch: '/styles',
     gift: '/gift-cards',
     profile: '/settings',
   };

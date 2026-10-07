@@ -509,11 +509,10 @@ ion-header.md ion-toolbar {
   padding-bottom: 4px;
 }
 
-/* Each tab, by default muted grey. The bar now holds 6 tabs
-   (Home / Explore / Cart / Style hub / Gifts / Profile), so icon
-   and label sizing is tightened to keep all six on one row without
-   overflowing on narrow phones. Padding is trimmed and labels are
-   single-line ellipsis as a safety net for long translations. */
+/* Each tab, by default muted grey. The bar holds 5 tabs
+   (Home / Explore / Cart / Gifts / Profile). Padding is trimmed and
+   labels are single-line ellipsis as a safety net for long
+   translations on narrow phones. */
 .m6f-tab {
   --color: var(--ax-color-text-tertiary);
   --color-selected: var(--ax-color-text-tertiary);
@@ -526,31 +525,22 @@ ion-header.md ion-toolbar {
   min-width: 0;
 
   ax-icon {
-    font-size: 21px;
+    font-size: 22px;
     color: var(--ax-color-text-tertiary);  /* #a8a092 */
   }
 
   ion-label {
     font-family: inherit;
-    font-size: 9.5px;
+    font-size: 10px;
     font-weight: 400;
     color: var(--ax-color-text-tertiary);
-    margin-top: 3px;
+    margin-top: 4px;
     text-transform: none;
     letter-spacing: 0;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-}
-
-/* Very narrow phones, give labels a hair more breathing room by
-   shrinking the icon slightly so 6 tabs never clip. */
-@media (max-width: 360px) {
-  .m6f-tab {
-    ax-icon { font-size: 20px; }
-    ion-label { font-size: 9px; }
   }
 }
 
@@ -1276,79 +1266,6 @@ ion-header.md ion-toolbar {
   /* Distinct from .m7-header-action because this is a passive
      count display, not a button. No padding/hover/tap states. */
 }
-
-
-/* ============================================================
-   M7, Segment tabs (mutually-exclusive view switcher)
-   ============================================================
-   Pill-style segment tabs for switching between mutually-exclusive
-   views on the same page. Used by styles.page (Community / 3bayti
-   / My Styles). Different from filter chips in m7-filter-chips:
-   filter chips are additive selectors, segment tabs are
-   mutually-exclusive views.
-
-   Place inside <ion-header class="m7-header-shadow"> AFTER the
-   <ion-toolbar> closes, OR at the top of <ion-content> below the
-   header, same render either way. The container provides its
-   own pill-track background.
-
-   Usage:
-     <div class="m7-segment-tabs">
-       <button class="m7-segment-tab"
-               [class.m7-segment-tab--active]="activeTab === 'a'"
-               (click)="switch('a')">Tab A</button>
-       <button class="m7-segment-tab"
-               [class.m7-segment-tab--active]="activeTab === 'b'"
-               (click)="switch('b')">Tab B</button>
-       <button class="m7-segment-tab"
-               [class.m7-segment-tab--active]="activeTab === 'c'"
-               (click)="switch('c')">Tab C</button>
-     </div>
-   ============================================================ */
-
-.m7-segment-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  margin: 0 16px 12px;
-  background: var(--ax-color-bg-canvas);  /* warm beige track */
-  border-radius: 999px;
-}
-
-.m7-segment-tab {
-  flex: 1;
-  background: transparent;
-  border: none;
-  border-radius: 999px;
-  padding: 8px 4px;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--ax-color-text-secondary);  /* muted by default */
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, font-weight 0.15s ease;
-  white-space: nowrap;
-
-  &:active {
-    /* Subtle press feedback when not active */
-    opacity: 0.7;
-  }
-}
-
-.m7-segment-tab--active {
-  background: var(--ax-color-bg-surface);  /* white pill on beige track */
-  color: var(--ax-color-text-primary);
-  font-weight: 500;
-  /* Soft shadow for the lifted-pill effect */
-  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.08),
-              0 1px 1px rgba(46, 36, 28, 0.04);
-
-  &:active {
-    /* Already active, no opacity dip on tap */
-    opacity: 1;
-  }
-}
-
 
 
 /* ============================================================

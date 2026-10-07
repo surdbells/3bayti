@@ -487,25 +487,6 @@ export function transformVendorResponse(data: unknown): unknown {
   };
 }
 
-/**
- * v3 GET /v3/vendors list -> legacy vendor-picker shape. The styles-create
- * page (and any other vendor list consumer) binds `store.store_id` and
- * `store.store_name`; v3 publicShape uses `id`/`name`. We map each item and
- * keep the v3 fields too (pass-through) so slug/logo-aware callers still work.
- */
-export function transformVendorListResponse(data: unknown): unknown {
-  if (!Array.isArray(data)) return data;
-  return data.map((v) => {
-    if (!isRecord(v)) return v;
-    return {
-      ...v,
-      store_id: v['id'],
-      store_name: asString(v['name']),
-      logo: asString(v['logo_url']),
-    };
-  });
-}
-
 /** Human "x ago" from an ISO timestamp, for review cards. */
 function relativeTime(iso: string): string {
   if (!iso) return '';
@@ -573,7 +554,7 @@ export function transformMeasurementsReadResponse(data: unknown): unknown {
 }
 
 /* ============================================================== *
- * M3.1.5.5, List shape for vendor labels + styles
+ * M3.1.5.5, List shape for vendor labels
  * ============================================================== */
 
 /**
@@ -605,97 +586,6 @@ function legacyCategoryFromV3Label(item: unknown): Record<string, unknown> {
     // Pass-through for slug-aware future callers:
     slug: asString(item['slug']),
     display_order: asNumberOrNull(item['display_order']),
-  };
-}
-
-/**
- * v3 styles list -> legacy styles array shape used by styles.page.
- * Mobile binds:
- *   `style.id`, number
- *   `style.style_name`, display name (note the underscore, legacy
- *                        field, not `name`)
- *   `style.total_price`, string from v3 DECIMAL
- *   `style.products[0..2].image`, image URL strings
- *
- * v3 emits {id, slug, name, description, cover_image_url,
- *           style_type, total_price, products: [{id, slug, name,
- *           primary_image_url, price, display_order}, ...]}.
- *
- * Mapping:
- *   name → style_name (legacy field name)
- *   products[].primary_image_url → products[].image (legacy field)
- *   total_price passes through as-is (string DECIMAL from v3)
- *
- * Slug + description + cover_image_url + style_type pass through for
- * any future caller; mobile's current HTML doesn't bind them but
- * forwarding them is harmless and future-friendly.
- *
- * Returns empty array if data isn't an array (defensive).
- */
-export function transformStylesListResponse(data: unknown): unknown {
-  if (!Array.isArray(data)) return [];
-  return data.map(legacyStyleFromV3Style);
-}
-
-/**
- * v3 single-style detail (GET /v3/styles/:slug) -> legacy Styles shape.
- *
- * Backs the style-view deep-link / hard-reload path: when router state is
- * wiped, the page re-fetches the style by slug and rebuilds it. v3 returns
- * a SINGLE style object under `data` (detailShape), so this reshapes one
- * object via the same mapper the list uses, keeping the legacy
- * {style_name, total_price, products[].{image, product_id, ...}} shape
- * (incl. legacy_product_id on each product) identical to the list path.
- *
- * Returns {} if data isn't an object (defensive, the page treats a
- * missing id as "not found" and stays on the loading/empty state).
- */
-export function transformStyleDetailResponse(data: unknown): unknown {
-  if (!isRecord(data)) return {};
-  return legacyStyleFromV3Style(data);
-}
-
-function legacyStyleFromV3Style(item: unknown): Record<string, unknown> {
-  if (!isRecord(item)) return {};
-  const products = Array.isArray(item['products'])
-    ? item['products'].map(legacyStyleProductFromV3Product)
-    : [];
-  return {
-    // Primary bindings (styles.page HTML):
-    id: asNumber(item['id']),
-    style_name: asString(item['name']),
-    total_price: asString(item['total_price']),
-    products,
-    // Pass-through:
-    slug: asString(item['slug']),
-    description: asString(item['description']),
-    cover_image_url: asString(item['cover_image_url']),
-    style_type: asString(item['style_type']),
-    // OWNER flag (detailShape only; absent → false). Drives the style-view
-    // Edit/Delete controls. The list shapes never set it, so it stays false
-    // there; the style-view resolves it via an authenticated detail fetch.
-    is_owner: item['is_owner'] === true,
-  };
-}
-
-function legacyStyleProductFromV3Product(item: unknown): Record<string, unknown> {
-  if (!isRecord(item)) return { image: '', product_id: 0 };
-  return {
-    // The style-view PDP tap opens the product via open_product(product_id),
-    // and the PDP loads by v3 id (GET /v3/products/by-id/:id), so navigate
-    // with the v3 id. Without this, product_id is undefined -> NaN ->
-    // placeholder PDP.
-    product_id: asNumber(item['id']),
-    // styles.page card binds style.products[N].image:
-    image: asString(item['primary_image_url']),
-    // style-view summary + cards bind product_name / price:
-    product_name: asString(item['name']),
-    // Pass-through for any caller that wants to navigate to the
-    // product detail page from a style:
-    id: asNumber(item['id']),
-    slug: asString(item['slug']),
-    name: asString(item['name']),
-    price: asString(item['price']),
   };
 }
 
@@ -780,7 +670,6 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
 
   // Vendor-shape endpoints
   'GET /mobile/read-vendor': transformVendorResponse,
-  'GET /vendors': transformVendorListResponse,
   'GET /vendors/:vendorId/reviews': transformReviewDisplayResponse,
   'GET /me/reviews': transformReviewDisplayResponse,
   'GET /me/measurements': transformMeasurementsReadResponse,
@@ -789,12 +678,4 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
   'GET /mobile/search': transformProductListResponse,            // products list
   'GET /mobile/products-by-labels': transformProductListResponse, // products list
   'GET /mobile/store-labels': transformVendorLabelsResponse,      // labels list
-  'GET /mobile/styles-list': transformStylesListResponse,         // styles list
-  // "My Styles" tab, owner-scoped styles list (GET /v3/me/styles). Same
-  // v3 styles shape as styles-list, so it MUST use the same transform to
-  // produce the legacy {style_name, total_price, products[].image} shape.
-  'GET /mobile/my-styles': transformStylesListResponse,           // styles list (owner-scoped)
-  // Single style by slug (deep-link / hard-reload re-fetch). v3 returns one
-  // style object under `data`; reshape it to the legacy Styles shape.
-  'GET /mobile/style-detail': transformStyleDetailResponse,       // single style
 };
