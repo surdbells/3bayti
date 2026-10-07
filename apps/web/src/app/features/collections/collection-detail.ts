@@ -3,16 +3,18 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
   ElementRef,
+  Injector,
   inject,
   computed,
   signal,
   effect,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { catchError, map, of, startWith, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, map, of, startWith, switchMap, tap } from 'rxjs';
 import { TranslatePipe } from '@ngx-translate/core';
 
 import { SeoService } from '../../core/seo/seo.service';
@@ -29,6 +31,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { CatalogService, type CatalogFilters, type CatalogSort } from '../categories/catalog.service';
 import { FilterBarComponent } from '../catalog/filter-bar';
 import { ProductCardComponent } from '../catalog/product-card';
+import { handOffLoadMoreFocus } from '../catalog/load-more-focus';
 import type { CollectionDetail, CollectionDetailMeta } from './collection.model';
 import { collectionUrl } from './collections.service';
 
@@ -43,10 +46,14 @@ import { collectionUrl } from './collections.service';
  *     (GET /products?collection=<slug> + GET /products/facets), with the
  *     shared FilterBar. The URL query string is the single source of truth
  *     for filters (shareable, survives reload); the collection slug always
- *     comes from the route param.
+ *     comes from the route param. As the scope is known from the route, the
+ *     listing + facets are requested in PARALLEL with the header (a filtered
+ *     deep link costs one round trip, not two).
  *
  * Unknown / inactive slug → API 404 → inline not-found state with a link
- * back to the /collection index (not a hard router error).
+ * back to the /collection index (not a hard router error); any listing
+ * started for it is discarded. A network / 5xx header failure offers a
+ * Retry that re-requests the header (and the listing with it).
  */
 @Component({
   selector: 'app-collection-detail',
@@ -74,6 +81,7 @@ export class CollectionDetailComponent {
   private seo = inject(SeoService);
   private catalog = inject(CatalogService);
   private destroyRef = inject(DestroyRef);
+  private injector = inject(Injector);
 
   // ── Collection metadata ───────────────────────────────────────────
 
@@ -88,9 +96,12 @@ export class CollectionDetailComponent {
   /** Any other fetch failure (network / 5xx). */
   readonly loadError = signal(false);
 
+  /** Bumped by retryHeader() to re-request the header for the same slug. */
+  private readonly headerReload$ = new BehaviorSubject(0);
+
   readonly response = toSignal(
-    this.route.paramMap.pipe(
-      switchMap((params) => {
+    combineLatest([this.route.paramMap, this.headerReload$]).pipe(
+      switchMap(([params]) => {
         const slug = params.get('slug') ?? '';
         this.notFound.set(false);
         this.loadError.set(false);
@@ -216,6 +227,10 @@ export class CollectionDetailComponent {
 
   /** The product-grid region (tabindex="-1"), focus target for a listing retry. */
   private readonly gridRegion = viewChild<ElementRef<HTMLElement>>('gridRegion');
+  /** Everything below the breadcrumb (tabindex="-1"), focus target for a header retry. */
+  private readonly pageBody = viewChild<unknown, ElementRef<HTMLElement>>('pageBody', { read: ElementRef });
+  /** The one "Load more" / retry button, while more pages exist. */
+  private readonly loadMoreButton = viewChild<ElementRef<HTMLButtonElement>>('loadMoreBtn');
 
   constructor() {
     // SEO
@@ -274,40 +289,50 @@ export class CollectionDetailComponent {
         });
       });
 
-    // Drive catalog + facets whenever the slug, filters or a retry change.
+    // Drive catalog + facets whenever the slug, filters, a retry or the
+    // header's failure state change.
     effect(() => {
       const filters = this.currentFilters();
       this.reloadTick();
-      // List products only for a collection whose header actually loaded:
-      // a 404 (notFound), a failed fetch (loadError) or a header still on its
-      // way renders its own state with no grid, so GET /products and
-      // /products/facets would be wasted calls. The header embeds the first
-      // page of products, so the unfiltered grid doesn't wait on this.
-      const headerReady = this.collection() !== null && !this.notFound() && !this.loadError();
-      const token = ++this.loadToken;
-      this._page.set(0);
-      this.loadMoreFailed.set(false);
-      if (!filters.collection || !headerReady) {
-        this.catalogState.set('idle');
-        return;
-      }
-      this.catalogState.set('loading');
-      // A new collection is a new scope: drop the previous listing AND its
-      // facets. A filter change within the same collection keeps the facets
-      // so the filter bar's options don't flicker while counts refresh.
-      if (filters.collection !== this.loadedScope) {
-        this.loadedScope = filters.collection;
-        this.catalog.reset();
-      } else {
-        this.catalog.resetProducts();
-      }
-      this.catalog.loadProducts(filters, 0, false).then(
-        () => { if (token === this.loadToken) this.catalogState.set('ready'); },
-        // Listing failed: the unfiltered view falls back to the embedded
-        // products; a filtered view shows the "couldn't load" error state.
-        () => { if (token === this.loadToken) this.catalogState.set('failed'); },
-      );
-      void this.catalog.loadFacets(filters);
+      // The scope is the ROUTE slug, known before GET /collections/:slug
+      // answers, so the listing + facets start in parallel with the header
+      // instead of after it (no second serial round trip on a filtered deep
+      // link). Only a header that has FAILED stops them: a 404 or a network /
+      // 5xx failure renders its own state with no grid, so a listing for it
+      // is discarded. A header retry (or a hop to another slug) clears that
+      // state and lists again; a header that is merely in flight, or that
+      // then resolves fine, does not re-run this. Until the listing is ready
+      // the unfiltered grid shows the products the header embeds, as before.
+      const headerFailed = this.notFound() || this.loadError();
+      // The rest only writes state and issues requests: untracked, so a
+      // signal the catalog happens to read can never re-trigger this effect.
+      untracked(() => {
+        const token = ++this.loadToken;
+        this._page.set(0);
+        this.loadMoreFailed.set(false);
+        if (!filters.collection || headerFailed) {
+          this.catalogState.set('idle');
+          this.discardListing();
+          return;
+        }
+        this.catalogState.set('loading');
+        // A new collection is a new scope: drop the previous listing AND its
+        // facets. A filter change within the same collection keeps the facets
+        // so the filter bar's options don't flicker while counts refresh.
+        if (filters.collection !== this.loadedScope) {
+          this.loadedScope = filters.collection;
+          this.catalog.reset();
+        } else {
+          this.catalog.resetProducts();
+        }
+        this.catalog.loadProducts(filters, 0, false).then(
+          () => { if (token === this.loadToken) this.catalogState.set('ready'); },
+          // Listing failed: the unfiltered view falls back to the embedded
+          // products; a filtered view shows the "couldn't load" error state.
+          () => { if (token === this.loadToken) this.catalogState.set('failed'); },
+        );
+        void this.catalog.loadFacets(filters);
+      });
     });
   }
 
@@ -320,6 +345,18 @@ export class CollectionDetailComponent {
   retryListing(): void {
     this.reloadTick.update((n) => n + 1);
     this.gridRegion()?.nativeElement.focus({ preventScroll: true });
+  }
+
+  /**
+   * Re-request the collection header after a network / 5xx failure.
+   * Clearing the error state also re-runs the listing + facets for the same
+   * slug and filters (in parallel with the header). The Retry button that
+   * triggered this gives way to the loading state, so focus moves to the
+   * stable page body rather than dropping to <body>.
+   */
+  retryHeader(): void {
+    this.headerReload$.next(this.headerReload$.value + 1);
+    this.pageBody()?.nativeElement.focus({ preventScroll: true });
   }
 
   /** Called by the filter bar; writes the new filter state to the URL. */
@@ -341,13 +378,18 @@ export class CollectionDetailComponent {
   /**
    * Load the next page and append to the grid. Never rejects: on failure
    * the page index is rolled back (so the retry re-requests the same page
-   * instead of skipping one) and the footer shows an inline retry.
+   * instead of skipping one) and the footer shows an inline retry. When it
+   * fetched the LAST page the button is removed, so a shopper who was on it
+   * moves to the first appended product instead of dropping to <body>.
    */
   async loadMore(): Promise<void> {
     if (this.isLoadingGrid()) return;
     const token = this.loadToken;
     const prevPage = this._page();
     const nextPage = prevPage + 1;
+    const shownBefore = this.products().length;
+    const button = this.loadMoreButton()?.nativeElement;
+    const focusedAtStart = !!button && button.ownerDocument.activeElement === button;
     this._page.set(nextPage);
     this.loadMoreFailed.set(false);
     try {
@@ -358,10 +400,34 @@ export class CollectionDetailComponent {
       if (token !== this.loadToken) return;
       this._page.set(prevPage);
       this.loadMoreFailed.set(true);
+      return;
     }
+    if (token !== this.loadToken || this.hasMore()) return;
+    handOffLoadMoreFocus({
+      injector: this.injector,
+      button,
+      focusedAtStart,
+      firstNewIndex: shownBefore,
+      cards: () => this.gridRegion()?.nativeElement.querySelectorAll('.product-grid > ui-product-card'),
+      fallback: () => this.gridRegion()?.nativeElement,
+    });
   }
 
   // ── Private ──────────────────────────────────────────────────────
+
+  /**
+   * Drop a listing started for a collection whose header then failed (404 /
+   * network / 5xx). The caller has already bumped loadToken, so its pending
+   * page-0 callbacks are ignored; the full reset also invalidates the shared
+   * CatalogService's in-flight product + facet requests and clears whatever
+   * they already stored, so nothing listed for the failed header can
+   * surface, and the next listing starts from a clean scope.
+   */
+  private discardListing(): void {
+    if (this.loadedScope === null) return;
+    this.loadedScope = null;
+    this.catalog.reset();
+  }
 
   private fetchCollectionDetail$(slug: string) {
     return this.routed.get<CollectionDetail>('GET /collections/:slug', { params: { slug } }).pipe(

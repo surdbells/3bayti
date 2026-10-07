@@ -1836,7 +1836,8 @@
     },
     "loadError": {
       "title": "We couldn't load this category",
-      "body": "Something went wrong on our side. Please refresh the page or try again in a moment."
+      "body": "Something went wrong on our side. Please check your connection and try again.",
+      "retryAria": "Retry loading this category"
     },
     "eyebrow": "Category",
     "piece": "piece",
@@ -1904,7 +1905,8 @@
     },
     "loadError": {
       "title": "We couldn't load this collection",
-      "body": "Something went wrong on our side. Please refresh the page or try again in a moment."
+      "body": "Something went wrong on our side. Please check your connection and try again.",
+      "retryAria": "Retry loading this collection"
     },
     "eyebrow": "Collection",
     "piece": "piece",

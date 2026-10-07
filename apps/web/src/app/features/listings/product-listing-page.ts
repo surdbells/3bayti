@@ -2,6 +2,7 @@ import {
   Component,
   ChangeDetectionStrategy,
   ElementRef,
+  Injector,
   inject,
   signal,
   viewChild,
@@ -11,6 +12,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ProductCardComponent } from '../catalog/product-card';
 import { FilterBarComponent } from '../catalog/filter-bar';
+import { handOffLoadMoreFocus } from '../catalog/load-more-focus';
 import { CatalogService, type CatalogFilters, type CatalogSort } from '../categories/catalog.service';
 import { SeoService } from '../../core/seo/seo.service';
 import { breadcrumbSchema } from '../../core/seo/schema.helpers';
@@ -128,8 +130,12 @@ export interface ProductListingRouteData {
                 <!-- ONE button for "Load more" and its retry: only the label and
                      test id change, and it is aria-disabled (not [disabled])
                      while loading, so keyboard focus stays on it throughout.
-                     loadMore() ignores clicks while a page is loading. -->
+                     loadMore() ignores clicks while a page is loading. When it
+                     fetches the LAST page the button goes away: loadMore()
+                     then moves a focused shopper to the first appended
+                     product card (else the results region). -->
                 <button
+                  #loadMoreBtn
                   type="button"
                   class="listing-page__more-btn"
                   (click)="loadMore()"
@@ -152,6 +158,7 @@ export class ProductListingPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly catalog = inject(CatalogService);
   private readonly seo = inject(SeoService);
+  private readonly injector = inject(Injector);
 
   /** Accumulated product list + paging state, owned by CatalogService. */
   protected readonly products = this.catalog.products;
@@ -184,6 +191,8 @@ export class ProductListingPageComponent implements OnInit {
 
   /** The results region (tabindex="-1"), focus target for a listing retry. */
   private readonly results = viewChild<ElementRef<HTMLElement>>('results');
+  /** The one "Load more" / retry button, while more pages exist. */
+  private readonly loadMoreButton = viewChild<ElementRef<HTMLButtonElement>>('loadMoreBtn');
 
   ngOnInit(): void {
     const data = this.route.snapshot.data as Partial<ProductListingRouteData>;
@@ -252,13 +261,18 @@ export class ProductListingPageComponent implements OnInit {
   /**
    * Load the next page and append to the grid. Never rejects: on failure
    * the page index is rolled back (so the retry re-requests the same page
-   * instead of skipping one) and the button offers a retry.
+   * instead of skipping one) and the button offers a retry. When it
+   * fetched the LAST page the button is removed, so a shopper who was on it
+   * moves to the first appended product instead of dropping to <body>.
    */
   protected async loadMore(): Promise<void> {
     if (this.isLoading()) return;
     const token = this.loadToken;
     const prev = this.page();
     const next = prev + 1;
+    const shownBefore = this.products().length;
+    const button = this.loadMoreButton()?.nativeElement;
+    const focusedAtStart = !!button && button.ownerDocument.activeElement === button;
     this.page.set(next);
     this.loadMoreFailed.set(false);
     try {
@@ -269,7 +283,17 @@ export class ProductListingPageComponent implements OnInit {
       if (token !== this.loadToken) return;
       this.page.set(prev);
       this.loadMoreFailed.set(true);
+      return;
     }
+    if (token !== this.loadToken || this.hasMore()) return;
+    handOffLoadMoreFocus({
+      injector: this.injector,
+      button,
+      focusedAtStart,
+      firstNewIndex: shownBefore,
+      cards: () => this.results()?.nativeElement.querySelectorAll('.listing-page__grid > li'),
+      fallback: () => this.results()?.nativeElement,
+    });
   }
 
   /** Load page 0 (+ facets) for the current filters, tracking failure. */

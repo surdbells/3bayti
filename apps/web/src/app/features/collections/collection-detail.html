@@ -13,191 +13,215 @@
         }
       </nav>
 
-      @if (loading()) {
-        <div class="collection-hero collection-hero--loading" aria-hidden="true"></div>
-        <ui-text tone="secondary">{{ 'collections.loading' | translate }}</ui-text>
-      } @else if (notFound()) {
-        <header class="category-header" data-testid="collection-not-found">
-          <ui-stack gap="md">
-            <p class="eyebrow">{{ 'collections.notFound.eyebrow' | translate }}</p>
-            <ui-heading level="h1" size="xl">{{ 'collections.notFound.title' | translate }}</ui-heading>
-            <ui-text size="lg" tone="secondary">{{ 'collections.notFound.body' | translate }}</ui-text>
-            <p><a href="/collection" class="back-link">{{ 'collections.notFound.back' | translate }}</a></p>
-          </ui-stack>
-        </header>
-      } @else if (loadError()) {
-        <header class="category-header" data-testid="collection-load-error">
-          <ui-stack gap="md">
-            <ui-heading level="h1" size="xl">{{ 'collections.loadError.title' | translate }}</ui-heading>
-            <ui-text size="lg" tone="secondary">{{ 'collections.loadError.body' | translate }}</ui-text>
-            <p><a href="/collection" class="back-link">{{ 'collections.notFound.back' | translate }}</a></p>
-          </ui-stack>
-        </header>
-      } @else if (collection(); as col) {
+      <!-- Everything below the breadcrumb. tabindex="-1": a header retry
+           moves focus here (the Retry button itself gives way to the
+           loading state), so it never drops to <body>. -->
+      <ui-stack
+        #pageBody
+        gap="2xl"
+        class="page-body"
+        tabindex="-1"
+        data-testid="collection-page-body">
 
-        <!-- Banner header. With an image (usually a portrait product photo)
-             it uses the blurred-backdrop pattern: the same image, blurred and
-             darkened, fills the banner, and the photo itself sits in front
-             uncropped beside the title. Without one, a brand gradient. -->
-        <header
-          class="collection-hero"
-          [class.collection-hero--with-image]="!!col.image_url"
-          [class.collection-hero--no-image]="!col.image_url"
-          data-testid="collection-hero"
-        >
-          @if (col.image_url) {
-            <!-- Same URL as the photo below and first in the DOM, so it is the
-                 element that issues the (single, shared) request: it carries
-                 the high fetch priority too, or the photo's hint is lost. -->
-            <img
-              class="collection-hero__backdrop"
-              [src]="col.image_url | cfImage:'detail'"
-              alt=""
-              aria-hidden="true"
-              fetchpriority="high"
-              decoding="async"
-              data-testid="collection-hero-backdrop"
-            />
-          }
-          <span class="collection-hero__scrim" aria-hidden="true"></span>
-          @if (col.image_url) {
-            <div class="collection-hero__media">
-              <img
-                class="collection-hero__photo"
-                [src]="col.image_url | cfImage:'detail'"
-                alt=""
-                fetchpriority="high"
-                decoding="async"
-                data-testid="collection-hero-photo"
-              />
-            </div>
-          }
-          <div class="collection-hero__content">
-            <p class="collection-hero__eyebrow">{{ 'collections.eyebrow' | translate }}</p>
-            <h1 class="collection-hero__title">{{ col.name }}</h1>
-            @if (col.description) {
-              <p class="collection-hero__description">{{ col.description }}</p>
-            }
-            @if (collectionTotal() > 0) {
-              <p class="collection-hero__count" data-testid="collection-count">
-                {{ collectionTotal() }} {{ (collectionTotal() === 1 ? 'collections.piece' : 'collections.pieces') | translate }}
-              </p>
-            }
-          </div>
-        </header>
-
-        <!-- Filter bar + grid layout -->
-        <div class="catalog-layout">
-
-          <app-filter-bar
-            class="catalog-layout__filters"
-            [filters]="currentFilters()"
-            [facets]="facets()"
-            (filterChange)="onFilterChange($event)"
-          />
-
-          <!-- tabindex="-1": a listing retry moves focus here (the Retry
-               button itself is replaced by the shimmer). -->
-          <section
-            #gridRegion
-            class="catalog-layout__grid"
-            tabindex="-1"
-            [attr.aria-label]="'collections.gridAria' | translate"
-            data-testid="collection-grid-region">
-
-            @if (showSkeleton()) {
-              <div class="grid-loading" aria-live="polite" [attr.aria-label]="'collections.loadingProducts' | translate">
-                @for (_ of [1,2,3,4,5,6]; track _) {
-                  <div class="grid-loading__card"></div>
-                }
-              </div>
-            }
-
-            @if (showListError()) {
-              <div class="grid-empty grid-error" role="alert" data-testid="collection-list-error">
-                <p class="grid-empty__title">{{ 'collections.listError.title' | translate }}</p>
-                <p class="grid-empty__hint">{{ 'collections.listError.body' | translate }}</p>
+        @if (loading()) {
+          <div class="collection-hero collection-hero--loading" aria-hidden="true"></div>
+          <ui-text tone="secondary">{{ 'collections.loading' | translate }}</ui-text>
+        } @else if (notFound()) {
+          <header class="category-header" data-testid="collection-not-found">
+            <ui-stack gap="md">
+              <p class="eyebrow">{{ 'collections.notFound.eyebrow' | translate }}</p>
+              <ui-heading level="h1" size="xl">{{ 'collections.notFound.title' | translate }}</ui-heading>
+              <ui-text size="lg" tone="secondary">{{ 'collections.notFound.body' | translate }}</ui-text>
+              <p><a href="/collection" class="back-link">{{ 'collections.notFound.back' | translate }}</a></p>
+            </ui-stack>
+          </header>
+        } @else if (loadError()) {
+          <header class="category-header" data-testid="collection-load-error">
+            <ui-stack gap="md">
+              <ui-heading level="h1" size="xl">{{ 'collections.loadError.title' | translate }}</ui-heading>
+              <ui-text size="lg" tone="secondary" role="alert">{{ 'collections.loadError.body' | translate }}</ui-text>
+              <!-- Retry re-requests the header (and, with it, the listing).
+                   Its accessible name contains the visible "Retry" (WCAG 2.5.3). -->
+              <div class="header-actions">
                 <button
                   class="load-more-btn"
                   type="button"
-                  (click)="retryListing()"
-                  [disabled]="isLoadingGrid()"
-                  data-testid="collection-list-retry">
-                  {{ isLoadingGrid() ? ('collections.loading' | translate) : ('collections.retry' | translate) }}
+                  (click)="retryHeader()"
+                  [attr.aria-label]="'collections.loadError.retryAria' | translate"
+                  data-testid="collection-load-error-retry">
+                  {{ 'collections.retry' | translate }}
                 </button>
+                <a href="/collection" class="back-link">{{ 'collections.notFound.back' | translate }}</a>
+              </div>
+            </ui-stack>
+          </header>
+        } @else if (collection(); as col) {
+
+          <!-- Banner header. With an image (usually a portrait product photo)
+               it uses the blurred-backdrop pattern: the same image, blurred and
+               darkened, fills the banner, and the photo itself sits in front
+               uncropped beside the title. Without one, a brand gradient. -->
+          <header
+            class="collection-hero"
+            [class.collection-hero--with-image]="!!col.image_url"
+            [class.collection-hero--no-image]="!col.image_url"
+            data-testid="collection-hero"
+          >
+            @if (col.image_url) {
+              <!-- Same URL as the photo below and first in the DOM, so it is the
+                   element that issues the (single, shared) request: it carries
+                   the high fetch priority too, or the photo's hint is lost. -->
+              <img
+                class="collection-hero__backdrop"
+                [src]="col.image_url | cfImage:'detail'"
+                alt=""
+                aria-hidden="true"
+                fetchpriority="high"
+                decoding="async"
+                data-testid="collection-hero-backdrop"
+              />
+            }
+            <span class="collection-hero__scrim" aria-hidden="true"></span>
+            @if (col.image_url) {
+              <div class="collection-hero__media">
+                <img
+                  class="collection-hero__photo"
+                  [src]="col.image_url | cfImage:'detail'"
+                  alt=""
+                  fetchpriority="high"
+                  decoding="async"
+                  data-testid="collection-hero-photo"
+                />
               </div>
             }
-
-            @if (showEmpty()) {
-              <div class="grid-empty" data-testid="collection-empty">
-                @if (hasUserFilters()) {
-                  <p class="grid-empty__title">{{ 'collections.emptyTitle' | translate }}</p>
-                  <p class="grid-empty__hint">{{ 'collections.emptyHint' | translate }}</p>
-                } @else {
-                  <p class="grid-empty__title">{{ 'collections.emptyCollectionTitle' | translate }}</p>
-                  <p class="grid-empty__hint">
-                    <a href="/collection" class="back-link">{{ 'collections.emptyCollectionHint' | translate }}</a>
-                  </p>
-                }
-              </div>
-            }
-
-            @if (products().length > 0) {
-              <div class="product-grid" data-testid="collection-grid">
-                @for (p of products(); track p.id) {
-                  <ui-product-card [product]="p" />
-                }
-              </div>
-
-              <div class="grid-footer">
-                <p class="grid-count">
-                  {{ 'collections.showing' | translate:{ shown: products().length, total: totalProducts() } }}
+            <div class="collection-hero__content">
+              <p class="collection-hero__eyebrow">{{ 'collections.eyebrow' | translate }}</p>
+              <h1 class="collection-hero__title">{{ col.name }}</h1>
+              @if (col.description) {
+                <p class="collection-hero__description">{{ col.description }}</p>
+              }
+              @if (collectionTotal() > 0) {
+                <p class="collection-hero__count" data-testid="collection-count">
+                  {{ collectionTotal() }} {{ (collectionTotal() === 1 ? 'collections.piece' : 'collections.pieces') | translate }}
                 </p>
-                @if (hasMore()) {
-                  <div class="load-more">
-                    @if (loadMoreFailed()) {
-                      <p class="load-more__error" role="alert" data-testid="collection-load-more-error">
+              }
+            </div>
+          </header>
+
+          <!-- Filter bar + grid layout -->
+          <div class="catalog-layout">
+
+            <app-filter-bar
+              class="catalog-layout__filters"
+              [filters]="currentFilters()"
+              [facets]="facets()"
+              (filterChange)="onFilterChange($event)"
+            />
+
+            <!-- tabindex="-1": a listing retry moves focus here (the Retry
+                 button itself is replaced by the shimmer). -->
+            <section
+              #gridRegion
+              class="catalog-layout__grid"
+              tabindex="-1"
+              [attr.aria-label]="'collections.gridAria' | translate"
+              data-testid="collection-grid-region">
+
+              @if (showSkeleton()) {
+                <div class="grid-loading" aria-live="polite" [attr.aria-label]="'collections.loadingProducts' | translate">
+                  @for (_ of [1,2,3,4,5,6]; track _) {
+                    <div class="grid-loading__card"></div>
+                  }
+                </div>
+              }
+
+              @if (showListError()) {
+                <div class="grid-empty grid-error" role="alert" data-testid="collection-list-error">
+                  <p class="grid-empty__title">{{ 'collections.listError.title' | translate }}</p>
+                  <p class="grid-empty__hint">{{ 'collections.listError.body' | translate }}</p>
+                  <button
+                    class="load-more-btn"
+                    type="button"
+                    (click)="retryListing()"
+                    data-testid="collection-list-retry">
+                    {{ 'collections.retry' | translate }}
+                  </button>
+                </div>
+              }
+
+              @if (showEmpty()) {
+                <div class="grid-empty" data-testid="collection-empty">
+                  @if (hasUserFilters()) {
+                    <p class="grid-empty__title">{{ 'collections.emptyTitle' | translate }}</p>
+                    <p class="grid-empty__hint">{{ 'collections.emptyHint' | translate }}</p>
+                  } @else {
+                    <p class="grid-empty__title">{{ 'collections.emptyCollectionTitle' | translate }}</p>
+                    <p class="grid-empty__hint">
+                      <a href="/collection" class="back-link">{{ 'collections.emptyCollectionHint' | translate }}</a>
+                    </p>
+                  }
+                </div>
+              }
+
+              @if (products().length > 0) {
+                <div class="product-grid" data-testid="collection-grid">
+                  @for (p of products(); track p.id) {
+                    <ui-product-card [product]="p" />
+                  }
+                </div>
+
+                <div class="grid-footer">
+                  <p class="grid-count">
+                    {{ 'collections.showing' | translate:{ shown: products().length, total: totalProducts() } }}
+                  </p>
+                  @if (hasMore()) {
+                    <div class="load-more">
+                      @if (loadMoreFailed()) {
+                        <p class="load-more__error" role="alert" data-testid="collection-load-more-error">
+                          {{ 'collections.loadMoreError' | translate }}
+                        </p>
+                      }
+                      <!-- ONE button for "Load more" and its retry: only the label
+                           and test id change, so keyboard focus stays on it across
+                           a failure and a retry. aria-disabled (not [disabled])
+                           while loading keeps it focusable; loadMore() ignores
+                           clicks meanwhile. The accessible name always contains
+                           the visible text (WCAG 2.5.3). When it fetches the LAST
+                           page the button goes away: loadMore() then moves a focused
+                           shopper to the first appended product card (else the grid). -->
+                      <button
+                        #loadMoreBtn
+                        class="load-more-btn"
+                        type="button"
+                        (click)="loadMore()"
+                        [attr.aria-disabled]="isLoadingGrid() ? 'true' : null"
+                        [attr.aria-label]="isLoadingGrid() ? null : ((loadMoreFailed() ? 'collections.loadMoreRetryAria' : 'collections.loadMoreAria') | translate)"
+                        [attr.data-testid]="loadMoreFailed() ? 'collection-load-more-retry' : 'collection-load-more'">
+                        {{ (isLoadingGrid() ? 'collections.loading' : loadMoreFailed() ? 'collections.retry' : 'collections.loadMore') | translate }}
+                      </button>
+                    </div>
+                  } @else if (showFallbackRetry()) {
+                    <div class="load-more">
+                      <p class="load-more__error" role="alert" data-testid="collection-fallback-error">
                         {{ 'collections.loadMoreError' | translate }}
                       </p>
-                    }
-                    <!-- ONE button for "Load more" and its retry: only the label
-                         and test id change, so keyboard focus stays on it across
-                         a failure and a retry. aria-disabled (not [disabled])
-                         while loading keeps it focusable; loadMore() ignores
-                         clicks meanwhile. The accessible name always contains
-                         the visible text (WCAG 2.5.3). -->
-                    <button
-                      class="load-more-btn"
-                      type="button"
-                      (click)="loadMore()"
-                      [attr.aria-disabled]="isLoadingGrid() ? 'true' : null"
-                      [attr.aria-label]="isLoadingGrid() ? null : ((loadMoreFailed() ? 'collections.loadMoreRetryAria' : 'collections.loadMoreAria') | translate)"
-                      [attr.data-testid]="loadMoreFailed() ? 'collection-load-more-retry' : 'collection-load-more'">
-                      {{ (isLoadingGrid() ? 'collections.loading' : loadMoreFailed() ? 'collections.retry' : 'collections.loadMore') | translate }}
-                    </button>
-                  </div>
-                } @else if (showFallbackRetry()) {
-                  <div class="load-more">
-                    <p class="load-more__error" role="alert" data-testid="collection-fallback-error">
-                      {{ 'collections.loadMoreError' | translate }}
-                    </p>
-                    <button
-                      class="load-more-btn"
-                      type="button"
-                      (click)="retryListing()"
-                      [disabled]="isLoadingGrid()"
-                      data-testid="collection-fallback-retry">
-                      {{ isLoadingGrid() ? ('collections.loading' | translate) : ('collections.retry' | translate) }}
-                    </button>
-                  </div>
-                }
-              </div>
-            }
+                      <button
+                        class="load-more-btn"
+                        type="button"
+                        (click)="retryListing()"
+                        data-testid="collection-fallback-retry">
+                        {{ 'collections.retry' | translate }}
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
 
-          </section>
-        </div>
+            </section>
+          </div>
 
-      }
+        }
+      </ui-stack>
     </ui-stack>
   </ui-container>
 </main>

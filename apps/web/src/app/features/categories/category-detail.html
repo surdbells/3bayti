@@ -13,158 +13,184 @@
         }
       </nav>
 
-      @if (loading()) {
-        <ui-text tone="secondary">{{ 'categories.loading' | translate }}</ui-text>
-      } @else if (notFound()) {
-        <header class="category-header" data-testid="category-not-found">
-          <ui-stack gap="md">
-            <p class="eyebrow">{{ 'categories.notFound.eyebrow' | translate }}</p>
-            <ui-heading level="h1" size="xl">{{ 'categories.notFound.title' | translate }}</ui-heading>
-            <ui-text size="lg" tone="secondary">{{ 'categories.notFound.body' | translate }}</ui-text>
-            <p><a [href]="categoriesIndexUrl()" class="back-link">{{ 'categories.notFound.back' | translate }}</a></p>
-          </ui-stack>
-        </header>
+      <!-- Everything below the breadcrumb. tabindex="-1": a header retry
+           moves focus here (the Retry button itself gives way to the
+           loading state), so it never drops to <body>. -->
+      <ui-stack
+        #pageBody
+        gap="2xl"
+        class="page-body"
+        tabindex="-1"
+        data-testid="category-page-body">
 
-      } @else if (loadError()) {
-        <header class="category-header" data-testid="category-load-error">
-          <ui-stack gap="md">
-            <ui-heading level="h1" size="xl">{{ 'categories.loadError.title' | translate }}</ui-heading>
-            <ui-text size="lg" tone="secondary">{{ 'categories.loadError.body' | translate }}</ui-text>
-            <p><a [href]="categoriesIndexUrl()" class="back-link">{{ 'categories.notFound.back' | translate }}</a></p>
-          </ui-stack>
-        </header>
+        @if (loading()) {
+          <ui-text tone="secondary">{{ 'categories.loading' | translate }}</ui-text>
+        } @else if (notFound()) {
+          <header class="category-header" data-testid="category-not-found">
+            <ui-stack gap="md">
+              <p class="eyebrow">{{ 'categories.notFound.eyebrow' | translate }}</p>
+              <ui-heading level="h1" size="xl">{{ 'categories.notFound.title' | translate }}</ui-heading>
+              <ui-text size="lg" tone="secondary">{{ 'categories.notFound.body' | translate }}</ui-text>
+              <p><a [href]="categoriesIndexUrl()" class="back-link">{{ 'categories.notFound.back' | translate }}</a></p>
+            </ui-stack>
+          </header>
 
-      } @else if (category(); as cat) {
-
-        <!-- Header -->
-        <header class="category-header" data-testid="category-header">
-          <ui-stack gap="md">
-            <p class="eyebrow">{{ 'categories.eyebrow' | translate }}</p>
-            <ui-heading level="h1" size="xl">{{ cat.name }}</ui-heading>
-            @if (catalogTotal() > 0) {
-              <ui-text size="lg" tone="secondary">
-                {{ catalogTotal() }} {{ (catalogTotal() === 1 ? 'categories.piece' : 'categories.pieces') | translate }}
-                {{ 'categories.fromDesigners' | translate }}
-              </ui-text>
-            } @else if (meta(); as m) {
-              <ui-text size="lg" tone="secondary">
-                {{ m.total_products }} {{ (m.total_products === 1 ? 'categories.piece' : 'categories.pieces') | translate }}
-                {{ 'categories.fromDesigners' | translate }}
-              </ui-text>
-            }
-          </ui-stack>
-        </header>
-
-        <!-- Filter bar + grid layout -->
-        <div class="catalog-layout">
-
-          <!-- Filter bar (top, full-width) -->
-          <app-filter-bar
-            class="catalog-layout__filters"
-            [filters]="currentFilters()"
-            [facets]="facets()"
-            (filterChange)="onFilterChange($event)"
-          />
-
-          <!-- Product grid. tabindex="-1": a listing retry moves focus here
-               (the Retry button itself is replaced by the shimmer). -->
-          <section
-            #gridRegion
-            class="catalog-layout__grid"
-            tabindex="-1"
-            [attr.aria-label]="'categories.gridAria' | translate"
-            data-testid="category-grid-region">
-
-            <!-- Loading shimmer: only while there is nothing to show yet, so a
-                 "load more" keeps the grid (and its focused button) in place -->
-            @if (showSkeleton()) {
-              <div class="grid-loading" aria-live="polite" [attr.aria-label]="'categories.loadingProducts' | translate">
-                @for (_ of [1,2,3,4,5,6]; track _) {
-                  <div class="grid-loading__card"></div>
-                }
-              </div>
-            }
-
-            <!-- Listing failed (network / server): distinct from "no match" -->
-            @if (showListError()) {
-              <div class="grid-empty grid-error" role="alert" data-testid="category-list-error">
-                <p class="grid-empty__title">{{ 'categories.listError.title' | translate }}</p>
-                <p class="grid-empty__hint">{{ 'categories.listError.body' | translate }}</p>
+        } @else if (loadError()) {
+          <header class="category-header" data-testid="category-load-error">
+            <ui-stack gap="md">
+              <ui-heading level="h1" size="xl">{{ 'categories.loadError.title' | translate }}</ui-heading>
+              <ui-text size="lg" tone="secondary" role="alert">{{ 'categories.loadError.body' | translate }}</ui-text>
+              <!-- Retry re-requests the header (and, with it, the listing).
+                   Its accessible name contains the visible "Retry" (WCAG 2.5.3). -->
+              <div class="header-actions">
                 <button
                   class="load-more-btn"
                   type="button"
-                  (click)="retryListing()"
-                  data-testid="category-list-retry">
+                  (click)="retryHeader()"
+                  [attr.aria-label]="'categories.loadError.retryAria' | translate"
+                  data-testid="category-load-error-retry">
                   {{ 'categories.retry' | translate }}
                 </button>
+                <a [href]="categoriesIndexUrl()" class="back-link">{{ 'categories.notFound.back' | translate }}</a>
               </div>
-            }
+            </ui-stack>
+          </header>
 
-            <!-- Empty state -->
-            @if (showEmpty()) {
-              <div class="grid-empty" data-testid="category-empty">
-                <p class="grid-empty__title">{{ 'categories.emptyTitle' | translate }}</p>
-                <p class="grid-empty__hint">{{ 'categories.emptyHint' | translate }}</p>
-              </div>
-            }
+        } @else if (category(); as cat) {
 
-            <!-- Product cards -->
-            @if (products().length > 0) {
-              <div class="product-grid" data-testid="category-grid">
-                @for (p of products(); track p.id) {
-                  <ui-product-card [product]="p" />
-                }
-              </div>
+          <!-- Header -->
+          <header class="category-header" data-testid="category-header">
+            <ui-stack gap="md">
+              <p class="eyebrow">{{ 'categories.eyebrow' | translate }}</p>
+              <ui-heading level="h1" size="xl">{{ cat.name }}</ui-heading>
+              @if (catalogTotal() > 0) {
+                <ui-text size="lg" tone="secondary">
+                  {{ catalogTotal() }} {{ (catalogTotal() === 1 ? 'categories.piece' : 'categories.pieces') | translate }}
+                  {{ 'categories.fromDesigners' | translate }}
+                </ui-text>
+              } @else if (meta(); as m) {
+                <ui-text size="lg" tone="secondary">
+                  {{ m.total_products }} {{ (m.total_products === 1 ? 'categories.piece' : 'categories.pieces') | translate }}
+                  {{ 'categories.fromDesigners' | translate }}
+                </ui-text>
+              }
+            </ui-stack>
+          </header>
 
-              <!-- Load more / total indicator -->
-              <div class="grid-footer">
-                <p class="grid-count">
-                  {{ 'categories.showing' | translate:{ shown: products().length, total: totalProducts() } }}
-                </p>
-                @if (hasMore()) {
-                  <div class="load-more">
-                    @if (loadMoreFailed()) {
-                      <p class="load-more__error" role="alert" data-testid="category-load-more-error">
+          <!-- Filter bar + grid layout -->
+          <div class="catalog-layout">
+
+            <!-- Filter bar (top, full-width) -->
+            <app-filter-bar
+              class="catalog-layout__filters"
+              [filters]="currentFilters()"
+              [facets]="facets()"
+              (filterChange)="onFilterChange($event)"
+            />
+
+            <!-- Product grid. tabindex="-1": a listing retry moves focus here
+                 (the Retry button itself is replaced by the shimmer). -->
+            <section
+              #gridRegion
+              class="catalog-layout__grid"
+              tabindex="-1"
+              [attr.aria-label]="'categories.gridAria' | translate"
+              data-testid="category-grid-region">
+
+              <!-- Loading shimmer: only while there is nothing to show yet, so a
+                   "load more" keeps the grid (and its focused button) in place -->
+              @if (showSkeleton()) {
+                <div class="grid-loading" aria-live="polite" [attr.aria-label]="'categories.loadingProducts' | translate">
+                  @for (_ of [1,2,3,4,5,6]; track _) {
+                    <div class="grid-loading__card"></div>
+                  }
+                </div>
+              }
+
+              <!-- Listing failed (network / server): distinct from "no match" -->
+              @if (showListError()) {
+                <div class="grid-empty grid-error" role="alert" data-testid="category-list-error">
+                  <p class="grid-empty__title">{{ 'categories.listError.title' | translate }}</p>
+                  <p class="grid-empty__hint">{{ 'categories.listError.body' | translate }}</p>
+                  <button
+                    class="load-more-btn"
+                    type="button"
+                    (click)="retryListing()"
+                    data-testid="category-list-retry">
+                    {{ 'categories.retry' | translate }}
+                  </button>
+                </div>
+              }
+
+              <!-- Empty state -->
+              @if (showEmpty()) {
+                <div class="grid-empty" data-testid="category-empty">
+                  <p class="grid-empty__title">{{ 'categories.emptyTitle' | translate }}</p>
+                  <p class="grid-empty__hint">{{ 'categories.emptyHint' | translate }}</p>
+                </div>
+              }
+
+              <!-- Product cards -->
+              @if (products().length > 0) {
+                <div class="product-grid" data-testid="category-grid">
+                  @for (p of products(); track p.id) {
+                    <ui-product-card [product]="p" />
+                  }
+                </div>
+
+                <!-- Load more / total indicator -->
+                <div class="grid-footer">
+                  <p class="grid-count">
+                    {{ 'categories.showing' | translate:{ shown: products().length, total: totalProducts() } }}
+                  </p>
+                  @if (hasMore()) {
+                    <div class="load-more">
+                      @if (loadMoreFailed()) {
+                        <p class="load-more__error" role="alert" data-testid="category-load-more-error">
+                          {{ 'categories.loadMoreError' | translate }}
+                        </p>
+                      }
+                      <!-- ONE button for "Load more" and its retry: only the label
+                           and test id change, so keyboard focus stays on it across
+                           a failure and a retry. aria-disabled (not [disabled])
+                           while loading keeps it focusable; loadMore() ignores
+                           clicks meanwhile. The accessible name always contains
+                           the visible text (WCAG 2.5.3). When it fetches the LAST
+                           page the button goes away: loadMore() then moves a focused
+                           shopper to the first appended product card (else the grid). -->
+                      <button
+                        #loadMoreBtn
+                        class="load-more-btn"
+                        type="button"
+                        (click)="loadMore()"
+                        [attr.aria-disabled]="isLoadingGrid() ? 'true' : null"
+                        [attr.aria-label]="isLoadingGrid() ? null : ((loadMoreFailed() ? 'categories.loadMoreRetryAria' : 'categories.loadMoreAria') | translate)"
+                        [attr.data-testid]="loadMoreFailed() ? 'category-load-more-retry' : 'category-load-more'">
+                        {{ (isLoadingGrid() ? 'categories.loading' : loadMoreFailed() ? 'categories.retry' : 'categories.loadMore') | translate }}
+                      </button>
+                    </div>
+                  } @else if (showFallbackRetry()) {
+                    <div class="load-more">
+                      <p class="load-more__error" role="alert" data-testid="category-fallback-error">
                         {{ 'categories.loadMoreError' | translate }}
                       </p>
-                    }
-                    <!-- ONE button for "Load more" and its retry: only the label
-                         and test id change, so keyboard focus stays on it across
-                         a failure and a retry. aria-disabled (not [disabled])
-                         while loading keeps it focusable; loadMore() ignores
-                         clicks meanwhile. The accessible name always contains
-                         the visible text (WCAG 2.5.3). -->
-                    <button
-                      class="load-more-btn"
-                      type="button"
-                      (click)="loadMore()"
-                      [attr.aria-disabled]="isLoadingGrid() ? 'true' : null"
-                      [attr.aria-label]="isLoadingGrid() ? null : ((loadMoreFailed() ? 'categories.loadMoreRetryAria' : 'categories.loadMoreAria') | translate)"
-                      [attr.data-testid]="loadMoreFailed() ? 'category-load-more-retry' : 'category-load-more'">
-                      {{ (isLoadingGrid() ? 'categories.loading' : loadMoreFailed() ? 'categories.retry' : 'categories.loadMore') | translate }}
-                    </button>
-                  </div>
-                } @else if (showFallbackRetry()) {
-                  <div class="load-more">
-                    <p class="load-more__error" role="alert" data-testid="category-fallback-error">
-                      {{ 'categories.loadMoreError' | translate }}
-                    </p>
-                    <button
-                      class="load-more-btn"
-                      type="button"
-                      (click)="retryListing()"
-                      data-testid="category-fallback-retry">
-                      {{ 'categories.retry' | translate }}
-                    </button>
-                  </div>
-                }
-              </div>
-            }
+                      <button
+                        class="load-more-btn"
+                        type="button"
+                        (click)="retryListing()"
+                        data-testid="category-fallback-retry">
+                        {{ 'categories.retry' | translate }}
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
 
-          </section>
-        </div>
+            </section>
+          </div>
 
-      }
+        }
+      </ui-stack>
     </ui-stack>
   </ui-container>
 </main>

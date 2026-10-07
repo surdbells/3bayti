@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, convertToParamMap, provideRouter, type ParamMap
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 
 import { CategoryDetailComponent } from './category-detail';
@@ -64,6 +64,11 @@ class StubCatalogService {
   /** When true, loadProducts rejects (like the real service's latest call
    *  failing) and leaves the accumulator untouched. */
   failLoads = false;
+  /** When set, a load also sets hasMore (e.g. false: it was the last page). */
+  nextHasMore: boolean | null = null;
+  /** When true, loads stay pending until releaseLoads() (a slow response). */
+  holdLoads = false;
+  private held: Array<() => void> = [];
 
   loadCalls: Array<{ filters: CatalogFilters; page: number; append: boolean }> = [];
   facetCalls: CatalogFilters[] = [];
@@ -87,13 +92,26 @@ class StubCatalogService {
 
   async loadProducts(filters: CatalogFilters, page = 0, append = false) {
     this.loadCalls.push({ filters, page, append });
+    if (this.holdLoads) {
+      this.isLoadingList.set(true);
+      await new Promise<void>((resolve) => this.held.push(resolve));
+      this.isLoadingList.set(false);
+    }
     if (this.failLoads) {
       throw new HttpErrorResponse({ status: 503 });
     }
     const items = this.nextItems;
     this.products.set(append ? [...this.products(), ...items] : items);
     this.total.set(this.nextTotal);
-    return { items, total: this.nextTotal, hasMore: false };
+    if (this.nextHasMore !== null) this.hasMore.set(this.nextHasMore);
+    return { items, total: this.nextTotal, hasMore: this.nextHasMore ?? false };
+  }
+
+  /** Let every held load settle. */
+  releaseLoads(): void {
+    const held = this.held;
+    this.held = [];
+    held.forEach((resolve) => resolve());
   }
 
   async loadFacets(filters: CatalogFilters): Promise<Facets | null> {
@@ -112,6 +130,23 @@ interface SetupOpts {
   failLoads?: boolean;
   /** Override the embedded category for the default slug. */
   category?: CategoryDetail;
+  /** Keep GET /categories/:slug pending until the test settles header.pending. */
+  deferHeader?: boolean;
+  /** Keep catalog loads pending until catalog.releaseLoads(). */
+  holdLoads?: boolean;
+}
+
+/** The GET /categories/:slug envelope for a category. */
+function envelope(cat: CategoryDetail) {
+  return { data: cat, meta: { total_products: cat.product_count, page_size: 20 } };
+}
+
+/** Test-side control of GET /categories/:slug. */
+interface HeaderControl {
+  /** Fail every request (any slug); change it to let a later Retry succeed. */
+  fail: '404' | '500' | undefined;
+  /** When set, requests stay pending on this subject until the test settles it. */
+  pending: Subject<unknown> | null;
 }
 
 function setup(opts: SetupOpts = {}): {
@@ -120,20 +155,27 @@ function setup(opts: SetupOpts = {}): {
   get: ReturnType<typeof vi.fn>;
   paramMap: BehaviorSubject<ParamMap>;
   queryParamMap: BehaviorSubject<ParamMap>;
+  header: HeaderControl;
 } {
   const catalog = new StubCatalogService();
   catalog.nextItems = opts.catalogItems ?? [];
   catalog.nextTotal = catalog.nextItems.length;
   catalog.failLoads = opts.failLoads ?? false;
+  catalog.holdLoads = opts.holdLoads ?? false;
   const categories: Record<string, CategoryDetail> = {
     abayas: opts.category ?? ABAYAS,
     kaftans: KAFTANS,
   };
+  const header: HeaderControl = {
+    fail: opts.detail,
+    pending: opts.deferHeader ? new Subject<unknown>() : null,
+  };
   const get = vi.fn((_route: string, req: { params: { slug: string } }) => {
-    if (opts.detail === '500') return throwError(() => new HttpErrorResponse({ status: 500 }));
-    const cat = opts.detail === '404' ? undefined : categories[req.params.slug];
+    if (header.pending) return header.pending.asObservable();
+    if (header.fail === '500') return throwError(() => new HttpErrorResponse({ status: 500 }));
+    const cat = header.fail === '404' ? undefined : categories[req.params.slug];
     if (!cat) return throwError(() => new HttpErrorResponse({ status: 404 }));
-    return of({ data: cat, meta: { total_products: cat.product_count, page_size: 20 } });
+    return of(envelope(cat));
   });
   const paramMap = new BehaviorSubject<ParamMap>(convertToParamMap({ slug: opts.slug ?? 'abayas' }));
   const queryParamMap = new BehaviorSubject<ParamMap>(convertToParamMap(opts.query ?? {}));
@@ -156,11 +198,14 @@ function setup(opts: SetupOpts = {}): {
 
   const fixture = TestBed.createComponent(CategoryDetailComponent);
   fixture.detectChanges();
-  return { fixture, catalog, get, paramMap, queryParamMap };
+  return { fixture, catalog, get, paramMap, queryParamMap, header };
 }
 
 const q = (fixture: ComponentFixture<unknown>, testId: string): HTMLElement | null =>
   (fixture.nativeElement as HTMLElement).querySelector(`[data-testid="${testId}"]`);
+
+/** Let released (held) loads, and the callbacks chained on them, settle. */
+const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('CategoryDetailComponent', () => {
   afterEach(() => {
@@ -276,6 +321,175 @@ describe('CategoryDetailComponent', () => {
       expect(q(fixture, 'category-load-error')).not.toBeNull();
       expect(q(fixture, 'category-not-found')).toBeNull();
       expect(catalog.loadCalls).toHaveLength(0);
+    });
+
+    it('offers a Retry on a header load error that re-requests the header + listing, keeping focus on the page', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const { fixture, catalog, get, header } = setup({
+        detail: '500',
+        query: { colors: 'black' },
+        catalogItems: [makeProduct({ id: 9, slug: 'abaya-9' })],
+      });
+      expect(q(fixture, 'category-load-error')?.querySelector('[role="alert"]')?.textContent)
+        .toContain(en.categories.loadError.body);
+      const retry = q(fixture, 'category-load-error-retry') as HTMLButtonElement;
+      expect(retry.textContent?.trim()).toBe('Retry');
+      // Label in name (WCAG 2.5.3): the accessible name contains "Retry".
+      expect(retry.getAttribute('aria-label')).toBe('Retry loading this category');
+      expect(catalog.loadCalls).toHaveLength(0);
+
+      header.fail = undefined; // the API has recovered
+      retry.focus();
+      retry.click();
+      expect(get).toHaveBeenCalledTimes(2);
+      expect(get).toHaveBeenLastCalledWith('GET /categories/:slug', { params: { slug: 'abayas' } });
+      // The Retry button is about to go: focus moves to the stable page body.
+      const body = q(fixture, 'category-page-body');
+      expect(body?.getAttribute('tabindex')).toBe('-1');
+      expect(document.activeElement).toBe(body);
+
+      fixture.detectChanges();
+      expect(q(fixture, 'category-load-error')).toBeNull();
+      expect(q(fixture, 'category-header')?.textContent).toContain('Abayas');
+      // ...and the listing + facets that depend on it run for the same slug + filters.
+      expect(catalog.loadCalls).toHaveLength(1);
+      expect(catalog.loadCalls[0].filters).toMatchObject({ category: 'abayas', colors: ['black'] });
+      expect(catalog.facetCalls).toHaveLength(1);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.products().map((p) => p.id)).toEqual([9]);
+      expect(document.activeElement).toBe(q(fixture, 'category-page-body'));
+    });
+
+    it('keeps the load-error state (and focus on the page body) when the header Retry fails again', () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const { fixture, catalog, get } = setup({ detail: '500' });
+      const retry = q(fixture, 'category-load-error-retry') as HTMLButtonElement;
+      retry.focus();
+      retry.click();
+      fixture.detectChanges();
+      expect(get).toHaveBeenCalledTimes(2);
+      expect(q(fixture, 'category-load-error')).not.toBeNull();
+      expect(q(fixture, 'category-load-error-retry')).not.toBeNull();
+      expect(document.activeElement).toBe(q(fixture, 'category-page-body'));
+      expect(catalog.loadCalls).toHaveLength(0);
+    });
+
+    it('localises the header Retry (en + ar), its accessible name containing the visible label', () => {
+      for (const dict of [en, ar]) {
+        for (const ns of [dict.categories, dict.collections]) {
+          expect(ns.loadError.retryAria).toContain(ns.retry);
+          expect(ns.loadError.body).not.toMatch(/refresh|تحديث الصفحة/i);
+        }
+      }
+    });
+  });
+
+  describe('listing in parallel with the header', () => {
+    it('requests the listing + facets before the header resolves, and renders them once it lands', async () => {
+      const { fixture, catalog, header } = setup({
+        deferHeader: true,
+        query: { colors: 'black' },
+        catalogItems: [makeProduct({ id: 9, slug: 'abaya-9' })],
+      });
+      // GET /categories/:slug is still pending, yet the route-scoped listing
+      // and facets are already on their way (one round trip, not two).
+      expect(q(fixture, 'category-header')).toBeNull();
+      expect(catalog.loadCalls).toHaveLength(1);
+      expect(catalog.loadCalls[0]).toMatchObject({ page: 0, append: false });
+      expect(catalog.loadCalls[0].filters).toMatchObject({ category: 'abayas', colors: ['black'] });
+      expect(catalog.facetCalls).toHaveLength(1);
+      expect(catalog.facetCalls[0].category).toBe('abayas');
+
+      // The listing answers first: still no grid without the header.
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(q(fixture, 'category-grid')).toBeNull();
+
+      header.pending!.next(envelope(ABAYAS));
+      fixture.detectChanges();
+      expect(q(fixture, 'category-header')?.textContent).toContain('Abayas');
+      expect(fixture.componentInstance.products().map((p) => p.id)).toEqual([9]);
+      expect(fixture.nativeElement.querySelectorAll('[data-testid="category-grid"] ui-product-card').length).toBe(1);
+      // The header's arrival does not re-request anything.
+      expect(catalog.loadCalls).toHaveLength(1);
+      expect(catalog.facetCalls).toHaveLength(1);
+    });
+
+    it('shows the embedded products for the unfiltered view while the parallel listing is in flight', async () => {
+      const { fixture, catalog, header } = setup({
+        deferHeader: true,
+        holdLoads: true,
+        catalogItems: [makeProduct({ id: 9, slug: 'abaya-9' })],
+      });
+      expect(catalog.loadCalls).toHaveLength(1);
+      header.pending!.next(envelope(ABAYAS));
+      fixture.detectChanges();
+      expect(fixture.componentInstance.products().map((p) => p.id)).toEqual([1, 2]);
+      expect(fixture.nativeElement.querySelector('.grid-loading')).toBeNull();
+
+      catalog.releaseLoads();
+      await settle();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.products().map((p) => p.id)).toEqual([9]);
+    });
+
+    it('discards the listing when the header then 404s: no grid, catalog reset, nothing re-requested', async () => {
+      const { fixture, catalog, header } = setup({
+        deferHeader: true,
+        catalogItems: [makeProduct({ id: 9, slug: 'abaya-9' })],
+      });
+      expect(catalog.loadCalls).toHaveLength(1);
+      expect(catalog.resetCalls).toBe(1);
+
+      header.pending!.error(new HttpErrorResponse({ status: 404 }));
+      fixture.detectChanges();
+      expect(q(fixture, 'category-not-found')).not.toBeNull();
+      expect(catalog.resetCalls).toBe(2); // listing + facets dropped
+
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(q(fixture, 'category-grid')).toBeNull();
+      expect(fixture.componentInstance.products()).toEqual([]);
+      expect(catalog.loadCalls).toHaveLength(1);
+      expect(catalog.facetCalls).toHaveLength(1);
+    });
+
+    it('ignores a listing that answers after the header failed, then lists again on Retry', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const { fixture, catalog, header } = setup({
+        deferHeader: true,
+        holdLoads: true,
+        catalogItems: [makeProduct({ id: 9, slug: 'abaya-9' })],
+      });
+      expect(catalog.loadCalls).toHaveLength(1);
+
+      header.pending!.error(new HttpErrorResponse({ status: 503 }));
+      fixture.detectChanges();
+      expect(q(fixture, 'category-load-error')).not.toBeNull();
+
+      // The stale listing lands late: it must not resurrect a grid.
+      catalog.releaseLoads();
+      await settle();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(q(fixture, 'category-load-error')).not.toBeNull();
+      expect(fixture.componentInstance.products()).toEqual([]);
+
+      // Retry: header + listing again, in parallel.
+      catalog.holdLoads = false;
+      header.pending = new Subject<unknown>();
+      const calls = catalog.loadCalls.length;
+      (q(fixture, 'category-load-error-retry') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(catalog.loadCalls).toHaveLength(calls + 1);
+      expect(q(fixture, 'category-header')).toBeNull(); // header still pending
+      header.pending.next(envelope(ABAYAS));
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(q(fixture, 'category-header')?.textContent).toContain('Abayas');
+      expect(fixture.componentInstance.products().map((p) => p.id)).toEqual([9]);
     });
   });
 
@@ -398,6 +612,97 @@ describe('CategoryDetailComponent', () => {
       expect(q(fixture, 'category-load-more')).toBe(btn);
       expect(document.activeElement).toBe(btn);
       expect(cmp.products().map((p) => p.id)).toEqual([9, 10]);
+    });
+
+    describe('focus when the LAST page loads (the button goes away)', () => {
+      async function onLastPage() {
+        const ctx = setup({ catalogItems: [makeProduct({ id: 9, slug: 'abaya-9' })] });
+        await ctx.fixture.whenStable();
+        ctx.catalog.hasMore.set(true);
+        ctx.fixture.detectChanges();
+        ctx.catalog.nextItems = [
+          makeProduct({ id: 10, slug: 'abaya-10' }),
+          makeProduct({ id: 11, slug: 'abaya-11' }),
+        ];
+        ctx.catalog.nextHasMore = false;
+        return { ...ctx, btn: q(ctx.fixture, 'category-load-more') as HTMLButtonElement };
+      }
+
+      it('moves focus to the first appended product link', async () => {
+        const { fixture, btn } = await onLastPage();
+        btn.focus();
+        btn.click();
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(q(fixture, 'category-load-more')).toBeNull();
+        const cards = fixture.nativeElement.querySelectorAll('[data-testid="category-grid"] ui-product-card');
+        expect(cards.length).toBe(3);
+        expect(document.activeElement).toBe(cards[1].querySelector('a'));
+        expect(document.activeElement?.getAttribute('href')).toContain('abaya-10');
+      });
+
+      it('also does so when the in-place retry fetches the last page', async () => {
+        const { fixture, catalog, btn } = await onLastPage();
+        btn.focus();
+        catalog.failLoads = true;
+        btn.click();
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(q(fixture, 'category-load-more-retry')).toBe(btn);
+        expect(document.activeElement).toBe(btn);
+
+        catalog.failLoads = false;
+        btn.click();
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(q(fixture, 'category-load-more-retry')).toBeNull();
+        const cards = fixture.nativeElement.querySelectorAll('[data-testid="category-grid"] ui-product-card');
+        expect(document.activeElement).toBe(cards[1].querySelector('a'));
+      });
+
+      it('falls back to the grid region when the appended card has no product link', async () => {
+        const { fixture, catalog, btn } = await onLastPage();
+        catalog.nextItems = [makeProduct({ id: 10, slug: '' })];
+        btn.focus();
+        btn.click();
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(document.activeElement).toBe(q(fixture, 'category-grid-region'));
+      });
+
+      it('does not move focus when the shopper was not on the button', async () => {
+        const { fixture, btn } = await onLastPage();
+        const crumb = fixture.nativeElement.querySelector('.breadcrumb-link') as HTMLAnchorElement;
+        crumb.focus();
+        btn.click(); // e.g. a pointer click that never focused the button
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(q(fixture, 'category-load-more')).toBeNull();
+        expect(document.activeElement).toBe(crumb);
+      });
+
+      it('does not steal focus the shopper moved elsewhere while the page loaded', async () => {
+        const { fixture, catalog, btn } = await onLastPage();
+        catalog.holdLoads = true;
+        btn.focus();
+        btn.click();
+        const crumb = fixture.nativeElement.querySelector('.breadcrumb-link') as HTMLAnchorElement;
+        crumb.focus();
+        catalog.releaseLoads();
+        await settle();
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(q(fixture, 'category-load-more')).toBeNull();
+        expect(document.activeElement).toBe(crumb);
+      });
+
+      it('does not move focus on the initial page load', async () => {
+        (document.activeElement as HTMLElement | null)?.blur();
+        const { fixture } = setup({ catalogItems: [makeProduct({ id: 9, slug: 'abaya-9' })] });
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(document.activeElement).toBe(document.body);
+      });
     });
   });
 

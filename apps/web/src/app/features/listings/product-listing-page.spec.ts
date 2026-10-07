@@ -36,6 +36,10 @@ class StubCatalogService {
   resetProductsCalls = 0;
   /** When true, loadProducts rejects (the latest call failing). */
   failLoads = false;
+  /** When set, a successful load writes these products (appended for page > 0). */
+  nextItems: Product[] | null = null;
+  /** When set, a successful load also sets hasMore (false: it was the last page). */
+  nextHasMore: boolean | null = null;
   loadCalls: Array<{ filters: Record<string, unknown>; page: number; append: boolean }> = [];
   facetCalls: Array<Record<string, unknown>> = [];
 
@@ -61,7 +65,12 @@ class StubCatalogService {
   ): Promise<{ items: Product[]; total: number; hasMore: boolean }> {
     this.loadCalls.push({ filters, page, append });
     if (this.failLoads) throw new Error('503');
-    return { items: [], total: 0, hasMore: false };
+    const items = this.nextItems ?? [];
+    if (this.nextItems) {
+      this.products.set(append ? [...this.products(), ...items] : items);
+    }
+    if (this.nextHasMore !== null) this.hasMore.set(this.nextHasMore);
+    return { items, total: items.length, hasMore: this.nextHasMore ?? false };
   }
 
   async loadFacets(filters: Record<string, unknown>): Promise<Facets | null> {
@@ -273,6 +282,68 @@ describe('ProductListingPageComponent', () => {
     expect(btn.disabled).toBe(false);
     btn.click();
     expect(catalog.loadCalls).toHaveLength(1); // only the initial page-0 load
+  });
+
+  describe('focus when "load more" fetches the LAST page (the button goes away)', () => {
+    function onLastPage() {
+      const ctx = setup();
+      ctx.catalog.isLoadingList.set(false);
+      ctx.catalog.products.set([makeProduct({ id: 1, slug: 'abaya-1' })]);
+      ctx.catalog.hasMore.set(true);
+      ctx.fixture.detectChanges();
+      ctx.catalog.nextItems = [
+        makeProduct({ id: 2, slug: 'abaya-2' }),
+        makeProduct({ id: 3, slug: 'abaya-3' }),
+      ];
+      ctx.catalog.nextHasMore = false;
+      const el: HTMLElement = ctx.fixture.nativeElement;
+      return { ...ctx, el, btn: el.querySelector('[data-testid="listing-load-more"]') as HTMLButtonElement };
+    }
+
+    it('moves focus to the first appended product link', async () => {
+      const { fixture, el, btn } = onLastPage();
+      btn.focus();
+      btn.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="listing-load-more"]')).toBeNull();
+      const items = el.querySelectorAll('[data-testid="listing-grid"] > li');
+      expect(items.length).toBe(3);
+      expect(document.activeElement).toBe(items[1].querySelector('a'));
+      expect(document.activeElement?.getAttribute('href')).toContain('abaya-2');
+    });
+
+    it('falls back to the results region when the appended card has no product link', async () => {
+      const { fixture, catalog, el, btn } = onLastPage();
+      catalog.nextItems = [makeProduct({ id: 2, slug: '' })];
+      btn.focus();
+      btn.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(document.activeElement).toBe(el.querySelector('[data-testid="listing-results"]'));
+    });
+
+    it('does not move focus when the shopper was not on the button', async () => {
+      const { fixture, el, btn } = onLastPage();
+      const crumb = el.querySelector('.listing-page__crumbs a') as HTMLAnchorElement;
+      crumb.focus();
+      btn.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="listing-load-more"]')).toBeNull();
+      expect(document.activeElement).toBe(crumb);
+    });
+
+    it('does not move focus after a failed last-page load (the button stays, as the retry)', async () => {
+      const { fixture, catalog, el, btn } = onLastPage();
+      catalog.failLoads = true;
+      btn.focus();
+      btn.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="listing-load-more-retry"]')).toBe(btn);
+      expect(document.activeElement).toBe(btn);
+    });
   });
 
   it('hides "load more" when there are no further pages', () => {

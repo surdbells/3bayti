@@ -44,11 +44,37 @@
   font-weight: 500;
 }
 
+/* ----- Page body (everything below the breadcrumb) ------------------- */
+
+/* Programmatic focus target (tabindex="-1"): a header retry swaps the
+   focused Retry button for the loading state, so focus moves here instead
+   of dropping to <body>. No ring for pointer users; keyboard users get one. */
+.page-body {
+  border-radius: 12px;
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 6px;
+  }
+}
+
 /* ----- Header -------------------------------------------------------- */
 
 .category-header {
   padding-bottom: 32px;
   border-bottom: 1px solid var(--color-border-subtle);
+}
+
+/* Header-level failure: "Retry" beside the link back to the index. */
+.header-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .eyebrow {
