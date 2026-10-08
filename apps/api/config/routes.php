@@ -1004,6 +1004,15 @@ return function (App $app): void {
             [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'list'])->add($perm->for('catalog.collections_view'));
         $group->post('/collections',
             [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'create'])->add($perm->for('catalog.collections_manage'));
+        // Static sub-paths registered BEFORE the {id} routes (the numeric {id}
+        // regex already keeps them apart; the order keeps that explicit).
+        // Batch product → collections lookup for the product builder's
+        // "already in this / other collections" badges (?product_ids=1,2,3).
+        $group->get('/collections/memberships',
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionMembershipController::class, 'forProducts'])->add($perm->for('catalog.collections_view'));
+        // Drag-and-drop reorder of ALL collections (= storefront order).
+        $group->put('/collections/order',
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'reorder'])->add($perm->for('catalog.collections_manage'));
         $group->get('/collections/{id:[0-9]+}',
             [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'get'])->add($perm->for('catalog.collections_view'));
         $group->put('/collections/{id:[0-9]+}',
@@ -1016,6 +1025,12 @@ return function (App $app): void {
             [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'listProducts'])->add($perm->for('catalog.collections_view'));
         $group->put('/collections/{id:[0-9]+}/products',
             [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'setProducts'])->add($perm->for('catalog.collections_manage'));
+        // Product-side membership: which collections one product (v3 id) is
+        // in, and set its COMPLETE membership set (a product can be in many).
+        $group->get('/products/{id:[0-9]+}/collections',
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionMembershipController::class, 'forProduct'])->add($perm->for('catalog.collections_view'));
+        $group->put('/products/{id:[0-9]+}/collections',
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionMembershipController::class, 'setForProduct'])->add($perm->for('catalog.collections_manage'));
 
         // HP-BE3, Campaigns CRUD (homepage Anniversary Deals + Flash Sale).
         $group->get('/campaigns',

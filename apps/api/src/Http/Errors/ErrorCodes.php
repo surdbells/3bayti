@@ -97,6 +97,14 @@ final class ErrorCodes
     public const CONFLICT_DUPLICATE = 'CONFLICT_DUPLICATE';
 
     /**
+     * The resource changed since the client loaded it (an optimistic
+     * precondition such as expected_product_ids failed, or a concurrent write
+     * won). Nothing was written; the client should reload and re-apply.
+     * Details may carry the current server state to reload from.
+     */
+    public const CONFLICT_STALE = 'CONFLICT_STALE';
+
+    /**
      * Account-link (POST /me/phone/claim): the phone doesn't map to a single
      * existing account that can be linked — either no other account owns it,
      * or (the legacy shared-number case) more than one active account does, so

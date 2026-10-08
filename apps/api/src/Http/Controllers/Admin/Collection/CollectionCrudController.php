@@ -1,15 +1,19 @@
 <?php declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Admin\Collection;
 
+use Bayti\Api\Domain\Catalog\CollectionCurationService;
 use Bayti\Api\Domain\Catalog\CollectionProduct;
 use Bayti\Api\Domain\Catalog\CollectionProductRepository;
 use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\ProductCollection;
 use Bayti\Api\Domain\Catalog\ProductCollectionRepository;
 use Bayti\Api\Domain\Catalog\ProductRepository;
+use Bayti\Api\Domain\Catalog\StaleCollectionMembershipException;
+use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\ProductSerializer;
+use Bayti\Api\Http\Validator\IdListParser;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -23,6 +27,11 @@ use Psr\Http\Message\ServerRequestInterface;
  *   GET    /v3/admin/collections/{id}       detail
  *   PUT    /v3/admin/collections/{id}       update
  *   DELETE /v3/admin/collections/{id}       hard-delete
+ *   PUT    /v3/admin/collections/order      drag-and-drop reorder (all collections)
+ *
+ * Every collection shape carries "product_count" (curated members), computed
+ * with one grouped count query per response (no per-collection N+1), and
+ * "position" (1-based row in the admin Collections list order).
  */
 final class CollectionCrudController
 {
@@ -32,6 +41,7 @@ final class CollectionCrudController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $productSerializer,
+        private readonly CollectionCurationService $curation,
     ) {}
 
     protected function getResponseFactory(): ResponseFactoryInterface { return $this->responseFactory; }
@@ -45,7 +55,7 @@ final class CollectionCrudController
         $repo   = $this->em->getRepository(ProductCollection::class);
         $result = $repo->findPaginated($limit, $offset);
         return $this->ok([
-            'data' => array_map([$this, 'shape'], $result['items']),
+            'data' => $this->shapeMany($result['items'], firstPosition: $offset + 1),
             'meta' => ['total' => $result['total'], 'limit' => $limit, 'offset' => $offset],
         ]);
     }
@@ -53,7 +63,7 @@ final class CollectionCrudController
     public function get(ServerRequestInterface $request): ResponseInterface
     {
         $col = $this->findOrFail((int) $request->getAttribute('id'));
-        return $this->ok(['data' => $this->shape($col)]);
+        return $this->ok(['data' => $this->shapeOne($col)]);
     }
 
     public function create(ServerRequestInterface $request): ResponseInterface
@@ -75,7 +85,7 @@ final class CollectionCrudController
         /** @var ProductCollectionRepository $repo */
         $repo = $this->em->getRepository(ProductCollection::class);
         $repo->save($col);
-        return $this->created(['data' => $this->shape($col)]);
+        return $this->created(['data' => $this->shapeOne($col)]);
     }
 
     public function update(ServerRequestInterface $request): ResponseInterface
@@ -96,7 +106,7 @@ final class CollectionCrudController
         /** @var ProductCollectionRepository $repo */
         $repo = $this->em->getRepository(ProductCollection::class);
         $repo->save($col);
-        return $this->ok(['data' => $this->shape($col)]);
+        return $this->ok(['data' => $this->shapeOne($col)]);
     }
 
     public function delete(ServerRequestInterface $request): ResponseInterface
@@ -106,6 +116,44 @@ final class CollectionCrudController
         $repo = $this->em->getRepository(ProductCollection::class);
         $repo->delete($col);
         return $this->noContent();
+    }
+
+    /**
+     * PUT /v3/admin/collections/order
+     *
+     * Drag-and-drop reorder. Body: { "collection_ids": [4, 9, 2] } (index 0
+     * first). Listed collections take positions 0..k-1 in that order; every
+     * collection NOT listed keeps its current relative order after them.
+     * display_order is rewritten 0..n-1 for ALL collections in one
+     * transaction, so the storefront "Shop by collection" order (display_order
+     * ASC) follows exactly. Duplicate / non-positive / unknown ids → 422 on
+     * collection_ids. Responds with the full collection list in the new order.
+     */
+    public function reorder(ServerRequestInterface $request): ResponseInterface
+    {
+        $body = (array) ($request->getParsedBody() ?? []);
+        $ids  = IdListParser::fromArray($body['collection_ids'] ?? null, 'collection_ids', rejectDuplicates: true);
+
+        if ($ids !== []) {
+            // Scalar id check: hydrating the collections here (outside the
+            // reorder's transaction + lock) would only put possibly-stale
+            // entities in the identity map.
+            /** @var ProductCollectionRepository $repo */
+            $repo    = $this->em->getRepository(ProductCollection::class);
+            $missing = array_values(array_diff($ids, $repo->orderedIds()));
+            if ($missing !== []) {
+                throw HttpException::validation([
+                    'collection_ids' => ['Unknown collection id(s): ' . implode(', ', $missing)],
+                ]);
+            }
+        }
+
+        $ordered = $this->curation->reorderCollections($ids);
+
+        return $this->ok([
+            'data' => $this->shapeMany($ordered, firstPosition: 1),
+            'meta' => ['total' => count($ordered)],
+        ]);
     }
 
     /**
@@ -138,6 +186,13 @@ final class CollectionCrudController
      * Array ORDER is the curation order (index 0 = the "first product", whose
      * image fronts the collection on storefront cards). An empty array clears
      * the collection. Unknown product ids → 422.
+     *
+     * Optional precondition "expected_product_ids": the curated ids (in
+     * order) the client loaded. When the stored list differs (another tab, or
+     * the product page's PUT /admin/products/{id}/collections, changed it
+     * since) nothing is written and the response is 409 CONFLICT_STALE with
+     * error.details.current_product_ids, instead of silently undoing that
+     * change. Omitted / null = no check (older clients).
      */
     public function setProducts(ServerRequestInterface $request): ResponseInterface
     {
@@ -147,6 +202,9 @@ final class CollectionCrudController
         if (!is_array($raw)) {
             throw HttpException::badRequest('product_ids must be an array.');
         }
+        $expected = ($body['expected_product_ids'] ?? null) === null
+            ? null
+            : IdListParser::fromArray($body['expected_product_ids'], 'expected_product_ids');
 
         // Normalise to a de-duplicated, order-preserving list of positive ints.
         $ids = [];
@@ -172,14 +230,18 @@ final class CollectionCrudController
             ]);
         }
 
-        /** @var CollectionProductRepository $joinRepo */
-        $joinRepo = $this->em->getRepository(CollectionProduct::class);
-        // Full re-set: clear, then re-insert in the supplied order.
-        $joinRepo->deleteForCollection((int) $col->getId());
-        foreach ($products as $i => $product) {
-            $this->em->persist(new CollectionProduct($col, $product, $i));
+        // Full re-set of THIS collection only (memberships in other collections
+        // are untouched), diffed through the UnitOfWork in one locked
+        // transaction so every removal / re-position / addition is audited.
+        try {
+            $this->curation->setCollectionProducts($col, $products, $expected);
+        } catch (StaleCollectionMembershipException $e) {
+            throw HttpException::conflict(
+                ErrorCodes::CONFLICT_STALE,
+                "This collection's products were changed elsewhere since you loaded them. Reload to see the latest list, then re-apply your changes.",
+                $e->currentIds === null ? [] : ['current_product_ids' => $e->currentIds],
+            );
         }
-        $this->em->flush();
 
         return $this->ok([
             'data' => $this->productSerializer->configureFromRequest($request)->listShapeMany($products),
@@ -258,8 +320,64 @@ final class CollectionCrudController
         return $col;
     }
 
+    /**
+     * Shape a page/list of collections with their member counts: ONE grouped
+     * count query for the whole list (no per-collection N+1).
+     *
+     * "position" is the 1-based row number in the admin Collections list,
+     * i.e. the display order (display_order ASC NULLS LAST, then id DESC)
+     * across ALL collections, active or not. It stays right even while stored
+     * display_order values still have gaps, duplicates or NULLs from before
+     * the first drag-and-drop save (display_order + 1 would not).
+     * $firstPosition: the rank of $collections[0] when they are a contiguous
+     * slice of that order (a list page / the reorder result); null = look
+     * each up (one scalar id query).
+     *
+     * @param list<ProductCollection> $collections
+     * @return list<array<string,mixed>>
+     */
+    private function shapeMany(array $collections, ?int $firstPosition = null): array
+    {
+        if ($collections === []) {
+            return [];
+        }
+        /** @var CollectionProductRepository $joinRepo */
+        $joinRepo = $this->em->getRepository(CollectionProduct::class);
+        $counts = $joinRepo->countsByCollection(array_map(
+            static fn (ProductCollection $c): int => (int) $c->getId(),
+            $collections,
+        ));
+
+        $rank = null;
+        if ($firstPosition === null) {
+            /** @var ProductCollectionRepository $repo */
+            $repo = $this->em->getRepository(ProductCollection::class);
+            $rank = array_flip($repo->orderedIds());
+        }
+
+        $out = [];
+        foreach ($collections as $i => $c) {
+            $id = (int) $c->getId();
+            $position = $rank === null
+                ? $firstPosition + $i
+                : (isset($rank[$id]) ? $rank[$id] + 1 : null);
+            $out[] = $this->shape($c, $counts[$id] ?? 0, $position);
+        }
+        return $out;
+    }
+
     /** @return array<string,mixed> */
-    public function shape(ProductCollection $c): array
+    private function shapeOne(ProductCollection $c): array
+    {
+        return $this->shapeMany([$c])[0];
+    }
+
+    /**
+     * @param int      $productCount curated members (collection_products rows)
+     * @param int|null $position     1-based rank in the display order
+     * @return array<string,mixed>
+     */
+    public function shape(ProductCollection $c, int $productCount = 0, ?int $position = null): array
     {
         return [
             'id'              => $c->getId(),
@@ -270,6 +388,8 @@ final class CollectionCrudController
             'cover_image_url' => $c->getCoverImageUrl(),
             'is_active'       => $c->isActive(),
             'display_order'   => $c->getDisplayOrder(),
+            'position'        => $position,
+            'product_count'   => $productCount,
             'created_at'      => $c->getCreatedAt()->format(\DateTimeInterface::ATOM),
         ];
     }

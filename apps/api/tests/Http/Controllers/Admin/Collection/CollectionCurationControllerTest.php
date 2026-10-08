@@ -31,13 +31,14 @@ final class CollectionCurationControllerTest extends HttpTestCase
 {
     /** @var list<CollectionProduct> */
     private array $persisted = [];
-    private int $deleteForCollectionCalls = 0;
+    /** @var list<list<int>> collection ids passed to each lockCollections() call */
+    private array $lockCalls = [];
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->persisted = [];
-        $this->deleteForCollectionCalls = 0;
+        $this->lockCalls = [];
     }
 
     #[Test]
@@ -63,8 +64,9 @@ final class CollectionCurationControllerTest extends HttpTestCase
         self::assertSame('p-seven', $body['data'][0]['slug']);
         self::assertSame('p-three', $body['data'][1]['slug']);
 
-        // Full re-set: cleared once, then two membership rows in order.
-        self::assertSame(1, $this->deleteForCollectionCalls);
+        // Full re-set of an empty collection: locked once, then two
+        // membership rows inserted in order (through the UnitOfWork).
+        self::assertSame([[5]], $this->lockCalls);
         self::assertCount(2, $this->persisted);
         self::assertSame(7, $this->persisted[0]->getProduct()->getId());
         self::assertSame(0, $this->persisted[0]->getSortOrder());
@@ -88,7 +90,7 @@ final class CollectionCurationControllerTest extends HttpTestCase
         self::assertSame(422, $response->getStatusCode());
         self::assertStringContainsString('999', json_encode($this->jsonBody($response)) ?: '');
         self::assertCount(0, $this->persisted, 'nothing persisted when validation fails');
-        self::assertSame(0, $this->deleteForCollectionCalls, 'membership untouched when validation fails');
+        self::assertSame([], $this->lockCalls, 'membership untouched when validation fails');
     }
 
     #[Test]
@@ -204,9 +206,10 @@ final class CollectionCurationControllerTest extends HttpTestCase
 
         $joinRepo = $this->createMock(CollectionProductRepository::class);
         $joinRepo->method('productIdsForCollection')->willReturn($memberIds);
-        $joinRepo->method('deleteForCollection')->willReturnCallback(function (): void {
-            $this->deleteForCollectionCalls++;
+        $joinRepo->method('lockCollections')->willReturnCallback(function (array $ids): void {
+            $this->lockCalls[] = $ids;
         });
+        $joinRepo->method('findForCollection')->willReturn([]);
 
         $em = $this->stubEm(function ($em) use ($userRepo, $collectionRepo, $productRepo, $joinRepo): void {
             $em->method('getRepository')->willReturnMap([

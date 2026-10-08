@@ -1869,6 +1869,23 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'PUT /admin/collections/:id/products': {
     target: 'new', oldPath: '', newPath: '/v3/admin/collections/:id/products', shape: 'v3-envelope',
   },
+  // Batch product -> collections lookup (?product_ids=1,2,3; 1..200 ids) for
+  // the product builder's "in this / other collections" badges.
+  'GET /admin/collections/memberships': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/collections/memberships', shape: 'v3-envelope',
+  },
+  // Drag-and-drop reorder of ALL collections ({ collection_ids: [...] }).
+  'PUT /admin/collections/order': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/collections/order', shape: 'v3-envelope',
+  },
+  // Product-side membership (v3 product id): read + set the product's
+  // complete collection set (a product can be in many collections).
+  'GET /admin/products/:id/collections': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/products/:id/collections', shape: 'v3-envelope',
+  },
+  'PUT /admin/products/:id/collections': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/products/:id/collections', shape: 'v3-envelope',
+  },
   'GET /admin/commissions': {
     target: 'new', oldPath: '/admin/common/commissions', newPath: '/v3/admin/commissions', shape: 'v3-envelope',
   },

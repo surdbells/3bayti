@@ -90,11 +90,14 @@ final class HttpException extends \RuntimeException
     }
 
     /**
-     * 409 Conflict, uniqueness violation (email/phone taken etc.).
+     * 409 Conflict, uniqueness violation (email/phone taken etc.) or a stale
+     * write (ErrorCodes::CONFLICT_STALE).
+     *
+     * @param array<string, mixed> $details Extra context for the client
      */
-    public static function conflict(string $errorCode, string $message): self
+    public static function conflict(string $errorCode, string $message, array $details = []): self
     {
-        return new self(409, $errorCode, $message);
+        return new self(409, $errorCode, $message, $details);
     }
 
     /**

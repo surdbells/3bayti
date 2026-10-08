@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Domain\Catalog;
 
+use Bayti\Api\Doctrine\AdvisoryLock;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Query;
+use Doctrine\ORM\QueryBuilder;
 
 /** @extends EntityRepository<ProductCollection> */
 class ProductCollectionRepository extends EntityRepository
 {
+    /** Advisory-lock key space for the collections' display order (key 2 = 0). */
+    public const LOCK_NAMESPACE_ORDER = 3_100_101;
+
     public function save(ProductCollection $col): void
     {
         $em = $this->getEntityManager();
@@ -38,6 +44,70 @@ class ProductCollectionRepository extends EntityRepository
         /** @var list<ProductCollection> $items */
         $items = $qb->getQuery()->getResult();
         return ['items' => $items, 'total' => $total];
+    }
+
+    /**
+     * EVERY collection (active or not) in display order: display_order ASC
+     * NULLS LAST, then id DESC, the same order the admin list shows (Postgres
+     * sorts NULLs last for ASC). Used to rewrite the order on a drag-and-drop
+     * reorder; collection counts are small, so no pagination.
+     *
+     * $refresh: overwrite collections already in the identity map with the
+     * row values just read. Without it Doctrine keeps an already-managed
+     * entity's in-memory display_order, so a reorder that runs after another
+     * one committed (see lockDisplayOrder) would diff against stale values
+     * and skip UPDATEs, leaving duplicate positions.
+     *
+     * @return list<ProductCollection>
+     */
+    public function findAllOrdered(bool $refresh = false): array
+    {
+        $query = $this->orderedQueryBuilder()->getQuery();
+        if ($refresh) {
+            $query->setHint(Query::HINT_REFRESH, true);
+        }
+        /** @var list<ProductCollection> $items */
+        $items = $query->getResult();
+        return $items;
+    }
+
+    /**
+     * Ids of EVERY collection in the admin/storefront display order (same
+     * ORDER BY as findAllOrdered), as plain scalars: nothing is hydrated into
+     * the identity map. Used for the reorder's unknown-id check and for a
+     * collection's 1-based "position".
+     *
+     * @return list<int>
+     */
+    public function orderedIds(): array
+    {
+        /** @var list<array{id: int|string}> $rows */
+        $rows = $this->orderedQueryBuilder()
+            ->select('c.id AS id')
+            ->getQuery()
+            ->getArrayResult();
+        return array_map(static fn (array $r): int => (int) $r['id'], $rows);
+    }
+
+    /**
+     * Serialise drag-and-drop reorders until the current transaction ends (a
+     * Postgres transaction-scoped advisory lock). A reorder reads every
+     * collection's display_order and rewrites the ones that moved; without
+     * this, two concurrent reorders interleave their UPDATEs into an order
+     * neither admin asked for, with duplicate positions. Must be called
+     * inside the transaction, BEFORE findAllOrdered(refresh: true).
+     */
+    public function lockDisplayOrder(): void
+    {
+        AdvisoryLock::forTransaction($this->getEntityManager()->getConnection(), self::LOCK_NAMESPACE_ORDER, 0);
+    }
+
+    private function orderedQueryBuilder(): QueryBuilder
+    {
+        return $this->createQueryBuilder('c')
+            ->orderBy('CASE WHEN c.displayOrder IS NULL THEN 1 ELSE 0 END', 'ASC')
+            ->addOrderBy('c.displayOrder', 'ASC')
+            ->addOrderBy('c.id', 'DESC');
     }
 
     /**
