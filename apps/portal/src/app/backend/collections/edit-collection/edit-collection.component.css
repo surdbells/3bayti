@@ -1,10 +1,11 @@
-/* Most styling comes from the ax-* design system; these cover the details
-   grid, the "Add products" tabs (search + paged browse) and the curated
-   (ordered) product list. */
+/* Collection editor: details card, then the product builder — a paged card
+   grid (left) beside the drag-and-drop curated list (right, sticky), and a
+   sticky save bar. Built on the ax-* tokens/components; only layout and the
+   card/indicator treatments live here. */
 
 .ax-textarea {
   resize: vertical;
-  min-height: 5rem;
+  min-height: 3.5rem;
   font-family: inherit;
 }
 
@@ -13,129 +14,128 @@
   font-size: 0.875em;
 }
 
-.ec-grid {
+/* ── Details ─────────────────────────────────────────────────────── */
+.ec-details__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
+.ec-details__wide {
+  grid-column: 1 / -1;
+}
+.ec-order-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--ax-color-text-secondary);
+}
+.ec-order-note app-icon {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+  color: var(--ax-color-text-tertiary);
+}
+.ec-order-note a {
+  color: var(--ax-color-text-link);
+}
 
-/* ── Products header ─────────────────────────────────────────────── */
-.ec-products-head {
+/* ── Builder layout ──────────────────────────────────────────────── */
+.ec-builder-wrap {
+  margin-top: var(--ax-space-5);
+}
+.ec-builder {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ax-space-5);
+  align-items: start;
+}
+.ec-pane {
+  padding: var(--ax-space-5);
+  min-width: 0;
+}
+.ec-pane__head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
-.ec-products-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* ── Search ──────────────────────────────────────────────────────── */
-.ec-search {
-  position: relative;
-}
-.ec-search__box {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.ec-search__box .ax-input {
-  flex: 1;
-}
-
-.ec-results {
-  list-style: none;
-  margin: 0.375rem 0 0;
-  padding: 0.25rem;
-  border: 1px solid var(--ax-color-border-subtle);
-  border-radius: 0.625rem;
-  background: var(--ax-color-bg-surface);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  max-height: 20rem;
-  overflow-y: auto;
-}
-.ec-results__item {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  width: 100%;
-  padding: 0.5rem 0.625rem;
-  border: 0;
-  border-radius: 0.5rem;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.ec-results__item:hover,
-.ec-results__item:focus-visible {
-  background: var(--ax-color-bg-muted);
-}
-.ec-results__item--added {
-  opacity: 0.65;
-}
-.ec-results__img {
-  width: 2.25rem;
-  height: 2.25rem;
-  object-fit: cover;
-  border-radius: 0.375rem;
-  flex-shrink: 0;
-}
-.ec-results__text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.ec-results__name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ec-results__sub {
-  font-size: 0.75rem;
-  color: var(--ax-color-text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ec-results__price {
-  color: var(--ax-color-text-secondary);
+.ec-pane__sub {
+  margin: 0.25rem 0 0;
   font-size: 0.8125rem;
-  white-space: nowrap;
-}
-
-.ec-thumb-empty {
-  display: inline-block;
-  background: var(--ax-color-bg-muted);
-  border: 1px dashed var(--ax-color-border-subtle);
-}
-
-/* ── Sale-aware price ────────────────────────────────────────────── */
-.ec-price-sale {
-  color: var(--ax-color-text-danger);
-  font-weight: 600;
-}
-.ec-price-was {
-  margin-left: 0.375rem;
   color: var(--ax-color-text-tertiary);
-  font-size: 0.9em;
 }
 
-/* ── Add products: tabs ──────────────────────────────────────────── */
+/* Side by side from 1280px (≈ 60rem of builder beside the 17rem sidenav).
+   A media query, not a container query: container-type would make the
+   builder the containing block for the fixed drag preview and misplace it.
+   The curated pane sticks below the topbar and scrolls on its own, above the
+   sticky save bar. */
+@media (min-width: 80rem) {
+  .ec-builder {
+    grid-template-columns: minmax(0, 1fr) clamp(21rem, 36%, 30rem);
+  }
+  .ec-curated-pane {
+    position: sticky;
+    top: calc(var(--ax-topbar-height) + var(--ax-space-4));
+    max-height: calc(100vh - var(--ax-topbar-height) - 10.5rem);
+    display: flex;
+    flex-direction: column;
+  }
+  .ec-curated-pane .ec-curated {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+.ec-locked {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--ax-radius-md);
+  background: var(--ax-color-bg-warning-subtle);
+  color: var(--ax-color-text-warning);
+  font-size: 0.8125rem;
+}
+
+/* ── Add products: tabs + search ─────────────────────────────────── */
 .ec-add__tabs {
-  margin-top: 0.375rem;
+  overflow-x: auto;
 }
 .ec-add__panel {
   padding-top: 1rem;
 }
+.ec-search {
+  margin-bottom: 0.75rem;
+}
+.ec-search__box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.ec-search__box .ax-input {
+  flex: 1;
+  padding-inline-start: 2.25rem;
+  padding-inline-end: 2.5rem;
+}
+.ec-search__icon {
+  position: absolute;
+  inset-inline-start: 0.75rem;
+  color: var(--ax-color-text-tertiary);
+  pointer-events: none;
+}
+.ec-search__spin,
+.ec-search__clear {
+  position: absolute;
+  inset-inline-end: 0.5rem;
+}
 
-/* ── Browse (category / best sellers / new arrivals) ─────────────── */
 .ec-browse__picker {
   margin-bottom: 0.75rem;
 }
@@ -150,14 +150,13 @@
 .ec-browse__inline--error {
   color: var(--ax-color-text-danger);
 }
-
 .ec-browse__bar {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 .ec-browse__heading {
   display: flex;
@@ -166,6 +165,7 @@
 }
 .ec-browse__title {
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 .ec-browse__hint {
   font-size: 0.75rem;
@@ -175,45 +175,240 @@
   color: var(--ax-color-text-tertiary);
   font-variant-numeric: tabular-nums;
 }
-
-.ec-browse__state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 10rem;
+[aria-disabled='true'].ax-btn {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
-.ec-browse__list {
+/* ── Product card grid ───────────────────────────────────────────── */
+.ec-grid {
   list-style: none;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--ax-color-border-subtle);
-  border-radius: 0.625rem;
-  max-height: 28rem;
-  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11.25rem, 1fr));
+  gap: 0.875rem;
 }
-.ec-browse__row {
+
+.ec-card {
+  position: relative;
   display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-lg);
+  background: var(--ax-color-bg-surface);
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    box-shadow var(--ax-duration-fast) var(--ax-ease-out),
+    border-color var(--ax-duration-fast) var(--ax-ease-out),
+    transform var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ec-card:hover {
+  border-color: var(--ax-color-border-strong);
+  box-shadow: var(--ax-shadow-md);
+}
+.ec-card:focus-within {
+  box-shadow: 0 0 0 2px var(--ax-color-ring);
+}
+/* In THIS collection: tinted frame. */
+.ec-card--in {
+  border-color: var(--ax-color-bg-success);
+  box-shadow: 0 0 0 1px var(--ax-color-bg-success);
+  background: color-mix(in srgb, var(--ax-color-bg-success-subtle) 55%, var(--ax-color-bg-surface));
+}
+.ec-card--in:hover {
+  box-shadow: 0 0 0 1px var(--ax-color-bg-success), var(--ax-shadow-md);
+}
+
+.ec-card__media {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  background: var(--ax-color-bg-sunken);
+  overflow: hidden;
+}
+.ec-media__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--ax-duration-slow) var(--ax-ease-out);
+}
+.ec-card:hover .ec-media__img {
+  transform: scale(1.03);
+}
+.ec-media__ph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.375rem;
+  color: var(--ax-color-text-tertiary);
+  font-size: 0.75rem;
+}
+.ec-media__ph app-icon {
+  font-size: 2rem;
+}
+
+/* Indicators: overlaid on the image so they never shift layout. */
+.ec-flag-in,
+.ec-flag-also,
+.ec-flag-stock {
+  position: absolute;
+  display: inline-flex;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.5rem 0.625rem;
-  border-bottom: 1px solid var(--ax-color-border-subtle);
+  gap: 0.25rem;
+  max-width: calc(100% - 1rem);
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--ax-radius-pill);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
-.ec-browse__row:last-child {
-  border-bottom: none;
+.ec-flag-in {
+  top: 0.5rem;
+  inset-inline-start: 0.5rem;
+  background: var(--ax-color-bg-success);
+  color: var(--ax-color-text-inverse);
 }
-.ec-browse__row--added .ec-results__text,
-.ec-browse__row--added .ec-results__img,
-.ec-browse__row--added .ec-results__price {
-  opacity: 0.65;
+.ec-flag-in--cover {
+  background: var(--ax-color-bg-gold);
+  color: var(--ax-palette-espresso-900, #1f1610);
 }
-.ec-browse__stock {
-  margin-left: 0.375rem;
+.ec-flag-in__unsaved {
+  font-weight: 500;
+  opacity: 0.9;
 }
-.ec-browse__add {
-  flex-shrink: 0;
-  min-width: 5.5rem;
+.ec-flag-also {
+  bottom: 0.5rem;
+  inset-inline-start: 0.5rem;
+  background: rgba(28, 22, 17, 0.78);
+  color: #fff;
+}
+.ec-flag-also--loading {
+  width: 6.5rem;
+  height: 1.375rem;
+  padding: 0;
+  box-shadow: none;
+  opacity: 0.7;
+}
+/* The lookup failed: unknown, which must not read as "in no other collection". */
+.ec-flag-also--unknown {
+  background: var(--ax-color-bg-warning-subtle);
+  color: var(--ax-color-text-warning);
+}
+.ec-flag-stock {
+  top: 0.5rem;
+  inset-inline-end: 0.5rem;
+  max-width: 45%;
+  background: var(--ax-color-bg-warning-subtle);
+  color: var(--ax-color-text-warning);
+}
+.ec-card--in .ec-flag-stock {
+  top: 2.15rem;
+}
+
+.ec-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.625rem 0.75rem 0.25rem;
+  min-width: 0;
+}
+.ec-card__title {
+  all: unset;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  /* Two lines always reserved, so cards in a row line up. */
+  min-height: 2.6em;
+  line-height: 1.3;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--ax-color-text-primary);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  border-radius: var(--ax-radius-xs);
+}
+.ec-card__title:focus-visible {
+  outline: 2px solid var(--ax-color-border-focus);
+  outline-offset: 2px;
+}
+.ec-card__vendor {
+  min-height: 1.15rem;
+  font-size: 0.75rem;
+  color: var(--ax-color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ec-card__price {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ax-color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.ec-card__price--none {
+  font-weight: 400;
+  color: var(--ax-color-text-tertiary);
+}
+.ec-card__also {
+  display: none;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--ax-color-text-secondary);
+}
+.ec-card__also--unknown {
+  color: var(--ax-color-text-warning);
+}
+.ec-card__foot {
+  margin-top: auto;
+  padding: 0.5rem 0.75rem 0.75rem;
+}
+.ec-card__toggle {
+  width: 100%;
   justify-content: center;
+}
+.ec-card__toggle--remove:not([aria-disabled='true']):hover {
+  color: var(--ax-color-text-danger);
+  border-color: var(--ax-color-text-danger);
+}
+
+/* Sale-aware price */
+.ec-price-sale {
+  color: var(--ax-color-text-danger);
+  font-weight: 600;
+}
+.ec-price-was {
+  margin-inline-start: 0.375rem;
+  color: var(--ax-color-text-tertiary);
+  font-size: 0.85em;
+  font-weight: 400;
+}
+
+/* Skeleton cards */
+.ec-card--skeleton {
+  cursor: default;
+}
+.ec-card--skeleton:hover {
+  box-shadow: none;
+  border-color: var(--ax-color-border-subtle);
+}
+.ec-card--skeleton .ec-card__body {
+  gap: 0.5rem;
+  padding-bottom: 1rem;
+}
+.ec-skel-short {
+  width: 55%;
 }
 
 .ec-pager {
@@ -221,7 +416,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-top: 0.75rem;
+  margin-top: 1rem;
 }
 .ec-pager__summary {
   font-size: 0.8125rem;
@@ -230,11 +425,7 @@
   text-align: center;
 }
 
-.ec-empty--compact {
-  padding: 1.5rem 1rem;
-}
-
-/* ── Curated list ────────────────────────────────────────────────── */
+/* ── Empty / error states ────────────────────────────────────────── */
 .ec-empty {
   display: flex;
   flex-direction: column;
@@ -248,117 +439,184 @@
   margin: 0;
   max-width: 28rem;
 }
-
-.ec-items {
-  list-style: none;
-  margin: 1rem 0 0;
-  padding: 0;
-  border: 1px solid var(--ax-color-border-subtle);
-  border-radius: 0.625rem;
-  overflow: hidden;
-}
-.ec-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.625rem 0.75rem;
-  border-bottom: 1px solid var(--ax-color-border-subtle);
-}
-.ec-item:last-child {
-  border-bottom: none;
-}
-.ec-item--cover {
-  background: var(--ax-color-bg-muted);
+.ec-empty--compact {
+  padding: 1.5rem 1rem;
 }
 
-.ec-rank {
-  flex: 0 0 auto;
-  width: 1.75rem;
-  height: 1.75rem;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: var(--ax-color-bg-muted);
-  color: var(--ax-color-text-secondary);
-  font-weight: 600;
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-}
-.ec-item--cover .ec-rank {
-  background: var(--ax-color-bg-surface);
-}
-
-.ec-item__img {
-  width: 3rem;
-  height: 3rem;
-  object-fit: cover;
-  border-radius: 0.375rem;
-  flex-shrink: 0;
-}
-
-.ec-item__meta {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-.ec-item__name-row {
+/* ── Curated list ────────────────────────────────────────────────── */
+.ec-curated-title {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex-wrap: wrap;
-  min-width: 0;
 }
-.ec-item__name {
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
+.ec-curated-title:focus {
+  outline: none;
 }
-.ec-item__name-row .ax-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
+.ec-count {
+  font-variant-numeric: tabular-nums;
 }
-.ec-item__sub {
-  font-size: 0.8125rem;
-  color: var(--ax-color-text-secondary);
+.ec-view-toggle {
+  flex-shrink: 0;
 }
 
-.ec-item__actions {
-  flex: 0 0 auto;
+.ec-curated {
+  list-style: none;
+  margin: 0;
+  padding: 2px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.75rem;
+}
+.ec-cur--cover {
+  border-color: var(--ax-color-bg-gold);
+  box-shadow: 0 0 0 1px var(--ax-color-bg-gold);
+}
+.ec-cur__rank {
+  display: none;
+}
+.ec-cur .ec-card__foot {
+  padding: 0.375rem 0.5rem 0.5rem;
+}
+.ec-cur__actions {
   display: flex;
   align-items: center;
   gap: 0.125rem;
+}
+.ec-cur__spacer {
+  flex: 1;
+}
+.ec-cur__grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  color: var(--ax-color-text-tertiary);
+  cursor: grab;
 }
 .ec-remove:not(:disabled):hover {
   color: var(--ax-color-text-danger, #b42318);
 }
+/* Grid view: Remove sits on the image's top-end corner (the actions row
+   below keeps just the reorder controls, so narrow cards still fit). */
+.ec-curated:not(.ec-curated--list) .ec-remove {
+  position: absolute;
+  top: 0.5rem;
+  inset-inline-end: 0.5rem;
+  width: 1.75rem;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ax-color-bg-raised) 92%, transparent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.ec-curated:not(.ec-curated--list) .ec-cur__spacer {
+  display: none;
+}
+/* The position flag stops short of the Remove button on the same corner row
+   (inset 0.5rem + 1.75rem button + a gap), so it never runs underneath it. */
+.ec-curated:not(.ec-curated--list) .ec-flag-in {
+  max-width: calc(100% - 3rem);
+}
+/* Curated cards show "Unsaved add" and stock in the body (the image corner
+   holds Remove, and the list view's thumbnail has no room for overlays). */
+.ec-card__badges {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+.ec-cur .ec-card__badges {
+  display: flex;
+}
+.ec-cur .ec-flag-stock {
+  display: none;
+}
 
-@media (max-width: 640px) {
-  .ec-grid {
-    grid-template-columns: 1fr;
-  }
-  .ec-rank {
-    display: none;
-  }
-  .ec-item {
-    flex-wrap: wrap;
-  }
-  .ec-item__actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-  .ec-browse__row {
-    flex-wrap: wrap;
-  }
-  .ec-browse__row .ec-results__price {
-    order: 3;
-    width: 100%;
-    padding-left: 2.875rem;
-  }
+/* Drag and drop */
+.ec-cur__placeholder {
+  min-height: 12rem;
+  border: 2px dashed var(--ax-color-border-brand);
+  border-radius: var(--ax-radius-lg);
+  background: var(--ax-color-bg-brand-subtle);
+}
+.ec-cur.cdk-drag-preview {
+  box-shadow: var(--ax-shadow-xl);
+  cursor: grabbing;
+  opacity: 0.96;
+}
+.ec-cur.cdk-drag-animating,
+.ec-curated.cdk-drop-list-dragging .ec-cur:not(.cdk-drag-placeholder) {
+  transition: transform var(--ax-duration-base, 200ms) var(--ax-ease-out);
+}
+
+/* Compact list view */
+.ec-curated--list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.ec-curated--list .ec-cur {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline-start: 0.5rem;
+}
+.ec-curated--list .ec-cur__rank {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--ax-color-bg-muted);
+  color: var(--ax-color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.ec-curated--list .ec-cur--cover .ec-cur__rank {
+  background: var(--ax-color-bg-gold);
+  color: var(--ax-palette-espresso-900, #1f1610);
+}
+.ec-curated--list .ec-card__media {
+  flex: 0 0 3rem;
+  width: 3rem;
+  border-radius: var(--ax-radius-md);
+  margin-block: 0.375rem;
+}
+.ec-curated--list .ec-flag-in,
+.ec-curated--list .ec-flag-also,
+.ec-curated--list .ec-flag-stock,
+.ec-curated--list .ec-media__ph span {
+  display: none;
+}
+.ec-curated--list .ec-media__ph app-icon {
+  font-size: 1.25rem;
+}
+.ec-curated--list .ec-card__body {
+  flex: 1 1 auto;
+  padding: 0.375rem 0;
+}
+.ec-curated--list .ec-card__title {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  min-height: 0;
+}
+.ec-curated--list .ec-card__vendor {
+  min-height: 0;
+}
+.ec-curated--list .ec-card__also {
+  display: inline-flex;
+}
+.ec-curated--list .ec-card__foot {
+  margin-top: 0;
+  padding: 0 0.375rem 0 0;
+}
+.ec-curated--list .ec-cur__placeholder {
+  min-height: 4.25rem;
+}
+.ec-curated--list .ec-media__img {
+  transform: none;
 }
 
 /* Save in flight: curation is frozen until the PUT response lands. */
@@ -366,10 +624,129 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0;
+  margin: 0 0 0.75rem;
   padding: 0.5rem 0.75rem;
   border-radius: var(--ax-radius-md);
   background: var(--ax-color-bg-sunken, #f1ece4);
   font-size: 0.8125rem;
   color: var(--ax-color-text-secondary);
+}
+
+/* Page-level notices (failed membership lookup, changes merged from elsewhere). */
+.ec-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: var(--ax-space-4);
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--ax-radius-md);
+  font-size: 0.8125rem;
+}
+.ec-notice--warn {
+  background: var(--ax-color-bg-warning-subtle);
+  color: var(--ax-color-text-warning);
+}
+.ec-notice > app-icon {
+  flex-shrink: 0;
+}
+.ec-notice__text {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+/* ── Sticky summary / save bar ───────────────────────────────────── */
+/* Only "raised" (not --ax-z-sticky): the CDK overlay container that holds the
+   confirm dialogs and dropdowns sits at z-index 1000, and the bar must stay
+   below those backdrops, not on top of (and clickable over) them. */
+.ec-summary {
+  position: sticky;
+  bottom: var(--ax-space-3);
+  z-index: var(--ax-z-raised);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: var(--ax-space-5);
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-lg);
+  background: var(--ax-color-bg-raised);
+  box-shadow: var(--ax-shadow-lg);
+}
+.ec-summary__notice {
+  flex-basis: 100%;
+  margin-bottom: 0;
+}
+.ec-summary__info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  min-width: 0;
+}
+.ec-summary__count {
+  font-size: 0.9375rem;
+}
+.ec-summary__count strong {
+  font-variant-numeric: tabular-nums;
+}
+.ec-summary__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--ax-color-text-secondary);
+}
+.ec-summary__detail {
+  color: var(--ax-color-text-tertiary);
+}
+.ec-summary__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-inline-start: auto;
+}
+.ec-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.ec-dot--warn {
+  background: var(--ax-color-bg-warning);
+}
+.ec-dot--ok {
+  background: var(--ax-color-bg-success);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .ec-details__grid {
+    grid-template-columns: 1fr;
+  }
+  .ec-grid {
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 0.625rem;
+  }
+  .ec-summary__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ec-card,
+  .ec-media__img,
+  .ec-cur.cdk-drag-animating,
+  .ec-curated.cdk-drop-list-dragging .ec-cur:not(.cdk-drag-placeholder) {
+    transition: none;
+  }
+  .ec-card:hover .ec-media__img {
+    transform: none;
+  }
+  .ax-skeleton {
+    animation: none;
+  }
 }

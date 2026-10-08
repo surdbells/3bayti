@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard, adminGuard, vendorGuard, requirePermission, requireAnyPermission } from './core/auth/auth.guard';
 import { adminDashboardResolver } from './core/resolvers/admin-dashboard.resolver';
+import { unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 export const routes: Routes = [
   {
     path: '',
@@ -237,6 +238,10 @@ export const routes: Routes = [
     path: 'admin/collections/edit',
     loadComponent: () => import('./backend/collections/edit-collection/edit-collection.component').then(m => m.EditCollectionComponent),
     canActivate: [adminGuard, requirePermission('catalog.collections_manage')],
+    // Unsaved curation asks before leaving, including a switch to another
+    // collection (?id=) from the builder's details panel.
+    canDeactivate: [unsavedChangesGuard],
+    runGuardsAndResolvers: 'paramsOrQueryParamsChange',
     title: 'Edit collection'
   },
   {

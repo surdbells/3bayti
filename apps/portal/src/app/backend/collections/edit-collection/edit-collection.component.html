@@ -1,5 +1,5 @@
 <app-admin-shell>
-  <div class="ax-container">
+  <div class="ax-container ec-page">
       <!-- Page header -->
       <header class="ax-page-header">
         <div class="ax-page-header-content">
@@ -25,36 +25,115 @@
         <span class="ax-spinner ax-spinner-lg" aria-label="Loading collection"></span>
       </div>
 
+      <!-- Announces adds, removes and moves to screen readers. -->
+      <p class="ax-sr-only" role="status" aria-live="polite">{{ announcement }}</p>
+
+      <!-- ═════════ Shared card pieces ═════════ -->
+
+      <!-- Sale-aware price, shared by every card. -->
+      <ng-template #priceTpl let-p>
+        <ng-container *ngIf="p.sale_price != null; else regularPrice">
+          <span class="ec-price-sale">AED {{ p.sale_price | number:'1.0-2' }}</span>
+          <s class="ec-price-was"><span class="ax-sr-only">was </span>AED {{ p.price | number:'1.0-2' }}</s>
+        </ng-container>
+        <ng-template #regularPrice>AED {{ p.price | number:'1.0-2' }}</ng-template>
+      </ng-template>
+
+      <!-- Image + membership indicators. Indicators are overlaid on the image,
+           so they never shift the layout when memberships arrive. -->
+      <ng-template #mediaTpl let-p let-rank="rank">
+        <img
+          *ngIf="p.image && !brokenImages.has(p.image); else noImg"
+          [src]="p.image"
+          alt=""
+          class="ec-media__img"
+          loading="lazy"
+          decoding="async"
+          (error)="onImageError(p.image)" />
+        <ng-template #noImg>
+          <span class="ec-media__ph">
+            <app-icon name="image" aria-hidden="true"></app-icon>
+            <span>No image</span>
+          </span>
+        </ng-template>
+
+        <!-- In THIS collection (live, including unsaved adds) -->
+        <span *ngIf="isAdded(p.id)" class="ec-flag-in" [class.ec-flag-in--cover]="rank === 1">
+          <app-icon name="check" aria-hidden="true"></app-icon>
+          <ng-container *ngIf="rank; else inThis">
+            <span class="ax-sr-only">Position </span>#{{ rank }}<ng-container *ngIf="rank === 1"> · Cover</ng-container>
+          </ng-container>
+          <ng-template #inThis>In this collection</ng-template>
+          <!-- Grid cards only: curated cards show "Unsaved" in their body, where
+               it can't be covered by the Remove button or cut off. -->
+          <span *ngIf="!rank && !isSaved(p.id)" class="ec-flag-in__unsaved">· unsaved</span>
+        </span>
+
+        <!-- In OTHER collections -->
+        <ng-container *ngIf="othersFor(p.id) as others">
+          <span *ngIf="others.length" class="ec-flag-also" [title]="othersTitle(others)">
+            <app-icon name="collections_bookmark" aria-hidden="true"></app-icon>
+            {{ alsoInLabel(others.length) }}<span class="ax-sr-only">: {{ othersTitle(others) }}</span>
+          </span>
+        </ng-container>
+        <span *ngIf="memberships.isPending(p.id)" class="ec-flag-also ec-flag-also--loading ax-skeleton" aria-hidden="true"></span>
+        <!-- The lookup failed: say so, never look like "in no other collection". -->
+        <span *ngIf="memberships.isUnknown(p.id)" class="ec-flag-also ec-flag-also--unknown" title="Couldn't check which other collections this product is in">
+          <app-icon name="error" aria-hidden="true"></app-icon>
+          Collections unknown<span class="ax-sr-only">: couldn't check which other collections this product is in</span>
+        </span>
+
+        <span *ngIf="p.in_stock === false" class="ec-flag-stock" title="Out-of-stock products are not shown on the storefront">Out of stock</span>
+      </ng-template>
+
+      <!-- Name (the card's keyboard entry point), store, price. -->
+      <ng-template #infoTpl let-p let-curated="curated">
+        <button type="button" class="ec-card__title" data-focus="title" aria-haspopup="dialog" [title]="p.name">
+          {{ p.name }}<span class="ax-sr-only">, view details</span>
+        </button>
+        <span class="ec-card__vendor">{{ p.vendor_name }}</span>
+        <span class="ec-card__price" *ngIf="p.price != null; else noPrice">
+          <ng-container *ngTemplateOutlet="priceTpl; context: { $implicit: p }"></ng-container>
+        </span>
+        <ng-template #noPrice><span class="ec-card__price ec-card__price--none">No price</span></ng-template>
+        <span *ngIf="(curated && !isSaved(p.id)) || p.in_stock === false" class="ec-card__badges">
+          <!-- Curated cards (grid and list view): added since the last save. -->
+          <span *ngIf="curated && !isSaved(p.id)" class="ax-badge ax-badge-warning ec-card__unsaved" title="Added since the last save">Unsaved add</span>
+          <span *ngIf="p.in_stock === false" class="ax-badge ax-badge-warning ec-card__stock" title="Out-of-stock products are not shown on the storefront">Out of stock</span>
+        </span>
+        <!-- Compact list view only (its thumbnail is too small for the image
+             overlays, which are display:none there, so each view exposes the
+             indicator exactly once to assistive tech). -->
+        <ng-container *ngIf="othersFor(p.id) as others">
+          <span *ngIf="others.length" class="ec-card__also" [title]="othersTitle(others)">
+            <app-icon name="collections_bookmark" aria-hidden="true"></app-icon>
+            {{ alsoInLabel(others.length) }}<span class="ax-sr-only">: {{ othersTitle(others) }}</span>
+          </span>
+        </ng-container>
+        <span *ngIf="memberships.isUnknown(p.id)" class="ec-card__also ec-card__also--unknown" title="Couldn't check which other collections this product is in">
+          <app-icon name="error" aria-hidden="true"></app-icon>
+          Collections unknown<span class="ax-sr-only">: couldn't check which other collections this product is in</span>
+        </span>
+      </ng-template>
+
       <ng-container *ngIf="!ui.is_loading">
-        <!-- Details -->
-        <section class="ax-page-section" style="max-width: 48rem;">
-          <div class="ax-card ax-p-5">
+        <!-- ═════════ Details ═════════ -->
+        <section class="ax-page-section">
+          <div class="ax-card ax-p-5 ec-details">
             <h2 class="ax-h6 ax-m-0 ax-mb-4">Details</h2>
 
-            <div class="ax-form-field ax-mb-4">
-              <label class="ax-label ax-label-required" for="collection_name">Collection name</label>
-              <input
-                id="collection_name"
-                name="name"
-                type="text"
-                class="ax-input"
-                [(ngModel)]="form.name"
-                placeholder="Collection name" />
-            </div>
+            <div class="ec-details__grid">
+              <div class="ax-form-field">
+                <label class="ax-label ax-label-required" for="collection_name">Collection name</label>
+                <input
+                  id="collection_name"
+                  name="name"
+                  type="text"
+                  class="ax-input"
+                  [(ngModel)]="form.name"
+                  placeholder="Collection name" />
+              </div>
 
-            <div class="ax-form-field ax-mb-4">
-              <label class="ax-label" for="collection_description">Description</label>
-              <textarea
-                id="collection_description"
-                name="description"
-                rows="3"
-                class="ax-textarea"
-                [(ngModel)]="form.description"
-                placeholder="Optional short intro for the collection page"></textarea>
-              <span class="ax-hint">Shown on the storefront collection page.</span>
-            </div>
-
-            <div class="ec-grid">
               <div class="ax-form-field">
                 <label class="ax-label" for="collection_active">Status</label>
                 <label class="ax-switch">
@@ -70,69 +149,59 @@
                 </label>
               </div>
 
-              <div class="ax-form-field">
-                <label class="ax-label" for="collection_order">Display order</label>
-                <input
-                  id="collection_order"
-                  name="display_order"
-                  type="number"
-                  min="0"
-                  step="1"
-                  class="ax-input"
-                  [(ngModel)]="form.display_order"
-                  placeholder="Optional" />
-                <span class="ax-hint">Lower numbers show first on the storefront.</span>
+              <div class="ax-form-field ec-details__wide">
+                <label class="ax-label" for="collection_description">Description</label>
+                <textarea
+                  id="collection_description"
+                  name="description"
+                  rows="2"
+                  class="ax-textarea"
+                  [(ngModel)]="form.description"
+                  placeholder="Optional short intro for the collection page"></textarea>
+                <span class="ax-hint">Shown on the storefront collection page.</span>
               </div>
             </div>
+
+            <p class="ec-order-note">
+              <app-icon name="unfold_more" aria-hidden="true"></app-icon>
+              <span>
+                Where this collection appears on the storefront is set by dragging it on the
+                <a routerLink="/admin/collections">Collections list</a>.
+              </span>
+            </p>
           </div>
         </section>
 
-        <!-- Products -->
-        <section class="ax-page-section" style="max-width: 48rem;">
-          <div class="ax-card ax-p-5">
-            <div class="ec-products-head">
-              <div>
-                <h2 class="ax-h6 ax-m-0">Products</h2>
-                <p class="ax-text-2xs ax-text-tertiary ax-m-0 ax-mt-1">
-                  Shown on the storefront in this order. The first product's image is used as the collection's card picture.
-                </p>
+        <!-- ═════════ Product builder ═════════ -->
+        <div class="ec-builder-wrap">
+          <!-- The other-collections lookup failed for some cards (their chips say
+               "Collections unknown"): explain why and offer a retry. -->
+          <div *ngIf="membershipFailures" class="ec-notice ec-notice--warn" role="status">
+            <app-icon name="error" aria-hidden="true"></app-icon>
+            <span class="ec-notice__text">
+              Couldn't check which other collections {{ membershipFailures === 1 ? '1 product is' : membershipFailures + ' products are' }} in.
+              {{ membershipErrorText }}
+            </span>
+            <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="retryMemberships()">
+              <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+            </button>
+          </div>
+
+          <div class="ec-builder">
+            <!-- ── Browse / search (left) ── -->
+            <section class="ax-card ec-pane ec-browse-pane" aria-labelledby="ec_add_label">
+              <header class="ec-pane__head">
+                <div>
+                  <h2 class="ax-h6 ax-m-0" id="ec_add_label">Add products</h2>
+                  <p class="ec-pane__sub">Click a product for details. Products can be in any number of collections.</p>
+                </div>
+              </header>
+
+              <div *ngIf="ui.products_error" class="ec-locked" role="alert">
+                <app-icon name="lock" aria-hidden="true"></app-icon>
+                <span>Adding is locked until this collection's current products load.</span>
               </div>
-              <div class="ec-products-actions">
-                <span *ngIf="productsDirty && !savingInFlight" class="ax-badge ax-badge-info">unsaved changes</span>
-                <button
-                  type="button"
-                  class="ax-btn ax-btn-outline ax-btn-sm"
-                  (click)="saveProducts()"
-                  [disabled]="!productsDirty || ui.products_saving || ui.is_saving || ui.products_loading">
-                  <span *ngIf="ui.products_saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-                  <app-icon name="save" *ngIf="!ui.products_saving" aria-hidden="true"></app-icon>
-                  {{ ui.products_saving ? 'Saving…' : 'Save products' }}
-                </button>
-              </div>
-            </div>
 
-            <!-- While a save is in flight the list is frozen: its response replaces the list,
-                 so an add/remove/reorder made meanwhile would otherwise be lost. -->
-            <p *ngIf="savingInFlight && !ui.products_loading && !ui.products_error" class="ec-saving ax-mt-3" role="status">
-              <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-              Saving… Adding, removing and reordering products is paused until the save finishes.
-            </p>
-
-            <!-- Announces single adds (which show no toast) to screen readers. -->
-            <p class="ax-sr-only" role="status" aria-live="polite">{{ announcement }}</p>
-
-            <!-- Sale-aware price, shared by search hits, browse rows and the curated list. -->
-            <ng-template #priceTpl let-p>
-              <ng-container *ngIf="p.sale_price != null; else regularPrice">
-                <span class="ec-price-sale">AED {{ p.sale_price | number:'1.0-2' }}</span>
-                <s class="ec-price-was"><span class="ax-sr-only">was </span>AED {{ p.price | number:'1.0-2' }}</s>
-              </ng-container>
-              <ng-template #regularPrice>AED {{ p.price | number:'1.0-2' }}</ng-template>
-            </ng-template>
-
-            <!-- Add products: search, or browse by category / best sellers / new arrivals -->
-            <div *ngIf="!ui.products_loading && !ui.products_error" class="ec-add ax-mt-4">
-              <span class="ax-label" id="ec_add_label">Add products</span>
               <div class="ax-tabs-list ec-add__tabs" role="tablist" aria-labelledby="ec_add_label">
                 <button
                   *ngFor="let t of addTabs; let i = index"
@@ -152,11 +221,11 @@
               </div>
 
               <div id="ec_add_panel" role="tabpanel" class="ec-add__panel" [attr.aria-labelledby]="'ec_add_tab_' + addTab">
-                <!-- Search -->
+                <!-- Search box -->
                 <div *ngIf="addTab === 'search'" class="ec-search ax-form-field">
                   <label class="ax-label" for="ec_search">Search products</label>
                   <div class="ec-search__box">
-                    <app-icon name="search" aria-hidden="true"></app-icon>
+                    <app-icon name="search" aria-hidden="true" class="ec-search__icon"></app-icon>
                     <input
                       #searchInput
                       id="ec_search"
@@ -166,239 +235,344 @@
                       [ngModel]="productQuery"
                       (ngModelChange)="onSearchChange($event)"
                       placeholder="Search products by name (2+ characters)…" />
-                    <span *ngIf="ui.searching" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                    <span *ngIf="ui.searching" class="ax-spinner ax-spinner-sm ec-search__spin" aria-hidden="true"></span>
+                    <button *ngIf="productQuery && !ui.searching" type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm ec-search__clear" (click)="clearSearch()" aria-label="Clear search">
+                      <app-icon name="close" aria-hidden="true"></app-icon>
+                    </button>
                   </div>
-
-                  <ul *ngIf="searchResults.length" class="ec-results" aria-label="Matching products">
-                    <li *ngFor="let p of searchResults">
-                      <button type="button" class="ec-results__item" [class.ec-results__item--added]="isAdded(p.id)" [disabled]="curationLocked" (click)="addProduct(p)">
-                        <img *ngIf="p.image; else noResultImg" [src]="p.image" alt="" class="ec-results__img" />
-                        <ng-template #noResultImg><span class="ec-results__img ec-thumb-empty" aria-hidden="true"></span></ng-template>
-                        <span class="ec-results__text">
-                          <span class="ec-results__name">{{ p.name }}</span>
-                          <span class="ec-results__sub" *ngIf="p.vendor_name">{{ p.vendor_name }}</span>
-                        </span>
-                        <span class="ec-results__price" *ngIf="p.price != null"><ng-container *ngTemplateOutlet="priceTpl; context: { $implicit: p }"></ng-container></span>
-                        <span *ngIf="isAdded(p.id); else addIcon" class="ax-badge ax-badge-neutral">added</span>
-                        <ng-template #addIcon><app-icon name="add" aria-hidden="true"></app-icon></ng-template>
-                      </button>
-                    </li>
-                  </ul>
-                  <p *ngIf="!ui.searching && productQuery.trim().length >= 2 && !searchResults.length" class="ax-text-2xs ax-text-tertiary ax-m-0 ax-mt-1">
-                    No matching products.
-                  </p>
                 </div>
 
-                <!-- Browse: By category / Best sellers / New arrivals -->
-                <div *ngIf="addTab !== 'search'" class="ec-browse">
-                  <!-- Category picker -->
-                  <div *ngIf="addTab === 'category'" class="ax-form-field ec-browse__picker">
-                    <span class="ax-label" aria-hidden="true">Category</span>
-                    <div *ngIf="categories.loading" class="ec-browse__inline">
-                      <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-                      <span>Loading categories…</span>
-                    </div>
-                    <div *ngIf="!categories.loading && categories.error" class="ec-browse__inline ec-browse__inline--error" role="alert">
-                      <app-icon name="error" aria-hidden="true"></app-icon>
-                      <span>{{ categories.error }}</span>
-                      <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="loadCategories()">
-                        <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
-                      </button>
-                    </div>
-                    <app-ax-combobox
-                      *ngIf="categories.loaded"
-                      [options]="categoryOptions"
-                      [ngModel]="selectedCategory"
-                      (ngModelChange)="onCategoryChange($event)"
-                      placeholder="Choose a category"
-                      searchPlaceholder="Search categories"
-                      ariaLabel="Category">
-                    </app-ax-combobox>
+                <!-- Category picker -->
+                <div *ngIf="addTab === 'category'" class="ax-form-field ec-browse__picker">
+                  <span class="ax-label" aria-hidden="true">Category</span>
+                  <div *ngIf="categories.loading" class="ec-browse__inline">
+                    <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                    <span>Loading categories…</span>
                   </div>
-
-                  <div *ngIf="addTab === 'category' && categories.loaded && !selectedCategory" class="ec-empty ec-empty--compact">
-                    <app-icon name="category" aria-hidden="true"></app-icon>
-                    <p>{{ categoryOptions.length ? 'Choose a category to list its products.' : 'No categories found.' }}</p>
+                  <div *ngIf="!categories.loading && categories.error" class="ec-browse__inline ec-browse__inline--error" role="alert">
+                    <app-icon name="error" aria-hidden="true"></app-icon>
+                    <span>{{ categories.error }}</span>
+                    <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="loadCategories()">
+                      <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+                    </button>
                   </div>
+                  <app-ax-combobox
+                    *ngIf="categories.loaded"
+                    [options]="categoryOptions"
+                    [ngModel]="selectedCategory"
+                    (ngModelChange)="onCategoryChange($event)"
+                    placeholder="Choose a category"
+                    searchPlaceholder="Search categories"
+                    ariaLabel="Category">
+                  </app-ax-combobox>
+                </div>
 
-                  <ng-container *ngIf="browseRequest">
-                    <div class="ec-browse__bar">
-                      <div class="ec-browse__heading">
-                        <span class="ec-browse__title">{{ browseTitle }}</span>
-                        <span class="ec-browse__hint">{{ browseHint }}</span>
-                      </div>
-                      <!-- aria-disabled (not disabled) so focus stays here after it adds the last products. -->
-                      <button
-                        type="button"
-                        class="ax-btn ax-btn-outline ax-btn-sm"
-                        (click)="addAllOnPage()"
-                        [attr.aria-disabled]="addAllDisabled ? 'true' : null">
-                        <ng-container *ngIf="!browse.loading && browse.items.length && browseAddableCount === 0; else addAllLabel">
-                          <app-icon name="check" aria-hidden="true"></app-icon>
-                          All added
-                        </ng-container>
-                        <ng-template #addAllLabel>
-                          <app-icon name="done_all" aria-hidden="true"></app-icon>
-                          Add all on this page
-                          <span *ngIf="!browse.loading && browse.items.length" class="ec-browse__count">({{ browseAddableCount }} new)</span>
-                        </ng-template>
-                      </button>
+                <!-- Prompts when nothing is requested yet -->
+                <div *ngIf="addTab === 'search' && !browseRequest && !ui.searching" class="ec-empty ec-empty--compact">
+                  <app-icon name="search" aria-hidden="true"></app-icon>
+                  <p>Search the storefront catalogue by product name, or browse by category, best sellers or new arrivals.</p>
+                </div>
+                <div *ngIf="addTab === 'category' && categories.loaded && !selectedCategory" class="ec-empty ec-empty--compact">
+                  <app-icon name="category" aria-hidden="true"></app-icon>
+                  <p>{{ categoryOptions.length ? 'Choose a category to list its products.' : 'No categories found.' }}</p>
+                </div>
+
+                <ng-container *ngIf="browseRequest">
+                  <div class="ec-browse__bar">
+                    <div class="ec-browse__heading">
+                      <span class="ec-browse__title">{{ browseTitle }}</span>
+                      <span class="ec-browse__hint">{{ browseHint }}</span>
                     </div>
-
-                    <!-- Loading -->
-                    <div *ngIf="browse.loading" class="ec-browse__state">
-                      <span class="ax-spinner" aria-label="Loading products"></span>
-                    </div>
-
-                    <!-- Error -->
-                    <div *ngIf="!browse.loading && browse.error" class="ec-empty ec-empty--compact" role="alert">
-                      <app-icon name="error" aria-hidden="true"></app-icon>
-                      <p>{{ browse.error }}</p>
-                      <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="retryBrowse()">
-                        <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
-                      </button>
-                    </div>
-
-                    <!-- Empty -->
-                    <div *ngIf="!browse.loading && !browse.error && !browse.items.length" class="ec-empty ec-empty--compact">
-                      <app-icon name="inventory_2" aria-hidden="true"></app-icon>
-                      <ng-container [ngSwitch]="browse.page > 1 ? 'page' : browseRequest.mode">
-                        <p *ngSwitchCase="'page'">No products on this page. Go back a page.</p>
-                        <p *ngSwitchCase="'category'">
-                          No products in this category.
-                          <ng-container *ngIf="selectedCategoryHasChildren">Products are listed under their exact category, so try one of its sub-categories.</ng-container>
-                        </p>
-                        <p *ngSwitchCase="'best_sellers'">No best sellers to show yet.</p>
-                        <p *ngSwitchCase="'new_arrivals'">No new arrivals to show yet.</p>
+                    <!-- aria-disabled (not disabled) so focus stays here after it adds the last products. -->
+                    <button
+                      type="button"
+                      class="ax-btn ax-btn-outline ax-btn-sm"
+                      (click)="addAllOnPage()"
+                      [attr.aria-disabled]="addAllDisabled ? 'true' : null">
+                      <ng-container *ngIf="!browse.loading && browse.items.length && browseAddableCount === 0; else addAllLabel">
+                        <app-icon name="check" aria-hidden="true"></app-icon>
+                        All added
                       </ng-container>
-                    </div>
+                      <ng-template #addAllLabel>
+                        <app-icon name="done_all" aria-hidden="true"></app-icon>
+                        Add all on this page
+                        <span *ngIf="!browse.loading && browse.items.length" class="ec-browse__count">({{ browseAddableCount }} new)</span>
+                      </ng-template>
+                    </button>
+                  </div>
 
-                    <!-- Results -->
-                    <ul *ngIf="!browse.loading && !browse.error && browse.items.length" class="ec-browse__list" [attr.aria-label]="browseTitle + ', page ' + browse.page">
-                      <li *ngFor="let p of browse.items; trackBy: trackProductById" class="ec-browse__row" [class.ec-browse__row--added]="isAdded(p.id)">
-                        <img *ngIf="p.image; else noBrowseImg" [src]="p.image" alt="" class="ec-results__img" />
-                        <ng-template #noBrowseImg><span class="ec-results__img ec-thumb-empty" aria-hidden="true"></span></ng-template>
-                        <span class="ec-results__text">
-                          <span class="ec-results__name">{{ p.name }}</span>
-                          <span class="ec-results__sub">
-                            <ng-container *ngIf="p.vendor_name">{{ p.vendor_name }}</ng-container>
-                            <span *ngIf="p.in_stock === false" class="ax-badge ax-badge-warning ec-browse__stock" title="Out-of-stock products are not shown on the storefront">out of stock</span>
-                          </span>
-                        </span>
-                        <span class="ec-results__price" *ngIf="p.price != null"><ng-container *ngTemplateOutlet="priceTpl; context: { $implicit: p }"></ng-container></span>
-                        <!-- ONE button whose label/state switches (aria-disabled, never removed or
-                             `disabled`), so keyboard focus stays on it after Add. -->
-                        <button
-                          type="button"
-                          class="ax-btn ax-btn-sm ec-browse__add"
-                          [class.ax-btn-outline]="!isAdded(p.id)"
-                          [class.ax-btn-ghost]="isAdded(p.id)"
-                          (click)="addProduct(p, 'browse')"
-                          [attr.aria-disabled]="isAdded(p.id) || curationLocked ? 'true' : null"
-                          [attr.aria-label]="isAdded(p.id) ? p.name + ' is already in this collection' : 'Add ' + p.name + ' to the collection'">
-                          <app-icon [name]="isAdded(p.id) ? 'check' : 'add'" aria-hidden="true"></app-icon>
-                          {{ isAdded(p.id) ? 'Added' : 'Add' }}
-                        </button>
+                  <!-- Loading: skeleton cards in the grid's shape -->
+                  <ng-container *ngIf="browse.loading">
+                    <span class="ax-sr-only" role="status">Loading products</span>
+                    <ul class="ec-grid" aria-hidden="true">
+                      <li *ngFor="let s of skeletonCards" class="ec-card ec-card--skeleton">
+                        <div class="ec-card__media ax-skeleton"></div>
+                        <div class="ec-card__body">
+                          <span class="ax-skeleton ax-skeleton-line"></span>
+                          <span class="ax-skeleton ax-skeleton-line ec-skel-short"></span>
+                        </div>
                       </li>
                     </ul>
-
-                    <!-- Pager -->
-                    <!-- Hidden until this view's total is known, so a remembered page never reads "Page N of 1". -->
-                    <nav *ngIf="browse.totalKnown && (browse.total > 0 || browse.page > 1)" class="ec-pager" aria-label="Product pages">
-                      <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="prevBrowsePage()" [disabled]="browsePrevDisabled">
-                        <app-icon name="chevron_left" aria-hidden="true"></app-icon> Prev
-                      </button>
-                      <span class="ec-pager__summary" aria-live="polite">
-                        Page {{ browse.page }} of {{ browseLastPage }}<ng-container *ngIf="browse.total > 0"> · {{ browse.total | number }} {{ browse.total === 1 ? 'product' : 'products' }}</ng-container>
-                      </span>
-                      <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="nextBrowsePage()" [disabled]="browseNextDisabled">
-                        Next <app-icon name="chevron_right" aria-hidden="true"></app-icon>
-                      </button>
-                    </nav>
                   </ng-container>
-                </div>
-              </div>
-            </div>
 
-            <!-- Curated list -->
-            <div *ngIf="ui.products_loading" class="ax-flex ax-justify-center ax-py-8">
-              <span class="ax-spinner" aria-label="Loading products"></span>
-            </div>
+                  <!-- Error -->
+                  <div *ngIf="!browse.loading && browse.error" class="ec-empty ec-empty--compact" role="alert">
+                    <app-icon name="error" aria-hidden="true"></app-icon>
+                    <p>{{ browse.error }}</p>
+                    <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="retryBrowse()">
+                      <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+                    </button>
+                  </div>
 
-            <div *ngIf="ui.products_error" class="ec-empty">
-              <app-icon name="info" aria-hidden="true"></app-icon>
-              <p>Couldn't load this collection's products, so curation is locked to avoid overwriting them.</p>
-              <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="loadProducts()">
-                <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
-              </button>
-            </div>
+                  <!-- Empty -->
+                  <div *ngIf="!browse.loading && !browse.error && !browse.items.length" class="ec-empty ec-empty--compact">
+                    <app-icon name="inventory_2" aria-hidden="true"></app-icon>
+                    <ng-container [ngSwitch]="browse.page > 1 ? 'page' : browseRequest.mode">
+                      <p *ngSwitchCase="'page'">No products on this page. Go back a page.</p>
+                      <p *ngSwitchCase="'search'">No matching products.</p>
+                      <p *ngSwitchCase="'category'">
+                        No products in this category.
+                        <ng-container *ngIf="selectedCategoryHasChildren">Products are listed under their exact category, so try one of its sub-categories.</ng-container>
+                      </p>
+                      <p *ngSwitchCase="'best_sellers'">No best sellers to show yet.</p>
+                      <p *ngSwitchCase="'new_arrivals'">No new arrivals to show yet.</p>
+                    </ng-container>
+                  </div>
 
-            <div *ngIf="!ui.products_loading && !ui.products_error && items.length === 0" class="ec-empty">
-              <app-icon name="inventory_2" aria-hidden="true"></app-icon>
-              <p>No products yet. Search or browse above to add some — the collection stays empty on the storefront until you do.</p>
-            </div>
+                  <!-- Results -->
+                  <ul
+                    *ngIf="!browse.loading && !browse.error && browse.items.length"
+                    class="ec-grid"
+                    [attr.aria-label]="browseTitle + ', page ' + browse.page">
+                    <li
+                      *ngFor="let p of browse.items; trackBy: trackProductById"
+                      class="ec-card"
+                      [class.ec-card--in]="isAdded(p.id)"
+                      [attr.data-product-card]="p.id"
+                      (click)="onCardClick(p, $event)">
+                      <div class="ec-card__media">
+                        <ng-container *ngTemplateOutlet="mediaTpl; context: { $implicit: p, rank: null }"></ng-container>
+                      </div>
+                      <div class="ec-card__body">
+                        <ng-container *ngTemplateOutlet="infoTpl; context: { $implicit: p }"></ng-container>
+                      </div>
+                      <div class="ec-card__foot">
+                        <!-- ONE button whose label/state switches (aria-disabled, never removed or
+                             `disabled`), so keyboard focus stays on it after Add / Remove. -->
+                        <button
+                          type="button"
+                          data-card-action
+                          class="ax-btn ax-btn-sm ec-card__toggle"
+                          [class.ax-btn-outline-brand]="!isAdded(p.id)"
+                          [class.ax-btn-outline]="isAdded(p.id)"
+                          [class.ec-card__toggle--remove]="isAdded(p.id)"
+                          (click)="onCardToggle(p, $event)"
+                          [attr.aria-disabled]="curationLocked ? 'true' : null"
+                          [attr.aria-label]="isAdded(p.id) ? 'Remove ' + p.name + ' from this collection' : 'Add ' + p.name + ' to this collection'">
+                          <app-icon [name]="isAdded(p.id) ? 'remove' : 'add'" aria-hidden="true"></app-icon>
+                          {{ isAdded(p.id) ? 'Remove' : 'Add' }}
+                        </button>
+                      </div>
+                    </li>
+                  </ul>
 
-            <ol *ngIf="!ui.products_loading && items.length" class="ec-items">
-              <li *ngFor="let it of items; let i = index; let first = first; let last = last" class="ec-item" [class.ec-item--cover]="first">
-                <div class="ec-rank" aria-hidden="true">{{ i + 1 }}</div>
-
-                <img *ngIf="it.image; else noItemImg" [src]="it.image" alt="" class="ec-item__img" />
-                <ng-template #noItemImg><span class="ec-item__img ec-thumb-empty" aria-hidden="true"></span></ng-template>
-
-                <div class="ec-item__meta">
-                  <div class="ec-item__name-row">
-                    <span class="ec-item__name">{{ it.name }}</span>
-                    <span *ngIf="first" class="ax-badge ax-badge-gold" title="This product's image is the collection's card picture on the storefront">
-                      <app-icon name="star" aria-hidden="true"></app-icon> Storefront cover
+                  <!-- Pager -->
+                  <!-- Hidden until this view's total is known, so a remembered page never reads "Page N of 1". -->
+                  <nav *ngIf="browse.totalKnown && (browse.total > 0 || browse.page > 1)" class="ec-pager" aria-label="Product pages">
+                    <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="prevBrowsePage()" [disabled]="browsePrevDisabled">
+                      <app-icon name="chevron_left" aria-hidden="true"></app-icon> Prev
+                    </button>
+                    <span class="ec-pager__summary" aria-live="polite">
+                      Page {{ browse.page }} of {{ browseLastPage }}<ng-container *ngIf="browse.total > 0"> · {{ browse.total | number }} {{ browse.total === 1 ? 'product' : 'products' }}</ng-container>
                     </span>
-                    <span *ngIf="it.in_stock === false" class="ax-badge ax-badge-warning" title="Out-of-stock products are not shown on the storefront">out of stock</span>
-                  </div>
-                  <div class="ec-item__sub">
-                    <span *ngIf="it.vendor_name">{{ it.vendor_name }}</span>
-                    <span *ngIf="it.vendor_name && it.price != null" aria-hidden="true"> · </span>
-                    <span *ngIf="it.price != null"><ng-container *ngTemplateOutlet="priceTpl; context: { $implicit: it }"></ng-container></span>
-                  </div>
-                </div>
+                    <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="nextBrowsePage()" [disabled]="browseNextDisabled">
+                      Next <app-icon name="chevron_right" aria-hidden="true"></app-icon>
+                    </button>
+                  </nav>
+                </ng-container>
+              </div>
+            </section>
 
-                <div class="ec-item__actions">
-                  <button type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm"
-                          [disabled]="first || curationLocked" (click)="moveUp(i)"
-                          [attr.aria-label]="'Move ' + it.name + ' up'" title="Move up">
-                    <app-icon name="keyboard_arrow_up" aria-hidden="true"></app-icon>
+            <!-- ── In this collection (right) ── -->
+            <section class="ax-card ec-pane ec-curated-pane" aria-labelledby="ec_curated_title">
+              <header class="ec-pane__head">
+                <div>
+                  <h2 class="ax-h6 ax-m-0 ec-curated-title" id="ec_curated_title" tabindex="-1">
+                    In this collection
+                    <span class="ax-badge ax-badge-brand ec-count">{{ items.length }}</span>
+                  </h2>
+                  <p class="ec-pane__sub" id="ec_curated_help">
+                    Storefront order. Drag to reorder, or use the arrow buttons. The first product's image is the collection's cover.
+                  </p>
+                </div>
+                <div class="ax-btn-group ec-view-toggle" role="group" aria-label="Layout">
+                  <button type="button" class="ax-btn ax-btn-sm ax-btn-icon" [class.ax-btn-secondary]="curatedView === 'grid'" [class.ax-btn-outline]="curatedView !== 'grid'" [attr.aria-pressed]="curatedView === 'grid'" (click)="setCuratedView('grid')" aria-label="Grid view" title="Grid view">
+                    <app-icon name="grid_view" aria-hidden="true"></app-icon>
                   </button>
-                  <button type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm"
-                          [disabled]="last || curationLocked" (click)="moveDown(i)"
-                          [attr.aria-label]="'Move ' + it.name + ' down'" title="Move down">
-                    <app-icon name="keyboard_arrow_down" aria-hidden="true"></app-icon>
-                  </button>
-                  <button type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm ec-remove"
-                          [disabled]="curationLocked"
-                          (click)="removeItem(i)"
-                          [attr.aria-label]="'Remove ' + it.name" title="Remove from collection">
-                    <app-icon name="delete" aria-hidden="true"></app-icon>
+                  <button type="button" class="ax-btn ax-btn-sm ax-btn-icon" [class.ax-btn-secondary]="curatedView === 'list'" [class.ax-btn-outline]="curatedView !== 'list'" [attr.aria-pressed]="curatedView === 'list'" (click)="setCuratedView('list')" aria-label="Compact list view" title="Compact list view">
+                    <app-icon name="list" aria-hidden="true"></app-icon>
                   </button>
                 </div>
-              </li>
-            </ol>
+              </header>
+
+              <!-- While a save is in flight the list is frozen: its response replaces the list,
+                   so an add/remove/reorder made meanwhile would otherwise be lost. -->
+              <p *ngIf="savingInFlight && !ui.products_loading && !ui.products_error" class="ec-saving" role="status">
+                <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                Saving… Adding, removing and reordering products is paused until the save finishes.
+              </p>
+
+              <div *ngIf="ui.products_loading" class="ax-flex ax-justify-center ax-py-8">
+                <span class="ax-spinner" aria-label="Loading this collection's products"></span>
+              </div>
+
+              <div *ngIf="ui.products_error" class="ec-empty">
+                <app-icon name="info" aria-hidden="true"></app-icon>
+                <p>Couldn't load this collection's products, so curation is locked to avoid overwriting them.</p>
+                <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="loadProducts()">
+                  <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+                </button>
+              </div>
+
+              <div *ngIf="!ui.products_loading && !ui.products_error && items.length === 0" class="ec-empty">
+                <app-icon name="inventory_2" aria-hidden="true"></app-icon>
+                <p>No products yet. Search or browse to add some — the collection stays empty on the storefront until you do.</p>
+              </div>
+
+              <ol
+                *ngIf="!ui.products_loading && items.length"
+                cdkDropList
+                [cdkDropListData]="items"
+                [cdkDropListOrientation]="curatedView === 'grid' ? 'mixed' : 'vertical'"
+                [cdkDropListDisabled]="curationLocked"
+                (cdkDropListDropped)="onCuratedDrop($event)"
+                class="ec-curated"
+                [class.ec-curated--list]="curatedView === 'list'"
+                aria-labelledby="ec_curated_title"
+                aria-describedby="ec_curated_help">
+                <li
+                  *ngFor="let it of items; let i = index; let first = first; let last = last; trackBy: trackProductById"
+                  cdkDrag
+                  [cdkDragData]="it"
+                  [cdkDragStartDelay]="{ touch: 220, mouse: 0 }"
+                  cdkDragPreviewContainer="parent"
+                  class="ec-card ec-card--in ec-cur"
+                  [class.ec-cur--cover]="first"
+                  [attr.data-curated-id]="it.id"
+                  [attr.data-product-card]="it.id"
+                  (click)="onCardClick(it, $event)">
+                  <div *cdkDragPlaceholder class="ec-cur__placeholder"></div>
+                  <span class="ec-cur__rank" aria-hidden="true">{{ i + 1 }}</span>
+
+                  <div class="ec-card__media">
+                    <ng-container *ngTemplateOutlet="mediaTpl; context: { $implicit: it, rank: i + 1 }"></ng-container>
+                  </div>
+                  <div class="ec-card__body">
+                    <ng-container *ngTemplateOutlet="infoTpl; context: { $implicit: it, curated: true }"></ng-container>
+                  </div>
+                  <div class="ec-card__foot ec-cur__actions">
+                    <span class="ec-cur__grip" aria-hidden="true" title="Drag to reorder">
+                      <app-icon name="drag_indicator" aria-hidden="true"></app-icon>
+                    </span>
+                    <button type="button" data-card-action data-focus="up" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm"
+                            [disabled]="first || curationLocked" (click)="$event.stopPropagation(); moveUp(i)"
+                            [attr.aria-label]="'Move ' + it.name + ' earlier (position ' + (i + 1) + ' of ' + items.length + ')'" title="Move earlier">
+                      <app-icon name="arrow_upward" aria-hidden="true"></app-icon>
+                    </button>
+                    <button type="button" data-card-action data-focus="down" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm"
+                            [disabled]="last || curationLocked" (click)="$event.stopPropagation(); moveDown(i)"
+                            [attr.aria-label]="'Move ' + it.name + ' later (position ' + (i + 1) + ' of ' + items.length + ')'" title="Move later">
+                      <app-icon name="arrow_downward" aria-hidden="true"></app-icon>
+                    </button>
+                    <button *ngIf="!first" type="button" data-card-action class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm"
+                            [disabled]="curationLocked" (click)="$event.stopPropagation(); makeCover(i)"
+                            [attr.aria-label]="'Make ' + it.name + ' the cover'" title="Make cover (move to first)">
+                      <app-icon name="star" aria-hidden="true"></app-icon>
+                    </button>
+                    <span class="ec-cur__spacer"></span>
+                    <button type="button" data-card-action class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm ec-remove"
+                            [disabled]="curationLocked"
+                            (click)="$event.stopPropagation(); removeItem(i)"
+                            [attr.aria-label]="'Remove ' + it.name + ' from this collection'" title="Remove from collection">
+                      <app-icon name="delete" aria-hidden="true"></app-icon>
+                    </button>
+                  </div>
+                </li>
+              </ol>
+            </section>
           </div>
-        </section>
+        </div>
 
-        <!-- Actions -->
-        <section class="ax-page-section" style="max-width: 48rem;">
-          <div class="ax-flex ax-gap-2 ax-justify-end ax-items-center">
-            <span *ngIf="productsDirty" class="ax-text-2xs ax-text-tertiary">Unsaved product changes are saved too.</span>
-            <button type="button" class="ax-btn ax-btn-outline" (click)="goBack()">Cancel</button>
-            <button
-              type="button"
-              class="ax-btn ax-btn-primary"
-              (click)="save()"
-              [disabled]="ui.is_saving || ui.products_saving">
-              <span *ngIf="ui.is_saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-              <app-icon name="save" *ngIf="!ui.is_saving" aria-hidden="true"></app-icon>
-              {{ ui.is_saving ? 'Saving…' : 'Save changes' }}
+        <!-- ═════════ Sticky summary / save bar ═════════ -->
+        <div class="ec-summary" role="region" aria-label="Collection changes">
+          <!-- A save found changes made elsewhere and merged them in (nothing saved). -->
+          <div *ngIf="mergeNotice" class="ec-notice ec-notice--warn ec-summary__notice" role="alert">
+            <app-icon name="info" aria-hidden="true"></app-icon>
+            <span class="ec-notice__text">{{ mergeNotice }}</span>
+            <button type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm" (click)="dismissMergeNotice()" aria-label="Dismiss this message">
+              <app-icon name="close" aria-hidden="true"></app-icon>
             </button>
           </div>
-        </section>
+          <div class="ec-summary__info">
+            <span class="ec-summary__count">
+              <strong>{{ items.length }}</strong> {{ items.length === 1 ? 'product' : 'products' }} in this collection
+            </span>
+            <span class="ec-summary__state">
+              <ng-container *ngIf="savingInFlight; else notSaving">
+                <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> Saving…
+              </ng-container>
+              <ng-template #notSaving>
+                <ng-container *ngIf="dirty; else allSaved">
+                  <span class="ec-dot ec-dot--warn" aria-hidden="true"></span>
+                  Unsaved changes
+                  <span class="ec-summary__detail">
+                    <ng-container *ngIf="unsavedAddCount">· {{ unsavedAddCount }} added </ng-container>
+                    <ng-container *ngIf="unsavedRemoveCount">· {{ unsavedRemoveCount }} removed </ng-container>
+                    <ng-container *ngIf="productsDirty && !unsavedAddCount && !unsavedRemoveCount">· order changed </ng-container>
+                    <ng-container *ngIf="detailsDirty">· details edited</ng-container>
+                  </span>
+                </ng-container>
+                <ng-template #allSaved>
+                  <span class="ec-dot ec-dot--ok" aria-hidden="true"></span> All changes saved
+                </ng-template>
+              </ng-template>
+            </span>
+          </div>
+          <div class="ec-summary__actions">
+            <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="discard()" [disabled]="!dirty || savingInFlight">
+              <app-icon name="undo" aria-hidden="true"></app-icon> Discard
+            </button>
+            <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="saveChanges()" [disabled]="!dirty || savingInFlight || ui.products_loading">
+              <app-icon name="save" aria-hidden="true"></app-icon> Save
+            </button>
+            <button type="button" class="ax-btn ax-btn-primary ax-btn-sm" (click)="save()" [disabled]="savingInFlight || ui.products_loading">
+              <span *ngIf="ui.is_saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+              <app-icon name="check" *ngIf="!ui.is_saving" aria-hidden="true"></app-icon>
+              Save &amp; close
+            </button>
+          </div>
+        </div>
       </ng-container>
   </div>
 </app-admin-shell>
+
+<!-- Details panel (outside the shell so nothing can clip its fixed layer). -->
+<app-collection-product-panel
+  *ngIf="panel"
+  [product]="panel.product"
+  [detail]="panel.detail"
+  [detailState]="panel.state"
+  [inCollection]="isAdded(panel.product.id)"
+  [savedInCollection]="isSaved(panel.product.id)"
+  [otherCollections]="othersFor(panel.product.id)"
+  [membershipFailed]="memberships.hasFailed(panel.product.id)"
+  [currentCollection]="{ id: collectionId, name: form.name }"
+  [locked]="curationLocked"
+  [position]="positionOf(panel.product.id)"
+  [canOpenProduct]="canOpenProduct"
+  (toggle)="toggleProduct($event)"
+  (retryDetail)="retryPanelDetail()"
+  (retryMemberships)="retryPanelMemberships()"
+  (navigating)="closePanel()"
+  (closed)="closePanel()">
+</app-collection-product-panel>

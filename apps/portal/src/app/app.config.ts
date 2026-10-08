@@ -1,6 +1,6 @@
 import { provideAnimations } from "@angular/platform-browser/animations";
 import {APP_INITIALIZER, ApplicationConfig, provideZoneChangeDetection} from '@angular/core';
-import { provideRouter, withInMemoryScrolling } from '@angular/router';
+import { provideRouter, withInMemoryScrolling, withRouterConfig } from '@angular/router';
 
 import { routes } from './app.routes';
 import {provideHotToastConfig} from './shared/toast/toast.service';
@@ -20,6 +20,12 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       routes,
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' }),
+      // A guard that cancels a browser Back/Forward (e.g. "Leave without
+      // saving?" → Stay) puts the browser history back where it was. The
+      // default ('replace') overwrites the entry the browser had moved to with
+      // the current URL, so that page drops out of the history and the next
+      // Back skips past it.
+      withRouterConfig({ canceledNavigationResolution: 'computed' }),
     ),
     { provide: APP_INITIALIZER, useFactory: initI18n, deps: [I18nService], multi: true }
   ]

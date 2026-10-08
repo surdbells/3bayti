@@ -7,23 +7,184 @@
         </button>
         <span class="ax-page-header-eyebrow">Catalog</span>
         <h1 class="ax-page-title">Collections</h1>
-        <p class="ax-page-subtitle">Admin-curated groups of products shown on the storefront. Active collections appear in display order.</p>
+        <p class="ax-page-subtitle">
+          Admin-curated groups of products. Active collections appear on the storefront ("Shop by collection") in the order below.
+        </p>
       </div>
-      <div class="ax-flex ax-gap-2 ax-items-center" *axCan="'catalog.collections_manage'">
-        <a routerLink="/admin/collections/new" class="ax-btn ax-btn-primary ax-btn-sm">
+      <div class="ax-flex ax-gap-2 ax-items-center">
+        <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" [axDropdown]="exportMenu" axDropdownAlign="end" [disabled]="loading || !rows.length" aria-haspopup="menu">
+          <app-icon name="download" aria-hidden="true"></app-icon> Export
+        </button>
+        <ng-template #exportMenu>
+          <button type="button" class="ax-dropdown-item" axDropdownItem role="menuitem" (click)="exportAs('csv')">CSV</button>
+          <button type="button" class="ax-dropdown-item" axDropdownItem role="menuitem" (click)="exportAs('xlsx')">Excel (XLSX)</button>
+        </ng-template>
+        <a *axCan="'catalog.collections_manage'" routerLink="/admin/collections/new" class="ax-btn ax-btn-primary ax-btn-sm">
           <app-icon name="add" aria-hidden="true"></app-icon> New collection
         </a>
       </div>
     </header>
 
-    <section class="ax-card ax-p-0">
-      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
-        <ng-template axCell="is_active" let-row>
-          <span class="ax-badge" [class.ax-badge-success]="row.is_active" [class.ax-badge-neutral]="!row.is_active">
-            {{ row.is_active ? 'Active' : 'Inactive' }}
+    <!-- Moves, saves and rollbacks, for screen readers. -->
+    <p class="ax-sr-only" role="status" aria-live="polite">{{ announcement }}</p>
+
+    <section class="ax-card ax-p-0 cl-card">
+      <!-- Toolbar -->
+      <div class="cl-toolbar">
+        <div class="cl-search">
+          <app-icon name="search" aria-hidden="true" class="cl-search__icon"></app-icon>
+          <input
+            type="text"
+            class="ax-input"
+            [(ngModel)]="search"
+            placeholder="Search collections…"
+            aria-label="Search collections"
+            autocomplete="off" />
+          <button *ngIf="search" type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm cl-search__clear" (click)="search = ''" aria-label="Clear search">
+            <app-icon name="close" aria-hidden="true"></app-icon>
+          </button>
+        </div>
+        <span *ngIf="!loading && !loadError" class="cl-meta">
+          {{ rows.length }} {{ rows.length === 1 ? 'collection' : 'collections' }} · {{ activeCount }} active
+        </span>
+        <span *ngIf="saving" class="cl-saving" role="status">
+          <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> Saving order…
+        </span>
+      </div>
+
+      <p *ngIf="!loading && !loadError && rows.length > 1" class="cl-hint">
+        <app-icon name="info" aria-hidden="true"></app-icon>
+        <ng-container *ngIf="canManage; else readOnlyHint">
+          <ng-container *ngIf="!filtering; else filterHint">
+            Drag a collection by its handle to change the storefront order (or focus the handle and use the arrow keys). Each move is saved right away.
+          </ng-container>
+          <ng-template #filterHint>Reordering is paused while searching. Clear the search to drag collections.</ng-template>
+        </ng-container>
+        <ng-template #readOnlyHint>Storefront order. You can view collections but not reorder or edit them.</ng-template>
+      </p>
+
+      <!-- Loading -->
+      <ul *ngIf="loading" class="cl-list" aria-hidden="true">
+        <li *ngFor="let s of skeletonRows" class="cl-row cl-row--skeleton">
+          <span class="ax-skeleton cl-skel-thumb"></span>
+          <span class="cl-name">
+            <span class="ax-skeleton ax-skeleton-line cl-skel-name"></span>
+            <span class="ax-skeleton ax-skeleton-line cl-skel-slug"></span>
           </span>
-        </ng-template>
-      </app-ax-data-table>
+        </li>
+      </ul>
+      <span *ngIf="loading" class="ax-sr-only" role="status">Loading collections</span>
+
+      <!-- Error -->
+      <div *ngIf="!loading && loadError" class="cl-empty" role="alert">
+        <app-icon name="error" aria-hidden="true"></app-icon>
+        <p>{{ loadError }}</p>
+        <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="load()">
+          <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+        </button>
+      </div>
+
+      <!-- Empty -->
+      <div *ngIf="!loading && !loadError && !rows.length" class="cl-empty">
+        <app-icon name="collections_bookmark" aria-hidden="true"></app-icon>
+        <p class="cl-empty__title">No collections</p>
+        <p>Create your first collection, then add the products it should show on the storefront.</p>
+        <a *axCan="'catalog.collections_manage'" routerLink="/admin/collections/new" class="ax-btn ax-btn-primary ax-btn-sm">
+          <app-icon name="add" aria-hidden="true"></app-icon> New collection
+        </a>
+      </div>
+
+      <div *ngIf="!loading && !loadError && rows.length && !visibleRows.length" class="cl-empty">
+        <app-icon name="search_off" aria-hidden="true"></app-icon>
+        <p>No collections match “{{ search }}”.</p>
+      </div>
+
+      <!-- Ordered list -->
+      <ol
+        *ngIf="!loading && !loadError && visibleRows.length"
+        cdkDropList
+        [cdkDropListData]="rows"
+        cdkDropListLockAxis="y"
+        [cdkDropListDisabled]="!canReorder"
+        (cdkDropListDropped)="onDrop($event)"
+        class="cl-list"
+        [class.cl-list--readonly]="!canManage"
+        aria-label="Collections in storefront order">
+        <li
+          *ngFor="let r of visibleRows; let i = index; trackBy: trackRow"
+          cdkDrag
+          [cdkDragData]="r"
+          [cdkDragDisabled]="!canReorder"
+          class="cl-row"
+          [class.cl-row--inactive]="!r.is_active"
+          [attr.data-collection-id]="r.id">
+          <div *cdkDragPlaceholder class="cl-row__placeholder"></div>
+
+          <button
+            *ngIf="canManage"
+            type="button"
+            class="cl-handle"
+            cdkDragHandle
+            data-focus="handle"
+            [attr.aria-disabled]="!canReorder ? 'true' : null"
+            (keydown)="onHandleKeydown($event, i)"
+            [attr.aria-label]="'Reorder ' + r.name + ', position ' + positionOf(r.id) + ' of ' + rows.length + '. Use the up and down arrow keys to move it.'"
+            [title]="canReorder ? 'Drag to reorder (or use the arrow keys)' : 'Clear the search to reorder'">
+            <app-icon name="drag_indicator" aria-hidden="true"></app-icon>
+          </button>
+
+          <span class="cl-pos" [attr.aria-label]="'Position ' + positionOf(r.id)">{{ positionOf(r.id) }}</span>
+
+          <span class="cl-thumb">
+            <img
+              *ngIf="r.cover_image_url && !brokenImages.has(r.cover_image_url); else noCover"
+              [src]="r.cover_image_url"
+              alt=""
+              loading="lazy"
+              decoding="async"
+              (error)="onImageError(r.cover_image_url)" />
+            <ng-template #noCover><app-icon name="collections_bookmark" aria-hidden="true"></app-icon></ng-template>
+          </span>
+
+          <span class="cl-name">
+            <a *ngIf="canManage; else plainName" class="cl-name__link" [routerLink]="['/admin/collections/edit']" [queryParams]="{ id: r.id }">{{ r.name }}</a>
+            <ng-template #plainName><span class="cl-name__text">{{ r.name }}</span></ng-template>
+            <span *ngIf="r.slug" class="cl-slug">{{ r.slug }}</span>
+          </span>
+
+          <span class="cl-facts">
+            <span class="ax-badge" [class.ax-badge-success]="r.is_active" [class.ax-badge-neutral]="!r.is_active">
+              {{ r.is_active ? 'Active' : 'Inactive' }}
+            </span>
+            <span class="cl-count">
+              <strong>{{ r.product_count | number }}</strong> {{ r.product_count === 1 ? 'product' : 'products' }}
+            </span>
+          </span>
+
+          <span *ngIf="canManage" class="cl-actions">
+            <!-- aria-disabled (never `disabled`): after a move, focus returns to the
+                 button that was pressed, even when the row has reached an end. -->
+            <button type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm" data-focus="up"
+                    [attr.aria-disabled]="i === 0 || !canReorder ? 'true' : null"
+                    (click)="moveUp(i)"
+                    [attr.aria-label]="'Move ' + r.name + ' up'" title="Move up">
+              <app-icon name="arrow_upward" aria-hidden="true"></app-icon>
+            </button>
+            <button type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm" data-focus="down"
+                    [attr.aria-disabled]="i === visibleRows.length - 1 || !canReorder ? 'true' : null"
+                    (click)="moveDown(i)"
+                    [attr.aria-label]="'Move ' + r.name + ' down'" title="Move down">
+              <app-icon name="arrow_downward" aria-hidden="true"></app-icon>
+            </button>
+            <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="edit(r)" [attr.aria-label]="'Edit ' + r.name">
+              <app-icon name="edit" aria-hidden="true"></app-icon> <span class="cl-actions__label">Edit</span>
+            </button>
+            <button type="button" class="ax-btn ax-btn-ghost ax-btn-icon ax-btn-sm cl-delete" (click)="confirmDelete(r)" [attr.aria-disabled]="saving ? 'true' : null" [attr.aria-label]="'Delete ' + r.name" title="Delete">
+              <app-icon name="delete" aria-hidden="true"></app-icon>
+            </button>
+          </span>
+        </li>
+      </ol>
     </section>
   </div>
 </app-admin-shell>

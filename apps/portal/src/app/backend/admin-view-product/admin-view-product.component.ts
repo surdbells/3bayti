@@ -26,6 +26,8 @@ import {
   AxAccordionItemComponent,
 } from '../../shared/overlays';
 import { apiErrorMessage } from '../../shared/http/api-error';
+import { AxCanDirective } from '../../shared/security/ax-can.directive';
+import { ProductCollectionsComponent } from './product-collections/product-collections.component';
 
 interface ColorOption {
   id: string;
@@ -90,7 +92,9 @@ const SIZE_FLAGS: Record<string, string> = {
  * and reads the audit trail from GET /admin/products/:id/history, all with that
  * same id. Labels are store-scoped: the picker lists, and "Add" creates, labels
  * of the PRODUCT's store (GET/POST /admin/vendors/:id/labels), never the
- * admin's own session store.
+ * admin's own session store. The sidebar's Collections section
+ * (ProductCollectionsComponent) lists and edits the storefront collections
+ * the product is in, by the same v3 id.
  */
 @Component({
   selector: 'app-admin-view-product',
@@ -101,7 +105,8 @@ const SIZE_FLAGS: Record<string, string> = {
     FormsModule,
     AxRichEditorComponent,
     AxAccordionComponent,
-    AxAccordionItemComponent, IconComponent, AxComboboxComponent],
+    AxAccordionItemComponent, IconComponent, AxComboboxComponent,
+    AxCanDirective, ProductCollectionsComponent],
   templateUrl: './admin-view-product.component.html',
   styleUrl: './admin-view-product.component.css',
 })

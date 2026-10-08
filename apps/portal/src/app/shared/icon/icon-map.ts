@@ -27,7 +27,10 @@ import {
   Bell, BellOff, MessageSquare, MessagesSquare, Inbox, Calendar,
   Ruler, FilePen, Megaphone, Dices, Wifi, SignalHigh, BatteryFull,
   Hand, Eye, ClipboardCheck, CornerDownLeft, Flag, House,
-  ToggleRight, Headset, type LucideIconData,
+  ToggleRight, Headset,
+  // curation / media
+  GripVertical, Image, ImageOff, Layers,
+  type LucideIconData,
 } from 'lucide-angular';
 
 /**
@@ -192,4 +195,9 @@ export const ICON_MAP: Record<string, LucideIconData> = {
   toggle_on: ToggleRight,
   support_agent: Headset,
   cancel: CircleX,
+  // curation / media
+  drag_indicator: GripVertical,
+  image: Image,
+  hide_image: ImageOff,
+  collections_bookmark: Layers,
 };

@@ -1,0 +1,191 @@
+<div class="ecp-backdrop" (click)="closed.emit()" aria-hidden="true"></div>
+
+<!-- tabindex="-1": a click on non-interactive content (description, image,
+     blank space) keeps focus inside the dialog instead of dropping it to
+     <body>. Escape is handled at the document level (see the component). -->
+<div
+  class="ecp"
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  [attr.aria-labelledby]="headingId"
+  cdkTrapFocus>
+  <!-- Header -->
+  <header class="ecp__head">
+    <div class="ecp__head-text">
+      <span class="ecp__eyebrow">Product details</span>
+      <h2 class="ecp__title" [id]="headingId" tabindex="-1" #heading>{{ name }}</h2>
+    </div>
+    <button type="button" class="ax-drawer-close" (click)="closed.emit()" aria-label="Close product details">
+      <app-icon name="close" aria-hidden="true"></app-icon>
+    </button>
+  </header>
+
+  <div class="ecp__body">
+    <!-- Gallery -->
+    <section class="ecp-gallery" aria-label="Product images">
+      <div class="ecp-gallery__stage" [class.ecp-gallery__stage--empty]="!currentImage">
+        <img *ngIf="currentImage; else noImage" [src]="currentImage" [alt]="name + (images.length > 1 ? ', image ' + (imageIndex + 1) + ' of ' + images.length : '')" class="ecp-gallery__img" decoding="async" />
+        <ng-template #noImage>
+          <span class="ecp-gallery__placeholder">
+            <app-icon name="hide_image" aria-hidden="true"></app-icon>
+            <span>No image</span>
+          </span>
+        </ng-template>
+
+        <span *ngIf="inCollection" class="ecp-badge-in">
+          <app-icon name="check" aria-hidden="true"></app-icon>
+          In this collection<ng-container *ngIf="position != null"> · #{{ position }}</ng-container>
+        </span>
+
+        <ng-container *ngIf="images.length > 1">
+          <button type="button" class="ecp-gallery__nav ecp-gallery__nav--prev" (click)="prevImage()" aria-label="Previous image">
+            <app-icon name="chevron_left" aria-hidden="true"></app-icon>
+          </button>
+          <button type="button" class="ecp-gallery__nav ecp-gallery__nav--next" (click)="nextImage()" aria-label="Next image">
+            <app-icon name="chevron_right" aria-hidden="true"></app-icon>
+          </button>
+          <span class="ecp-gallery__count" aria-hidden="true">{{ imageIndex + 1 }} / {{ images.length }}</span>
+        </ng-container>
+      </div>
+
+      <div *ngIf="images.length > 1" class="ecp-gallery__thumbs" role="group" aria-label="Choose image" (keydown)="onGalleryKeydown($event)">
+        <button
+          *ngFor="let src of images; let i = index"
+          type="button"
+          class="ecp-gallery__thumb"
+          [class.ecp-gallery__thumb--active]="i === imageIndex"
+          [attr.aria-current]="i === imageIndex ? 'true' : null"
+          [attr.aria-label]="'Show image ' + (i + 1) + ' of ' + images.length"
+          (click)="selectImage(i)">
+          <img [src]="src" alt="" loading="lazy" decoding="async" />
+        </button>
+      </div>
+    </section>
+
+    <!-- Price + quick facts -->
+    <section class="ecp-summary">
+      <div class="ecp-price" *ngIf="price != null">
+        <ng-container *ngIf="salePrice != null; else regular">
+          <span class="ecp-price__sale">AED {{ salePrice | number:'1.0-2' }}</span>
+          <s class="ecp-price__was"><span class="ax-sr-only">was </span>AED {{ price | number:'1.0-2' }}</s>
+          <span class="ax-badge ax-badge-danger">On sale</span>
+        </ng-container>
+        <ng-template #regular><span class="ecp-price__regular">AED {{ price | number:'1.0-2' }}</span></ng-template>
+      </div>
+
+      <div class="ecp-pills">
+        <span *ngIf="detail?.status as status" class="ax-badge" [class.ax-badge-success]="status === 'active'" [class.ax-badge-neutral]="status !== 'active'">{{ status }}</span>
+        <span *ngIf="inStock === false" class="ax-badge ax-badge-warning" title="Out-of-stock products are not shown on the storefront">Out of stock</span>
+        <span *ngIf="inStock === true" class="ax-badge ax-badge-success">In stock</span>
+      </div>
+
+      <dl class="ecp-facts">
+        <div *ngIf="storeName"><dt>Store</dt><dd>{{ storeName }}</dd></div>
+        <div>
+          <dt>Category</dt>
+          <dd>
+            <ng-container *ngIf="detail; else factPending">{{ detail.category || '—' }}</ng-container>
+          </dd>
+        </div>
+        <div *ngIf="detail?.sku"><dt>SKU</dt><dd class="ecp-mono">{{ detail?.sku }}</dd></div>
+        <div>
+          <dt>Stock</dt>
+          <dd>
+            <ng-container *ngIf="detail || stockLabel; else factPending">{{ stockLabel || '—' }}</ng-container>
+          </dd>
+        </div>
+        <div><dt>Product id</dt><dd class="ecp-mono">{{ product.id }}</dd></div>
+      </dl>
+      <ng-template #factPending>
+        <span *ngIf="detailState === 'loading'" class="ax-skeleton ecp-skel-inline" aria-hidden="true"></span>
+        <span *ngIf="detailState === 'loading'" class="ax-sr-only">Loading</span>
+        <span *ngIf="detailState !== 'loading'">—</span>
+      </ng-template>
+
+      <div *ngIf="detailState === 'error'" class="ecp-inline-error" role="alert">
+        <app-icon name="error" aria-hidden="true"></app-icon>
+        <span>Couldn't load the full product details.</span>
+        <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="retryDetail.emit()">
+          <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+        </button>
+      </div>
+      <p *ngIf="detailState === 'forbidden'" class="ecp-note">
+        You don't have access to the full product record, so only the card details are shown.
+      </p>
+    </section>
+
+    <!-- Description -->
+    <section *ngIf="description" class="ecp-section" aria-labelledby="ecp_desc_h">
+      <h3 class="ecp-section__title" id="ecp_desc_h">Description</h3>
+      <p class="ecp-desc">{{ descriptionShown }}</p>
+      <button *ngIf="descriptionClipped" type="button" class="ax-btn ax-btn-link ax-btn-sm ecp-more" (click)="descriptionExpanded = !descriptionExpanded" [attr.aria-expanded]="descriptionExpanded">
+        {{ descriptionExpanded ? 'Show less' : 'Show more' }}
+      </button>
+    </section>
+
+    <!-- Collections -->
+    <section class="ecp-section" aria-labelledby="ecp_cols_h">
+      <h3 class="ecp-section__title" id="ecp_cols_h">
+        <app-icon name="collections_bookmark" aria-hidden="true"></app-icon>
+        Collections
+      </h3>
+      <ul class="ecp-cols">
+        <!-- This collection, from the builder's live (possibly unsaved) state -->
+        <li class="ecp-col ecp-col--current" [class.ecp-col--member]="inCollection">
+          <span class="ecp-col__dot" aria-hidden="true"></span>
+          <span class="ecp-col__name">{{ currentCollection.name || 'This collection' }}</span>
+          <span class="ax-badge ax-badge-brand">This collection</span>
+          <span class="ecp-col__state">
+            {{ inCollection ? 'In it' : 'Not in it' }}<ng-container *ngIf="unsavedChange"> · unsaved</ng-container>
+          </span>
+        </li>
+
+        <ng-container *ngIf="otherCollections; else othersPending">
+          <li *ngFor="let c of otherCollections; trackBy: trackCollection" class="ecp-col ecp-col--member">
+            <span class="ecp-col__dot" aria-hidden="true"></span>
+            <a class="ecp-col__name ecp-col__link" [routerLink]="['/admin/collections/edit']" [queryParams]="{ id: c.id }" (click)="navigating.emit()">{{ c.name }}</a>
+            <span *ngIf="!c.is_active" class="ax-badge ax-badge-neutral">Inactive</span>
+          </li>
+        </ng-container>
+        <ng-template #othersPending>
+          <li class="ecp-col ecp-col--muted">
+            <ng-container *ngIf="membershipFailed; else loadingOthers">
+              <span class="ecp-col__failed" role="alert">
+                <app-icon name="error" aria-hidden="true"></app-icon>
+                Couldn't check which other collections it is in.
+              </span>
+              <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="retryMemberships.emit()">
+                <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+              </button>
+            </ng-container>
+            <ng-template #loadingOthers>
+              <span class="ax-skeleton ecp-skel-inline" aria-hidden="true"></span>
+              <span class="ax-sr-only">Loading other collections</span>
+            </ng-template>
+          </li>
+        </ng-template>
+      </ul>
+      <p *ngIf="otherCollections && !otherCollections.length" class="ecp-note">Not in any other collection.</p>
+      <p *ngIf="otherCollections?.length" class="ecp-note">A product can be in any number of collections; adding it here doesn't remove it from the others.</p>
+    </section>
+  </div>
+
+  <!-- Actions -->
+  <footer class="ecp__foot">
+    <button
+      type="button"
+      class="ax-btn ecp-toggle"
+      [class.ax-btn-primary]="!inCollection"
+      [class.ax-btn-outline-danger]="inCollection"
+      [attr.aria-disabled]="locked ? 'true' : null"
+      (click)="onToggle()">
+      <app-icon [name]="inCollection ? 'remove' : 'add'" aria-hidden="true"></app-icon>
+      {{ inCollection ? 'Remove from this collection' : 'Add to this collection' }}
+    </button>
+    <a *ngIf="canOpenProduct" class="ax-btn ax-btn-outline" [routerLink]="['/admin/products', product.id]" (click)="navigating.emit()">
+      <app-icon name="open_in_new" aria-hidden="true"></app-icon>
+      Open product
+    </a>
+  </footer>
+</div>

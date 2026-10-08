@@ -1,0 +1,104 @@
+<section class="ax-card ax-p-5 pc" aria-labelledby="pc_title">
+  <div class="pc__head">
+    <h3 class="ax-h5 ax-m-0 pc__title" id="pc_title">
+      <app-icon name="collections_bookmark" aria-hidden="true"></app-icon>
+      Collections
+      <span *ngIf="!loading && !loadError" class="ax-badge ax-badge-neutral">{{ collections.length }}</span>
+    </h3>
+    <button
+      *ngIf="canManage && !editing && !loading && !loadError"
+      type="button"
+      class="ax-btn ax-btn-outline ax-btn-sm"
+      (click)="startEditing()"
+      [disabled]="saving">
+      <app-icon name="add" aria-hidden="true"></app-icon>
+      Add to collections
+    </button>
+  </div>
+  <p class="pc__hint">Storefront collections this product appears in. A product can be in any number of collections.</p>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="pc__chips" aria-hidden="true">
+    <span class="ax-skeleton pc__skel"></span>
+    <span class="ax-skeleton pc__skel pc__skel--short"></span>
+  </div>
+  <span *ngIf="loading" class="ax-sr-only" role="status">Loading collections</span>
+
+  <!-- Error -->
+  <div *ngIf="!loading && loadError" class="pc__error" role="alert">
+    <app-icon name="error" aria-hidden="true"></app-icon>
+    <span>{{ loadError }}</span>
+    <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="load()">
+      <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+    </button>
+  </div>
+
+  <!-- Chips -->
+  <ul *ngIf="!loading && !loadError && collections.length" class="pc__chips" aria-label="This product's collections">
+    <li *ngFor="let c of collections; trackBy: trackById" class="ax-chip pc-chip" [class.pc-chip--inactive]="!c.is_active">
+      <a *ngIf="canManage; else chipText" class="pc-chip__link" [routerLink]="['/admin/collections/edit']" [queryParams]="{ id: c.id }" [title]="'Open the ' + c.name + ' collection'">{{ c.name }}</a>
+      <ng-template #chipText><span>{{ c.name }}</span></ng-template>
+      <span *ngIf="!c.is_active" class="pc-chip__state">inactive</span>
+      <!-- Hidden while the picker is open: the picker's selection is the one
+           source of truth until it is saved or cancelled. -->
+      <button
+        *ngIf="canManage && !editing"
+        type="button"
+        class="ax-chip-close pc-chip__remove"
+        (click)="remove(c)"
+        [disabled]="saving"
+        [attr.aria-label]="'Remove this product from ' + c.name">
+        <app-icon name="close" aria-hidden="true"></app-icon>
+      </button>
+    </li>
+  </ul>
+  <p *ngIf="!loading && !loadError && !collections.length" class="pc__empty">Not in any collection yet.</p>
+
+  <!-- Save feedback -->
+  <p class="pc__status" role="status" aria-live="polite">
+    <ng-container *ngIf="saving">
+      <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> Saving…
+    </ng-container>
+    <ng-container *ngIf="!saving && savedNote">
+      <app-icon name="check_circle" aria-hidden="true" class="pc__ok"></app-icon> {{ savedNote }}
+    </ng-container>
+  </p>
+
+  <!-- Picker -->
+  <div *ngIf="editing" class="pc__editor">
+    <span class="ax-label" id="pc_picker_label">Choose every collection this product should be in</span>
+
+    <div *ngIf="allLoading" class="pc__inline">
+      <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> Loading collections…
+    </div>
+    <div *ngIf="!allLoading && allError" class="pc__error" role="alert">
+      <app-icon name="error" aria-hidden="true"></app-icon>
+      <span>{{ allError }}</span>
+      <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="loadAllCollections()">
+        <app-icon name="refresh" aria-hidden="true"></app-icon> Retry
+      </button>
+    </div>
+
+    <app-ax-multiselect
+      *ngIf="allCollections"
+      [options]="options"
+      [ngModel]="draftIds"
+      (ngModelChange)="onDraftChange($event)"
+      placeholder="Choose collections"
+      searchPlaceholder="Search collections"
+      [showSelectAll]="false"
+      [chipLimit]="3"
+      ariaLabel="Collections for this product">
+    </app-ax-multiselect>
+    <span class="ax-hint">Collections you add get this product at the end of their line-up; reorder it on the collection's page.</span>
+
+    <div class="pc__editor-actions">
+      <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="cancelEditing()" [disabled]="saving">Cancel</button>
+      <button type="button" class="ax-btn ax-btn-primary ax-btn-sm" (click)="saveDraft()" [disabled]="!draftChanged || saving || !allCollections">
+        <span *ngIf="saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+        <app-icon *ngIf="!saving" name="save" aria-hidden="true"></app-icon>
+        Save collections
+      </button>
+    </div>
+  </div>
+</section>

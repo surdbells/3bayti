@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 379 route keys.
+ * 383 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -47,6 +47,7 @@ export type V3RouteKey =
   | 'GET /admin/collections'
   | 'GET /admin/collections/:id'
   | 'GET /admin/collections/:id/products'
+  | 'GET /admin/collections/memberships'
   | 'GET /admin/commissions'
   | 'GET /admin/customers'
   | 'GET /admin/delivery-readiness'
@@ -74,6 +75,7 @@ export type V3RouteKey =
   | 'GET /admin/permission-catalog'
   | 'GET /admin/products'
   | 'GET /admin/products/:id'
+  | 'GET /admin/products/:id/collections'
   | 'GET /admin/products/:id/history'
   | 'GET /admin/promo-codes'
   | 'GET /admin/promo-codes/:id'
@@ -369,10 +371,12 @@ export type V3RouteKey =
   | 'PUT /admin/categories/:id'
   | 'PUT /admin/collections/:id'
   | 'PUT /admin/collections/:id/products'
+  | 'PUT /admin/collections/order'
   | 'PUT /admin/notification-schedules/:id'
   | 'PUT /admin/notification-templates/:id'
   | 'PUT /admin/otp/providers'
   | 'PUT /admin/products/:id'
+  | 'PUT /admin/products/:id/collections'
   | 'PUT /admin/promo-codes/:id'
   | 'PUT /admin/roles/:id'
   | 'PUT /admin/settings/notifications'
@@ -429,6 +433,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/collections',
   'GET /admin/collections/:id',
   'GET /admin/collections/:id/products',
+  'GET /admin/collections/memberships',
   'GET /admin/commissions',
   'GET /admin/customers',
   'GET /admin/delivery-readiness',
@@ -456,6 +461,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/permission-catalog',
   'GET /admin/products',
   'GET /admin/products/:id',
+  'GET /admin/products/:id/collections',
   'GET /admin/products/:id/history',
   'GET /admin/promo-codes',
   'GET /admin/promo-codes/:id',
@@ -751,10 +757,12 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PUT /admin/categories/:id',
   'PUT /admin/collections/:id',
   'PUT /admin/collections/:id/products',
+  'PUT /admin/collections/order',
   'PUT /admin/notification-schedules/:id',
   'PUT /admin/notification-templates/:id',
   'PUT /admin/otp/providers',
   'PUT /admin/products/:id',
+  'PUT /admin/products/:id/collections',
   'PUT /admin/promo-codes/:id',
   'PUT /admin/roles/:id',
   'PUT /admin/settings/notifications',

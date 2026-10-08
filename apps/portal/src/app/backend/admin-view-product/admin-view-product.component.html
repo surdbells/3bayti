@@ -297,6 +297,9 @@
 
         <!-- ═══════ RIGHT COLUMN: Sidebar ═══════ -->
         <aside class="ax-flex ax-flex-col ax-gap-4">
+          <!-- Storefront collections (a product can be in many). -->
+          <app-product-collections *axCan="'catalog.collections_view'" [productId]="productId"></app-product-collections>
+
           <app-ax-accordion [defaultOpenIndex]="0" [multi]="true">
 
             <!-- Category -->
