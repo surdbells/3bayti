@@ -68,7 +68,7 @@ final class ListVendorProductsController
 
         $query = $request->getQueryParams();
 
-        $limit = max(1, min(100, (int) ($query['limit'] ?? 500)));
+        $limit = max(1, min(300, (int) ($query['limit'] ?? 500)));
         $offset = max(0, (int) ($query['offset'] ?? 0));
 
         $filters = [
