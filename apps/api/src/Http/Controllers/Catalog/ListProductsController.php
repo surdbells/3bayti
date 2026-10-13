@@ -13,6 +13,7 @@ use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorLabel;
 use Bayti\Api\Domain\Catalog\VendorLabelRepository;
 use Bayti\Api\Domain\Catalog\VendorRepository;
+use Bayti\Api\Http\CatalogPageSize;
 use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\ProductSerializer;
@@ -39,10 +40,23 @@ use Psr\Http\Message\ServerRequestInterface;
  * keeps the public URL contract slug-based (SEO-friendly) while the SQL
  * uses indexed id lookups.
  *
- * Pagination caps:
- *   - limit: 1-100 (defaults to 24)
+ * Pagination (page size is the shared CatalogPageSize rule):
+ *   - limit present: clamped to 1-100, exactly as always.
+ *   - limit absent, STORE-SCOPED request (a `vendor` slug or `vendor_id`
+ *     filter that resolves to a store): the whole store selection, bounded
+ *     by CatalogPageSize::STORE_CATALOGUE_MAX (500). Why: the shipped mobile
+ *     store page loads each label chip with ONE request,
+ *     ?vendor={slug}&label={slug}, with no limit/offset and no infinite
+ *     scroll, so the old 24-row default truncated every label holding more
+ *     than 24 products. The fix has to live here because the app cannot
+ *     change without an OTA push.
+ *   - limit absent, anything else (category, search, explore, best sellers,
+ *     new arrivals, collections, ...): 24, unchanged.
  *   - offset: >= 0 (no upper bound, but very large offsets are slow -
  *     callers should switch to category/vendor filters for deeper browsing)
+ *   - meta.limit always echoes the page size actually applied, including on
+ *     the empty early-return envelopes (unknown vendor/category/label/
+ *     collection). An unknown vendor is not store-scoped, so it reports 24.
  *
  * Sorting defaults to 'newest' (created_at DESC) which matches the
  * apps/web homepage's expected order.
@@ -68,8 +82,8 @@ final class ListProductsController
     {
         $query = $request->getQueryParams();
 
-        // ---- pagination ----
-        $limit = max(1, min(100, (int) ($query['limit'] ?? 24)));
+        // ---- pagination (offset; the page size depends on the vendor scope
+        // and is resolved right after the vendor filter below) ----
         $offset = max(0, (int) ($query['offset'] ?? 0));
 
         // ---- resolve slug or legacy-id filters to internal ids ----
@@ -87,6 +101,16 @@ final class ListProductsController
         // Unknown id/slug → empty result set (not 404; "no products
         // from this vendor/category" is a valid empty list).
         $vendorId = $this->resolveVendorId($query);
+
+        // Store-scoped = the vendor filter resolved to a store. Only then does
+        // an absent ?limit mean "the whole store selection" (<= 500), which the
+        // shipped mobile store page's label chips rely on. An unknown vendor is
+        // NOT store-scoped, so its empty envelope reports the default page size.
+        $limit = CatalogPageSize::resolve(
+            $query,
+            storeScoped: $vendorId !== null && $vendorId !== self::FILTER_NOT_FOUND,
+        );
+
         if ($vendorId === self::FILTER_NOT_FOUND) {
             return $this->ok(PaginatedEnvelope::build([], 0, $limit, $offset));
         }

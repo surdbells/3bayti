@@ -8,6 +8,7 @@ use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorRepository;
+use Bayti\Api\Http\CatalogPageSize;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
@@ -25,11 +26,18 @@ use Psr\Http\Message\ServerRequestInterface;
  * legacy WordPress/CodeIgniter vendor id rather than slug.
  *
  * Behaviour matches ListVendorProductsController (the slug variant):
- *   - Pagination via ?limit + ?offset (limit clamped to 1-100, defaults
- *     to 24; offset clamped to >= 0, defaults to 0)
+ *   - Page size is the shared CatalogPageSize rule, store-scoped:
+ *     ?limit present = clamped to 1-100; ?limit ABSENT = the whole store
+ *     catalogue, bounded by CatalogPageSize::STORE_CATALOGUE_MAX (500).
+ *     Mobile bundles built before the slug storefront (2026-08-24) load
+ *     their store page's "All" grid and "Latest" rail through THIS route
+ *     with no limit/offset and no infinite scroll, so the old 24-row
+ *     default truncated them exactly like the slug route did.
+ *   - ?offset clamped to >= 0, defaults to 0; meta.has_more is accurate
  *   - Sort is hardcoded to 'newest' (matches slug controller; vendor
  *     storefront UX is consistent and doesn't expose sort controls)
- *   - 404 for unknown legacy id OR inactive vendors
+ *   - 404 for unknown legacy id OR a vendor that may not sell (inactive
+ *     or not approved)
  *
  * Returns: { data: Product[], meta: PaginationMeta }
  *
@@ -78,7 +86,8 @@ final class ListVendorProductsByLegacyIdController
 
         $query = $request->getQueryParams();
 
-        $limit = max(1, min(100, (int) ($query['limit'] ?? 24)));
+        // Always store-scoped: no limit = the whole store catalogue (<= 500).
+        $limit = CatalogPageSize::resolve($query, storeScoped: true);
         $offset = max(0, (int) ($query['offset'] ?? 0));
 
         $filters = [

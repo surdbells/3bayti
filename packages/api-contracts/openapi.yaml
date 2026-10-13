@@ -81,7 +81,14 @@ paths:
             enum: [newest, oldest, price_asc, price_desc]
         - in: query
           name: limit
-          schema: { type: integer, minimum: 1, maximum: 100, default: 24 }
+          schema: { type: integer, minimum: 1, maximum: 100 }
+          description: |
+            Page size. When sent, clamped to 1-100. When omitted: 24, EXCEPT
+            on a store-scoped request (a `vendor` filter that resolves to a
+            store), which returns the whole store selection, bounded at 500
+            (the shipped mobile store page loads label chips in one request
+            with no limit). meta.limit echoes the size applied. Paginating
+            clients should always send a limit.
         - in: query
           name: offset
           schema: { type: integer, minimum: 0, default: 0 }
@@ -173,7 +180,13 @@ paths:
           schema: { type: string }
         - in: query
           name: limit
-          schema: { type: integer, minimum: 1, maximum: 100, default: 24 }
+          schema: { type: integer, minimum: 1, maximum: 100 }
+          description: |
+            Page size. When sent, clamped to 1-100. When omitted, the whole
+            store catalogue is returned, bounded at 500 (the shipped mobile
+            store page loads it in one request with no limit); meta.limit
+            echoes the size applied and meta.has_more stays accurate.
+            Paginating clients should always send a limit.
         - in: query
           name: offset
           schema: { type: integer, minimum: 0, default: 0 }

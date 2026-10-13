@@ -8,6 +8,7 @@ use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorRepository;
+use Bayti\Api\Http\CatalogPageSize;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
@@ -20,10 +21,21 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/vendors/{slug}/products
  *
- * Vendor storefront, paginated active products for a single vendor.
+ * Vendor storefront, active products for a single vendor (the vendor is
+ * fixed by the URL slug). Sort is hardcoded to 'newest'; the only query
+ * params are ?limit and ?offset.
  *
- * Same filter + sort semantics as /v3/products, but vendor is fixed
- * (not filterable away from the URL slug).
+ * Page size (shared rule, see CatalogPageSize):
+ *   - ?limit present: clamped to 1-100 (an explicit limit is a normal
+ *     paginated read; the web store page always sends one).
+ *   - ?limit absent: the WHOLE store catalogue, bounded by
+ *     CatalogPageSize::STORE_CATALOGUE_MAX (500). The shipped mobile store
+ *     page loads its "All" grid and "Latest" rail with a single request that
+ *     carries no limit/offset and has no infinite scroll, so the old 24-row
+ *     default hid every product past the 24th. This endpoint is always
+ *     store-scoped, so an absent limit always means "the whole catalogue".
+ *   - ?offset: >= 0, default 0, honoured in both cases; meta.has_more is
+ *     accurate either way.
  *
  * Returns: { data: Product[], meta: PaginationMeta }
  *
@@ -68,7 +80,8 @@ final class ListVendorProductsController
 
         $query = $request->getQueryParams();
 
-        $limit = max(1, min(300, (int) ($query['limit'] ?? 500)));
+        // Always store-scoped: no limit = the whole store catalogue (<= 500).
+        $limit = CatalogPageSize::resolve($query, storeScoped: true);
         $offset = max(0, (int) ($query['offset'] ?? 0));
 
         $filters = [
