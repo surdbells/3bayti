@@ -15,31 +15,6 @@ use Doctrine\ORM\EntityRepository;
 class OtaBundleRepository extends EntityRepository
 {
     /**
-     * The newest ACTIVE bundle for an app + platform + channel, or null.
-     *
-     * Ordered by created_at DESC (not by version) so that retiring a bad
-     * bundle, setting is_active=false, serves the previously published one to
-     * devices that never downloaded the bad one. Devices that already did are
-     * only reached by a strictly newer version, see OtaRollbackService. Semver comparison against the device's current/native
-     * version is done by the caller (SQL can't order semver correctly).
-     */
-    public function latestActive(string $appId, string $platform, string $channel): ?OtaBundle
-    {
-        return $this->createQueryBuilder('b')
-            ->where('b.appId = :appId')
-            ->andWhere('b.platform = :platform')
-            ->andWhere('b.channel = :channel')
-            ->andWhere('b.isActive = true')
-            ->setParameter('appId', $appId)
-            ->setParameter('platform', $platform)
-            ->setParameter('channel', $channel)
-            ->orderBy('b.createdAt', 'DESC')
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
-    }
-
-    /**
      * Every version ever published for an app + platform + channel (active or
      * not), used to pick a rollback version that no device has seen yet.
      *
@@ -62,7 +37,10 @@ class OtaBundleRepository extends EntityRepository
     }
 
     /**
-     * All ACTIVE bundles for an app + platform + channel.
+     * All ACTIVE bundles for an app + platform + channel (a small set: one row
+     * per release, and every rollback deactivates the rest). The update endpoint
+     * picks the highest compatible version among them in PHP, since SQL can't
+     * order dotted versions numerically.
      *
      * @return list<OtaBundle>
      */

@@ -8,7 +8,8 @@
         <span class="ax-page-header-eyebrow">Mobile</span>
         <h1 class="ax-page-title">OTA updates</h1>
         <p class="ax-page-subtitle">
-          Ship a new mobile web bundle over-the-air. The newest active bundle per platform is served to devices; deactivate one to roll back.
+          Ship a new mobile web bundle over-the-air. Devices get the highest-version active bundle their app supports, only if it is newer than what they run.
+          To move devices back, use <strong>Roll back to this</strong> (it republishes that bundle as the next version); deactivating only stops devices that haven't downloaded a bundle yet.
         </p>
       </div>
     </header>
@@ -45,24 +46,24 @@
         </label>
 
         <label class="ota-field ota-field--wide">
-          <span class="ota-label">Session key <span class="ota-hint">(signed bundles only, the ivSessionKey from <code>capgo encrypt</code>)</span></span>
-          <input class="ax-input" type="text" [(ngModel)]="form.session_key" name="session_key" placeholder="leave empty for an unsigned .zip" autocomplete="off" />
+          <span class="ota-label">Session key <span class="ota-hint">(the ivSessionKey from <code>bundle encrypt</code>; required for iOS and for production, which only accept signed bundles)</span></span>
+          <input class="ax-input" type="text" [(ngModel)]="form.session_key" name="session_key" placeholder="empty only for an unsigned android dev-channel .zip" autocomplete="off" />
         </label>
 
         <label class="ota-field ota-field--wide">
-          <span class="ota-label">Checksum <span class="ota-hint">(signed bundles only, from <code>capgo encrypt</code>; auto-computed for a plain .zip)</span></span>
+          <span class="ota-label">Checksum <span class="ota-hint">(signed bundles: the ENCRYPTED checksum printed by <code>bundle encrypt</code>, 512 hex, never the plain sha256; auto-computed for a plain .zip)</span></span>
           <input class="ax-input" type="text" [(ngModel)]="form.checksum" name="checksum" placeholder="auto (SHA256) when unsigned" autocomplete="off" />
         </label>
 
         <label class="ota-field ota-field--wide">
-          <span class="ota-label">Bundle .zip</span>
+          <span class="ota-label">Bundle .zip <span class="ota-hint">(max 50 MB; for a signed release, the <code>*_encrypted.zip</code>)</span></span>
           <input id="ota-file" class="ax-input" type="file" accept=".zip,application/zip" (change)="onFileSelected($event)" />
         </label>
       </div>
 
       <div class="ax-flex ax-justify-between ax-items-center ax-mt-3">
         <p class="ax-text-2xs ax-text-tertiary ax-m-0">
-          Build the web bundle, zip it (<code>npx &#64;capgo/cli bundle zip com.threebayti.app --path www</code>), then upload the .zip here. The server stores it and computes the checksum.
+          Build the web bundle, zip it (<code>npx &#64;capgo/cli&#64;8.68.1 bundle zip com.threebayti.app --path www --json</code>), encrypt it (<code>bundle encrypt &lt;zip&gt; &lt;checksum&gt;</code>), then upload the <code>*_encrypted.zip</code> here with its Session key and Checksum. Unsigned plain .zips are accepted only for android on a non-production channel.
         </p>
         <button type="button" class="ax-btn ax-btn-primary" [disabled]="uploading()" (click)="upload()">
           <app-icon name="upload_file" aria-hidden="true"></app-icon>
@@ -125,7 +126,7 @@
                       title="The bundle devices are being offered right now">live</span>
                 <ng-template #notServed>
                   <span [ngClass]="b.is_active ? 'ax-badge ax-badge-warning' : 'ax-badge ax-badge-neutral'"
-                        [title]="b.is_active ? 'Active, but a newer active bundle is served instead' : ''">
+                        [title]="b.is_active ? 'Active, but a higher-version active bundle is served instead (older app builds may still get this one)' : ''">
                     {{ b.is_active ? 'active' : 'inactive' }}
                   </span>
                 </ng-template>

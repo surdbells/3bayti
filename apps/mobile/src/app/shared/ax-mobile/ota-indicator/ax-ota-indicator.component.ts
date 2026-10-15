@@ -1,11 +1,15 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DOCUMENT,
+  ElementRef,
   OnDestroy,
   computed,
   effect,
   inject,
   signal,
+  untracked,
+  viewChild,
 } from '@angular/core';
 import { TranslatePipe } from '../../../translate.pipe';
 import { OtaUpdateService } from '../../../core/services/ota-update.service';
@@ -22,11 +26,20 @@ import { CheckoutActivityService } from '../../../core/services/checkout-activit
  *                   a "Restart now" button, and a visible 6-second countdown
  *                   before it auto-restarts into the new bundle. The countdown
  *                   (was a 1.2s beat) gives the customer time to read what's new.
+ *                   Both call OtaUpdateService.restartToApply(); the countdown
+ *                   never runs (and the sheet stays hidden) while a checkout is
+ *                   in progress. (The plugin also installs a staged bundle when
+ *                   the app is backgrounded; OtaUpdateService holds that during
+ *                   a checkout too.) If the restart itself fails, the service
+ *                   takes the sheet down instead of leaving it stuck.
  *
- * The scrim blocks interaction with the app behind it. Hardware-back isn't
- * trapped on purpose: backing out just exits the app, and the freshly
- * downloaded bundle applies on the next cold start anyway, so the update can't
- * actually be skipped.
+ * The scrim blocks pointer interaction with the app behind it, and the app's
+ * router outlet is made `inert` while the sheet is up, so keyboard / switch /
+ * screen-reader users can't reach it either; focus moves into the sheet.
+ * Download progress is announced politely in 25% steps, not on every tick.
+ * Hardware-back isn't trapped on purpose: backing out just exits the app, and
+ * the freshly downloaded bundle applies on the next cold start anyway, so the
+ * update can't actually be skipped.
  *
  * Purely reactive off OtaUpdateService; shows for both the automatic
  * resume-time download and any on-demand dashboard check.
@@ -39,7 +52,7 @@ import { CheckoutActivityService } from '../../../core/services/checkout-activit
   template: `
     @if (visible()) {
       <div class="ota-sheet-scrim"></div>
-      <section class="ota-sheet" role="alertdialog" aria-live="assertive" aria-modal="true"
+      <section #sheet class="ota-sheet" role="alertdialog" aria-modal="true" tabindex="-1"
                [attr.aria-label]="titleKey() | translate">
         <span class="ota-sheet__grip" aria-hidden="true"></span>
 
@@ -70,7 +83,7 @@ import { CheckoutActivityService } from '../../../core/services/checkout-activit
             }
           </div>
           <div class="ota-sheet__footer">
-            <button type="button" class="ota-sheet__primary" (click)="restart()">
+            <button #primary type="button" class="ota-sheet__primary" (click)="restart()">
               {{ 'ota_update_restart' | translate }}
             </button>
             <p class="ota-sheet__countdown" aria-live="polite">
@@ -85,12 +98,13 @@ import { CheckoutActivityService } from '../../../core/services/checkout-activit
               <div class="ota-sheet__track">
                 <div class="ota-sheet__fill" [style.width.%]="percent()"></div>
               </div>
-              <div class="ota-sheet__meta">
+              <div class="ota-sheet__meta" aria-hidden="true">
                 <span class="ota-sheet__pct">{{ percent() }}%</span>
                 @if (etaLabel()) {
                   <span class="ota-sheet__eta">{{ etaLabel() }}</span>
                 }
               </div>
+              <p class="ota-sheet__sr" aria-live="polite">{{ titleKey() | translate }} {{ announcedPercent() }}%</p>
             </div>
           </div>
         }
@@ -98,15 +112,36 @@ import { CheckoutActivityService } from '../../../core/services/checkout-activit
     }
   `,
   styleUrl: './ax-ota-indicator.component.scss',
+  // Screen-reader-only text (the throttled progress announcement).
+  styles: `
+    .ota-sheet__sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  `,
 })
 export class AxOtaIndicatorComponent implements OnDestroy {
   private readonly ota = inject(OtaUpdateService);
   private readonly checkout = inject(CheckoutActivityService);
+  private readonly doc = inject(DOCUMENT);
 
   protected readonly status = this.ota.status;
   protected readonly percent = this.ota.percent;
   protected readonly summary = this.ota.summary;
   protected readonly version = this.ota.version;
+
+  private readonly sheet = viewChild<ElementRef<HTMLElement>>('sheet');
+  private readonly primary = viewChild<ElementRef<HTMLButtonElement>>('primary');
+
+  /** Progress for the polite live region, in 25% steps (not every tick). */
+  protected readonly announcedPercent = computed(() => Math.floor(this.percent() / 25) * 25);
 
   /**
    * The summary split into clean lines (leading bullet markers stripped) for
@@ -160,6 +195,18 @@ export class AxOtaIndicatorComponent implements OnDestroy {
   private restartTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
+    // Modal semantics: while the sheet is up the app behind it is inert (not
+    // focusable / not announced), and focus moves into the sheet: the
+    // "Restart now" button once ready, the sheet itself while downloading.
+    effect(() => {
+      const visible = this.visible();
+      untracked(() => this.setBackgroundInert(visible));
+    });
+    effect(() => {
+      const target = this.status() === 'ready' ? this.primary() : this.sheet();
+      target?.nativeElement.focus({ preventScroll: true });
+    });
+
     effect(() => {
       const ready = this.status() === 'ready';
       const busy = this.checkout.isActive();
@@ -195,6 +242,17 @@ export class AxOtaIndicatorComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.clearTimer();
+    this.setBackgroundInert(false);
+  }
+
+  /** Make the app's page outlet (everything behind the sheet) inert, or not. */
+  private setBackgroundInert(inert: boolean): void {
+    const outlet = this.doc.querySelector('ion-router-outlet');
+    if (inert) {
+      outlet?.setAttribute('inert', '');
+    } else {
+      outlet?.removeAttribute('inert');
+    }
   }
 
   protected restart(): void {

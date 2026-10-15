@@ -10,6 +10,16 @@ import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.comp
 import { IconComponent } from '../../shared/icon/icon.component';
 import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
 import { OtaAdminService, OtaBundle, OtaUploadMeta } from '../../services/ota-admin.service';
+import {
+  OTA_MAX_BYTES,
+  compareOtaVersions,
+  isOtaVersion,
+  isPlainZipHeader,
+  otaChecksumError,
+  otaSessionKeyError,
+  otaUnsignedError,
+  servedOtaBundleIds,
+} from './ota-rules';
 
 /**
  * Admin page to manage self-hosted OTA (over-the-air) mobile web bundles -
@@ -41,22 +51,11 @@ export class OtaComponent implements OnInit {
   readonly rollingBackId = signal<number | null>(null);
 
   /**
-   * Ids of the bundle each platform/channel is actually serving: the newest
-   * active row (the update endpoint orders by publish time). Every other row
-   * can be rolled back to.
+   * Ids of the bundle each platform/channel is actually serving: the
+   * highest-version active row (the update endpoint picks by version, not
+   * publish time). Every other row can be rolled back to.
    */
-  readonly servedIds = computed(() => {
-    const newest = new Map<string, OtaBundle>();
-    for (const b of this.bundles()) {
-      if (!b.is_active) continue;
-      const key = `${b.app_id}|${b.platform}|${b.channel}`;
-      const current = newest.get(key);
-      if (!current || Date.parse(b.created_at) > Date.parse(current.created_at)) {
-        newest.set(key, b);
-      }
-    }
-    return new Set([...newest.values()].map((b) => b.id));
-  });
+  readonly servedIds = computed(() => servedOtaBundleIds(this.bundles()));
 
   /** Upload form model. */
   form: OtaUploadMeta & { channel: string; min_native: string } = {
@@ -102,19 +101,49 @@ export class OtaComponent implements OnInit {
       this.toast.error('Choose a bundle .zip first.');
       return;
     }
-    if (!/^\d+(\.\d+){0,3}$/.test(this.form.version.trim())) {
-      this.toast.error('Version must be semver, e.g. 1.0.7.');
+    if (this.file.size > OTA_MAX_BYTES) {
+      this.toast.error(`Bundle too large (max ${OTA_MAX_BYTES / 1024 / 1024} MB).`);
       return;
     }
-    // Signed bundles carry both the ivSessionKey and the encrypt-command checksum.
-    if (this.form.session_key?.trim() && !this.form.checksum?.trim()) {
-      this.toast.error('A signed bundle also needs the checksum from `capgo encrypt`.');
+    if (!isOtaVersion(this.form.version)) {
+      this.toast.error('Version must be numeric, e.g. 1.0.7 (no pre-release suffix).');
+      return;
+    }
+    if (!isOtaVersion(this.form.min_native || '0.0.0')) {
+      this.toast.error('Min native must be numeric, e.g. 1.6.0.');
+      return;
+    }
+    // Signed bundles carry the ivSessionKey, the ENCRYPTED checksum and the
+    // *_encrypted.zip; unsigned ones are android + non-production only.
+    const signed = !!this.form.session_key?.trim();
+    const signingError = signed
+      ? otaSessionKeyError(this.form.session_key ?? '')
+      : otaUnsignedError(this.form.platform, this.form.channel || 'production');
+    if (signingError) {
+      this.toast.error(signingError);
+      return;
+    }
+    const checksumError = otaChecksumError(this.form.checksum ?? '', signed);
+    if (checksumError) {
+      this.toast.error(checksumError);
       return;
     }
 
     this.uploading.set(true);
     this.uploadProgress.set(0);
     try {
+      // `bundle encrypt` leaves the plain zip next to its *_encrypted.zip;
+      // catch the wrong one before uploading (the API refuses it too).
+      const plainZip = isPlainZipHeader(new Uint8Array(await this.file.slice(0, 4).arrayBuffer()));
+      if (signed && plainZip) {
+        this.toast.error('This is the PLAIN .zip. For a signed bundle, upload the *_encrypted.zip written by `bundle encrypt`.');
+        return;
+      }
+      if (!signed && !plainZip) {
+        this.toast.error('This is not a plain .zip. An encrypted bundle needs its Session key and Checksum.');
+        return;
+      }
+
       const published = await this.ota.upload(
         this.file,
         {
@@ -209,7 +238,7 @@ export class OtaComponent implements OnInit {
     const scoped = this.bundles().filter(
       (b) => b.app_id === bundle.app_id && b.platform === bundle.platform && b.channel === bundle.channel,
     );
-    const highest = scoped.reduce((max, b) => (compareVersions(b.version, max) > 0 ? b.version : max), bundle.version);
+    const highest = scoped.reduce((max, b) => (compareOtaVersions(b.version, max) > 0 ? b.version : max), bundle.version);
     const parts = highest.split('-')[0].split('.').map((p) => parseInt(p, 10) || 0);
     while (parts.length < 3) parts.push(0);
     parts[parts.length - 1]++;
@@ -241,15 +270,4 @@ export class OtaComponent implements OnInit {
   goBack(): void {
     this.navHistory.back('/account');
   }
-}
-
-/** Numeric semver compare (mirrors the API's OtaVersion::compare). */
-function compareVersions(a: string, b: string): number {
-  const pa = a.split('-')[0].split('.').map((p) => parseInt(p, 10) || 0);
-  const pb = b.split('-')[0].split('.').map((p) => parseInt(p, 10) || 0);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
-    if (d !== 0) return d;
-  }
-  return 0;
 }

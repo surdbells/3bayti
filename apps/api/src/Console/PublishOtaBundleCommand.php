@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Bayti\Api\Console;
 
 use Bayti\Api\Domain\Ota\OtaBundle;
+use Bayti\Api\Domain\Ota\OtaBundleRepository;
+use Bayti\Api\Domain\Ota\OtaChecksum;
+use Bayti\Api\Domain\Ota\OtaSigning;
+use Bayti\Api\Domain\Ota\OtaVersion;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -14,22 +18,33 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Register a self-hosted OTA web bundle in `ota_bundles` so devices polling
- * POST /v3/ota/updates can download it. Run from the deploy box as part of the
- * release workflow, there is no auth surface (a CLI on the server, not an HTTP
- * endpoint).
+ * Register an ALREADY-HOSTED OTA web bundle in `ota_bundles` so devices polling
+ * POST /v3/ota/updates can download it. Run on the API server; there is no
+ * auth surface (a CLI, not an HTTP endpoint).
  *
- * Typical release:
- *   cd apps/mobile && npm run build
- *   npx @capgo/cli bundle zip com.threebayti.app --path www --json   # -> checksum
- *   wrangler r2 object put 3bayti-ota/ota/android/1.0.7.zip --file <zip>
+ * This is the escape hatch, not the standard path. Normal releases are
+ * uploaded through the portal (OTA updates page, or `npm run ota:release`),
+ * which stores the .zip on this server under var/uploads/ota/… and registers
+ * the row in one step. Use ota:publish only when the .zip is already reachable
+ * over HTTPS, e.g. you copied it into var/uploads yourself:
+ *
  *   bin/console ota:publish --platform android --version 1.0.7 \
- *     --url https://cdn.3bayti.ae/ota/android/1.0.7.zip --checksum <sha256> \
- *     --min-native 1.6.0
+ *     --url https://api-v3.3bayti.ae/uploads/ota/com.threebayti.app/production/android/1.0.7.zip \
+ *     --checksum <sha256 | encrypted checksum> [--session-key <ivSessionKey>] \
+ *     --min-native 1.6.0 [--notes "What's new"]
  *
- * The newest ACTIVE bundle per app/platform/channel wins; retire a bad one with
- * a manual `UPDATE ota_bundles SET is_active = false WHERE id = ...` and the
- * previous bundle is served again.
+ * --checksum is the plain 64-hex SHA256 for an unsigned bundle, or, with
+ * --session-key, the ENCRYPTED checksum printed by `@capgo/cli bundle encrypt`
+ * (exactly 512 hex for RSA-2048), never the plain one (see OtaChecksum).
+ * Unsigned bundles are only accepted for android on a non-production channel
+ * (iOS can't install them, production must be signed; see OtaSigning), and a
+ * version that an active bundle would always shadow is refused.
+ *
+ * The highest-version ACTIVE compatible bundle per app/platform/channel is
+ * served, and only to devices on an older version. Deactivating a bundle is
+ * therefore NOT a rollback: devices that already installed it keep it. To move
+ * them back, use the portal's "Roll back to this" (OtaRollbackService), which
+ * republishes the good bundle's file under the next unused version.
  */
 #[AsCommand(
     name: 'ota:publish',
@@ -51,11 +66,12 @@ final class PublishOtaBundleCommand extends Command
             ->addOption('platform', null, InputOption::VALUE_REQUIRED, 'android | ios')
             ->addOption('version', null, InputOption::VALUE_REQUIRED, 'Bundle semver, e.g. 1.0.7')
             ->addOption('url', null, InputOption::VALUE_REQUIRED, 'Public HTTPS URL of the bundle .zip')
-            ->addOption('checksum', null, InputOption::VALUE_REQUIRED, 'SHA256 of the .zip (from @capgo/cli bundle zip)')
+            ->addOption('checksum', null, InputOption::VALUE_REQUIRED, 'Unsigned: SHA256 of the .zip (64 hex). Signed: the encrypted checksum from @capgo/cli bundle encrypt')
             ->addOption('min-native', null, InputOption::VALUE_REQUIRED, 'Lowest compatible native build', '0.0.0')
             ->addOption('channel', null, InputOption::VALUE_REQUIRED, 'Release channel', OtaBundle::DEFAULT_CHANNEL)
             ->addOption('app-id', null, InputOption::VALUE_REQUIRED, 'App id', self::DEFAULT_APP_ID)
             ->addOption('session-key', null, InputOption::VALUE_REQUIRED, 'IV session key (signed/encrypted bundles only)')
+            ->addOption('notes', null, InputOption::VALUE_REQUIRED, '"What\'s new" summary shown to customers after the update')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Validate and print without writing');
     }
 
@@ -71,24 +87,33 @@ final class PublishOtaBundleCommand extends Command
         $channel = trim((string) $input->getOption('channel')) ?: OtaBundle::DEFAULT_CHANNEL;
         $appId = trim((string) $input->getOption('app-id')) ?: self::DEFAULT_APP_ID;
         $sessionKeyRaw = $input->getOption('session-key');
-        $sessionKey = is_string($sessionKeyRaw) && $sessionKeyRaw !== '' ? $sessionKeyRaw : null;
+        $sessionKey = is_string($sessionKeyRaw) && trim($sessionKeyRaw) !== '' ? trim($sessionKeyRaw) : null;
+        $notesRaw = $input->getOption('notes');
+        $notes = is_string($notesRaw) && trim($notesRaw) !== '' ? trim($notesRaw) : null;
         $dryRun = (bool) $input->getOption('dry-run');
 
         $errors = [];
         if (!in_array($platform, OtaBundle::ALL_PLATFORMS, true)) {
             $errors[] = 'platform must be one of: ' . implode(', ', OtaBundle::ALL_PLATFORMS);
         }
-        if (!$this->isSemver($version)) {
-            $errors[] = 'version must be semver (e.g. 1.0.7)';
+        if (!OtaVersion::isValid($version)) {
+            $errors[] = 'version must be numeric with 1-4 segments (e.g. 1.0.7); pre-release suffixes are not supported';
         }
-        if (!$this->isSemver($minNative)) {
-            $errors[] = 'min-native must be semver (e.g. 1.6.0)';
+        if (!OtaVersion::isValid($minNative)) {
+            $errors[] = 'min-native must be numeric with 1-4 segments (e.g. 1.6.0)';
         }
         if (!str_starts_with($url, 'https://')) {
             $errors[] = 'url must be an https:// URL';
         }
-        if (!preg_match('/^[a-f0-9]{64}$/i', $checksum)) {
-            $errors[] = 'checksum must be a 64-char hex SHA256';
+        $checksumError = OtaChecksum::validate($checksum, $sessionKey !== null);
+        if ($checksumError !== null) {
+            $errors[] = $checksumError;
+        }
+        $signingError = $sessionKey !== null
+            ? OtaSigning::sessionKeyError($sessionKey)
+            : OtaSigning::unsignedError([$platform], $channel);
+        if ($signingError !== null) {
+            $errors[] = $signingError;
         }
         if ($errors !== []) {
             foreach ($errors as $message) {
@@ -98,7 +123,9 @@ final class PublishOtaBundleCommand extends Command
         }
 
         // Duplicate guard, mirrors uniq_ota_bundle_version.
-        $existing = $this->em->getRepository(OtaBundle::class)->findOneBy([
+        /** @var OtaBundleRepository $repo */
+        $repo = $this->em->getRepository(OtaBundle::class);
+        $existing = $repo->findOneBy([
             'appId' => $appId,
             'platform' => $platform,
             'channel' => $channel,
@@ -115,6 +142,21 @@ final class PublishOtaBundleCommand extends Command
             ));
             return Command::FAILURE;
         }
+        // A version no device could ever be served (see OtaBundle::shadows).
+        foreach ($repo->activeFor($appId, $platform, $channel) as $active) {
+            if ($active->shadows($version, $minNative)) {
+                $io->error(sprintf(
+                    'Version %s would never be served: active bundle %s (min native %s) is at least as high and '
+                    . 'runs on the same app builds. Use a version above %s, or deactivate %s first.',
+                    $version,
+                    $active->getVersion(),
+                    $active->getMinNativeVersion(),
+                    $active->getVersion(),
+                    $active->getVersion(),
+                ));
+                return Command::FAILURE;
+            }
+        }
 
         $io->title('Publish OTA bundle' . ($dryRun ? ' [DRY RUN]' : ''));
         $io->definitionList(
@@ -126,6 +168,7 @@ final class PublishOtaBundleCommand extends Command
             ['checksum' => $checksum],
             ['min_native_version' => $minNative],
             ['signed' => $sessionKey !== null ? 'yes' : 'no'],
+            ['notes' => $notes ?? '-'],
         );
 
         if ($dryRun) {
@@ -133,7 +176,7 @@ final class PublishOtaBundleCommand extends Command
             return Command::SUCCESS;
         }
 
-        $bundle = new OtaBundle($appId, $platform, $channel, $version, $url, $checksum, $minNative, $sessionKey);
+        $bundle = new OtaBundle($appId, $platform, $channel, $version, $url, $checksum, $minNative, $sessionKey, $notes);
         $this->em->persist($bundle);
         $this->em->flush();
 
@@ -147,10 +190,5 @@ final class PublishOtaBundleCommand extends Command
         ));
 
         return Command::SUCCESS;
-    }
-
-    private function isSemver(string $value): bool
-    {
-        return (bool) preg_match('/^\d+(\.\d+){0,3}(-[0-9A-Za-z.-]+)?$/', $value);
     }
 }

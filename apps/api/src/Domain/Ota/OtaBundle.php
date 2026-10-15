@@ -13,10 +13,10 @@ use Doctrine\ORM\Mapping as ORM;
  * that the @capgo/capacitor-updater plugin can download and apply on top of an
  * installed native shell, without an app-store release.
  *
- * The update endpoint (POST /v3/ota/updates) serves the newest ACTIVE bundle
- * for a given {app_id, platform, channel} whose {@see $minNativeVersion} is
- * compatible with the device's native build, and only when its {@see $version}
- * is newer than the device's current bundle.
+ * The update endpoint (POST /v3/ota/updates) serves the highest-version ACTIVE
+ * bundle for a given {app_id, platform, channel} whose {@see $minNativeVersion}
+ * is compatible with the device's native build, and only when its
+ * {@see $version} is newer than the device's current bundle.
  *
  * OTA ships JS/CSS only, never native code. A change needing a new native
  * capability must go through the store with a native version bump; the
@@ -57,15 +57,16 @@ class OtaBundle
     #[ORM\Column(type: 'string', length: 64)]
     private string $version;
 
-    /** Public HTTPS URL of the bundle .zip (the CDN object). */
+    /** Public HTTPS URL of the bundle .zip (normally our own /uploads/ota/… file). */
     #[ORM\Column(type: 'string', length: 1000)]
     private string $url;
 
     /**
      * Integrity checksum the plugin verifies the download against. For a PLAIN
      * bundle this is the SHA256 of the .zip (64 hex); for a SIGNED bundle it's
-     * the RSA-encrypted checksum from `@capgo/cli bundle encrypt` (512 hex for
-     * RSA-2048, more for larger keys), hence the generous length.
+     * the RSA-encrypted checksum from `@capgo/cli bundle encrypt` (exactly 512
+     * hex: the plugin only accepts RSA-2048, see OtaChecksum). The column is
+     * generous so a future key change needs no migration.
      */
     #[ORM\Column(type: 'string', length: 2048)]
     private string $checksum;
@@ -223,6 +224,22 @@ class OtaBundle
     public function getRollbackOfVersion(): ?string
     {
         return $this->rollbackOfVersion;
+    }
+
+    /**
+     * Whether this (active) bundle would ALWAYS be served instead of a bundle
+     * with $version / $minNative on the same app/platform/channel, i.e. the
+     * other bundle could never reach a device. The update endpoint serves the
+     * highest version among the active bundles a device's shell can run, so
+     * that is the case when this one is at least as high AND runs on every
+     * shell the other one does (its min_native is not higher). A lower
+     * version with a LOWER min_native is not shadowed: older shells still get it.
+     */
+    public function shadows(string $version, string $minNative): bool
+    {
+        return $this->isActive
+            && OtaVersion::compare($this->version, $version) >= 0
+            && OtaVersion::compare($this->minNativeVersion, $minNative) <= 0;
     }
 
     public function getCreatedAt(): DateTimeImmutable

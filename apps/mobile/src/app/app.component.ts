@@ -208,8 +208,9 @@ export class AppComponent {
         .catch((e) => console.warn('[OTA] notifyAppReady() failed:', e));
 
       // Reactive listeners (download percent / complete / failed) live in
-      // OtaUpdateService, which drives the silent top progress bar. Safe to
-      // await-less; the service is native-guarded + fully wrapped.
+      // OtaUpdateService, which drives the mandatory update sheet
+      // (ax-ota-indicator). Safe to await-less; the service is
+      // native-guarded + fully wrapped.
       void this.ota.init();
     } catch (e) {
       console.warn('[OTA] updater init failed:', e);

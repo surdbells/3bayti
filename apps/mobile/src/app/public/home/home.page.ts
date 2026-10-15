@@ -152,7 +152,8 @@ export class HomePage implements OnInit, OnDestroy {
     // Proactively check for a freshly-published OTA bundle when the customer
     // lands on the home dashboard, so updates are caught without waiting for
     // the next app resume. Throttled + fully wrapped in the service; it only
-    // stages the bundle for the next cold start (never mid-session).
+    // downloads + stages the bundle. The update sheet then applies it (never
+    // during a checkout), see OtaUpdateService.
     void this.ota.checkNow();
     void this.pendingOrders.refresh();
   }

@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Admin\Ota;
 
 use Bayti\Api\Domain\Ota\OtaBundle;
+use Bayti\Api\Domain\Ota\OtaBundleRepository;
 use Bayti\Api\Domain\Ota\OtaBundleStorageService;
+use Bayti\Api\Domain\Ota\OtaChecksum;
+use Bayti\Api\Domain\Ota\OtaSigning;
+use Bayti\Api\Domain\Ota\OtaVersion;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\OtaBundleSerializer;
@@ -21,20 +25,49 @@ use Psr\Http\Message\UploadedFileInterface;
  *
  * multipart/form-data with the .zip in field "file"; the release metadata comes
  * in the query string (matching the existing /v3/upload convention):
- *   ?platform=android&version=1.0.7&channel=production&min_native=1.6.0
- *   [&app_id=…&session_key=…]
+ *   ?platform=android|ios|both&version=1.0.7&channel=production&min_native=1.6.0
+ *   [&app_id=…&session_key=…&checksum=…&notes=…]
  *
  * Stores the .zip on the app server (var/uploads/ota/…, served statically by
- * Apache), computes its SHA256, and inserts the ota_bundles row. Devices then
- * pick it up via POST /v3/ota/updates.
+ * Apache), computes its SHA256 (unsigned bundles), and inserts the ota_bundles
+ * row(s). Devices then pick it up via POST /v3/ota/updates.
+ *
+ * Signing ({@see OtaSigning}): a bundle is SIGNED when session_key is sent;
+ * it then needs the ivSessionKey shape, the 512-hex encrypted checksum, and
+ * ciphertext bytes (the plain zip is refused: `bundle encrypt` writes the
+ * ciphertext to a separate <zip>_encrypted.zip). UNSIGNED bundles are only
+ * accepted for android on a non-production channel: iOS can't install them
+ * at all (the app embeds a public key) and production must be signed.
+ *
+ * A version no device could ever be served is refused too: one already
+ * published (duplicate), one whose file path is still in use (a rollback row
+ * serving it after its original row was deleted), and one shadowed by an
+ * active bundle that is at least as high and runs on the same shells.
+ *
+ * File/row consistency: the bytes are first written to a private staging file;
+ * the rows are flushed and the staging file copied to its public path inside
+ * ONE transaction, so a failing flush, copy or commit rolls the rows back and
+ * deletes every file this request wrote. Neither an orphan file nor a row
+ * pointing at a missing file survives a failed upload. (The copy runs just
+ * before COMMIT rather than after it, so no device can be served a committed
+ * row whose file doesn't exist yet.)
+ *
+ * Size: {@see MAX_BYTES}. PHP's upload_max_filesize / post_max_size
+ * (docker/php.ini, and the aaPanel PHP 8.3 config in production, see
+ * OTA-DEPLOY.md) and the web server's body limit must be at least this large.
  */
 final class UploadOtaBundleController
 {
     use Responder;
 
     private const APP_ID = 'com.threebayti.app';
-    /** 60 MB, a web bundle is a few MB; this is a generous safety cap. */
-    private const MAX_BYTES = 60 * 1024 * 1024;
+    /**
+     * 50 MB. Today's bundle is ~15 MB (apps/mobile/www is ~20 MB unzipped), so
+     * this leaves room to grow. Keep in step with docker/php.ini
+     * (upload_max_filesize = 50M, post_max_size = 52M), docker/default.conf
+     * (client_max_body_size) and the portal's client-side check.
+     */
+    public const MAX_BYTES = 50 * 1024 * 1024;
 
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
@@ -63,8 +96,9 @@ final class UploadOtaBundleController
         $notesRaw = trim((string) ($q['notes'] ?? ''));
         $notes = $notesRaw !== '' ? $notesRaw : null;
         // For signed/encrypted bundles the plugin verifies against the checksum
-        // that `@capgo/cli encrypt` emits (not a SHA256 of the ciphertext), so
-        // the operator supplies it. Optional for plain bundles (we compute it).
+        // that `@capgo/cli bundle encrypt` emits (not a SHA256 of the
+        // ciphertext), so the operator supplies it. Optional for plain bundles
+        // (we compute it).
         $providedChecksum = trim((string) ($q['checksum'] ?? ''));
         $signed = $sessionKey !== null;
 
@@ -79,17 +113,52 @@ final class UploadOtaBundleController
                 'platform must be one of: ' . implode(', ', OtaBundle::ALL_PLATFORMS) . ', both',
             );
         }
-        if (!$this->isSemver($version)) {
-            throw HttpException::badRequest('version must be semver (e.g. 1.0.7).');
+        if (!OtaVersion::isValid($version)) {
+            throw HttpException::badRequest('version must be numeric with 1-4 segments (e.g. 1.0.7); pre-release suffixes are not supported.');
         }
-        if (!$this->isSemver($minNative)) {
-            throw HttpException::badRequest('min_native must be semver (e.g. 1.6.0).');
+        if (!OtaVersion::isValid($minNative)) {
+            throw HttpException::badRequest('min_native must be numeric with 1-4 segments (e.g. 1.6.0).');
+        }
+        // Both become storage path segments, so keep them to a safe charset
+        // (and no trailing "." on app_id, which would alias another app's
+        // directory; OtaBundleStorageService rejects it too).
+        if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}\z/', $channel)) {
+            throw HttpException::badRequest('channel may only contain letters, digits, "_" and "-" (max 64).');
+        }
+        if (!preg_match('/^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,253}[A-Za-z0-9_-])?\z/', $appId)) {
+            throw HttpException::badRequest('app_id may only contain letters, digits, ".", "_" and "-", and must not end with ".".');
+        }
+
+        // Signing policy, before touching the upload.
+        if ($signed) {
+            $sessionKeyError = OtaSigning::sessionKeyError($sessionKeyRaw);
+            if ($sessionKeyError !== null) {
+                throw HttpException::badRequest($sessionKeyError);
+            }
+        } else {
+            $unsignedError = OtaSigning::unsignedError($targets, $channel);
+            if ($unsignedError !== null) {
+                throw HttpException::badRequest($unsignedError);
+            }
         }
 
         // The uploaded .zip.
         $upload = $request->getUploadedFiles()['file'] ?? null;
         if (!$upload instanceof UploadedFileInterface) {
+            // PHP discards a body over post_max_size before we run, so it
+            // surfaces here as "no file"; say what actually happened.
+            $contentLength = (int) $request->getHeaderLine('Content-Length');
+            $postMax = (string) ini_get('post_max_size');
+            if ($contentLength > self::iniBytes($postMax)) {
+                throw HttpException::badRequest(self::phpLimitMessage('post_max_size', $postMax));
+            }
             throw HttpException::badRequest('No file in field "file". Send multipart/form-data with the bundle .zip in field "file".');
+        }
+        if ($upload->getError() === UPLOAD_ERR_INI_SIZE) {
+            throw HttpException::badRequest(self::phpLimitMessage('upload_max_filesize', (string) ini_get('upload_max_filesize')));
+        }
+        if ($upload->getError() === UPLOAD_ERR_FORM_SIZE) {
+            throw HttpException::badRequest(self::tooLargeMessage());
         }
         if ($upload->getError() !== UPLOAD_ERR_OK) {
             throw HttpException::badRequest('File upload failed (error code ' . $upload->getError() . ').');
@@ -99,7 +168,7 @@ final class UploadOtaBundleController
             throw HttpException::badRequest('The uploaded file is empty.');
         }
         if ($size > self::MAX_BYTES) {
-            throw HttpException::badRequest('Bundle too large (max 60 MB).');
+            throw HttpException::badRequest(self::tooLargeMessage());
         }
         $bytes = (string) $upload->getStream();
         if ($signed) {
@@ -107,20 +176,31 @@ final class UploadOtaBundleController
             // plugin checks it against the encrypt-command checksum, which we
             // can't derive, so the operator must supply it.
             if ($providedChecksum === '') {
-                throw HttpException::badRequest('Signed bundles require the checksum from `@capgo/cli encrypt` (send it as ?checksum=…).');
+                throw HttpException::badRequest('Signed bundles require the encrypted checksum from `@capgo/cli bundle encrypt` (send it as ?checksum=…).');
+            }
+            // `bundle encrypt` leaves the plain zip next to the ciphertext; a
+            // signed upload of the plain zip fails AES decryption on every
+            // device, so refuse it here.
+            if (OtaSigning::looksLikePlainZip($bytes)) {
+                throw HttpException::badRequest('This looks like the PLAIN .zip. A signed bundle must be the *_encrypted.zip written by `@capgo/cli bundle encrypt`.');
             }
             $checksum = $providedChecksum;
         } else {
             // Plain bundle: must be a real .zip (PK\x03\x04, or PK\x05\x06 for an
             // empty archive). Checksum is the SHA256 we compute (or an override).
-            if (!str_starts_with($bytes, "PK\x03\x04") && !str_starts_with($bytes, "PK\x05\x06")) {
+            if (!OtaSigning::looksLikePlainZip($bytes)) {
                 throw HttpException::badRequest('The uploaded file is not a .zip archive.');
             }
             $checksum = $providedChecksum !== '' ? $providedChecksum : hash('sha256', $bytes);
         }
+        $checksumError = OtaChecksum::validate($checksum, $signed);
+        if ($checksumError !== null) {
+            throw HttpException::badRequest($checksumError);
+        }
 
-        // Duplicate guard for every target (atomic, reject before storing
-        // anything if any platform already has this version).
+        // Servability guards for every target (atomic: reject before storing
+        // anything if any platform fails one).
+        /** @var OtaBundleRepository $repo */
         $repo = $this->em->getRepository(OtaBundle::class);
         foreach ($targets as $target) {
             $existing = $repo->findOneBy([
@@ -137,27 +217,71 @@ final class UploadOtaBundleController
                     $version,
                 ));
             }
+            // The row was deleted but its file still backs another row (a
+            // rollback re-publishes its source's file): re-uploading would
+            // replace those bytes under the other row's checksum.
+            if ($this->storage->isTaken($appId, $channel, $target, $version)) {
+                throw HttpException::badRequest(sprintf(
+                    'The file for %s / %s version %s is still served by another bundle (e.g. a rollback). Bump the version.',
+                    $target,
+                    $channel,
+                    $version,
+                ));
+            }
+            foreach ($repo->activeFor($appId, $target, $channel) as $active) {
+                if ($active->shadows($version, $minNative)) {
+                    throw HttpException::badRequest(sprintf(
+                        'Version %s would never be served on %s / %s: active bundle %s (min native %s) is at least as high '
+                        . 'and runs on the same app builds. Use a version above %s, or deactivate %s first.',
+                        $version,
+                        $target,
+                        $channel,
+                        $active->getVersion(),
+                        $active->getMinNativeVersion(),
+                        $active->getVersion(),
+                        $active->getVersion(),
+                    ));
+                }
+            }
         }
 
-        // Store the (identical) bytes + register one row per target platform.
+        // Stage → (rows + promote) in one transaction → drop the staging file.
+        $staging = $this->storage->stage($bytes);
+        /** @var list<string> $promoted */
+        $promoted = [];
+        /** @var list<OtaBundle> $bundles */
         $bundles = [];
-        foreach ($targets as $target) {
-            $stored = $this->storage->store($bytes, $target, $version);
-            $bundle = new OtaBundle(
-                $appId,
-                $target,
-                $channel,
-                $version,
-                $stored['url'],
-                $checksum,
-                $minNative,
-                $sessionKey,
-                $notes,
-            );
-            $this->em->persist($bundle);
-            $bundles[] = $bundle;
+        try {
+            $this->em->wrapInTransaction(function () use ($targets, $staging, $appId, $channel, $version, $checksum, $minNative, $sessionKey, $notes, &$promoted, &$bundles): void {
+                foreach ($targets as $target) {
+                    $bundle = new OtaBundle(
+                        $appId,
+                        $target,
+                        $channel,
+                        $version,
+                        $this->storage->publicUrlFor($appId, $channel, $target, $version),
+                        $checksum,
+                        $minNative,
+                        $sessionKey,
+                        $notes,
+                    );
+                    $this->em->persist($bundle);
+                    $bundles[] = $bundle;
+                }
+                $this->em->flush();
+
+                foreach ($targets as $target) {
+                    $promoted[] = $this->storage->promote($staging, $appId, $channel, $target, $version);
+                }
+            });
+        } catch (\Throwable $e) {
+            foreach ($promoted as $path) {
+                $this->storage->discard($path);
+            }
+            throw $e;
+        } finally {
+            $this->storage->discard($staging);
         }
-        $this->em->flush();
 
         // One platform → {bundle}; `both` → {bundles:[…]} (client accepts either).
         if (count($bundles) === 1) {
@@ -172,8 +296,41 @@ final class UploadOtaBundleController
         ]);
     }
 
-    private function isSemver(string $value): bool
+    private static function tooLargeMessage(): string
     {
-        return (bool) preg_match('/^\d+(\.\d+){0,3}(-[0-9A-Za-z.-]+)?$/', $value);
+        return sprintf('Bundle too large (max %d MB).', intdiv(self::MAX_BYTES, 1024 * 1024));
+    }
+
+    /**
+     * A PHP ini limit (not our MAX_BYTES) rejected the upload, which happens
+     * when the server's PHP config was not raised as OTA-DEPLOY.md describes.
+     * Name the setting so the operator fixes the server, not the bundle.
+     */
+    private static function phpLimitMessage(string $setting, string $value): string
+    {
+        return sprintf(
+            'Upload exceeds the server\'s PHP limit (%s=%s). The bundle cap is %d MB; raise %s per OTA-DEPLOY.md → Upload limits.',
+            $setting,
+            $value,
+            intdiv(self::MAX_BYTES, 1024 * 1024),
+            $setting,
+        );
+    }
+
+    /** Parse a php.ini size ("8M", "512K", "1G"; "0"/"-1" = unlimited) to bytes. */
+    private static function iniBytes(string $value): int
+    {
+        $value = trim($value);
+        if ($value === '' || $value === '0' || $value === '-1') {
+            return PHP_INT_MAX;
+        }
+        $number = (int) $value;
+
+        return match (strtolower(substr($value, -1))) {
+            'g' => $number * 1024 ** 3,
+            'm' => $number * 1024 ** 2,
+            'k' => $number * 1024,
+            default => $number,
+        };
     }
 }

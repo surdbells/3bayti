@@ -169,9 +169,10 @@ final class OtaRollbackServiceTest extends TestCase
 
     private function bundle(string $version, ?string $sessionKey = null, ?string $notes = null, bool $storeFile = false): OtaBundle
     {
-        $url = self::BASE . '/' . $this->storage->pathFor('android', $version);
+        $path = $this->storage->pathFor('com.threebayti.app', 'production', 'android', $version);
+        $url = self::BASE . '/' . $path;
         if ($storeFile) {
-            $this->storage->store('zip-bytes', 'android', $version);
+            $this->filesystem->write($path, 'zip-bytes');
         }
 
         return new OtaBundle(
