@@ -17,8 +17,9 @@ import type { FeaturedVendor } from './store-card';
 export const DESIGNER_PAGE_SIZE = 24;
 
 /** Page size for the STORES directory grid (load-more). Smaller than the
- *  per-store product grid so the A-Z store list paginates in digestible
- *  batches of 10 rather than dumping every store at once. */
+ *  per-store product grid so the store list (most-followed first, the
+ *  API's default order) paginates in digestible batches of 10 rather than
+ *  dumping every store at once. */
 export const STORE_DIRECTORY_PAGE_SIZE = 10;
 
 /** Result of a paginated product fetch, items plus whether more exist. */
@@ -60,25 +61,35 @@ export class StoreService {
   readonly hasMore = computed(() => this._lastPageHasMore());
   readonly loadedCount = computed(() => this._directory().length);
 
+  /** Server rows paged past so far, i.e. the next page's offset. Kept apart
+   *  from loadedCount() because loadMore drops repeated stores: the offset
+   *  must still advance past them, or the next request would re-read rows
+   *  already consumed (and a page of nothing but repeats would never move on). */
+  private readonly _nextOffset = signal<number>(0);
+
   /** Reset the directory accumulator (call before a fresh load). */
   reset(): void {
     this._directory.set([]);
     this._lastPageHasMore.set(false);
+    this._nextOffset.set(0);
   }
 
   /**
-   * Load the next page of the store directory. Appends to the
-   * accumulator (offset > 0) or replaces it (offset === 0).
+   * Load the next page of the store directory (GET /v3/vendors, real
+   * limit/offset pagination). Appends to the accumulator (offset > 0)
+   * or replaces it (offset === 0).
    *
-   * NOTE: the current v3 ListVendors endpoint returns ALL active
-   * vendors in a single envelope (limit = count, has_more = false),
-   * so in practice this resolves in one page today. The load-more
-   * machinery is kept so that when the endpoint gains real pagination
-   * the UI needs no change.
+   * The API's default order ranks stores by live follower count (then
+   * name, then id). A follow or unfollow between two load-more calls can
+   * move a store across the page boundary, so the next page may repeat a
+   * store already shown: appended rows whose slug (the grid's trackBy key)
+   * is already listed are dropped. The mirror case, a store promoted into
+   * pages already loaded, is not shown until the next fresh load; that is
+   * inherent to offset paging over a live ranking.
    */
   async loadMore(params: StoreListParams = {}): Promise<DirectoryStore[]> {
     const limit = params.limit ?? DESIGNER_PAGE_SIZE;
-    const offset = params.offset ?? this.loadedCount();
+    const offset = params.offset ?? this._nextOffset();
 
     this._isLoadingList.set(true);
     try {
@@ -91,8 +102,11 @@ export class StoreService {
       if (offset === 0) {
         this._directory.set(page);
       } else {
-        this._directory.set([...this._directory(), ...page]);
+        const listed = new Set(this._directory().map(s => s.slug));
+        const fresh = page.filter(s => !s?.slug || !listed.has(s.slug));
+        this._directory.set([...this._directory(), ...fresh]);
       }
+      this._nextOffset.set(offset + page.length);
       this._lastPageHasMore.set(env.meta?.has_more ?? false);
       return page;
     } finally {

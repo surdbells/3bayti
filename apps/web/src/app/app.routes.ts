@@ -113,7 +113,7 @@ export const routes: Routes = [
   },
   {
     /* Stores directory, `/stores`. Public storefront page:
-       featured stores + paginated A-Z grid of all active stores.
+       featured stores + paginated grid of all active stores (most-followed first).
        Backed by /v3/vendors + /v3/featured-vendors. (Formerly /designer.) */
     path: 'stores',
     loadComponent: () =>

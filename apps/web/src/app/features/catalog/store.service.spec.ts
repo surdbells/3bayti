@@ -113,6 +113,53 @@ describe('StoreService', () => {
       expect(service.isLoadingList()).toBe(false);
     });
 
+    it('drops a store repeated across pages but still advances the offset past it', async () => {
+      // The default order ranks by live follower count, so a follow between
+      // two load-more calls can push an already-shown store onto the next page.
+      const { service, controller } = setup();
+      const p1 = service.loadMore({ offset: 0, limit: 2 });
+      controller.expectOne(r => r.url === `${V3}/v3/vendors`).flush(
+        envelope([makeStore({ id: 1, slug: 'a' }), makeStore({ id: 2, slug: 'b' })],
+          { total: 5, limit: 2, offset: 0, has_more: true }));
+      await p1;
+
+      const p2 = service.loadMore({ limit: 2 });
+      const req2 = controller.expectOne(r => r.url === `${V3}/v3/vendors`);
+      expect(req2.request.params.get('offset')).toBe('2');
+      req2.flush(envelope([makeStore({ id: 2, slug: 'b' }), makeStore({ id: 3, slug: 'c' })],
+        { total: 5, limit: 2, offset: 2, has_more: true }));
+      await p2;
+      expect(service.directory().map(s => s.slug)).toEqual(['a', 'b', 'c']);
+
+      // Offset counts server rows paged past (4), not stores listed (3).
+      const p3 = service.loadMore({ limit: 2 });
+      const req3 = controller.expectOne(r => r.url === `${V3}/v3/vendors`);
+      expect(req3.request.params.get('offset')).toBe('4');
+      req3.flush(envelope([makeStore({ id: 4, slug: 'd' })],
+        { total: 5, limit: 2, offset: 4, has_more: false }));
+      await p3;
+      expect(service.directory().map(s => s.slug)).toEqual(['a', 'b', 'c', 'd']);
+      expect(service.hasMore()).toBe(false);
+    });
+
+    it('reset restarts paging at offset 0', async () => {
+      const { service, controller } = setup();
+      const p1 = service.loadMore({ limit: 2 });
+      controller.expectOne(r => r.url === `${V3}/v3/vendors`).flush(
+        envelope([makeStore({ id: 1, slug: 'a' }), makeStore({ id: 2, slug: 'b' })],
+          { total: 4, limit: 2, offset: 0, has_more: true }));
+      await p1;
+
+      service.reset();
+      const p2 = service.loadMore({ limit: 2 });
+      const req2 = controller.expectOne(r => r.url === `${V3}/v3/vendors`);
+      expect(req2.request.params.get('offset')).toBe('0');
+      req2.flush(envelope([makeStore({ id: 1, slug: 'a' })],
+        { total: 1, limit: 2, offset: 0, has_more: false }));
+      await p2;
+      expect(service.directory().map(s => s.slug)).toEqual(['a']);
+    });
+
     it('reset clears the accumulator', async () => {
       const { service, controller } = setup();
       const promise = service.loadMore();

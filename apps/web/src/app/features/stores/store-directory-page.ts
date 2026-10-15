@@ -18,8 +18,8 @@ import type { FeaturedVendor } from '../catalog/store-card';
  * Public storefront page (no auth guard). Two sections:
  *   1. Store Spotlight, featured stores rendered with the
  *      existing StoreCard (embedded product thumbnails + rating).
- *   2. All stores, a plain A-Z grid of every active store,
- *      with load-more pagination.
+ *   2. All stores, a grid of every active store, most-followed
+ *      first (the API's default order), with load-more pagination.
  *
  * Data
  * ----
