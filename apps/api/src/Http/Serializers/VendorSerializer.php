@@ -371,6 +371,11 @@ final class VendorSerializer
      * ignores the extra fields. Null store_id/legacy_product_id for
      * vendors/products with no legacy row.
      *
+     * `followers_count` is the live-follower count that the directory's
+     * default order ranks on (see VendorRepository::findActiveWithStatsPaginated).
+     * Additive: apps/web ignores it and apps/mobile's transform whitelists
+     * the fields it maps, so neither client changes.
+     *
      * @param list<Product> $embeddedProducts up to 5 (controller-clamped)
      * @return array<string, mixed>
      */
@@ -379,6 +384,7 @@ final class VendorSerializer
         array $embeddedProducts,
         ?float $rating,
         int $ratingCount,
+        int $followersCount,
     ): array {
         return [
             'id' => $v->getId(),
@@ -393,6 +399,7 @@ final class VendorSerializer
             'is_verified' => $v->isVerified(),
             'rating' => $rating !== null ? round($rating, 1) : null,
             'rating_count' => $ratingCount,
+            'followers_count' => $followersCount,
             'products' => array_map(
                 static fn (Product $p): array => [
                     'id' => $p->getId(),

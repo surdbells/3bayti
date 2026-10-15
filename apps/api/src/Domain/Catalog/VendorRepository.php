@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Domain\Catalog;
 
+use Bayti\Api\Domain\Following\VendorFollow;
 use Doctrine\ORM\EntityRepository;
 
 /**
@@ -474,35 +475,98 @@ class VendorRepository extends EntityRepository
         return $out;
     }
 
+    /** Directory order: most-followed stores first (the default). */
+    public const DIRECTORY_SORT_FOLLOWERS = 'followers';
+
+    /** Directory order: alphabetical by store name (the pre-ranking order). */
+    public const DIRECTORY_SORT_NAME = 'name';
+
+    /** Every accepted `sort` for {@see findActiveWithStatsPaginated}. */
+    public const DIRECTORY_SORTS = [self::DIRECTORY_SORT_FOLLOWERS, self::DIRECTORY_SORT_NAME];
+
     /**
-     * All active vendors + rating aggregates, paginated + optionally
-     * name-filtered, the store DIRECTORY source (Stores H2.A).
+     * All active vendors + rating and follower aggregates, paginated +
+     * optionally name-filtered, the store DIRECTORY source (Stores H2.A).
      *
      * Structurally identical to {@see findTopVerifiedWithStats} but without
      * the verified/featured constraint (the directory lists every active
      * store), with real limit/offset pagination, an optional case-insensitive
      * name search, and a companion COUNT so the controller can emit an honest
-     * has_more. Sort: name ASC (A-Z directory).
+     * has_more.
      *
-     * @return array{items: list<array{vendor: Vendor, rating: float|null, ratingCount: int}>, total: int}
+     * Sort ($sort, anything unknown falls back to the default):
+     *   - 'followers' (DEFAULT): follower count DESC, then name ASC, then id ASC
+     *   - 'name': name ASC, then id ASC (the A-Z directory)
+     * Both orders end on the unique v.id, so they are total: for a given
+     * snapshot of the data, offset paging (web load-more, mobile infinite
+     * scroll) never repeats or skips a store when several stores share a
+     * follower count or a name. Across requests the follower count is LIVE:
+     * a follow/unfollow between two page fetches can move a store over the
+     * page boundary, so the next page may repeat one store and never show
+     * another. The paging clients dedupe repeats by slug; the skipped store
+     * shows on the next fresh load (inherent to offset paging over a live
+     * ranking; keyset paging would be the fix if it ever matters).
+     *
+     * Follower count: a correlated scalar subquery in the SELECT, NOT a
+     * second LEFT JOIN. A join onto vendor_follow would multiply every
+     * review row by the follower rows (and vice versa), inflating
+     * COUNT(pr.id) and skewing AVG(pr.star); the subquery keeps the rating
+     * aggregates over the review join alone. A follow counts only while the
+     * follower's account is live (users.deleted_at IS NULL AND
+     * users.is_active = true, the same "active user" test as
+     * UserRepository::findActiveOwnersByPhone): a soft-deleted account (e.g.
+     * one retired by an account merge) or an admin-deactivated one keeps its
+     * vendor_follow rows but no longer boosts a store's rank. Hard-deleted
+     * users need no filter, their rows are removed by ON DELETE CASCADE.
+     *
+     * The companion COUNT (meta.total) is unaffected by the sort.
+     *
+     * @return array{items: list<array{vendor: Vendor, rating: float|null, ratingCount: int, followersCount: int}>, total: int}
      */
-    public function findActiveWithStatsPaginated(int $limit, int $offset, ?string $q = null): array
-    {
+    public function findActiveWithStatsPaginated(
+        int $limit,
+        int $offset,
+        ?string $q = null,
+        string $sort = self::DIRECTORY_SORT_FOLLOWERS,
+    ): array {
+        $followersDql = $this->getEntityManager()->createQueryBuilder()
+            ->select('COUNT(vf.id)')
+            ->from(VendorFollow::class, 'vf')
+            ->innerJoin('vf.user', 'vfu')
+            ->where('vf.vendor = v')
+            ->andWhere('vfu.deletedAt IS NULL')
+            ->andWhere('vfu.isActive = true')
+            ->getDQL();
+
         $qb = $this->createQueryBuilder('v')
-            ->select('v', 'AVG(pr.star) AS rating', 'COUNT(pr.id) AS ratingCount')
+            ->select(
+                'v',
+                'AVG(pr.star) AS rating',
+                'COUNT(pr.id) AS ratingCount',
+                '(' . $followersDql . ') AS followersCount',
+            )
             ->leftJoin(
                 \Bayti\Api\Domain\Catalog\ProductReview::class,
                 'pr',
                 'WITH',
-                "pr.vendor = v AND pr.status = 'approved'"
+                // Bound (not an inline 'approved' literal) so the DQL compiles
+                // to SQL without a live connection (VendorDirectoryRepositoryDqlTest).
+                'pr.vendor = v AND pr.status = :reviewApproved'
             )
+            ->setParameter('reviewApproved', ProductReview::STATUS_APPROVED)
             ->where('v.isActive = true')
             ->andWhere('v.status = :approved')
             ->setParameter('approved', Vendor::STATUS_APPROVED)
             ->groupBy('v.id')
-            ->orderBy('v.name', 'ASC')
             ->setMaxResults($limit)
             ->setFirstResult($offset);
+
+        if ($sort === self::DIRECTORY_SORT_NAME) {
+            $qb->orderBy('v.name', 'ASC');
+        } else {
+            $qb->orderBy('followersCount', 'DESC')->addOrderBy('v.name', 'ASC');
+        }
+        $qb->addOrderBy('v.id', 'ASC');
 
         $countQb = $this->createQueryBuilder('v')
             ->select('COUNT(v.id)')
@@ -530,6 +594,7 @@ class VendorRepository extends EntityRepository
                 'vendor' => $vendor,
                 'rating' => $rating,
                 'ratingCount' => $ratingCount,
+                'followersCount' => (int) $row['followersCount'],
             ];
         }
 

@@ -20,14 +20,34 @@ use Psr\Http\Message\ServerRequestInterface;
  * GET /v3/vendors  (public), the store directory source.
  *
  * Active vendors, directoryShape: a publicShape superset (so existing
- * consumers keep every field) PLUS a rating aggregate + up to 5 embedded
- * newest in-stock products per card, and an optional case-insensitive
- * name search. Returns envelope { data, meta } with honest pagination.
+ * consumers keep every field) PLUS a rating aggregate, a follower count
+ * (`followers_count`) + up to 5 embedded newest in-stock products per
+ * card, and an optional case-insensitive name search. Returns envelope
+ * { data, meta } with honest pagination.
  *
  * Query params:
  *   - limit  (default 24, clamped 1..48)
  *   - offset (>= 0)
  *   - q      (optional vendor-name search; blank/whitespace = ignored)
+ *   - sort   'followers' (DEFAULT) | 'name'
+ *              followers: follower count DESC, then name ASC, then id ASC
+ *              name:      name ASC, then id ASC (alphabetical)
+ *            Applies with or without `q`. A missing or unknown value falls
+ *            back to the default rather than 400ing, the same convention as
+ *            GET /v3/products' `sort` (ProductFilterParser::parseSort).
+ *
+ * Why the default ranks by followers: the directory is the "popular
+ * stores" surface on both apps/web (store directory + search's stores
+ * section) and apps/mobile (home + account store lists), and apps/mobile
+ * can only change with an OTA push, so the ranking has to come from the
+ * API's DEFAULT order rather than a new client param. Callers that need a
+ * plain A-Z list (the portal's coupon store picker) send sort=name. The
+ * trailing id tie-break makes both orders total, so for a given snapshot
+ * offset pagination never repeats or skips a store across pages. Follower
+ * counts are live, though: a follow/unfollow between two page fetches can
+ * move a store over the page boundary (one repeat, one skip); clients
+ * dedupe repeats by slug. Only live follower accounts count (see
+ * VendorRepository::findActiveWithStatsPaginated).
  *
  * Pagination (Stores H2.A): real limit/offset + has_more, computed from a
  * companion COUNT in the repo. Replaces the prior "emit everything in one
@@ -78,9 +98,15 @@ final class ListVendorsController
         $rawQ = $query['q'] ?? null;
         $search = is_string($rawQ) && trim($rawQ) !== '' ? trim($rawQ) : null;
 
+        // Unknown / non-string sort -> default (followers), never a 400.
+        $rawSort = $query['sort'] ?? null;
+        $sort = is_string($rawSort) && in_array($rawSort, VendorRepository::DIRECTORY_SORTS, true)
+            ? $rawSort
+            : VendorRepository::DIRECTORY_SORT_FOLLOWERS;
+
         /** @var VendorRepository $repo */
         $repo = $this->em->getRepository(Vendor::class);
-        $result = $repo->findActiveWithStatsPaginated($limit, $offset, $search);
+        $result = $repo->findActiveWithStatsPaginated($limit, $offset, $search, $sort);
         $rows = $result['items'];
         $total = $result['total'];
 
@@ -107,6 +133,7 @@ final class ListVendorsController
                 $productsResult['items'],
                 $row['rating'],
                 $row['ratingCount'],
+                $row['followersCount'],
             );
         }
 
