@@ -13,6 +13,7 @@ import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.c
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { apiErrorMessage } from '../../shared/http/api-error';
+import { fetchAllStores } from '../coupon-store-options';
 interface StoreOption { id: number; store_name: string; }
 interface NamedOption { id: number; name: string; }
 
@@ -178,11 +179,12 @@ export class EditCouponComponent implements OnInit {
     }
 
     if (this.user_session.is_admin) {
-      this.adapter.get_v3('GET /utility/stores').subscribe({
-        next: (r: any) => {
-          if (r) {
-            this.stores = (r.data || []).map((s: any) => ({ id: s.user_id ?? s.id, store_name: s.store_name }));
-          }
+      // Every store, A-Z (the directory pages at <= 48 and defaults to a
+      // most-followed-first order), see fetchAllStores.
+      fetchAllStores((query) => this.adapter.get_v3('GET /utility/stores', { query })).subscribe({
+        next: (rows: any[]) => {
+          // GET /v3/vendors rows carry `name`, not the legacy `store_name`.
+          this.stores = rows.map((s: any) => ({ id: s.user_id ?? s.id, store_name: s.store_name ?? s.name }));
         },
       });
     }
