@@ -34,6 +34,13 @@ use Psr\Log\LoggerInterface;
  */
 final class CustomizationNotificationService
 {
+    /**
+     * The vendor portal's customization requests page. Must match the route
+     * in apps/portal/src/app/app.routes.ts (path: 'customization'); the old
+     * '/vendor/customization-requests' link 404'd.
+     */
+    public const VENDOR_REQUESTS_PATH = '/customization';
+
     private readonly string $webBase;
     private readonly string $portalBase;
 
@@ -57,7 +64,7 @@ final class CustomizationNotificationService
     {
         $to = $this->vendorEmail($r);
         $product = $this->esc($r->getProduct()->getName());
-        $link = $this->portalBase . '/vendor/customization-requests';
+        $link = $this->portalBase . self::VENDOR_REQUESTS_PATH;
         $subject = "New customization request for {$r->getProduct()->getName()}";
         $intro = "A customer has requested a bespoke customization on <strong>{$product}</strong>. "
             . 'Review the details and send them a quote.';
@@ -119,7 +126,7 @@ final class CustomizationNotificationService
     {
         $to = $this->vendorEmail($r);
         $product = $this->esc($r->getProduct()->getName());
-        $link = $this->portalBase . '/vendor/customization-requests';
+        $link = $this->portalBase . self::VENDOR_REQUESTS_PATH;
         $subject = "Customization quote accepted — {$r->getProduct()->getName()}";
         $body = "The customer accepted your quote to customize <strong>{$product}</strong> and is completing payment. "
             . "You'll see the request move to Paid once payment is confirmed — that's your cue to begin.";
