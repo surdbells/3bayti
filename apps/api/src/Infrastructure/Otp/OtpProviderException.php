@@ -19,11 +19,21 @@ namespace Bayti\Api\Infrastructure\Otp;
  */
 final class OtpProviderException extends \RuntimeException
 {
+    /**
+     * The machine-readable failure kind the provider raised ('upstream',
+     * 'unauthorized', 'network', 'transport', 'malformed', 'missing_id',
+     * 'unsupported_country', 'no_provider', ...). Exposed so callers (e.g. the
+     * OtpProviderFailureClassifier) don't have to parse it back out of the
+     * message, which is always "<kind>: <detail>" (or just "<kind>").
+     */
+    public readonly string $kind;
+
     public function __construct(
         string $reason,
         string $detail = '',
         ?\Throwable $previous = null,
     ) {
+        $this->kind = $reason;
         $message = $detail !== '' ? "{$reason}: {$detail}" : $reason;
         parent::__construct($message, 0, $previous);
     }

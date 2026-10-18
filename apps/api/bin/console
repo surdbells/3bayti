@@ -292,6 +292,17 @@ try {
     ]);
 }
 
+// SMS-provider alert drill (otp:test-alert). Sends a [TEST] alert email to
+// OTP_ALERT_EMAILS / ADMIN_NOTIFICATION_EMAILS, ignoring the cooldown, so the
+// owner can confirm alert emails arrive. Needs only mailer + store + config.
+try {
+    $cli->add($container->get(\Bayti\Api\Console\TestOtpAlertCommand::class));
+} catch (\Throwable $e) {
+    $logger->info('otp test-alert command not registered', [
+        'reason' => $e->getMessage(),
+    ]);
+}
+
 // Scheduled/recurring notifications — emits due schedules as queued
 // broadcasts (the broadcast dispatcher above then sends them). Needs only
 // the EntityManager + logger.

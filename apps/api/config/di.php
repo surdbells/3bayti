@@ -1165,13 +1165,56 @@ return [
             }
         };
 
+        // "Alert on provider problems": emails the admin team (rate-limited) +
+        // one grouped Sentry issue when a provider refuses for an ACCOUNT reason
+        // (out of credit, pricing not set up, credentials rejected). Resolved
+        // defensively — if the alerting stack (mailer / store) can't be built,
+        // OTP must still work, just unmonitored.
+        $healthObserver = null;
+        try {
+            $healthObserver = $c->get(\Bayti\Api\Infrastructure\Otp\OtpProviderHealthMonitor::class);
+        } catch (\Throwable $e) {
+            $logger->warning('otp.alert.monitor_unavailable', ['error' => $e->getMessage()]);
+        }
+
         return new RoutingOtpProvider(
             providers: $providers,
             enabledOrderResolver: $resolver,
             defaultProvider: 'messagecentral',
             logger: $logger,
+            healthObserver: $healthObserver,
         );
     },
+
+    /**
+     * SMS-provider alerting (see OtpProviderHealthMonitor). Recipients come from
+     * OTP_ALERT_EMAILS, else ADMIN_NOTIFICATION_EMAILS; one email per provider +
+     * reason per OTP_ALERT_COOLDOWN_SECONDS (default 3600). The cooldown is
+     * claimed on the shared KeyValueStore (Redis); while Redis is down — or when
+     * REDIS_DSN is unset and the store is the per-request InMemoryKeyValueStore —
+     * it falls back to marker files in var/cache. Env read inside the factories, no use()
+     * captures → compiled-container safe.
+     */
+    \Bayti\Api\Infrastructure\Otp\OtpAlertConfig::class => static function (): \Bayti\Api\Infrastructure\Otp\OtpAlertConfig {
+        return \Bayti\Api\Infrastructure\Otp\OtpAlertConfig::fromEnv($_ENV);
+    },
+    \Bayti\Api\Infrastructure\Otp\OtpProviderIncidentReporter::class => static function (): \Bayti\Api\Infrastructure\Otp\OtpProviderIncidentReporter {
+        return new \Bayti\Api\Infrastructure\Otp\SentryOtpProviderIncidentReporter();
+    },
+    \Bayti\Api\Infrastructure\Otp\OtpProviderHealthMonitor::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Infrastructure\Otp\OtpProviderHealthMonitor {
+        return new \Bayti\Api\Infrastructure\Otp\OtpProviderHealthMonitor(
+            store: $c->get(KeyValueStore::class),
+            mailer: $c->get(\Bayti\Api\Notification\MailerInterface::class),
+            reporter: $c->get(\Bayti\Api\Infrastructure\Otp\OtpProviderIncidentReporter::class),
+            config: $c->get(\Bayti\Api\Infrastructure\Otp\OtpAlertConfig::class),
+            logger: $c->get(\Psr\Log\LoggerInterface::class),
+            fallbackDir: $c->get('app.rootPath') . '/var/cache',
+        );
+    },
+    // otp:test-alert, all constructor deps are bound above.
+    \Bayti\Api\Console\TestOtpAlertCommand::class => \DI\autowire(),
 
     /**
      * SettingsService, the durable+cached JSON settings store (app_settings

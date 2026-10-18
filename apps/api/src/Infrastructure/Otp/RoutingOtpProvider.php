@@ -32,6 +32,18 @@ use Psr\Log\NullLogger;
  * contract live one layer up and are untouched. The provider ORDER is read live
  * (per send) via the injected resolver, so an admin re-ordering takes effect on
  * the next send with no redeploy.
+ *
+ * Provider health
+ * ---------------
+ * An optional OtpProviderHealthObserver (OtpProviderHealthMonitor in prod) is
+ * told the OUTCOME of each send once it is known: every provider failure — with
+ * the backup provider that then delivered the code, or null if the request
+ * failed — then recordSuccess() for the winner; a send with no provider to try
+ * at all is a 'no_provider' failure under OtpProviderHealthObserver::NO_PROVIDER_KEY.
+ * Each call carries the destination's dial code (OtpDestination), never the
+ * phone number. That is what emails the admin team when an account runs out of
+ * credit etc. Observer calls are guarded: they can never change what send()
+ * returns or throws.
  */
 final class RoutingOtpProvider implements OtpProvider
 {
@@ -47,12 +59,15 @@ final class RoutingOtpProvider implements OtpProvider
      * @param callable(): list<string> $enabledOrderResolver returns the ENABLED
      *        provider keys in priority order (admin-configured). Read per send.
      * @param string $defaultProvider provider that validates legacy/unprefixed ids
+     * @param OtpProviderHealthObserver|null $healthObserver told every send's
+     *        outcome (account-problem alerting); null = no monitoring
      */
     public function __construct(
         array $providers,
         callable $enabledOrderResolver,
         private readonly string $defaultProvider = 'messagecentral',
         private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly ?OtpProviderHealthObserver $healthObserver = null,
     ) {
         $this->providers = $providers;
         $this->enabledOrderResolver = \Closure::fromCallable($enabledOrderResolver);
@@ -60,7 +75,11 @@ final class RoutingOtpProvider implements OtpProvider
 
     public function send(string $toPhone): string
     {
-        $last = null;
+        /** @var list<array{0: string, 1: OtpProviderException}> $failures */
+        $failures = [];
+        // Only the destination COUNTRY reaches the health observer, never the
+        // number (pricing problems are per destination country).
+        $destination = $this->healthObserver !== null ? OtpDestination::dialCode($toPhone) : null;
         foreach ($this->resolveOrder() as $key) {
             $provider = $this->providers[$key] ?? null;
             if ($provider === null) {
@@ -68,21 +87,34 @@ final class RoutingOtpProvider implements OtpProvider
                 continue;
             }
             try {
-                return $key . ':' . $provider->send($toPhone);
+                $verificationId = $provider->send($toPhone);
             } catch (OtpProviderException $e) {
                 $this->logger->warning('otp.provider.send_failed', [
                     'provider' => $key,
                     'error' => $e->getMessage(),
                 ]);
-                $last = $e;
+                $failures[] = [$key, $e];
+                continue;
             }
+
+            // Delivered. Earlier failures (if any) were covered by this backup.
+            $this->reportOutcome($failures, $key, $destination);
+            return $key . ':' . $verificationId;
         }
 
-        // Every enabled+wired provider failed (or none is available).
-        throw $last ?? new OtpProviderException(
-            'no_provider',
-            'No OTP provider is available to send the code.',
-        );
+        if ($failures === []) {
+            // Nothing could even be tried.
+            $noProvider = new OtpProviderException(
+                'no_provider',
+                'No OTP provider is available to send the code.',
+            );
+            $this->reportOutcome([[OtpProviderHealthObserver::NO_PROVIDER_KEY, $noProvider]], null, $destination);
+            throw $noProvider;
+        }
+
+        // Every enabled+wired provider failed: rethrow the last error (unchanged).
+        $this->reportOutcome($failures, null, $destination);
+        throw $failures[count($failures) - 1][1];
     }
 
     public function verify(string $verificationId, string $code): bool
@@ -99,6 +131,42 @@ final class RoutingOtpProvider implements OtpProvider
         }
 
         return $provider->verify($realId, $code);
+    }
+
+    /**
+     * Tell the health observer how this send went. Guarded per call: the
+     * observer must never change the OTP result (it is designed not to throw;
+     * this is the second line of defence).
+     *
+     * @param list<array{0: string, 1: OtpProviderException}> $failures
+     * @param string|null $deliveredBy provider that delivered the code, or null
+     * @param string|null $destination destination dial code ("973"), never the number
+     */
+    private function reportOutcome(array $failures, ?string $deliveredBy, ?string $destination): void
+    {
+        if ($this->healthObserver === null) {
+            return;
+        }
+        foreach ($failures as [$key, $e]) {
+            try {
+                $this->healthObserver->recordFailure($key, $e, $deliveredBy, $destination);
+            } catch (\Throwable $t) {
+                $this->logger->warning('otp.provider.health_observer_failed', [
+                    'provider' => $key,
+                    'error' => $t->getMessage(),
+                ]);
+            }
+        }
+        if ($deliveredBy !== null) {
+            try {
+                $this->healthObserver->recordSuccess($deliveredBy, $destination);
+            } catch (\Throwable $t) {
+                $this->logger->warning('otp.provider.health_observer_failed', [
+                    'provider' => $deliveredBy,
+                    'error' => $t->getMessage(),
+                ]);
+            }
+        }
     }
 
     /**
