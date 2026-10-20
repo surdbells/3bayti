@@ -35,8 +35,14 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>3bayti uses your camera so you can take a photo to search for similar pieces, try an outfit on, or add a photo to your profile or a gift card.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>3bayti uses your contacts so you can quickly pick a gift-card recipient's phone number and email.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>3bayti saves images you choose to keep, such as a virtual try-on result, to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>3bayti uses your photo library so you can pick a photo to search for similar pieces, try an outfit on, or add a photo to your profile or a gift card.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
