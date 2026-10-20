@@ -313,6 +313,78 @@ final class UploadOtaBundleControllerTest extends TestCase
         self::assertSame(201, $response->getStatusCode());
     }
 
+    #[Test]
+    public function aLowerVersionForShellsAboveTheLiveBundlesMaxIsAllowed(): void
+    {
+        // Production 1.7.3 for store shell 1.8 only (max defaults to min).
+        $this->active = [new OtaBundle('com.threebayti.app', 'android', 'production', '1.7.3', 'https://x/1.7.3.zip', self::encrypted(), '1.8')];
+
+        // Same shell, lower version: never served, and the message shows both ranges.
+        $this->assertBadRequest(
+            'active bundle 1.7.3 (native 1.8) is at least as high and runs on every app version this one targets (native 1.8)',
+            $this->signed(['platform' => 'android', 'version' => '1.7.2', 'min_native' => '1.8']),
+        );
+
+        // A lower version for the TestFlight shell 1.8.1 is served to it.
+        self::assertSame(201, $this->upload($this->signed(['platform' => 'android', 'version' => '1.7.0', 'min_native' => '1.8.1']))->getStatusCode());
+        // As is one whose range reaches beyond 1.8 (1.8.x / 1.9 shells get it).
+        self::assertSame(201, $this->upload($this->signed(['platform' => 'android', 'version' => '1.7.1', 'min_native' => '1.8', 'max_native' => '1.9']))->getStatusCode());
+    }
+
+    #[Test]
+    public function maxNativeDefaultsToMinNativeAndIsStored(): void
+    {
+        $response = $this->upload($this->signed(['platform' => 'both', 'version' => '1.7.1', 'min_native' => '1.8']));
+
+        self::assertSame(201, $response->getStatusCode());
+        foreach (json_decode((string) $response->getBody(), true)['bundles'] as $shape) {
+            self::assertSame('1.8', $shape['min_native_version']);
+            self::assertSame('1.8', $shape['max_native_version']);
+        }
+        self::assertCount(2, $this->committed);
+        foreach ($this->committed as $bundle) {
+            self::assertSame('1.8', $bundle->getMaxNativeVersion(), 'stored explicitly, not left null');
+        }
+    }
+
+    #[Test]
+    public function anExplicitMaxNativeIsStoredAndReturned(): void
+    {
+        $response = $this->upload($this->signed(['platform' => 'android', 'version' => '1.7.1', 'min_native' => '1.8', 'max_native' => '1.9']));
+
+        self::assertSame(201, $response->getStatusCode());
+        $shape = json_decode((string) $response->getBody(), true)['bundle'];
+        self::assertSame('1.8', $shape['min_native_version']);
+        self::assertSame('1.9', $shape['max_native_version']);
+        self::assertSame('1.9', $this->committed[0]->getMaxNativeVersion());
+    }
+
+    #[Test]
+    public function minNativeIsRequired(): void
+    {
+        $query = ['platform' => 'android', 'version' => '1.7.1'];
+        $this->assertBadRequest('min_native is required', $this->signed($query + ['min_native' => null]));
+        $this->assertBadRequest('min_native is required', $this->signed($query + ['min_native' => '  ']));
+        // A max alone does not stand in for the min.
+        $this->assertBadRequest('min_native is required', $this->signed($query + ['min_native' => null, 'max_native' => '1.9']));
+    }
+
+    #[Test]
+    public function rejectsAnInvalidNativeRange(): void
+    {
+        $query = ['platform' => 'android', 'version' => '1.7.1'];
+        $this->assertBadRequest('min_native must be numeric', $this->signed($query + ['min_native' => '1.8-beta']));
+        $this->assertBadRequest('max_native must be numeric', $this->signed($query + ['min_native' => '1.8', 'max_native' => '1.08']));
+        $this->assertBadRequest(
+            'max_native (1.7.9) must not be lower than min_native (1.8)',
+            $this->signed($query + ['min_native' => '1.8', 'max_native' => '1.7.9']),
+        );
+        // "0" is falsy in PHP: it must be validated, not replaced by the min.
+        $this->assertBadRequest('max_native (0) must not be lower than', $this->signed($query + ['min_native' => '1.8', 'max_native' => '0']));
+        // The old portal / release-script default: matches no real device.
+        $this->assertBadRequest('matches no installed app', $this->signed($query + ['min_native' => '0.0.0']));
+    }
+
     // ── helpers ────────────────────────────────────────────────────────
 
     private static function encrypted(): string
@@ -326,8 +398,8 @@ final class UploadOtaBundleControllerTest extends TestCase
     }
 
     /**
-     * @param array<string, string> $query
-     * @return array<string, string>
+     * @param array<string, ?string> $query
+     * @return array<string, ?string>
      */
     private function signed(array $query): array
     {
@@ -335,7 +407,10 @@ final class UploadOtaBundleControllerTest extends TestCase
     }
 
     /**
-     * @param array<string, string> $query
+     * min_native is required, so it defaults to the production shell (1.8)
+     * here unless the test sets it; a null value omits the key entirely.
+     *
+     * @param array<string, ?string> $query
      */
     private function upload(
         array $query,
@@ -344,6 +419,10 @@ final class UploadOtaBundleControllerTest extends TestCase
         int $error = UPLOAD_ERR_OK,
         ?OtaBundle $existing = null,
     ): \Psr\Http\Message\ResponseInterface {
+        if (!array_key_exists('min_native', $query)) {
+            $query['min_native'] = '1.8';
+        }
+        $query = array_filter($query, static fn (?string $v): bool => $v !== null);
         $bytes ??= isset($query['session_key']) ? self::CIPHER : self::ZIP;
         $controller = new UploadOtaBundleController(
             new ResponseFactory(),
@@ -411,7 +490,7 @@ final class UploadOtaBundleControllerTest extends TestCase
     }
 
     /**
-     * @param array<string, string> $query
+     * @param array<string, ?string> $query
      */
     private function assertBadRequest(
         string $messageFragment,

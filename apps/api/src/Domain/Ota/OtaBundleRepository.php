@@ -38,7 +38,8 @@ class OtaBundleRepository extends EntityRepository
 
     /**
      * All ACTIVE bundles for an app + platform + channel (a small set: one row
-     * per release, and every rollback deactivates the rest). The update endpoint
+     * per release and native range, and every rollback deactivates the bundles
+     * its native range overlaps). The update endpoint
      * picks the highest compatible version among them in PHP, since SQL can't
      * order dotted versions numerically.
      *

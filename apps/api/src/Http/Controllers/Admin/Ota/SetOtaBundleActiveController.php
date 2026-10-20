@@ -22,7 +22,12 @@ use Psr\Http\Message\ServerRequestInterface;
  * To move those devices back, use the one-click rollback
  * (POST /v3/admin/ota/bundles/{id}/rollback).
  *
- * @param array<string, string> $args
+ * Only is_active changes: a re-activated row keeps its native range
+ * (min_native_version .. effective max), so it is again served only to the
+ * native app versions it was published for. Activating a row whose range
+ * matches no installed app (it ends at 0, e.g. a legacy row from the old
+ * "0.0.0" min default; {@see OtaBundle::reachesNoShell()}) is refused with a
+ * 400 instead of silently serving nobody. Deactivating is always allowed.
  */
 final class SetOtaBundleActiveController
 {
@@ -59,7 +64,20 @@ final class SetOtaBundleActiveController
             throw HttpException::badRequest('Body must be { "is_active": true|false }.');
         }
 
-        $bundle->setActive((bool) $body['is_active']);
+        $active = (bool) $body['is_active'];
+        if ($active && $bundle->reachesNoShell()) {
+            throw HttpException::badRequest(sprintf(
+                '%s %s is published for native app version %s, which no installed app reports, so activating it would '
+                . 'serve no device. Widen its native range first (set its max_native_version to the app version it was '
+                . 'built for, e.g. 1.8: see OTA-DEPLOY.md), or upload its build again as a new version with Min native '
+                . 'set to that app version.',
+                $bundle->getPlatform(),
+                $bundle->getVersion(),
+                $bundle->nativeRangeLabel(),
+            ));
+        }
+
+        $bundle->setActive($active);
         $this->em->flush();
 
         return $this->ok(['bundle' => $this->serializer->shape($bundle)]);

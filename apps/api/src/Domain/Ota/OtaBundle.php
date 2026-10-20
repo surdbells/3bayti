@@ -14,13 +14,33 @@ use Doctrine\ORM\Mapping as ORM;
  * installed native shell, without an app-store release.
  *
  * The update endpoint (POST /v3/ota/updates) serves the highest-version ACTIVE
- * bundle for a given {app_id, platform, channel} whose {@see $minNativeVersion}
- * is compatible with the device's native build, and only when its
- * {@see $version} is newer than the device's current bundle.
+ * bundle for a given {app_id, platform, channel} whose NATIVE RANGE contains
+ * the device's native app version, and only when its {@see $version} is newer
+ * than the device's current bundle.
  *
- * OTA ships JS/CSS only, never native code. A change needing a new native
- * capability must go through the store with a native version bump; the
- * `min_native_version` gate keeps such a bundle off older shells.
+ * Native range: a bundle runs on shells with
+ *   min_native_version <= device version_build <= effective max
+ * where the effective max is {@see $maxNativeVersion}, or min_native_version
+ * when that is null (rows published before the column existed). Both ends are
+ * inclusive and compared with {@see OtaVersion::compare()}, which pads missing
+ * segments with 0 ("1.8" == "1.8.0", while "1.8.1" is above a max of "1.8").
+ *
+ *  - min keeps a bundle that needs a new native capability off OLDER shells
+ *    (OTA ships JS/CSS only; native changes go through the store);
+ *  - max keeps a bundle built for the production shell off NEWER shells, so a
+ *    production release never replaces the newer web code inside a TestFlight
+ *    or Android test build (e.g. production shell 1.8, test shell 1.8.1).
+ *
+ * version_build is the MARKETING version, not the build number: the installed
+ * @capgo/capacitor-updater (8.51.3) sets it from CFBundleShortVersionString
+ * (Xcode MARKETING_VERSION) on iOS (CapacitorUpdaterPlugin.swift, via
+ * Bundle.main.versionName in InternalUtils.swift) and from
+ * PackageInfo.versionName on Android (CapacitorUpdaterPlugin.java), unless the
+ * CapacitorUpdater `version` config overrides it (capacitor.config.ts does
+ * not). CFBundleVersion / versionCode travel separately as `version_code` and
+ * are NOT used here. A test build is therefore only kept apart from production
+ * when its MARKETING version is higher (1.8.1), never by a higher build number
+ * alone (1.8 build 6 reports "1.8", the same as the production shell).
  */
 #[ORM\Entity(repositoryClass: OtaBundleRepository::class)]
 #[ORM\Table(name: 'ota_bundles')]
@@ -71,9 +91,18 @@ class OtaBundle
     #[ORM\Column(type: 'string', length: 2048)]
     private string $checksum;
 
-    /** Lowest native app build this bundle is compatible with. */
+    /** Lowest native app (marketing) version this bundle runs on, inclusive. */
     #[ORM\Column(name: 'min_native_version', type: 'string', length: 64)]
     private string $minNativeVersion;
+
+    /**
+     * Highest native app (marketing) version this bundle runs on, inclusive.
+     * Every write path stores it explicitly (defaulting to min_native_version);
+     * it is null only on rows published before the column existed, which
+     * {@see getEffectiveMaxNativeVersion()} treats as max = min.
+     */
+    #[ORM\Column(name: 'max_native_version', type: 'string', length: 64, nullable: true)]
+    private ?string $maxNativeVersion = null;
 
     /**
      * The ivSessionKey from `@capgo/cli bundle encrypt`, non-null only for
@@ -115,9 +144,19 @@ class OtaBundle
         string $minNativeVersion,
         ?string $sessionKey = null,
         ?string $notes = null,
+        ?string $maxNativeVersion = null,
     ) {
         if (!in_array($platform, self::ALL_PLATFORMS, true)) {
             throw new \InvalidArgumentException("Unknown OTA platform: {$platform}");
+        }
+        $minNativeVersion = $minNativeVersion !== '' ? $minNativeVersion : '0.0.0';
+        // Max defaults to min (the bundle runs on exactly the shell it was
+        // built for) and is always stored explicitly on a new row.
+        $maxNativeVersion = ($maxNativeVersion === null || $maxNativeVersion === '') ? $minNativeVersion : $maxNativeVersion;
+        if (OtaVersion::compare($maxNativeVersion, $minNativeVersion) < 0) {
+            throw new \InvalidArgumentException(
+                "OTA max native version {$maxNativeVersion} is below min native version {$minNativeVersion}",
+            );
         }
         $this->appId = $appId;
         $this->platform = $platform;
@@ -125,7 +164,8 @@ class OtaBundle
         $this->version = $version;
         $this->url = $url;
         $this->checksum = $checksum;
-        $this->minNativeVersion = $minNativeVersion !== '' ? $minNativeVersion : '0.0.0';
+        $this->minNativeVersion = $minNativeVersion;
+        $this->maxNativeVersion = $maxNativeVersion;
         $this->sessionKey = $sessionKey;
         $this->notes = ($notes === null || trim($notes) === '') ? null : trim($notes);
         $this->isActive = true;
@@ -134,9 +174,12 @@ class OtaBundle
 
     /**
      * A new row that re-publishes $source's file (same url, checksum, session
-     * key and native gate) under $version, so devices that already moved past
-     * $source download it again. It carries no "what's new" notes: customers
-     * rolled back should not see an old release's summary a second time.
+     * key and native range) under $version, so devices that already moved past
+     * $source download it again. The range is copied as $source's EFFECTIVE
+     * one (a legacy row with no max gets max = min stored explicitly), so the
+     * rollback runs on exactly the shells the source did. It carries no
+     * "what's new" notes: customers rolled back should not see an old
+     * release's summary a second time.
      */
     public static function rollbackOf(OtaBundle $source, string $version): self
     {
@@ -150,6 +193,7 @@ class OtaBundle
             $source->getMinNativeVersion(),
             $source->getSessionKey(),
             null,
+            $source->getEffectiveMaxNativeVersion(),
         );
         $bundle->rollbackOfVersion = $source->getRollbackOfVersion() ?? $source->getVersion();
 
@@ -196,6 +240,66 @@ class OtaBundle
         return $this->minNativeVersion;
     }
 
+    /**
+     * The stored max native version: null only on rows published before the
+     * column existed. Use {@see getEffectiveMaxNativeVersion()} for any
+     * compatibility decision.
+     */
+    public function getMaxNativeVersion(): ?string
+    {
+        return $this->maxNativeVersion;
+    }
+
+    /** The upper end of the native range: max_native_version, or min when unset. */
+    public function getEffectiveMaxNativeVersion(): string
+    {
+        return $this->maxNativeVersion ?? $this->minNativeVersion;
+    }
+
+    /**
+     * Whether a device whose native app version is $nativeBuild can run this
+     * bundle: min <= $nativeBuild <= effective max, both ends inclusive.
+     * Callers check {@see OtaVersion::isComparable()} on a device-reported
+     * value first (the update endpoint fails closed on anything else).
+     */
+    public function supportsNative(string $nativeBuild): bool
+    {
+        return OtaVersion::compare($nativeBuild, $this->minNativeVersion) >= 0
+            && OtaVersion::compare($nativeBuild, $this->getEffectiveMaxNativeVersion()) <= 0;
+    }
+
+    /**
+     * Whether no installed app can ever be offered this bundle: its effective
+     * native range ends at 0 (e.g. a legacy row published with the old
+     * "0.0.0" min default and no max, so [0.0.0, 0.0.0]). New uploads with
+     * such a range are refused ({@see OtaVersion::nativeRangeError()}); the
+     * rollback and re-activation paths refuse such a row too, so an operator
+     * is told instead of getting an active bundle that serves nobody.
+     */
+    public function reachesNoShell(): bool
+    {
+        return OtaVersion::isZero($this->getEffectiveMaxNativeVersion());
+    }
+
+    /**
+     * Whether this bundle's effective native range and $other's share at least
+     * one native version (both ranges inclusive): the bundles compete for
+     * those shells. A rollback deactivates exactly the active bundles that
+     * overlap its range and leaves bundles for other shells alone
+     * ({@see OtaRollbackService}).
+     */
+    public function nativeRangeOverlaps(OtaBundle $other): bool
+    {
+        return OtaVersion::compare($this->minNativeVersion, $other->getEffectiveMaxNativeVersion()) <= 0
+            && OtaVersion::compare($other->getMinNativeVersion(), $this->getEffectiveMaxNativeVersion()) <= 0;
+    }
+
+    /** The effective native range for messages ({@see OtaVersion::rangeLabel()}). */
+    public function nativeRangeLabel(): string
+    {
+        return OtaVersion::rangeLabel($this->minNativeVersion, $this->getEffectiveMaxNativeVersion());
+    }
+
     public function getSessionKey(): ?string
     {
         return $this->sessionKey;
@@ -228,18 +332,21 @@ class OtaBundle
 
     /**
      * Whether this (active) bundle would ALWAYS be served instead of a bundle
-     * with $version / $minNative on the same app/platform/channel, i.e. the
-     * other bundle could never reach a device. The update endpoint serves the
-     * highest version among the active bundles a device's shell can run, so
-     * that is the case when this one is at least as high AND runs on every
-     * shell the other one does (its min_native is not higher). A lower
-     * version with a LOWER min_native is not shadowed: older shells still get it.
+     * with $version and native range [$minNative, $maxNative] on the same
+     * app/platform/channel, i.e. the other bundle could never reach a device.
+     * The update endpoint serves the highest version among the active bundles
+     * a device's shell can run, so that is the case when this one is at least
+     * as high AND its native range [min, effective max] fully covers the other
+     * one's. A lower version for shells outside this range is NOT shadowed:
+     * an older-shell hotfix below min, or a test-shell bundle above max, still
+     * reaches those shells.
      */
-    public function shadows(string $version, string $minNative): bool
+    public function shadows(string $version, string $minNative, string $maxNative): bool
     {
         return $this->isActive
             && OtaVersion::compare($this->version, $version) >= 0
-            && OtaVersion::compare($this->minNativeVersion, $minNative) <= 0;
+            && OtaVersion::compare($this->minNativeVersion, $minNative) <= 0
+            && OtaVersion::compare($this->getEffectiveMaxNativeVersion(), $maxNative) >= 0;
     }
 
     public function getCreatedAt(): DateTimeImmutable

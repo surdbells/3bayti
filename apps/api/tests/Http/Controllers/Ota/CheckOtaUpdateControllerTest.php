@@ -101,7 +101,8 @@ final class CheckOtaUpdateControllerTest extends HttpTestCase
     #[Test]
     public function anOversizedBodyIsTreatedAsMalformed(): void
     {
-        $this->active([$this->bundle('1.7.1', '0.0.0')]);
+        // Would be served to this device (native 1.7) if the body were read.
+        $this->active([$this->bundle('1.7.1', '1.7')]);
 
         $body = $this->check([
             'version_name' => '1.0.0',
@@ -131,9 +132,9 @@ final class CheckOtaUpdateControllerTest extends HttpTestCase
     #[DataProvider('unprovableNativeBuilds')]
     public function failsClosedWhenTheNativeBuildCannotBeChecked(array $device): void
     {
-        // Even a bundle with no native requirement is withheld: the gate can't
-        // be evaluated, so the endpoint must not guess.
-        $this->active([$this->bundle('1.7.1', '0.0.0')]);
+        // Even a bundle whose range spans every native version is withheld:
+        // the gate can't be evaluated, so the endpoint must not guess.
+        $this->active([$this->bundle('1.7.1', '0.0.0', maxNative: '999999999')]);
 
         $body = $this->check($device);
 
@@ -164,16 +165,25 @@ final class CheckOtaUpdateControllerTest extends HttpTestCase
         self::assertSame('1.7.10', $this->check(['version_name' => '1.7.0', 'version_build' => '1.7'])['version']);
     }
 
+    /*
+     * The native-range tests below send what a real shell sends on its
+     * BUILT-IN web code (a fresh install, or right after a store update):
+     * version_name = its own marketing version, the same value as
+     * version_build (the plugin's builtin BundleInfo uses versionBuild as its
+     * version). So every "not offered" assertion is decided by the range gate,
+     * not by the bundle merely being older than the device.
+     */
+
     #[Test]
     public function olderShellsGetTheHighestBundleTheyCanRun(): void
     {
         $this->active([
             $this->bundle('1.7.4', '1.7'),
-            $this->bundle('1.8.0', '1.8'), // needs the new native shell
+            $this->bundle('1.8.1', '1.8'), // needs the new native shell
         ]);
 
-        self::assertSame('1.7.4', $this->check(['version_name' => '1.7.0', 'version_build' => '1.7'])['version']);
-        self::assertSame('1.8.0', $this->check(['version_name' => '1.7.0', 'version_build' => '1.8'])['version']);
+        self::assertSame('1.7.4', $this->builtin('1.7')['version']);
+        self::assertSame('1.8.1', $this->builtin('1.8')['version']);
     }
 
     #[Test]
@@ -181,7 +191,77 @@ final class CheckOtaUpdateControllerTest extends HttpTestCase
     {
         $this->active([$this->bundle('1.8.0', '1.8')]);
 
-        self::assertSame('', $this->check(['version_name' => '1.7.0', 'version_build' => '1.7.9'])['version']);
+        self::assertSame('', $this->builtin('1.7.9')['version']);
+    }
+
+    #[Test]
+    public function aProductionBundleNeverReachesANewerTestShell(): void
+    {
+        // Production bundle built for store shell 1.8 (max defaults to min).
+        // Its version, 1.9.5, is above the test shells' own marketing versions,
+        // so only the range gate keeps it off them.
+        $this->active([$this->bundle('1.9.5', '1.8')]);
+
+        self::assertSame('1.9.5', $this->builtin('1.8')['version']);
+        self::assertSame('1.9.5', $this->builtin('1.8.0')['version']);
+        // TestFlight / Android test shells with a higher marketing version keep
+        // their own (newer) built-in web code.
+        self::assertSame('', $this->builtin('1.8.1')['version']);
+        self::assertSame('', $this->builtin('1.9')['version']);
+    }
+
+    #[Test]
+    public function aTestShellGetsOnlyTheBundlePublishedForItsRange(): void
+    {
+        $this->active([
+            $this->bundle('1.8.5', '1.8'),                       // production shell
+            $this->bundle('1.8.3', '1.8.1', maxNative: '1.8.2'), // test shells
+        ]);
+
+        self::assertSame('1.8.5', $this->builtin('1.8')['version']);
+        // Lower than production, still the one the test shells are offered
+        // (and above their own marketing versions, so fresh installs take it).
+        self::assertSame('1.8.3', $this->builtin('1.8.1')['version']);
+        self::assertSame('1.8.3', $this->builtin('1.8.2')['version']);
+        self::assertSame('', $this->check(['version_name' => '1.8.3', 'version_build' => '1.8.1'])['version'], 'already on it');
+        self::assertSame('', $this->builtin('1.9')['version']);
+    }
+
+    #[Test]
+    public function aFreshInstallTakesOnlyABundleAboveItsOwnMarketingVersion(): void
+    {
+        // A range does not by itself reach every shell in it: on builtin the
+        // device's current version IS its marketing version, and only a
+        // strictly newer bundle is served. So 1.8.4 reaches fresh 1.8 installs
+        // but not fresh 1.9 ones, though 1.9 is inside [1.8, 1.9].
+        $this->active([$this->bundle('1.8.4', '1.8', maxNative: '1.9')]);
+
+        self::assertSame('1.8.4', $this->builtin('1.8')['version']);
+        self::assertSame('', $this->builtin('1.9')['version']);
+    }
+
+    #[Test]
+    public function aRangeIsInclusiveAtBothEnds(): void
+    {
+        $this->active([$this->bundle('1.9.5', '1.8', maxNative: '1.9')]);
+
+        self::assertSame('1.9.5', $this->builtin('1.8')['version']);
+        self::assertSame('1.9.5', $this->builtin('1.8.7')['version']);
+        self::assertSame('1.9.5', $this->builtin('1.9')['version']);
+        self::assertSame('', $this->builtin('1.9.1')['version']);
+        self::assertSame('', $this->builtin('1.7.9')['version']);
+    }
+
+    #[Test]
+    public function aLegacyRowWithoutAMaxIsServedOnlyToItsMinVersion(): void
+    {
+        // Published before max_native_version existed: NULL means max = min.
+        $legacy = $this->bundle('1.8.4', '1.7');
+        (new \ReflectionProperty(OtaBundle::class, 'maxNativeVersion'))->setValue($legacy, null);
+        $this->active([$legacy]);
+
+        self::assertSame('1.8.4', $this->builtin('1.7')['version']);
+        self::assertSame('', $this->builtin('1.8')['version']);
     }
 
     #[Test]
@@ -240,6 +320,17 @@ final class CheckOtaUpdateControllerTest extends HttpTestCase
     }
 
     /**
+     * A check from a shell still on its built-in web code: version_name is the
+     * shell's own marketing version, exactly like version_build.
+     *
+     * @return array<string, mixed>
+     */
+    private function builtin(string $marketingVersion): array
+    {
+        return $this->check(['version_name' => $marketingVersion, 'version_build' => $marketingVersion]);
+    }
+
+    /**
      * @param list<OtaBundle> $bundles
      */
     private function active(array $bundles): void
@@ -259,8 +350,13 @@ final class CheckOtaUpdateControllerTest extends HttpTestCase
         ));
     }
 
-    private function bundle(string $version, string $minNative, ?string $sessionKey = null, ?string $notes = null): OtaBundle
-    {
+    private function bundle(
+        string $version,
+        string $minNative,
+        ?string $sessionKey = null,
+        ?string $notes = null,
+        ?string $maxNative = null,
+    ): OtaBundle {
         return new OtaBundle(
             'com.threebayti.app',
             'android',
@@ -271,6 +367,7 @@ final class CheckOtaUpdateControllerTest extends HttpTestCase
             $minNative,
             $sessionKey,
             $notes,
+            maxNativeVersion: $maxNative,
         );
     }
 }

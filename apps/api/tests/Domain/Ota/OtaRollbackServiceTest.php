@@ -13,12 +13,14 @@ use Doctrine\ORM\EntityManagerInterface;
 use League\Flysystem\Filesystem;
 use League\Flysystem\Local\LocalFilesystemAdapter;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
  * One-click rollback: re-publishes an old bundle's file under the next unused
- * version and makes it the only active bundle. Real Flysystem (temp dir) for
+ * version and deactivates the active bundles its native range overlaps (and
+ * no others). Real Flysystem (temp dir) for
  * the file-availability check; the EntityManager + repository are mocked.
  */
 #[CoversClass(OtaRollbackService::class)]
@@ -75,6 +77,7 @@ final class OtaRollbackServiceTest extends TestCase
         self::assertSame($good->getChecksum(), $rollback->getChecksum());
         self::assertSame('iv-key', $rollback->getSessionKey());
         self::assertSame($good->getMinNativeVersion(), $rollback->getMinNativeVersion());
+        self::assertSame($good->getMaxNativeVersion(), $rollback->getMaxNativeVersion());
         self::assertSame('android', $rollback->getPlatform());
         self::assertSame('1.6.3', $rollback->getRollbackOfVersion());
         self::assertNull($rollback->getNotes(), 'a rollback must not re-show old "what\'s new" notes');
@@ -83,6 +86,119 @@ final class OtaRollbackServiceTest extends TestCase
         self::assertFalse($bad->isActive());
         self::assertSame([$bad], $result['deactivated']);
         self::assertSame([$rollback], $this->persisted);
+    }
+
+    #[Test]
+    public function theRollbackKeepsTheSourcesNativeRangeAndIsServedOnlyInsideIt(): void
+    {
+        $good = $this->bundle('1.6.3', storeFile: true, minNative: '1.8', maxNative: '1.9');
+        $good->deactivate();
+        $bad = $this->bundle('1.6.8', storeFile: true, minNative: '1.8', maxNative: '1.9');
+        $testShell = $this->bundle('1.6.5', storeFile: true, minNative: '2.0');
+
+        $service = new OtaRollbackService($this->em(['1.6.3', '1.6.5', '1.6.8'], [$bad, $testShell]), $this->storage);
+        $result = $service->rollbackTo($good);
+
+        $rollback = $result['bundle'];
+        self::assertSame('1.6.9', $rollback->getVersion());
+        self::assertSame('1.8', $rollback->getMinNativeVersion());
+        self::assertSame('1.9', $rollback->getMaxNativeVersion());
+        self::assertTrue($rollback->supportsNative('1.9'));
+        self::assertFalse($rollback->supportsNative('2.0'), 'the rollback never reaches shells the source did not support');
+        self::assertSame([$bad], $result['deactivated']);
+        self::assertTrue($testShell->isActive(), 'the 2.0 test shell is outside the rollback range: its bundle keeps serving it');
+    }
+
+    #[Test]
+    public function rollingBackProductionLeavesTheTestShellBundleLiveAndViceVersa(): void
+    {
+        // Production [1.8] and TestFlight [1.8.1] are both live side by side.
+        $goodProd = $this->bundle('1.8.2', storeFile: true, minNative: '1.8');
+        $goodProd->deactivate();
+        $badProd = $this->bundle('1.8.5', storeFile: true, minNative: '1.8');
+        $test = $this->bundle('1.8.4', storeFile: true, minNative: '1.8.1');
+
+        $prodResult = (new OtaRollbackService($this->em(['1.8.2', '1.8.4', '1.8.5'], [$badProd, $test]), $this->storage))
+            ->rollbackTo($goodProd);
+
+        self::assertSame([$badProd], $prodResult['deactivated']);
+        self::assertTrue($test->isActive(), 'a production rollback never pulls the test-shell bundle');
+
+        $goodTest = $this->bundle('1.8.3', storeFile: true, minNative: '1.8.1');
+        $goodTest->deactivate();
+        $prodRollback = $prodResult['bundle'];
+
+        $testResult = (new OtaRollbackService($this->em(['1.8.2', '1.8.3', '1.8.4', '1.8.5', '1.8.6'], [$test, $prodRollback]), $this->storage))
+            ->rollbackTo($goodTest);
+
+        self::assertSame('1.8.7', $testResult['bundle']->getVersion());
+        self::assertSame([$test], $testResult['deactivated']);
+        self::assertTrue($prodRollback->isActive(), 'a test-shell rollback never pulls the production bundle');
+    }
+
+    #[Test]
+    public function aBadBundleThatOnlyPartlyOverlapsTheRollbackRangeIsStillPulled(): void
+    {
+        // The bad release reached 1.7 - 1.9; the good one ran on 1.8 only.
+        $good = $this->bundle('1.6.3', storeFile: true, minNative: '1.8');
+        $good->deactivate();
+        $bad = $this->bundle('1.6.8', storeFile: true, minNative: '1.7', maxNative: '1.9');
+        $older = $this->bundle('1.6.6', storeFile: true, minNative: '1.6', maxNative: '1.7.9');
+
+        $result = (new OtaRollbackService($this->em(['1.6.3', '1.6.6', '1.6.8'], [$bad, $older]), $this->storage))
+            ->rollbackTo($good);
+
+        self::assertSame([$bad], $result['deactivated']);
+        self::assertTrue($older->isActive(), '[1.6 - 1.7.9] does not reach 1.8: it is left alone');
+    }
+
+    /**
+     * @return iterable<string, array{string, ?string}>
+     */
+    public static function unreachableSources(): iterable
+    {
+        yield 'legacy row: old 0.0.0 min default, no max' => ['0.0.0', null];
+        yield 'legacy row: bare 0 min, no max' => ['0', null];
+        yield 'explicit 0.0.0 range' => ['0.0.0', '0.0.0'];
+    }
+
+    #[Test]
+    #[DataProvider('unreachableSources')]
+    public function refusesASourceWhoseNativeRangeMatchesNoInstalledApp(string $minNative, ?string $maxNative): void
+    {
+        $source = $this->bundle('1.8.2', storeFile: true, minNative: $minNative, maxNative: $maxNative);
+        if ($maxNative === null) {
+            (new \ReflectionProperty(OtaBundle::class, 'maxNativeVersion'))->setValue($source, null);
+        }
+        $source->deactivate();
+        $live = $this->bundle('1.8.3', storeFile: true, minNative: '0.0.0');
+        (new \ReflectionProperty(OtaBundle::class, 'maxNativeVersion'))->setValue($live, null);
+
+        $service = new OtaRollbackService($this->em(['1.8.2', '1.8.3'], [$live]), $this->storage);
+
+        try {
+            $service->rollbackTo($source);
+            self::fail('Expected the rollback to be refused');
+        } catch (OtaRollbackException $e) {
+            self::assertStringContainsString('which no installed app reports', $e->getMessage());
+            self::assertStringContainsString('android 1.8.2', $e->getMessage());
+        }
+        self::assertSame([], $this->persisted, 'no rollback row is created');
+        self::assertTrue($live->isActive(), 'nothing is deactivated');
+    }
+
+    #[Test]
+    public function aLegacyZeroMinRowWidenedByTheOperatorCanBeRolledBackTo(): void
+    {
+        // OTA-DEPLOY.md: max_native_version set on a legacy 0.0.0 row.
+        $source = $this->bundle('1.8.2', storeFile: true, minNative: '0.0.0', maxNative: '1.8');
+        $source->deactivate();
+        $bad = $this->bundle('1.8.5', storeFile: true, minNative: '1.8');
+
+        $result = (new OtaRollbackService($this->em(['1.8.2', '1.8.5'], [$bad]), $this->storage))->rollbackTo($source);
+
+        self::assertTrue($result['bundle']->supportsNative('1.8'));
+        self::assertSame([$bad], $result['deactivated']);
     }
 
     #[Test]
@@ -167,8 +283,14 @@ final class OtaRollbackServiceTest extends TestCase
         return $em;
     }
 
-    private function bundle(string $version, ?string $sessionKey = null, ?string $notes = null, bool $storeFile = false): OtaBundle
-    {
+    private function bundle(
+        string $version,
+        ?string $sessionKey = null,
+        ?string $notes = null,
+        bool $storeFile = false,
+        string $minNative = '1.6.0',
+        ?string $maxNative = null,
+    ): OtaBundle {
         $path = $this->storage->pathFor('com.threebayti.app', 'production', 'android', $version);
         $url = self::BASE . '/' . $path;
         if ($storeFile) {
@@ -182,9 +304,10 @@ final class OtaRollbackServiceTest extends TestCase
             $version,
             $url,
             'checksum-' . $version,
-            '1.6.0',
+            $minNative,
             $sessionKey,
             $notes,
+            maxNativeVersion: $maxNative,
         );
     }
 

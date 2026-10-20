@@ -122,12 +122,91 @@ final class PublishOtaBundleCommandTest extends TestCase
     }
 
     #[Test]
+    public function maxNativeDefaultsToMinNativeAndIsStored(): void
+    {
+        $tester = $this->publish($this->signed(['--platform' => 'android', '--version' => '1.7.1', '--url' => self::URL, '--min-native' => '1.8']));
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode(), $tester->getDisplay());
+        self::assertSame('1.8', $this->persisted[0]->getMinNativeVersion());
+        self::assertSame('1.8', $this->persisted[0]->getMaxNativeVersion());
+        self::assertStringContainsString('for native app version 1.8.', self::flat($tester));
+    }
+
+    #[Test]
+    public function storesAnExplicitMaxNative(): void
+    {
+        $tester = $this->publish($this->signed([
+            '--platform' => 'android',
+            '--version' => '1.7.1',
+            '--url' => self::URL,
+            '--min-native' => '1.8',
+            '--max-native' => '1.9',
+        ]));
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode(), $tester->getDisplay());
+        self::assertSame('1.9', $this->persisted[0]->getMaxNativeVersion());
+        self::assertStringContainsString('for native app version 1.8 - 1.9.', self::flat($tester));
+    }
+
+    #[Test]
+    public function minNativeIsRequired(): void
+    {
+        $tester = $this->publish($this->signed(['--platform' => 'android', '--version' => '1.7.1', '--url' => self::URL, '--min-native' => null]));
+
+        self::assertSame(Command::INVALID, $tester->getStatusCode());
+        self::assertStringContainsString('--min-native is required', $tester->getDisplay());
+        self::assertSame([], $this->persisted);
+    }
+
+    #[Test]
+    public function refusesAnInvalidNativeRange(): void
+    {
+        $base = ['--platform' => 'android', '--version' => '1.7.1', '--url' => self::URL];
+
+        $below = $this->publish($this->signed($base + ['--min-native' => '1.8', '--max-native' => '1.7']));
+        self::assertSame(Command::INVALID, $below->getStatusCode());
+        self::assertStringContainsString('must not be lower than', $below->getDisplay());
+
+        $malformed = $this->publish($this->signed($base + ['--min-native' => '1.8', '--max-native' => '1.9-beta']));
+        self::assertSame(Command::INVALID, $malformed->getStatusCode());
+        self::assertStringContainsString('--max-native must be numeric', $malformed->getDisplay());
+
+        $zeroMax = $this->publish($this->signed($base + ['--min-native' => '1.8', '--max-native' => '0']));
+        self::assertSame(Command::INVALID, $zeroMax->getStatusCode(), '"0" is validated, not replaced by the min');
+        self::assertStringContainsString('--max-native (0) must not be lower than', $zeroMax->getDisplay());
+
+        $zero = $this->publish($this->signed($base + ['--min-native' => '0.0.0']));
+        self::assertSame(Command::INVALID, $zero->getStatusCode());
+        self::assertStringContainsString('matches no installed app', $zero->getDisplay());
+
+        self::assertSame([], $this->persisted);
+    }
+
+    #[Test]
+    public function allowsALowerVersionForShellsAboveTheLiveBundlesMax(): void
+    {
+        // Production 1.7.3 for shell 1.8 only; a TestFlight 1.8.1 bundle is servable.
+        $this->active = [new OtaBundle('com.threebayti.app', 'android', 'production', '1.7.3', 'https://x/1.7.3.zip', self::encrypted(), '1.8')];
+
+        $tester = $this->publish($this->signed(['--platform' => 'android', '--version' => '1.7.0', '--url' => self::URL, '--min-native' => '1.8.1']));
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode(), $tester->getDisplay());
+        self::assertSame('1.8.1', $this->persisted[0]->getMaxNativeVersion());
+    }
+
+    #[Test]
     public function dryRunWritesNothing(): void
     {
         $tester = $this->publish($this->signed(['--platform' => 'android', '--version' => '1.7.1', '--url' => self::URL, '--dry-run' => true]));
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode(), $tester->getDisplay());
         self::assertSame([], $this->persisted);
+    }
+
+    /** The command output with SymfonyStyle's line wrapping collapsed to single spaces. */
+    private static function flat(CommandTester $tester): string
+    {
+        return (string) preg_replace('/\s+/', ' ', $tester->getDisplay());
     }
 
     private static function encrypted(): string
@@ -150,10 +229,18 @@ final class PublishOtaBundleCommandTest extends TestCase
     }
 
     /**
+     * --min-native is required, so it defaults to the production shell (1.8)
+     * here unless the test sets it; a null value omits the option entirely.
+     *
      * @param array<string, mixed> $input
      */
     private function publish(array $input): CommandTester
     {
+        if (!array_key_exists('--min-native', $input)) {
+            $input['--min-native'] = '1.8';
+        }
+        $input = array_filter($input, static fn (mixed $v): bool => $v !== null);
+
         $repo = $this->createMock(OtaBundleRepository::class);
         $repo->method('findOneBy')->willReturn(null);
         $repo->method('activeFor')->willReturnCallback(fn (): array => $this->active);

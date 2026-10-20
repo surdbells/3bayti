@@ -27,12 +27,12 @@ namespace Bayti\Api\Domain\Ota;
  */
 final class OtaVersion
 {
-    /** The only accepted shape for a stored bundle / min-native version. */
+    /** The only accepted shape for a stored bundle / min-native / max-native version. */
     public const PATTERN = '/^(0|[1-9]\d{0,8})(\.(0|[1-9]\d{0,8})){0,3}\z/';
 
     /**
-     * Shape of a device-reported NATIVE build (version_build) that the
-     * min_native gate can trust: numeric, 1-4 bounded segments. Leading zeros
+     * Shape of a device-reported NATIVE version (version_build) that the
+     * native-range gate can trust: numeric, 1-4 bounded segments. Leading zeros
      * are tolerated here (we don't control how a store build was labelled and
      * compare() reads "08" as 8); anything else fails the gate closed.
      */
@@ -47,6 +47,68 @@ final class OtaVersion
     public static function isComparable(string $version): bool
     {
         return (bool) preg_match(self::COMPARABLE, $version);
+    }
+
+    /**
+     * Why [$min, $max] is not an acceptable native range for a NEW bundle, or
+     * null when it is. Shared by every server-side write path (the upload
+     * controller and `ota:publish`), so they refuse exactly the same input.
+     *
+     * $max is the already-defaulted upper bound (max_native, or $min when the
+     * caller sent none). $minLabel / $maxLabel name the inputs in the message
+     * ("min_native" for the API, "--min-native" for the CLI).
+     *
+     *  - min is REQUIRED: a bundle serves min <= device <= max, so a silent
+     *    "0.0.0" default (the old behaviour) would now serve nobody;
+     *  - both ends must be canonical versions ({@see PATTERN}) and max >= min;
+     *  - a range ending at 0 ("0.0.0", e.g. a stale portal/script that still
+     *    sends its old 0.0.0 default) matches no installed app, since devices
+     *    report their real native version (e.g. "1.8"), so it is refused too.
+     */
+    public static function nativeRangeError(
+        string $min,
+        string $max,
+        string $minLabel = 'min_native',
+        string $maxLabel = 'max_native',
+    ): ?string {
+        if ($min === '') {
+            return "{$minLabel} is required: the native app version this bundle was built for (e.g. 1.8). "
+                . "Devices on any other native version are not offered the bundle unless {$maxLabel} widens the range.";
+        }
+        if (!self::isValid($min)) {
+            return "{$minLabel} must be numeric with 1-4 segments (e.g. 1.8).";
+        }
+        if (!self::isValid($max)) {
+            return "{$maxLabel} must be numeric with 1-4 segments (e.g. 1.9).";
+        }
+        if (self::compare($max, $min) < 0) {
+            return "{$maxLabel} ({$max}) must not be lower than {$minLabel} ({$min}).";
+        }
+        if (self::isZero($max)) {
+            return "A native range ending at {$max} matches no installed app (devices report their native app version, "
+                . "e.g. 1.8), so the bundle would never be served. Set {$minLabel} to the native app version this bundle "
+                . "was built for.";
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether $version is zero in any padding ("0", "0.0.0"). A native range
+     * whose upper end is zero matches no installed app, since every device
+     * reports its real native version (e.g. "1.8"). The single definition of
+     * that rule: new bundles ({@see nativeRangeError()}), rollbacks and
+     * re-activation ({@see OtaBundle::reachesNoShell()}) all refuse it.
+     */
+    public static function isZero(string $version): bool
+    {
+        return self::compare($version, '0') === 0;
+    }
+
+    /** A native range for messages: "1.8" when min == max, else "1.8 - 1.9". */
+    public static function rangeLabel(string $min, string $max): string
+    {
+        return self::compare($min, $max) === 0 ? $min : "{$min} - {$max}";
     }
 
     /**

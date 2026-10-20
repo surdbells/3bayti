@@ -31,7 +31,13 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *   bin/console ota:publish --platform android --version 1.0.7 \
  *     --url https://api-v3.3bayti.ae/uploads/ota/com.threebayti.app/production/android/1.0.7.zip \
  *     --checksum <sha256 | encrypted checksum> [--session-key <ivSessionKey>] \
- *     --min-native 1.6.0 [--notes "What's new"]
+ *     --min-native 1.8 [--max-native 1.9] [--notes "What's new"]
+ *
+ * --min-native is REQUIRED and --max-native defaults to it: the bundle is
+ * served only to devices whose native app (marketing) version is within
+ * [min, max], inclusive (see OtaBundle). Keeping max = min stops a production
+ * bundle from replacing the web code of a newer TestFlight / Android test
+ * shell (e.g. 1.8.1).
  *
  * --checksum is the plain 64-hex SHA256 for an unsigned bundle, or, with
  * --session-key, the ENCRYPTED checksum printed by `@capgo/cli bundle encrypt`
@@ -67,7 +73,8 @@ final class PublishOtaBundleCommand extends Command
             ->addOption('version', null, InputOption::VALUE_REQUIRED, 'Bundle semver, e.g. 1.0.7')
             ->addOption('url', null, InputOption::VALUE_REQUIRED, 'Public HTTPS URL of the bundle .zip')
             ->addOption('checksum', null, InputOption::VALUE_REQUIRED, 'Unsigned: SHA256 of the .zip (64 hex). Signed: the encrypted checksum from @capgo/cli bundle encrypt')
-            ->addOption('min-native', null, InputOption::VALUE_REQUIRED, 'Lowest compatible native build', '0.0.0')
+            ->addOption('min-native', null, InputOption::VALUE_REQUIRED, 'REQUIRED. Lowest native app version this bundle runs on (inclusive), e.g. 1.8')
+            ->addOption('max-native', null, InputOption::VALUE_REQUIRED, 'Highest native app version this bundle runs on (inclusive); defaults to --min-native')
             ->addOption('channel', null, InputOption::VALUE_REQUIRED, 'Release channel', OtaBundle::DEFAULT_CHANNEL)
             ->addOption('app-id', null, InputOption::VALUE_REQUIRED, 'App id', self::DEFAULT_APP_ID)
             ->addOption('session-key', null, InputOption::VALUE_REQUIRED, 'IV session key (signed/encrypted bundles only)')
@@ -83,7 +90,11 @@ final class PublishOtaBundleCommand extends Command
         $version = trim((string) $input->getOption('version'));
         $url = trim((string) $input->getOption('url'));
         $checksum = trim((string) $input->getOption('checksum'));
-        $minNative = trim((string) $input->getOption('min-native')) ?: '0.0.0';
+        // Native range: min required, max defaults to min (validated below).
+        // (Explicit '' check, not `?:`: "0" is falsy in PHP.)
+        $minNative = trim((string) $input->getOption('min-native'));
+        $maxNativeRaw = trim((string) $input->getOption('max-native'));
+        $maxNative = $maxNativeRaw !== '' ? $maxNativeRaw : $minNative;
         $channel = trim((string) $input->getOption('channel')) ?: OtaBundle::DEFAULT_CHANNEL;
         $appId = trim((string) $input->getOption('app-id')) ?: self::DEFAULT_APP_ID;
         $sessionKeyRaw = $input->getOption('session-key');
@@ -99,8 +110,9 @@ final class PublishOtaBundleCommand extends Command
         if (!OtaVersion::isValid($version)) {
             $errors[] = 'version must be numeric with 1-4 segments (e.g. 1.0.7); pre-release suffixes are not supported';
         }
-        if (!OtaVersion::isValid($minNative)) {
-            $errors[] = 'min-native must be numeric with 1-4 segments (e.g. 1.6.0)';
+        $nativeRangeError = OtaVersion::nativeRangeError($minNative, $maxNative, '--min-native', '--max-native');
+        if ($nativeRangeError !== null) {
+            $errors[] = $nativeRangeError;
         }
         if (!str_starts_with($url, 'https://')) {
             $errors[] = 'url must be an https:// URL';
@@ -144,13 +156,15 @@ final class PublishOtaBundleCommand extends Command
         }
         // A version no device could ever be served (see OtaBundle::shadows).
         foreach ($repo->activeFor($appId, $platform, $channel) as $active) {
-            if ($active->shadows($version, $minNative)) {
+            if ($active->shadows($version, $minNative, $maxNative)) {
                 $io->error(sprintf(
-                    'Version %s would never be served: active bundle %s (min native %s) is at least as high and '
-                    . 'runs on the same app builds. Use a version above %s, or deactivate %s first.',
+                    'Version %s would never be served: active bundle %s (native %s) is at least as high and '
+                    . 'runs on every app version this one targets (native %s). Use a version above %s, or '
+                    . 'deactivate %s first.',
                     $version,
                     $active->getVersion(),
-                    $active->getMinNativeVersion(),
+                    $active->nativeRangeLabel(),
+                    OtaVersion::rangeLabel($minNative, $maxNative),
                     $active->getVersion(),
                     $active->getVersion(),
                 ));
@@ -167,6 +181,7 @@ final class PublishOtaBundleCommand extends Command
             ['url' => $url],
             ['checksum' => $checksum],
             ['min_native_version' => $minNative],
+            ['max_native_version' => $maxNative],
             ['signed' => $sessionKey !== null ? 'yes' : 'no'],
             ['notes' => $notes ?? '-'],
         );
@@ -176,17 +191,29 @@ final class PublishOtaBundleCommand extends Command
             return Command::SUCCESS;
         }
 
-        $bundle = new OtaBundle($appId, $platform, $channel, $version, $url, $checksum, $minNative, $sessionKey, $notes);
+        $bundle = new OtaBundle(
+            $appId,
+            $platform,
+            $channel,
+            $version,
+            $url,
+            $checksum,
+            $minNative,
+            $sessionKey,
+            $notes,
+            maxNativeVersion: $maxNative,
+        );
         $this->em->persist($bundle);
         $this->em->flush();
 
         $io->success(sprintf(
-            'Published bundle id %s — %s %s (%s) is now live on channel "%s".',
+            'Published bundle id %s — %s %s (%s) is now live on channel "%s" for native app version %s.',
             (string) $bundle->getId(),
             $platform,
             $version,
             $appId,
             $channel,
+            $bundle->nativeRangeLabel(),
         ));
 
         return Command::SUCCESS;

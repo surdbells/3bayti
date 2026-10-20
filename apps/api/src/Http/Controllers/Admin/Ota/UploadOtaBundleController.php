@@ -25,12 +25,21 @@ use Psr\Http\Message\UploadedFileInterface;
  *
  * multipart/form-data with the .zip in field "file"; the release metadata comes
  * in the query string (matching the existing /v3/upload convention):
- *   ?platform=android|ios|both&version=1.0.7&channel=production&min_native=1.6.0
- *   [&app_id=…&session_key=…&checksum=…&notes=…]
+ *   ?platform=android|ios|both&version=1.0.7&channel=production&min_native=1.8
+ *   [&max_native=1.9&app_id=…&session_key=…&checksum=…&notes=…]
  *
  * Stores the .zip on the app server (var/uploads/ota/…, served statically by
  * Apache), computes its SHA256 (unsigned bundles), and inserts the ota_bundles
  * row(s). Devices then pick it up via POST /v3/ota/updates.
+ *
+ * Native range ({@see OtaBundle}): the bundle is served to devices whose native
+ * app (marketing) version is within [min_native, max_native], inclusive.
+ * min_native is REQUIRED (no silent 0.0.0 default: under "max defaults to
+ * min" that would serve nobody); max_native is optional, defaults to
+ * min_native and is stored explicitly. Both must be canonical versions
+ * ({@see OtaVersion::nativeRangeError()}) with max >= min, else 400. Leaving
+ * max at min is what keeps a production bundle off newer TestFlight / Android
+ * test shells (e.g. 1.8.1).
  *
  * Signing ({@see OtaSigning}): a bundle is SIGNED when session_key is sent;
  * it then needs the ivSessionKey shape, the 512-hex encrypted checksum, and
@@ -42,7 +51,8 @@ use Psr\Http\Message\UploadedFileInterface;
  * A version no device could ever be served is refused too: one already
  * published (duplicate), one whose file path is still in use (a rollback row
  * serving it after its original row was deleted), and one shadowed by an
- * active bundle that is at least as high and runs on the same shells.
+ * active bundle that is at least as high and whose native range covers the
+ * new one's ({@see OtaBundle::shadows()}).
  *
  * File/row consistency: the bytes are first written to a private staging file;
  * the rows are flushed and the staging file copied to its public path inside
@@ -88,7 +98,12 @@ final class UploadOtaBundleController
         $platform = trim((string) ($q['platform'] ?? ''));
         $version = trim((string) ($q['version'] ?? ''));
         $channel = trim((string) ($q['channel'] ?? '')) ?: OtaBundle::DEFAULT_CHANNEL;
-        $minNative = trim((string) ($q['min_native'] ?? '')) ?: '0.0.0';
+        // Native range: min required, max defaults to min (validated below).
+        // (Explicit '' check, not `?:`: "0" is falsy in PHP and must still be
+        // validated as a max rather than silently replaced by the min.)
+        $minNative = trim((string) ($q['min_native'] ?? ''));
+        $maxNativeRaw = trim((string) ($q['max_native'] ?? ''));
+        $maxNative = $maxNativeRaw !== '' ? $maxNativeRaw : $minNative;
         $appId = trim((string) ($q['app_id'] ?? '')) ?: self::APP_ID;
         $sessionKeyRaw = trim((string) ($q['session_key'] ?? ''));
         $sessionKey = $sessionKeyRaw !== '' ? $sessionKeyRaw : null;
@@ -116,8 +131,9 @@ final class UploadOtaBundleController
         if (!OtaVersion::isValid($version)) {
             throw HttpException::badRequest('version must be numeric with 1-4 segments (e.g. 1.0.7); pre-release suffixes are not supported.');
         }
-        if (!OtaVersion::isValid($minNative)) {
-            throw HttpException::badRequest('min_native must be numeric with 1-4 segments (e.g. 1.6.0).');
+        $nativeRangeError = OtaVersion::nativeRangeError($minNative, $maxNative);
+        if ($nativeRangeError !== null) {
+            throw HttpException::badRequest($nativeRangeError);
         }
         // Both become storage path segments, so keep them to a safe charset
         // (and no trailing "." on app_id, which would alias another app's
@@ -229,15 +245,17 @@ final class UploadOtaBundleController
                 ));
             }
             foreach ($repo->activeFor($appId, $target, $channel) as $active) {
-                if ($active->shadows($version, $minNative)) {
+                if ($active->shadows($version, $minNative, $maxNative)) {
                     throw HttpException::badRequest(sprintf(
-                        'Version %s would never be served on %s / %s: active bundle %s (min native %s) is at least as high '
-                        . 'and runs on the same app builds. Use a version above %s, or deactivate %s first.',
+                        'Version %s would never be served on %s / %s: active bundle %s (native %s) is at least as high '
+                        . 'and runs on every app version this one targets (native %s). Use a version above %s, or '
+                        . 'deactivate %s first.',
                         $version,
                         $target,
                         $channel,
                         $active->getVersion(),
-                        $active->getMinNativeVersion(),
+                        $active->nativeRangeLabel(),
+                        OtaVersion::rangeLabel($minNative, $maxNative),
                         $active->getVersion(),
                         $active->getVersion(),
                     ));
@@ -252,7 +270,7 @@ final class UploadOtaBundleController
         /** @var list<OtaBundle> $bundles */
         $bundles = [];
         try {
-            $this->em->wrapInTransaction(function () use ($targets, $staging, $appId, $channel, $version, $checksum, $minNative, $sessionKey, $notes, &$promoted, &$bundles): void {
+            $this->em->wrapInTransaction(function () use ($targets, $staging, $appId, $channel, $version, $checksum, $minNative, $maxNative, $sessionKey, $notes, &$promoted, &$bundles): void {
                 foreach ($targets as $target) {
                     $bundle = new OtaBundle(
                         $appId,
@@ -264,6 +282,7 @@ final class UploadOtaBundleController
                         $minNative,
                         $sessionKey,
                         $notes,
+                        maxNativeVersion: $maxNative,
                     );
                     $this->em->persist($bundle);
                     $bundles[] = $bundle;

@@ -117,4 +117,65 @@ final class OtaVersionTest extends TestCase
         self::assertSame($expected, $next);
         self::assertGreaterThan(0, OtaVersion::compare($next, $version));
     }
+
+    /**
+     * [min, max (already defaulted to min by the caller)] → expected error
+     * fragment, or null when the range is accepted.
+     *
+     * @return iterable<string, array{string, string, ?string}>
+     */
+    public static function nativeRanges(): iterable
+    {
+        yield 'single version' => ['1.8', '1.8', null];
+        yield 'range' => ['1.8', '1.9', null];
+        // "1.8" and "1.8.0" are the same version (missing segments are 0).
+        yield 'equal after padding' => ['1.8', '1.8.0', null];
+        yield 'zero min with a real max' => ['0.0.0', '1.8', null];
+        yield 'min missing' => ['', '', 'min_native is required'];
+        yield 'min malformed' => ['1.8-beta', '1.8-beta', 'min_native must be numeric'];
+        yield 'min non-canonical' => ['1.08', '1.08', 'min_native must be numeric'];
+        yield 'max malformed' => ['1.8', 'v1.9', 'max_native must be numeric'];
+        yield 'max below min' => ['1.9', '1.8.5', 'max_native (1.8.5) must not be lower than min_native (1.9)'];
+        // The old portal / release-script default: serves no real device.
+        yield 'all zero' => ['0.0.0', '0.0.0', 'matches no installed app'];
+        yield 'all zero, short' => ['0', '0', 'matches no installed app'];
+    }
+
+    #[Test]
+    #[DataProvider('nativeRanges')]
+    public function validatesANewBundlesNativeRange(string $min, string $max, ?string $error): void
+    {
+        $actual = OtaVersion::nativeRangeError($min, $max);
+        if ($error === null) {
+            self::assertNull($actual);
+        } else {
+            self::assertNotNull($actual);
+            self::assertStringContainsString($error, $actual);
+        }
+    }
+
+    #[Test]
+    public function nativeRangeErrorsNameTheCallersInputs(): void
+    {
+        self::assertStringContainsString('--min-native is required', (string) OtaVersion::nativeRangeError('', '', '--min-native', '--max-native'));
+        self::assertStringContainsString('--max-native (1.7)', (string) OtaVersion::nativeRangeError('1.8', '1.7', '--min-native', '--max-native'));
+    }
+
+    #[Test]
+    public function zeroIsZeroInAnyPadding(): void
+    {
+        self::assertTrue(OtaVersion::isZero('0'));
+        self::assertTrue(OtaVersion::isZero('0.0.0'));
+        self::assertTrue(OtaVersion::isZero('0.0.0.0'));
+        self::assertFalse(OtaVersion::isZero('0.0.1'));
+        self::assertFalse(OtaVersion::isZero('1.8'));
+    }
+
+    #[Test]
+    public function labelsANativeRange(): void
+    {
+        self::assertSame('1.8', OtaVersion::rangeLabel('1.8', '1.8'));
+        self::assertSame('1.8', OtaVersion::rangeLabel('1.8', '1.8.0'));
+        self::assertSame('1.8 - 1.9', OtaVersion::rangeLabel('1.8', '1.9'));
+    }
 }

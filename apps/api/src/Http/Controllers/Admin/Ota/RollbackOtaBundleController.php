@@ -20,10 +20,12 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * POST /v3/admin/ota/bundles/{id}/rollback, one-click rollback to a bundle.
  *
- * Re-publishes the bundle's existing file under the next unused version and
- * makes it the only active bundle for its platform/channel (see
- * {@see OtaRollbackService}). Returns 201 with the new row and the ids that
- * were deactivated.
+ * Re-publishes the bundle's existing file under the next unused version, with
+ * the bundle's native range, and deactivates the active bundles on its
+ * platform/channel whose native range overlaps it; bundles for other shells
+ * keep serving (see {@see OtaRollbackService}). Returns 201 with the new row
+ * and the ids that were deactivated. 400 when the bundle's file is gone or
+ * its native range matches no installed app (a legacy "0.0.0" row).
  */
 final class RollbackOtaBundleController
 {
