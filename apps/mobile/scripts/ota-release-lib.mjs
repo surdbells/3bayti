@@ -10,6 +10,10 @@
  *   - signing: OtaSigning, session-key shape + where unsigned is allowed
  *     (apps/api/src/Domain/Ota/OtaSigning.php)
  *   - platforms: android | ios | both (UploadOtaBundleController)
+ *   - native range: min_native REQUIRED, max_native optional (defaults to
+ *     min_native), max >= min, not ending at 0, compared like
+ *     OtaVersion::compare (OtaVersion::nativeRangeError,
+ *     OtaBundle::getEffectiveMaxNativeVersion)
  */
 
 export const PLATFORMS = ['android', 'ios', 'both'];
@@ -42,6 +46,87 @@ export function isVersion(v) {
 
 export function isPlatform(p) {
   return PLATFORMS.includes(p);
+}
+
+/**
+ * Numeric version compare (mirrors OtaVersion::compare): negative if a < b,
+ * positive if a > b, 0 if equal. Missing segments count as 0, so "1.8"
+ * equals "1.8.0".
+ */
+export function compareVersions(a, b) {
+  const pa = String(a ?? '').trim().split('-')[0].split('.').map((p) => parseInt(p, 10) || 0);
+  const pb = String(b ?? '').trim().split('-')[0].split('.').map((p) => parseInt(p, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+/**
+ * The bundle's native range from --min-native / --max-native. The update
+ * endpoint offers a bundle only to app builds whose native version
+ * (version_build = iOS CFBundleShortVersionString / Android versionName) is
+ * inside [min, max], and an empty max means "exactly min", so a production
+ * bundle never replaces the web code of a TestFlight / test build that
+ * carries a higher app version.
+ *
+ * @returns {{ minNative: string, maxNative: string, error: string | null }}
+ *          `error` names the flag to fix; maxNative is the EFFECTIVE max
+ *          (min when --max-native is omitted), which is what gets uploaded.
+ */
+export function resolveNativeRange(minRaw, maxRaw) {
+  const minNative = String(minRaw ?? '').trim();
+  const maxNative = String(maxRaw ?? '').trim() || minNative;
+  let error = null;
+  if (!minNative) {
+    error =
+      '--min-native is required: the app version this bundle was built for (iOS CFBundleShortVersionString / ' +
+      'Android versionName, e.g. 1.8). The bundle is offered only to app versions from --min-native to ' +
+      '--max-native (default: --min-native).';
+  } else if (!isVersion(minNative)) {
+    error = '--min-native must be numeric with 1-4 segments and no leading zeros, e.g. 1.8';
+  } else if (!isVersion(maxNative)) {
+    error = '--max-native must be numeric with 1-4 segments and no leading zeros, e.g. 1.9 (or omit it to use --min-native)';
+  } else if (compareVersions(maxNative, minNative) < 0) {
+    error = `--max-native (${maxNative}) must not be lower than --min-native (${minNative})`;
+  } else if (compareVersions(maxNative, '0') === 0) {
+    // Mirrors OtaVersion::nativeRangeError: the old 0.0.0 default matches no real app.
+    error =
+      `A native range ending at ${maxNative} matches no installed app (devices report their app version, e.g. 1.8). ` +
+      'Set --min-native to the app version this bundle was built for.';
+  }
+  return { minNative, maxNative, error };
+}
+
+/**
+ * Null when every app build in [minNative, maxNative] still on its BUILT-IN
+ * web code (a fresh install or a store update) can take a bundle of this
+ * version, else a warning (not an error: devices already on a lower OTA
+ * bundle still take it). On built-in code the updater plugin reports the
+ * app's marketing version as its current bundle version, and the update
+ * endpoint only offers a strictly newer version, so the bundle version must be
+ * above the max (a 1.8.1 test shell needs 1.8.2 or higher). Mirrors the
+ * portal's otaBuiltinReachWarning.
+ *
+ * @param {string} version
+ * @param {string} minNative
+ * @param {string} maxNative the EFFECTIVE max (resolveNativeRange's maxNative)
+ * @returns {string | null}
+ */
+export function builtinReachWarning(version, minNative, maxNative) {
+  const v = String(version ?? '').trim();
+  const min = String(minNative ?? '').trim();
+  const max = String(maxNative ?? '').trim() || min;
+  if (!isVersion(v) || !isVersion(min) || !isVersion(max)) return null; // the validators report these
+  if (compareVersions(v, max) > 0) return null;
+  const from = compareVersions(v, min) < 0 ? min : v;
+  const missed = compareVersions(from, max) === 0 ? `app version ${max}` : `app versions ${from} to ${max}`;
+  return (
+    `--version ${v} is not above --max-native ${max}: an app build still on its built-in web code (a fresh install ` +
+    `or a store update) reports its app version as its current bundle and is only offered a newer one, so ${missed} ` +
+    `on built-in code will never be offered this bundle. Use a version above ${max} to reach them.`
+  );
 }
 
 /**

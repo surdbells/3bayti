@@ -3,6 +3,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CAPGO_CLI,
+  builtinReachWarning,
+  compareVersions,
   isPlainZip,
   isPlatform,
   isVersion,
@@ -10,6 +12,7 @@ import {
   parseZipOutput,
   plainChecksumError,
   publishedBundles,
+  resolveNativeRange,
   sessionKeyError,
   signedChecksumError,
   unsignedError,
@@ -28,6 +31,57 @@ test('versions are numeric, canonical, 1-4 segments (matches OtaVersion::PATTERN
   for (const v of ['', '1.7.1-beta.1', '1.7.0+45', 'v1.7', '1.7.', '1.0.0.0.4', '1.08', '01.7', '1.1000000000', '1.8\n']) {
     assert.equal(isVersion(v), false, JSON.stringify(v));
   }
+});
+
+test('compareVersions is numeric and pads missing segments (mirrors OtaVersion::compare)', () => {
+  assert.ok(compareVersions('1.6.10', '1.6.9') > 0);
+  assert.ok(compareVersions('1.8', '1.8.1') < 0);
+  assert.equal(compareVersions('1.8', '1.8.0'), 0);
+  assert.equal(compareVersions('1.8.0.0', '1.8'), 0);
+});
+
+test('--min-native is required (no silent 0.0.0 default)', () => {
+  for (const missing of [undefined, '', '   ']) {
+    const r = resolveNativeRange(missing, '');
+    assert.match(r.error, /--min-native is required/);
+    assert.match(r.error, /CFBundleShortVersionString/);
+  }
+  // A max alone doesn't stand in for the min.
+  assert.match(resolveNativeRange('', '1.9').error, /--min-native is required/);
+});
+
+test('--max-native defaults to --min-native and is returned explicitly for the upload', () => {
+  assert.deepEqual(resolveNativeRange('1.8', undefined), { minNative: '1.8', maxNative: '1.8', error: null });
+  assert.deepEqual(resolveNativeRange(' 1.8 ', '  '), { minNative: '1.8', maxNative: '1.8', error: null });
+  assert.deepEqual(resolveNativeRange('1.8', '1.9'), { minNative: '1.8', maxNative: '1.9', error: null });
+  // Equal under padding is a valid single-version range.
+  assert.equal(resolveNativeRange('1.8', '1.8.0').error, null);
+});
+
+test('the native range must be canonical versions with max >= min', () => {
+  assert.match(resolveNativeRange('1.08', '').error, /--min-native must be numeric/);
+  assert.match(resolveNativeRange('1.8-beta', '').error, /--min-native must be numeric/);
+  assert.match(resolveNativeRange('1.8', 'v1.9').error, /--max-native must be numeric/);
+  assert.match(resolveNativeRange('1.9', '1.8.5').error, /--max-native \(1\.8\.5\) must not be lower than --min-native \(1\.9\)/);
+});
+
+test('a range ending at 0 (the old 0.0.0 default) is refused like the API does', () => {
+  assert.match(resolveNativeRange('0.0.0', '').error, /matches no installed app/);
+  assert.match(resolveNativeRange('0', '0.0').error, /matches no installed app/);
+  assert.equal(resolveNativeRange('0.0.0', '1.9').error, null);
+});
+
+test('builtinReachWarning flags a version not above the max (built-in code reports the app version)', () => {
+  assert.equal(builtinReachWarning('1.8.4', '1.8', '1.8'), null);
+  assert.equal(builtinReachWarning('1.8.2', '1.8.1', '1.8.1'), null);
+  assert.equal(builtinReachWarning('1.8.4', '1.7', '1.8'), null);
+  assert.match(builtinReachWarning('1.8', '1.8', '1.8'), /app version 1\.8 on/);
+  assert.match(builtinReachWarning('1.8.0', '1.8', ''), /app version 1\.8 on/); // empty max = min; 1.8.0 == 1.8
+  assert.match(builtinReachWarning('1.8.4', '1.8', '1.9'), /app versions 1\.8\.4 to 1\.9/);
+  assert.match(builtinReachWarning('1.7.9', '1.8', '1.9'), /app versions 1\.8 to 1\.9/);
+  // Invalid input is resolveNativeRange's / isVersion's job.
+  assert.equal(builtinReachWarning('1.8-beta', '1.8', '1.8'), null);
+  assert.equal(builtinReachWarning('1.8', '', ''), null);
 });
 
 test('platform accepts android, ios and both', () => {

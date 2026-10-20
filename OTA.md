@@ -7,8 +7,11 @@ server** (no Capgo Cloud, no external CDN). Bundles are managed from the **porta
 
 > **OTA ships web assets only.** Anything that needs new native code, a Capacitor
 > plugin, or a new permission must go through the app store with a native
-> version bump. The `min_native_version` gate keeps an incompatible bundle off
-> older shells (see [Compatibility](#compatibility--rollback)).
+> version bump. Each bundle has a **native range** (`min_native_version` to
+> `max_native_version`, max defaults to min): it is offered only to app builds
+> whose app version is inside it, so it stays off older shells it can't run on
+> AND off newer TestFlight / test builds whose own web code it would replace
+> (see [Native range](#native-range-and-testflight--test-builds)).
 
 ---
 
@@ -17,10 +20,11 @@ server** (no Capgo Cloud, no external CDN). Bundles are managed from the **porta
 ```
  App (@capgo/capacitor-updater, autoUpdate)
    │  on resume/cold start → POST /v3/ota/updates
-   │     { platform, app_id, version_name(current bundle), version_build(native) }
+   │     { platform, app_id, version_name(current bundle), version_build(native APP version) }
    ▼
  API  POST /v3/ota/updates  → HIGHEST-VERSION ACTIVE ota_bundles row for {app,platform,channel}
-   │                          with min_native ≤ device build, served only if version > device bundle
+   │                          with min_native ≤ version_build ≤ max_native (max defaults to min),
+   │                          served only if version > device bundle
    │                          (no/invalid version_build → no update: the native gate fails closed)
    │  ← { version, url, checksum, session_key[, comment(notes)] }
    │     or { kind:"up_to_date", error:"no_new_version_available", version:"", url:"" }
@@ -46,10 +50,11 @@ server** (no Capgo Cloud, no external CDN). Bundles are managed from the **porta
   overwrite each other. Bundles uploaded before this layout stay at
   `ota/<platform>/<version>.zip`; each row stores its own URL, so they keep
   working with no migration.
-- **Selection:** among active bundles whose `min_native_version` the device
-  satisfies, the **highest version** wins (not the most recently uploaded), so a
-  late-registered lower version or a re-activated old row can never shadow a
-  newer release.
+- **Selection:** among active bundles whose native range contains the
+  device's app version, the **highest version** wins (not the most recently
+  uploaded), so a late-registered lower version or a re-activated old row can
+  never shadow a newer release. Bundles with different ranges are served side
+  by side (e.g. production shell 1.8 and a 1.9 shell each get their own).
 - **Versions** are numeric only, 1–4 canonical segments (`1.7`, `1.7.1`,
   `1.0.0.4`; no leading zeros like `1.08`, at most 9 digits each).
   Pre-release suffixes (`1.7.1-beta`) are rejected by the portal, the API,
@@ -113,8 +118,13 @@ scripted auto-upload; see the footnote for the CI alternative.)
 4. **Upload** in the portal → **OTA updates** (`/ota`, needs `settings.edit`):
    upload the **`*_encrypted.zip`** (the form and API refuse the plain zip
    for a signed bundle); set platform (android, ios or both) / version (must
-   exceed the device's current bundle, e.g. `1.6.1` over builtin `1.6`) /
-   min-native; paste **Session key** = ivSessionKey and **Checksum** = the
+   exceed the device's current bundle; on its built-in web code a device
+   reports its app version, so use a version above Max native, e.g. `1.8.4`
+   for app `1.8`) / **Min native** (required: the app version of the
+   production shell the bundle was built for, as live in the stores, e.g.
+   `1.8`) / **Max native** (optional, defaults to Min native; see
+   [Native range](#native-range-and-testflight--test-builds));
+   paste **Session key** = ivSessionKey and **Checksum** = the
    encrypted checksum (exactly 512 hex; the form and API reject the 64-hex
    plain sha256 and truncated pastes). (Android dev channel only: an unsigned
    plain `.zip` with both fields empty is accepted — the server computes the
@@ -124,12 +134,15 @@ Devices pick up the bundle on their next resume or home-screen visit; the
 mandatory update sheet then shows "what's new" and restarts into it (tap, or a
 6-second countdown). It never restarts during a checkout; then the bundle
 applies on the next background/cold start. Choose **Both** to publish one
-upload to android + ios, and bump the version each release (`1.6.2`, `1.6.3`, …).
+upload to android + ios (with ONE native range for both: see
+[Native range](#native-range-and-testflight--test-builds) when their store
+versions differ), and bump the version each release (`1.8.4`, `1.8.5`, …).
 
 > **Scripted alternative (CI only — not the standard path):**
-> `npm run ota:release -- --platform both --version 1.6.1 --min-native 1.6`
-> does build → zip → encrypt → upload in one shot (auth via `OTA_ADMIN_TOKEN`),
-> with the pinned CLI. Signing is the default (`--sign` is accepted but no
+> `npm run ota:release -- --platform both --version 1.8.4 --min-native 1.8`
+> (add `--max-native <x.y>` for a range; it defaults to `--min-native`, and
+> `--min-native` is required) does build → zip → encrypt → upload in one shot
+> (auth via `OTA_ADMIN_TOKEN`), with the pinned CLI. Signing is the default (`--sign` is accepted but no
 > longer needed; `--unsigned` is refused except for android on a
 > non-production channel). It uploads the encrypted file and fails hard if it
 > can't read the encrypted checksum (it never falls back to the plain one or
@@ -139,17 +152,112 @@ upload to android + ios, and bump the version each release (`1.6.2`, `1.6.3`, �
 
 ---
 
+## Native range and TestFlight / test builds
+
+A bundle is offered to a device only when
+
+```
+min_native_version  <=  device version_build  <=  max_native_version
+```
+
+both ends inclusive, compared numerically with missing segments as 0 (`1.8`
+equals `1.8.0`; `1.8.1` is above a max of `1.8`).
+
+- **Min native is required** (portal, API, `ota:publish`, release script).
+  There is no `0.0.0` default any more: set it to the app version of the
+  shell the bundle was built for. A range ending at `0` (e.g. `0.0.0`) is
+  refused, it matches no installed app.
+- **Max native is optional and defaults to Min native** (stored explicitly).
+  So by default a bundle reaches exactly one app version. Widen it only when
+  the same JS should reach several shells, e.g. Min `1.7` / Max `1.8` for users
+  who haven't updated from 1.7. Never let Max include a version a TestFlight
+  or test build uses.
+- **Rows from before max existed** (stored max empty) behave as max = min,
+  so they now reach only their exact Min native version; see
+  [OTA-DEPLOY.md](OTA-DEPLOY.md) for the pre-deploy check. A row whose range
+  ends at `0` (the old `0.0.0` default) reaches no app at all: the portal
+  shows it as "matches no app", and the API refuses to activate it or roll
+  back to it until its max is widened (OTA-DEPLOY.md).
+- **The bundle version must be above Max native** for fresh installs to take
+  it. On its built-in web code (a fresh install, or right after a store
+  update) the plugin reports the app's marketing version as its current
+  bundle version, and the endpoint only offers a strictly newer one. So a
+  bundle for Min `1.8` / Max `1.8` needs version `1.8.1` or higher, one for a
+  `1.8.1` test shell needs `1.8.2` or higher, and one for Min `1.7` / Max `1.9`
+  must be above `1.9` to reach fresh `1.9` installs. The portal asks before
+  publishing a version that isn't, and the release script warns. Versions
+  are unique per platform/channel across ranges, so production and test
+  bundles share one version sequence.
+- **Platform Both uses one range for both platforms.** iOS needs a new
+  `CFBundleShortVersionString` for every App Store release while Play only
+  needs a new `versionCode`, so the two store versions can drift apart. When
+  they differ, upload each platform separately with its own Min native (or
+  give a range that covers both production versions and no test build's).
+
+**What `version_build` is.** The installed `@capgo/capacitor-updater`
+(8.51.3) sends the app's **marketing version**, not its build number:
+
+| Platform | `version_build` = | Not compared |
+|---|---|---|
+| iOS | `CFBundleShortVersionString` (Xcode `MARKETING_VERSION`) | `CFBundleVersion` / `CURRENT_PROJECT_VERSION` |
+| Android | `versionName` (`android/app/build.gradle`) | `versionCode` |
+
+The value to use as Min native for production bundles is the version
+**live in the stores** (Play Console / App Store Connect), not the one in
+`build.gradle` / `project.pbxproj`: the repo holds the NEWEST native build,
+which is often the TestFlight / Play test build you want to keep apart.
+
+(Source: `CapacitorUpdaterPlugin.swift` sets `versionBuild` from
+`Bundle.main.versionName`, which `InternalUtils.swift` reads from
+`CFBundleShortVersionString`; `CapacitorUpdaterPlugin.java` sets it from
+`PackageInfo.versionName`. The build number travels separately as
+`version_code`, which the endpoint ignores. A `CapacitorUpdater.version`
+entry in `capacitor.config.ts` would override it; we don't set one, and
+shouldn't.)
+
+**Rule for test builds:** a TestFlight build or an Android internal/closed
+testing build must carry a **higher marketing version** than the production
+shell (production `1.8` → test build `1.8.1` or `1.9`). A higher build number
+alone (`1.8` build 6) reports `1.8`, the same as production, so production
+bundles (Min = Max = `1.8`) would still replace the test build's own web code.
+With `1.8.1` the test build is outside the production range and keeps its own
+web code. So when the repo's marketing version equals the live store version
+(e.g. both `1.8`, with only the build number bumped), bump `MARKETING_VERSION`
+/ `versionName` (e.g. to `1.8.1`) before cutting the next TestFlight / Play
+test build; a test build already cut at the store version is not protected.
+
+- To OTA-test a test build, publish a bundle with Min native = its app
+  version (e.g. `1.8.1`) and an unused version above it (e.g. `1.8.2`;
+  versions are unique per platform/channel, so skip any a production bundle
+  already took); production shells (`1.8`) are outside that range. Once that app version ships to the store,
+  its users get those bundles too.
+- When a new shell (e.g. `1.9`) ships, publish its bundles with Min native
+  `1.9`. Bundles for `1.8` keep reaching only users still on `1.8`.
+
 ## Compatibility & rollback
 
-- **`min_native_version`** — set it to the native build that introduced any
-  capability the bundle relies on. A device on an older native shell is served
-  *no* update rather than a bundle that would crash.
+- **Native range** — Min native is the shell the bundle was built for (and
+  so has every native capability it relies on): an older shell is served *no*
+  update rather than a bundle that would crash. Max native keeps it off newer
+  shells (above).
 - **Rollback (one click)** — in the portal, click **Roll back to this** on the
   bundle you want devices on. The server re-publishes that bundle's existing
   file under the next unused version (e.g. bad `1.6.8` → rollback served as
-  `1.6.9`, labelled "rollback of 1.6.3"), and deactivates every other bundle for
-  that platform/channel. No upload, no notes popup. Devices download it on the
-  next resume and the update sheet restarts into it (never mid-checkout). Repeat per platform.
+  `1.6.9`, labelled "rollback of 1.6.3"), and deactivates the active bundles
+  for that platform/channel whose native range overlaps the source's.
+  Bundles for other app versions only (e.g. the TestFlight `1.8.1` bundle
+  while rolling back production `1.8`, or the reverse) stay active. No upload,
+  no notes popup. Devices download it on the next resume and the update sheet
+  restarts into it (never mid-checkout). Repeat per platform.
+  The rollback keeps the source's native range (a row without a max gets
+  max = min), so it reaches only those app versions. If a deactivated bundle
+  also served app versions outside that range (e.g. a bad `1.7 – 1.9` bundle
+  pulled by a `1.8` rollback), those shells are offered only another active
+  bundle that covers them, if any; the confirm dialog lists such bundles. So
+  pick a source whose range covers the shells you are rolling back. A source
+  whose range ends at `0` (legacy `0.0.0` rows) can't be rolled back to (the
+  portal disables the button, the API answers 400): widen its max first, see
+  [OTA-DEPLOY.md](OTA-DEPLOY.md#native-range-max_native-pre-deploy-check).
   API: `POST /v3/admin/ota/bundles/{id}/rollback` (`settings.edit`).
 - **Why Deactivate alone is not a rollback** — the endpoint only serves a
   version strictly newer than the device's current bundle. Deactivating a bad
@@ -159,8 +267,10 @@ upload to android + ios, and bump the version each release (`1.6.2`, `1.6.3`, �
 - The next real release must use a version above the rollback's. The upload
   form, the API and `ota:publish` reject a duplicate version, and any version
   that could never be served: one an active bundle shadows (an active bundle
-  at least as high whose min-native is not higher). A LOWER version for OLDER
-  shells (lower min-native) is still accepted; those shells get it.
+  at least as high whose native range covers the new one's whole range). A
+  LOWER version for shells outside that range (an older-shell hotfix below its
+  Min, or a test-shell bundle above its Max) is still accepted; those shells
+  get it.
 - Deleting a bundle keeps its file while a rollback row still serves it, and
   that version can't be re-uploaded while the file is in use (re-uploading
   would replace the bytes under the rollback's checksum). Bump the version.
@@ -209,7 +319,14 @@ Full step-by-step rollout (phases, verification, rollback): **[OTA-DEPLOY.md](OT
 
 - **API** changes deploy with the usual steps (pull → `rm -rf var/cache/di/*` →
   `orm:generate-proxies` → `chown -R www:www var/` → reload php-fpm). Run the
-  migration: `bin/console migrations:migrate -n`.
+  migration: `bin/console migrations:migrate -n`. The native-range change
+  adds `Version20261021000001` (`ota_bundles.max_native_version`) and narrows
+  existing bundles to max = min: run the
+  [pre-deploy check](OTA-DEPLOY.md#native-range-max_native-pre-deploy-check)
+  first. Deploy the API and the portal together: the old portal pre-fills
+  Min native `0.0.0` (which the API now refuses) and has no Max native field.
+  Same for an old checkout of the release script (`--min-native` defaulted to
+  `0.0.0`).
 - **Portal** deploys via its Cloudflare Pages build.
 - **Mobile** client changes (enabling/upgrading OTA, `key create`,
   `capacitor.config.ts`) are native → `pnpm install` + `npx cap sync` + a

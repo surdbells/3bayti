@@ -70,7 +70,22 @@ Then in the portal → **OTA updates**, upload the **`*_encrypted.zip`** and fil
 - **Checksum** = the ENCRYPTED checksum `bundle encrypt` prints (exactly 512
   hex for our RSA-2048 key) — NOT the plain `bundle zip` sha256. The device
   verifies the bundle against this signed checksum.
-- platform / version / min-native as usual.
+- platform / version as usual (the version must be above Max native, or
+  fresh installs of that app version, which report it as their bundle, never
+  take it);
+- **Min native** (required) = the marketing version of the production shell
+  the bundle was built for (iOS `CFBundleShortVersionString` /
+  `MARKETING_VERSION`, Android `versionName`), as **live in the stores**
+  (Play Console / App Store Connect), not the value in the repo, which holds
+  the newest, possibly TestFlight / test, build;
+- **Max native** (optional) = empty, which means "same as Min native", so
+  the bundle reaches only that app version. A TestFlight / Play test build
+  keeps its own web code only if its MARKETING version is higher (e.g.
+  `1.8.1`): the updater plugin reports the marketing version, never the build
+  number, so `1.8` build 6 is indistinguishable from production `1.8`. See
+  [OTA.md → Native range](../../OTA.md#native-range-and-testflight--test-builds).
+- Platform **Both** applies one native range to iOS and Android; when their
+  live store versions differ, upload each platform separately.
 
 The portal, the API and `ota:publish` reject: a 64-hex (plain) checksum on a
 signed bundle, a checksum that isn't exactly 512 hex (a truncated or wrapped
@@ -81,10 +96,22 @@ Or do all of it in one command (signs by default; put `--` before the flags
 when going through npm):
 
 ```bash
-OTA_ADMIN_TOKEN=<token> npm run ota:release -- --platform both --version <version> --min-native <x.y>
+# one app version (Max native defaults to Min native):
+OTA_ADMIN_TOKEN=<token> npm run ota:release -- --platform both --version <version> --min-native 1.8
+# a range of production shells (never include a test build's version):
+OTA_ADMIN_TOKEN=<token> npm run ota:release -- --platform both --version <version> --min-native 1.7 --max-native 1.8
+# a bundle already encrypted by hand:
+OTA_ADMIN_TOKEN=<token> node scripts/ota-release.mjs --platform ios --version <version> --min-native 1.8 \
+  --zip <zip>_encrypted.zip --session-key <ivSessionKey> --checksum <encrypted checksum>
 ```
 
-It fails instead of ever falling back to the plain checksum or the plain zip.
+`--min-native` is required (the script exits with an explanation without
+it); `--max-native` defaults to it and must not be lower. The `1.7` / `1.8`
+values above are examples: use the live store version(s). With `--platform
+both` the one range applies to both platforms; release each platform
+separately when their store versions differ. The script warns when
+`--version` is not above `--max-native`. It fails instead of ever falling
+back to the plain checksum or the plain zip.
 
 The server stores the encrypted blob and records that checksum + session key; the
 endpoint returns them, and the device decrypts with its embedded public key. The
@@ -94,17 +121,21 @@ bundle table shows **signed** for these.
 
 For development builds on **android** and a **non-production** channel only:
 upload the plain `.zip` and leave **Session key** and **Checksum** empty (the
-server computes the SHA256), or `npm run ota:release -- … --channel dev --unsigned`.
+server computes the SHA256), or
+`npm run ota:release -- --platform android --channel dev --version <version> --min-native 1.8 --unsigned`.
 iOS and `production` refuse unsigned bundles.
 
 ## Rollback
 
 In the portal, click **Roll back to this** on the last good bundle (per
 platform). The server republishes that bundle's existing file, with its
-original checksum and session key (so it stays signed, nothing to re-encrypt),
-under the next unused version, and deactivates the other bundles for that
-platform/channel. Devices already on the bad bundle see a newer version and
-move back. See [OTA.md → Compatibility & rollback](../../OTA.md#compatibility--rollback).
+original checksum and session key (so it stays signed, nothing to re-encrypt)
+and its native range, under the next unused version, and deactivates the
+active bundles for that platform/channel whose native range overlaps it
+(bundles for other app versions, e.g. a TestFlight range, stay active).
+Devices already on the bad bundle see a newer version and move back. A
+legacy row whose range ends at `0` can't be rolled back to until its max is
+widened (see OTA-DEPLOY.md). See [OTA.md → Compatibility & rollback](../../OTA.md#compatibility--rollback).
 
 **Deactivate** (or delete) alone is *not* a rollback: the endpoint only serves a
 version newer than the device's, so it only stops devices that haven't

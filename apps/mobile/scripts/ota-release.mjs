@@ -12,16 +12,34 @@
  *   OTA_ADMIN_EMAIL=… OTA_ADMIN_PASSWORD=…          (auto-login)
  *
  * Usage (from apps/mobile; via npm, put `--` before the flags):
- *   npm run ota:release -- --platform both --version 1.0.7 --min-native 1.6.0
- *   node scripts/ota-release.mjs --platform ios --version 1.0.7 \
+ *   npm run ota:release -- --platform both --version 1.8.4 --min-native 1.8
+ *   npm run ota:release -- --platform both --version 1.8.4 --min-native 1.7 --max-native 1.8
+ *   node scripts/ota-release.mjs --platform ios --version 1.8.4 --min-native 1.8 \
  *        --zip <file>_encrypted.zip --session-key <ivSessionKey> --checksum <encryptedChecksum>
- *   node scripts/ota-release.mjs --platform android --channel dev --version 1.0.7 --unsigned
+ *   node scripts/ota-release.mjs --platform android --channel dev --version 1.8.4 --min-native 1.8 --unsigned
  *
  * Flags:
  *   --platform android|ios|both (required; `both` publishes one upload to each)
  *   --version  <x.y.z>          (required; numeric, 1-4 segments, no leading zeros / pre-release suffix)
  *   --channel  <name>           (default production)
- *   --min-native <x.y.z>        (default 0.0.0)
+ *   --min-native <x.y>          (REQUIRED) the native app version the bundle
+ *                               was built for: iOS CFBundleShortVersionString /
+ *                               Android versionName, which the updater plugin
+ *                               reports as version_build (the build number /
+ *                               versionCode is NOT compared). Use the version
+ *                               live in the stores, not the repo's newest
+ *   --max-native <x.y>          (default: --min-native) highest native app
+ *                               version that may take the bundle. Devices get
+ *                               it only when min <= app version <= max, so a
+ *                               production bundle doesn't replace the web code
+ *                               of a TestFlight / test build that carries a
+ *                               HIGHER app version (e.g. 1.8.1); never let the
+ *                               range include a test build's version. --version
+ *                               should be above it (warned otherwise): fresh
+ *                               installs report their app version as their
+ *                               bundle. `both` applies one range to both
+ *                               platforms; if their store versions differ,
+ *                               release each platform separately
  *   --app-id   <id>             (default com.threebayti.app)
  *   --notes    "<what's new>"   optional update summary shown to customers
  *   --www      <dir>            (default www)
@@ -45,6 +63,7 @@ import { basename } from 'node:path';
 import {
   CAPGO_CLI,
   PLATFORMS,
+  builtinReachWarning,
   isPlainZip,
   isPlatform,
   isVersion,
@@ -52,6 +71,7 @@ import {
   parseZipOutput,
   plainChecksumError,
   publishedBundles,
+  resolveNativeRange,
   sessionKeyError,
   signedChecksumError,
   unsignedError,
@@ -98,7 +118,9 @@ function head4(path) {
 const platform = opt('platform');
 const version = opt('version').trim();
 const channel = opt('channel', 'production').trim();
-const minNative = opt('min-native', '0.0.0').trim();
+// Native range: min REQUIRED (no 0.0.0 default, that served every shell incl.
+// TestFlight / test builds), max defaults to min and is uploaded explicitly.
+const { minNative, maxNative, error: nativeRangeError } = resolveNativeRange(opt('min-native'), opt('max-native'));
 const appId = opt('app-id', 'com.threebayti.app').trim();
 // Optional "what's new" summary shown to customers after this update applies.
 const notes = opt('notes', '').trim();
@@ -112,7 +134,10 @@ let checksum = opt('checksum').trim();
 
 if (!isPlatform(platform)) die(`--platform must be one of: ${PLATFORMS.join(', ')}`);
 if (!isVersion(version)) die('--version must be numeric with 1-4 segments and no leading zeros, e.g. 1.0.7 (no pre-release suffix)');
-if (!isVersion(minNative)) die('--min-native must be numeric with 1-4 segments, e.g. 1.6.0');
+if (flag('max-native') && !opt('max-native')) die('--max-native needs a value (e.g. --max-native 1.9), or omit it to use --min-native.');
+if (nativeRangeError) die(nativeRangeError);
+const reachWarning = builtinReachWarning(version, minNative, maxNative);
+if (reachWarning) console.warn(`\n⚠ ${reachWarning}\n`);
 if (unsigned && flag('sign')) die('Use either --unsigned or --sign, not both (signing is the default).');
 if (unsigned) {
   if (sessionKey || checksum || preEncryptedZip) die('--unsigned cannot be combined with --zip/--session-key/--checksum.');
@@ -204,7 +229,14 @@ function encrypt(zipPath, plainChecksum) {
 }
 
 async function upload(token, zipPath) {
-  const qs = new URLSearchParams({ platform, version, channel, min_native: minNative, app_id: appId });
+  const qs = new URLSearchParams({
+    platform,
+    version,
+    channel,
+    min_native: minNative,
+    max_native: maxNative,
+    app_id: appId,
+  });
   if (sessionKey) qs.set('session_key', sessionKey);
   if (checksum) qs.set('checksum', checksum);
   if (notes) qs.set('notes', notes);
@@ -243,14 +275,17 @@ async function upload(token, zipPath) {
 
   if (dryRun) {
     console.log('\n• Dry run — not uploading. Would publish:');
-    console.log({ platform, version, channel, minNative, appId, file: uploadPath, signed: !!sessionKey, checksum });
+    console.log({ platform, version, channel, minNative, maxNative, appId, file: uploadPath, signed: !!sessionKey, checksum });
     return;
   }
 
   const bundles = await upload(token, uploadPath);
   for (const bundle of bundles) {
+    const min = bundle?.min_native_version ?? minNative;
+    const max = bundle?.max_native_version ?? maxNative;
     console.log(
       `\n✔ Published ${bundle?.platform} ${bundle?.version} on "${bundle?.channel}" ` +
+        `for native ${min === max ? min : `${min} – ${max}`} ` +
         `(${bundle?.signed ? 'signed' : 'unsigned'}, id ${bundle?.id}).`,
     );
   }
