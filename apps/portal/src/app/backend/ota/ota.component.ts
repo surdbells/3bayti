@@ -10,12 +10,18 @@ import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.comp
 import { IconComponent } from '../../shared/icon/icon.component';
 import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
 import { OtaAdminService, OtaBundle, OtaUploadMeta } from '../../services/ota-admin.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import {
   OTA_MAX_BYTES,
   compareOtaVersions,
   isOtaVersion,
   isPlainZipHeader,
+  otaBuiltinReachWarning,
   otaChecksumError,
+  otaNativeRangeError,
+  otaNativeRangeLabel,
+  otaRangeMatchesNoApp,
+  otaRollbackImpact,
   otaSessionKeyError,
   otaUnsignedError,
   servedOtaBundleIds,
@@ -51,18 +57,34 @@ export class OtaComponent implements OnInit {
   readonly rollingBackId = signal<number | null>(null);
 
   /**
-   * Ids of the bundle each platform/channel is actually serving: the
-   * highest-version active row (the update endpoint picks by version, not
-   * publish time). Every other row can be rolled back to.
+   * Ids of the bundles some app build is actually offered: per native
+   * version, the highest-version active row whose native range covers it (the
+   * update endpoint picks by version, not publish time). Every other row can
+   * be rolled back to.
    */
   readonly servedIds = computed(() => servedOtaBundleIds(this.bundles()));
 
-  /** Upload form model. */
-  form: OtaUploadMeta & { channel: string; min_native: string } = {
+  /** "1.8" or "1.8 – 1.9" for the bundles table. */
+  readonly nativeRange = otaNativeRangeLabel;
+
+  /**
+   * Rows whose native range ends at 0 (legacy rows published with the old
+   * 0.0.0 Min native default): no app is offered them, so they are never
+   * live and can't be rolled back to.
+   */
+  readonly matchesNoApp = otaRangeMatchesNoApp;
+
+  /**
+   * Upload form model. min_native is required (no default: a bundle only
+   * reaches app builds inside [min, max]); an empty max_native defaults to
+   * min_native on the server, so the bundle targets exactly that app version.
+   */
+  form: OtaUploadMeta & { channel: string; min_native: string; max_native: string } = {
     platform: 'android',
     version: '',
     channel: 'production',
-    min_native: '0.0.0',
+    min_native: '',
+    max_native: '',
     session_key: '',
     checksum: '',
     notes: '',
@@ -83,8 +105,8 @@ export class OtaComponent implements OnInit {
     this.loading.set(true);
     try {
       this.bundles.set(await this.ota.list());
-    } catch {
-      this.toast.error('Unable to load OTA bundles.');
+    } catch (e: unknown) {
+      this.toast.error(apiErrorMessage(e, 'Unable to load OTA bundles.'));
     } finally {
       this.loading.set(false);
     }
@@ -109,8 +131,9 @@ export class OtaComponent implements OnInit {
       this.toast.error('Version must be numeric, e.g. 1.0.7 (no pre-release suffix).');
       return;
     }
-    if (!isOtaVersion(this.form.min_native || '0.0.0')) {
-      this.toast.error('Min native must be numeric, e.g. 1.6.0.');
+    const nativeError = otaNativeRangeError(this.form.min_native, this.form.max_native);
+    if (nativeError) {
+      this.toast.error(nativeError);
       return;
     }
     // Signed bundles carry the ivSessionKey, the ENCRYPTED checksum and the
@@ -127,6 +150,18 @@ export class OtaComponent implements OnInit {
     if (checksumError) {
       this.toast.error(checksumError);
       return;
+    }
+    // Not an error (devices already on a lower OTA bundle still take it), but
+    // fresh installs / store updates of the top of the range never would.
+    const reachWarning = otaBuiltinReachWarning(this.form.version, this.form.min_native, this.form.max_native);
+    if (reachWarning) {
+      const ok = await this.confirm.confirm({
+        title: 'Version not above Max native',
+        message: `${reachWarning} Publish anyway?`,
+        confirmLabel: 'Publish anyway',
+        cancelLabel: 'Cancel',
+      });
+      if (!ok) return;
     }
 
     this.uploading.set(true);
@@ -151,6 +186,7 @@ export class OtaComponent implements OnInit {
           version: this.form.version,
           channel: this.form.channel,
           min_native: this.form.min_native,
+          max_native: this.form.max_native.trim() || undefined,
           session_key: this.form.session_key || undefined,
           checksum: this.form.checksum || undefined,
           notes: this.form.notes || undefined,
@@ -160,7 +196,7 @@ export class OtaComponent implements OnInit {
       const platforms = published.map((b) => b.platform).join(' + ') || this.form.platform;
       const version = published[0]?.version ?? this.form.version;
       this.toast.success(`Published ${platforms} ${version}.`);
-      // Reset the file + version; keep platform/channel/min_native for the next one.
+      // Reset the file + version; keep platform/channel/native range for the next one.
       this.file = null;
       this.form.version = '';
       this.form.session_key = '';
@@ -169,8 +205,8 @@ export class OtaComponent implements OnInit {
       const fileInput = document.getElementById('ota-file') as HTMLInputElement | null;
       if (fileInput) fileInput.value = '';
       await this.load();
-    } catch (e: any) {
-      this.toast.error(e?.error?.error?.message || e?.error?.message || 'Upload failed.');
+    } catch (e: unknown) {
+      this.toast.error(apiErrorMessage(e, 'Upload failed.'));
     } finally {
       this.uploading.set(false);
       this.uploadProgress.set(0);
@@ -179,6 +215,14 @@ export class OtaComponent implements OnInit {
 
   async toggleActive(bundle: OtaBundle): Promise<void> {
     const next = !bundle.is_active;
+    if (next && this.matchesNoApp(bundle)) {
+      // The API refuses this too: an active row no app is offered.
+      this.toast.error(
+        `${bundle.platform} ${bundle.version} is published for native app version ${this.nativeRange(bundle)}, which no installed app reports, ` +
+          'so activating it would serve no device. Widen its Max native first (OTA-DEPLOY.md) or upload it again with the right Min native.',
+      );
+      return;
+    }
     if (!next) {
       const ok = await this.confirm.confirm({
         title: 'Deactivate bundle',
@@ -195,8 +239,8 @@ export class OtaComponent implements OnInit {
       await this.ota.setActive(bundle.id, next);
       this.toast.success(next ? 'Bundle activated.' : 'Bundle deactivated.');
       await this.load();
-    } catch {
-      this.toast.error('Unable to update the bundle.');
+    } catch (e: unknown) {
+      this.toast.error(apiErrorMessage(e, 'Unable to update the bundle.'));
     }
   }
 
@@ -207,13 +251,33 @@ export class OtaComponent implements OnInit {
    */
   async rollbackTo(bundle: OtaBundle): Promise<void> {
     if (this.rollingBackId() !== null) return;
-    const nextVersion = this.previewRollbackVersion(bundle);
     const content = bundle.rollback_of_version ?? bundle.version;
+    const impact = otaRollbackImpact(bundle, this.bundles());
+    const range = this.nativeRange(bundle);
+    if (impact.matchesNoApp) {
+      // The button is disabled for these and the API refuses them: the
+      // rollback would reach no device while still pulling the live bundle.
+      this.toast.error(
+        `${content} is published for native app version ${range}, which no installed app reports, so a rollback to it would reach no device. ` +
+          'Widen its Max native first (OTA-DEPLOY.md) or upload that content again as a new version with the right Min native.',
+      );
+      return;
+    }
+    const nextVersion = this.previewRollbackVersion(bundle);
+    const label = (b: OtaBundle) => `${b.version} (app ${this.nativeRange(b)})`;
+    const pulled = impact.deactivated.length
+      ? `deactivates the ${bundle.platform} / ${bundle.channel} ${impact.deactivated.length === 1 ? 'bundle' : 'bundles'} ` +
+        `for overlapping app versions (${impact.deactivated.map(label).join(', ')}); bundles for other app versions stay active`
+      : `deactivates no other bundle (none is active for overlapping app versions)`;
+    const stranded = impact.strandedLive.length
+      ? ` ${impact.strandedLive.map(label).join(', ')} also ${impact.strandedLive.length === 1 ? 'serves' : 'serve'} ` +
+        `app versions outside ${range}: those app builds are then offered only another active bundle that covers them, if any.`
+      : '';
     const ok = await this.confirm.confirm({
       title: `Roll back ${bundle.platform} to ${content}`,
       message:
-        `This republishes the ${content} bundle as version ${nextVersion} and deactivates every other ` +
-        `${bundle.platform} / ${bundle.channel} bundle. Devices download it the next time the app is opened ` +
+        `This republishes the ${content} bundle as version ${nextVersion} and ${pulled}. It keeps its native range ` +
+        `(app version ${range}): only those app builds get it.${stranded} Devices download it the next time the app is opened ` +
         `and switch to it after a restart. No upload needed.`,
       confirmLabel: 'Roll back',
       cancelLabel: 'Cancel',
@@ -226,8 +290,8 @@ export class OtaComponent implements OnInit {
       const result = await this.ota.rollback(bundle.id);
       this.toast.success(`Rolled back ${result.bundle.platform} to ${content} (served as ${result.bundle.version}).`);
       await this.load();
-    } catch (e: any) {
-      this.toast.error(e?.error?.error?.message || e?.error?.message || 'Unable to roll back.');
+    } catch (e: unknown) {
+      this.toast.error(apiErrorMessage(e, 'Unable to roll back.'));
     } finally {
       this.rollingBackId.set(null);
     }
@@ -258,8 +322,8 @@ export class OtaComponent implements OnInit {
       await this.ota.remove(bundle.id);
       this.toast.success('Bundle deleted.');
       await this.load();
-    } catch {
-      this.toast.error('Unable to delete the bundle.');
+    } catch (e: unknown) {
+      this.toast.error(apiErrorMessage(e, 'Unable to delete the bundle.'));
     }
   }
 

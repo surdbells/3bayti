@@ -1,7 +1,11 @@
 .ota-form {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* Platform, Version, Channel, Min native, Max native on one row. */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.75rem 1rem;
+}
+@media (max-width: 1024px) {
+  .ota-form { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 768px) {
   .ota-form { grid-template-columns: 1fr 1fr; }
@@ -20,6 +24,15 @@
 }
 .ota-hint {
   font-weight: 400;
+  color: var(--ax-color-text-tertiary);
+}
+.ota-required {
+  color: var(--ax-color-text-danger, #c0392b);
+}
+.ota-note {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
   color: var(--ax-color-text-tertiary);
 }
 
@@ -81,6 +94,12 @@
   white-space: nowrap;
 }
 .ota-danger {
+  color: var(--ax-color-text-danger, #c0392b);
+}
+.ota-range-warning {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 500;
   color: var(--ax-color-text-danger, #c0392b);
 }
 .ota-rollback-of {

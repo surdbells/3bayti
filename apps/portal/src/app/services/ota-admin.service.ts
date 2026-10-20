@@ -11,7 +11,15 @@ export interface OtaBundle {
   version: string;
   url: string;
   checksum: string;
+  /** Lowest native app version (version_build) the bundle is offered to. */
   min_native_version: string;
+  /**
+   * Highest native app version the bundle is offered to. The API sends the
+   * EFFECTIVE max (min_native_version for rows stored without one); null /
+   * missing is tolerated for an API that predates the field, and read
+   * through effectiveMaxNative (backend/ota/ota-rules.ts) as max = min.
+   */
+  max_native_version?: string | null;
   signed: boolean;
   is_active: boolean;
   /** Set on rollback rows: the version whose file this row re-publishes. */
@@ -22,7 +30,11 @@ export interface OtaBundle {
 export interface OtaRollbackResult {
   /** The new row now being served (the rolled-back content, new version). */
   bundle: OtaBundle;
-  /** Rows that were deactivated so the rollback is the only active bundle. */
+  /**
+   * Rows that were deactivated: the active bundles of the platform/channel
+   * whose native range overlaps the rollback's (bundles for other app
+   * versions stay active).
+   */
   deactivated_ids: number[];
 }
 
@@ -31,7 +43,18 @@ export interface OtaUploadMeta {
   platform: 'android' | 'ios' | 'both';
   version: string;
   channel?: string;
-  min_native?: string;
+  /**
+   * REQUIRED: the native app version (iOS CFBundleShortVersionString /
+   * Android versionName, what the plugin reports as version_build) the
+   * bundle was built for.
+   */
+  min_native: string;
+  /**
+   * Highest native app version that may take the bundle. Optional: the API
+   * defaults it to min_native, so a bundle reaches exactly one app version
+   * unless a range is given.
+   */
+  max_native?: string;
   /** Signed bundles only, the ivSessionKey from `@capgo/cli encrypt`. */
   session_key?: string;
   /** Signed bundles only, the checksum from `@capgo/cli encrypt`. */
@@ -89,7 +112,8 @@ export class OtaAdminService {
     q.set('platform', meta.platform);
     q.set('version', meta.version.trim());
     if (meta.channel) q.set('channel', meta.channel.trim());
-    if (meta.min_native) q.set('min_native', meta.min_native.trim());
+    q.set('min_native', meta.min_native.trim());
+    if (meta.max_native?.trim()) q.set('max_native', meta.max_native.trim());
     if (meta.session_key) q.set('session_key', meta.session_key.trim());
     if (meta.checksum) q.set('checksum', meta.checksum.trim());
     if (meta.notes) q.set('notes', meta.notes.trim());
@@ -131,9 +155,11 @@ export class OtaAdminService {
   }
 
   /**
-   * One-click rollback: the server re-publishes this bundle's file under the
-   * next unused version and deactivates the other bundles for its platform,
-   * so devices that already installed a newer bundle download it again.
+   * One-click rollback: the server re-publishes this bundle's file (and its
+   * native range) under the next unused version and deactivates the active
+   * bundles of its platform/channel whose native range overlaps it, so
+   * devices that already installed a newer bundle download it again. A
+   * source whose range matches no app (ends at 0) is refused with a 400.
    */
   async rollback(id: number): Promise<OtaRollbackResult> {
     const res: any = await firstValueFrom(

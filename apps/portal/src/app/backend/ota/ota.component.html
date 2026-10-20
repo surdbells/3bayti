@@ -8,7 +8,7 @@
         <span class="ax-page-header-eyebrow">Mobile</span>
         <h1 class="ax-page-title">OTA updates</h1>
         <p class="ax-page-subtitle">
-          Ship a new mobile web bundle over-the-air. Devices get the highest-version active bundle their app supports, only if it is newer than what they run.
+          Ship a new mobile web bundle over-the-air. Devices get the highest-version active bundle whose native range (Min native to Max native) contains their app version, only if it is newer than what they run.
           To move devices back, use <strong>Roll back to this</strong> (it republishes that bundle as the next version); deactivating only stops devices that haven't downloaded a bundle yet.
         </p>
       </div>
@@ -35,9 +35,25 @@
         </label>
 
         <label class="ota-field">
-          <span class="ota-label">Min native</span>
-          <input class="ax-input" type="text" [(ngModel)]="form.min_native" name="min_native" placeholder="1.6.0" autocomplete="off" />
+          <span class="ota-label">Min native <span class="ota-required" aria-hidden="true">*</span></span>
+          <input class="ax-input" type="text" [(ngModel)]="form.min_native" name="min_native" placeholder="1.8" autocomplete="off"
+            required aria-required="true" aria-describedby="ota-native-hint" />
         </label>
+
+        <label class="ota-field">
+          <span class="ota-label">Max native <span class="ota-hint">(optional)</span></span>
+          <input class="ax-input" type="text" [(ngModel)]="form.max_native" name="max_native" placeholder="defaults to Min native" autocomplete="off"
+            aria-describedby="ota-native-hint" />
+        </label>
+
+        <p id="ota-native-hint" class="ota-field--wide ota-note">
+          <strong>Native range:</strong> the bundle is offered only to app builds whose app version (iOS <code>CFBundleShortVersionString</code> /
+          Android <code>versionName</code>) is between Min and Max native. Min native is the app version the bundle was built for;
+          leave Max empty to target exactly that version, so a TestFlight or test build with a higher app version (e.g. 1.8.1) keeps its own web code.
+          A higher build number alone does not separate builds. Use the app version live in the stores (Play Console / App Store Connect), not the one in the repo.
+          Version must be above Max native, or fresh installs of the top app version never take it.
+          <strong>Both</strong> uses one range for iOS and Android: when their store app versions differ, upload each platform separately.
+        </p>
 
         <label class="ota-field ota-field--wide">
           <span class="ota-label">Update summary <span class="ota-hint">(the "What's new" shown to customers on the update sheet, plain text; line breaks kept)</span></span>
@@ -98,7 +114,7 @@
               <th>Platform</th>
               <th>Channel</th>
               <th>Version</th>
-              <th>Min native</th>
+              <th>Native range</th>
               <th>Checksum</th>
               <th>Signed</th>
               <th>Status</th>
@@ -114,7 +130,11 @@
                 {{ b.version }}
                 <span *ngIf="b.rollback_of_version" class="ota-rollback-of">rollback of {{ b.rollback_of_version }}</span>
               </td>
-              <td class="ax-text-tertiary">{{ b.min_native_version }}</td>
+              <td class="ax-text-tertiary"
+                  [title]="matchesNoApp(b) ? 'Native range ' + nativeRange(b) + ' matches no installed app (published with the old 0.0.0 default), so no device is offered it' : 'Offered only to app version ' + nativeRange(b)">
+                {{ nativeRange(b) }}
+                <span *ngIf="matchesNoApp(b)" class="ota-range-warning">matches no app</span>
+              </td>
               <td><code class="ax-text-2xs" [title]="b.checksum">{{ shortChecksum(b.checksum) }}</code></td>
               <td>
                 <span [ngClass]="b.signed ? 'ax-badge ax-badge-success' : 'ax-badge ax-badge-neutral'">
@@ -123,10 +143,10 @@
               </td>
               <td>
                 <span *ngIf="servedIds().has(b.id); else notServed" class="ax-badge ax-badge-success"
-                      title="The bundle devices are being offered right now">live</span>
+                      [title]="'Offered right now to app version ' + nativeRange(b) + ', except where a higher active bundle covers it'">live</span>
                 <ng-template #notServed>
                   <span [ngClass]="b.is_active ? 'ax-badge ax-badge-warning' : 'ax-badge ax-badge-neutral'"
-                        [title]="b.is_active ? 'Active, but a higher-version active bundle is served instead (older app builds may still get this one)' : ''">
+                        [title]="!b.is_active ? '' : matchesNoApp(b) ? 'Active, but its native range (' + nativeRange(b) + ') matches no installed app, so no app build is offered it' : 'Active, but higher-version active bundles cover its whole native range (' + nativeRange(b) + '), so no app build is offered it'">
                     {{ b.is_active ? 'active' : 'inactive' }}
                   </span>
                 </ng-template>
@@ -134,11 +154,14 @@
               <td class="ax-text-2xs ax-text-tertiary">{{ b.created_at | date:'medium' }}</td>
               <td class="ota-actions-col">
                 <button *ngIf="!servedIds().has(b.id)" type="button" class="ax-btn ax-btn-secondary ax-btn-sm"
-                        [disabled]="rollingBackId() !== null" (click)="rollbackTo(b)"
+                        [disabled]="rollingBackId() !== null || matchesNoApp(b)" (click)="rollbackTo(b)"
+                        [title]="matchesNoApp(b) ? 'Its native range matches no installed app, so a rollback to it would reach no device' : ''"
                         [attr.aria-label]="'Roll back ' + b.platform + ' to ' + (b.rollback_of_version ?? b.version)">
                   {{ rollingBackId() === b.id ? 'Rolling back…' : 'Roll back to this' }}
                 </button>
-                <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="toggleActive(b)">
+                <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="toggleActive(b)"
+                        [disabled]="!b.is_active && matchesNoApp(b)"
+                        [title]="!b.is_active && matchesNoApp(b) ? 'Its native range matches no installed app, so activating it would serve no device' : ''">
                   {{ b.is_active ? 'Deactivate' : 'Activate' }}
                 </button>
                 <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm ota-danger" (click)="remove(b)">
