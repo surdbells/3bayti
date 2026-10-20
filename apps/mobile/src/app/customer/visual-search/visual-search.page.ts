@@ -41,9 +41,15 @@ interface StoredUser {
 
 /**
  * "Search by photo": snap or pick a photo and Ain finds visually similar real,
- * in-stock pieces (POST /ai/visual-search). Uses a native file/camera picker via
- * a standard <input type="file" capture> (no Capacitor Camera plugin); the image
- * is downscaled client-side and never persisted server-side.
+ * in-stock pieces (POST /ai/visual-search). Uses the OS file/photo picker via a
+ * standard <input type="file"> (no Capacitor Camera plugin; deliberately no
+ * `capture`, see the template); the image is downscaled client-side (never
+ * uploaded full-size) and never persisted server-side.
+ *
+ * iOS: taking a photo needs NSCameraUsageDescription in ios/App/App/Info.plist.
+ * Shells built without it are killed by iOS the moment the camera opens, which
+ * is why `capture` (camera-only) was removed: picking from the library needs no
+ * permission.
  */
 @Component({
   selector: 'app-visual-search',
@@ -182,12 +188,18 @@ export class VisualSearchPage implements OnInit {
     this.router.navigate(['/', 'product'], { queryParams: { id: card.id, name: card.name } });
   }
 
+  /**
+   * Downscale to <= `max` px on the long edge and re-encode as JPEG. Tries
+   * createImageBitmap first, then an <img> decode; it never falls back to
+   * uploading the original (a phone photo is several MB, ~1.37x more as
+   * base64, which can exceed the API's 6 MB cap). Rejects if neither decoder
+   * can read the file, so the page shows its error state instead.
+   */
   private async toResizedDataUrl(file: File, max = 1024): Promise<string> {
-    try {
-      const bitmap = await createImageBitmap(file);
-      const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
-      const w = Math.max(1, Math.round(bitmap.width * scale));
-      const h = Math.max(1, Math.round(bitmap.height * scale));
+    const draw = (src: CanvasImageSource, width: number, height: number): string => {
+      const scale = Math.min(1, max / Math.max(width, height));
+      const w = Math.max(1, Math.round(width * scale));
+      const h = Math.max(1, Math.round(height * scale));
       const canvas = document.createElement('canvas');
       canvas.width = w;
       canvas.height = h;
@@ -195,16 +207,34 @@ export class VisualSearchPage implements OnInit {
       if (!ctx) {
         throw new Error('no 2d context');
       }
-      ctx.drawImage(bitmap, 0, 0, w, h);
-      bitmap.close();
+      ctx.drawImage(src, 0, 0, w, h);
       return canvas.toDataURL('image/jpeg', 0.85);
-    } catch {
-      return await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error('read failed'));
-        reader.readAsDataURL(file);
+    };
+
+    if (typeof createImageBitmap === 'function') {
+      try {
+        const bitmap = await createImageBitmap(file);
+        try {
+          return draw(bitmap, bitmap.width, bitmap.height);
+        } finally {
+          bitmap.close();
+        }
+      } catch {
+        // fall through to the <img> decoder
+      }
+    }
+
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error('decode failed'));
+        el.src = url;
       });
+      return draw(img, img.naturalWidth, img.naturalHeight);
+    } finally {
+      URL.revokeObjectURL(url);
     }
   }
 

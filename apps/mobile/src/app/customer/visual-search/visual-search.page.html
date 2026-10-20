@@ -17,7 +17,11 @@
 
   @if (!preview) {
     <label class="vs-drop">
-      <input type="file" accept="image/*" capture="environment" (change)="onFile($event)" hidden />
+      <!-- No `capture`: it forces the camera, and iOS shells built before the
+           Info.plist NSCameraUsageDescription was added terminate the app on
+           camera access. Without it iOS shows its picker (Photo Library works
+           with no permission); Android shows its chooser. -->
+      <input type="file" accept="image/*" (change)="onFile($event)" hidden />
       <span class="vs-drop__icon"><ax-icon name="image" /></span>
       <span class="vs-drop__title">{{ 'visual_search_drop_title' | translate }}</span>
       <span class="vs-drop__sub">{{ 'visual_search_drop_sub' | translate }}</span>
