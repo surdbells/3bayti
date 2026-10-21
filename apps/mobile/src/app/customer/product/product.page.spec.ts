@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import { ProductPage } from './product.page';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
+import { transformProductDetailResponse } from '../../core/http/transforms/catalog-response.transforms';
 
 /** Benign adapter: every read succeeds empty, no real network. */
 class AdapterStub {
@@ -87,6 +88,41 @@ describe('ProductPage', () => {
 
       expect(router.navigate).not.toHaveBeenCalled();
       expect(toast.errors.length).toBe(1);
+    });
+  });
+
+  describe('gift-card nudge ("Not sure about their size?")', () => {
+    it('stays hidden until a product has loaded', () => {
+      const { component } = setup();
+      expect(component.showGiftCardNudge).toBeFalse();
+    });
+
+    it('shows for a loaded v3 product (the detail transform emits `product`, never `id`)', () => {
+      const { component } = setup();
+      const data = transformProductDetailResponse({ id: 7, name: 'Abaya', price: { amount: '100.00' } }) as any;
+      expect(data.id).toBeUndefined();
+
+      component.single = data;
+
+      expect(component.showGiftCardNudge).toBeTrue();
+    });
+
+    it('beacons ai_gift_card_recommended (pdp/mobile) and opens the gift-card flow', () => {
+      const { component, router } = setup();
+      const adapter = TestBed.inject(MobileNetworkAdapter) as unknown as AdapterStub;
+      const post = spyOn(adapter, 'post_v3').and.callThrough();
+
+      component.openGiftCardNudge();
+
+      expect(post).toHaveBeenCalledTimes(1);
+      const [route, body] = post.calls.mostRecent().args as unknown as [string, Record<string, unknown>];
+      expect(route).toBe('POST /ai/events');
+      expect(body).toEqual(jasmine.objectContaining({
+        event: 'ai_gift_card_recommended',
+        context: 'pdp',
+        surface: 'mobile',
+      }));
+      expect(router.navigate).toHaveBeenCalledOnceWith(['/', 'gift-cards']);
     });
   });
 });

@@ -14,16 +14,31 @@
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
 
-  <div *ngIf="isLoading" class="cv-loading">
-    <ion-spinner name="crescent"></ion-spinner>
-  </div>
+  <!-- First load: skeleton rows built from the real row classes. On a return
+       visit the inbox refreshes in place (the loaded list stays on screen),
+       instead of blanking to a spinner every time. -->
+  <ul *ngIf="isLoading && conversations.length === 0" class="cv-list" role="status" aria-busy="true" [attr.aria-label]="'messages_loading' | translate">
+    <li *ngFor="let s of skeletonRows" aria-hidden="true">
+      <div class="cv-item cv-item--skeleton">
+        <ax-skeleton-circle [size]="42" />
+        <div class="cv-body">
+          <div class="cv-top">
+            <span class="cv-name"><ax-skeleton-line width="120px" [height]="12" /></span>
+            <span class="cv-time"><ax-skeleton-line width="32px" [height]="9" /></span>
+          </div>
+          <div class="cv-meta"><ax-skeleton-line width="45%" [height]="9" /></div>
+          <div class="cv-preview"><ax-skeleton-line width="75%" [height]="10" /></div>
+        </div>
+      </div>
+    </li>
+  </ul>
 
   <div *ngIf="!isLoading && conversations.length === 0" class="cv-empty">
     <ax-icon name="chatbubbles-outline"></ax-icon>
     <p>{{ 'text_no_conversations' | translate }}</p>
   </div>
 
-  <ul *ngIf="!isLoading && conversations.length > 0" class="cv-list">
+  <ul *ngIf="conversations.length > 0" class="cv-list">
     <li *ngFor="let c of conversations; trackBy: trackByUuid">
       <button type="button" class="cv-item" (click)="openConversation(c)">
         <div class="cv-avatar">{{ (c.counterparty.name || '?').charAt(0) }}</div>

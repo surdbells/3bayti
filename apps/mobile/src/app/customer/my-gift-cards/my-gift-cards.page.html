@@ -14,21 +14,43 @@
     <ion-refresher-content />
   </ion-refresher>
 
-  @if (ui.loading) {
-    <div class="mgc-loader"><ax-loader /></div>
-  } @else {
+  <!-- Action row: static, so it renders straight away (also while loading). -->
+  <div class="mgc-actions ion-padding-horizontal">
+    <button type="button" class="mgc-action-btn" (click)="buyNew()">
+      <ax-icon name="gift" [size]="20" />
+      <span>{{ 'gift_promo_cta_buy' | translate }}</span>
+    </button>
+    <button type="button" class="mgc-action-btn mgc-action-btn--outline" (click)="redeemCode()">
+      <ax-icon name="scan-line" [size]="20" />
+      <span>{{ 'mgc_redeem_code' | translate }}</span>
+    </button>
+  </div>
 
-    <!-- Action row -->
-    <div class="mgc-actions ion-padding-horizontal">
-      <button type="button" class="mgc-action-btn" (click)="buyNew()">
-        <ax-icon name="gift" [size]="20" />
-        <span>{{ 'gift_promo_cta_buy' | translate }}</span>
-      </button>
-      <button type="button" class="mgc-action-btn mgc-action-btn--outline" (click)="redeemCode()">
-        <ax-icon name="scan-line" [size]="20" />
-        <span>{{ 'mgc_redeem_code' | translate }}</span>
-      </button>
+  <!-- Loading: filter-chip row + wallet cards drawn with the real classes,
+       so the list swaps in without a jump. -->
+  @if (ui.loading) {
+    <div role="status" aria-busy="true" [attr.aria-label]="'gift_cards_loading' | translate">
+      <div class="mgc-filters" aria-hidden="true">
+        @for (w of ['48px', '64px', '58px', '72px']; track $index) {
+          <ax-skeleton-block [width]="w" height="35px" radius="100px" />
+        }
+      </div>
+      <div class="mgc-list ion-padding-horizontal" aria-hidden="true">
+        @for (s of [1, 2, 3]; track s) {
+          <div class="mgc-card mgc-card--skeleton">
+            <ax-skeleton-block width="80px" height="52px" radius="10px" />
+            <div class="mgc-card__body">
+              <div class="mgc-card__top">
+                <div class="mgc-card__amount"><ax-skeleton-line width="88px" [height]="14" /></div>
+                <div class="mgc-card__status"><ax-skeleton-line width="44px" [height]="9" /></div>
+              </div>
+              <div class="mgc-card__to"><ax-skeleton-line width="60%" [height]="10" /></div>
+            </div>
+          </div>
+        }
+      </div>
     </div>
+  } @else {
 
     @if (cards.length === 0) {
       <div class="mgc-empty">
@@ -104,7 +126,7 @@
                   }
                 </div>
                 <div class="mgc-card__status"
-                     [style.color]="statusMeta[card.status]?.color ?? '#8B6F47'">
+                     [style.color]="statusMeta[card.status]?.color ?? 'var(--ax-color-text-secondary)'">
                   {{ statusMeta[card.status]?.label ?? card.status }}
                 </div>
               </div>

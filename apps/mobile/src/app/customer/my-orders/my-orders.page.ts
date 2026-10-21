@@ -29,7 +29,7 @@ import {Products} from "../../class/products";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
-import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import { AxSkeletonBlockComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 import { cfImage } from '../../shared/cf-image';
 // M3.1.7-I: widen OrderStatus to include v3 backend's full enum so
 // the cancel button can show conditionally on pending_payment. The
@@ -113,7 +113,8 @@ interface Order {
     FormsModule,
     TranslatePipe,
     AxIconComponent,
-    AxLoaderComponent,
+    AxSkeletonBlockComponent,
+    AxSkeletonLineComponent,
     AppTabBarComponent
   ]
 })
@@ -165,7 +166,9 @@ export class MyOrdersPage implements OnInit {
   private skipReloadOnEnter = false;
   ui_controls = {
     is_empty: false,
-    is_loading: false,
+    // Starts true so the first paint is the order-card skeleton, never a
+    // flash of the "no orders" empty state while the session is read.
+    is_loading: true,
     is_creating: false
   }
   ngOnInit() {
@@ -239,7 +242,13 @@ export class MyOrdersPage implements OnInit {
     return params;
   }
 
+  /** Bumped per first-page fetch; a reply for an older chip selection is dropped. */
+  private listSeq = 0;
+  /** Placeholder order cards shown while the first page loads. */
+  readonly skeletonOrders = [1, 2, 3];
+
   order_listing() {
+    const seq = ++this.listSeq;
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
     this.initial.limit = 10;
@@ -256,6 +265,10 @@ export class MyOrdersPage implements OnInit {
       })
       .subscribe(({
         next: (response: any) => {
+          // Tapping chips quickly: only the latest selection may land.
+          if (seq !== this.listSeq) {
+            return;
+          }
           if (response.response_code === 200 && response.status === "success") {
             // Dual-shape support for M3.1.6 strangler-fig migration:
             //   Legacy: response.data = orders[] (direct array)
@@ -267,6 +280,16 @@ export class MyOrdersPage implements OnInit {
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = true;
           }
+        },
+        // Transport-level failure (no HTTP status): end the skeleton instead
+        // of leaving it up forever, and say why the list is empty.
+        error: () => {
+          if (seq !== this.listSeq) {
+            return;
+          }
+          this.ui_controls.is_loading = false;
+          this.ui_controls.is_empty = true;
+          this.toast.error(this.i18n.t('network_error_retry'), { position: 'top-center' });
         }
       }))
   }

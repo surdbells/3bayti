@@ -25,8 +25,54 @@
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
 
+  <!-- First load: skeleton cards built from the real cards' classes (header,
+       timeline, items), so the order swaps in without a jump. A pull-to-refresh
+       keeps the loaded order on screen instead (see the @if (order) below). -->
   @if (ui_controls.is_loading && !order) {
-    <ax-loader></ax-loader>
+    <div role="status" aria-busy="true" [attr.aria-label]="'order_loading' | translate">
+      <ion-card class="detail-card detail-card--head" aria-hidden="true">
+        <div class="head-row">
+          <div class="head-meta">
+            <span class="head-label"><ax-skeleton-line width="96px" [height]="9" /></span>
+            <h2 class="head-ref"><ax-skeleton-line width="150px" [height]="16" /></h2>
+            <span class="head-date"><ax-skeleton-line width="124px" [height]="10" /></span>
+          </div>
+          <ax-skeleton-block width="80px" height="21px" radius="999px" />
+        </div>
+      </ion-card>
+
+      <ion-card class="detail-card" aria-hidden="true">
+        <h3 class="section-title"><ax-skeleton-line width="96px" [height]="11" /></h3>
+        <ol class="timeline">
+          @for (w of ['58%', '46%', '64%']; track $index) {
+            <li class="timeline__step timeline__step--upcoming">
+              <span class="timeline__marker"></span>
+              <div class="timeline__body">
+                <span class="timeline__label"><ax-skeleton-line [width]="w" [height]="12" /></span>
+                <span class="timeline__time"><ax-skeleton-line width="96px" [height]="9" /></span>
+              </div>
+            </li>
+          }
+        </ol>
+      </ion-card>
+
+      <ion-card class="detail-card" aria-hidden="true">
+        <h3 class="section-title"><ax-skeleton-line width="72px" [height]="11" /></h3>
+        <div class="items">
+          <div class="item-row">
+            <div class="item-thumb"><ax-skeleton-block width="72px" height="72px" radius="var(--ax-radius-md)" /></div>
+            <div class="item-body">
+              <p class="item-name"><ax-skeleton-line width="70%" [height]="12" /></p>
+              <div class="item-attrs"><span class="item-attr"><ax-skeleton-line width="64px" [height]="9" /></span></div>
+              <div class="item-foot">
+                <span class="item-qty"><ax-skeleton-line width="24px" [height]="10" /></span>
+                <span class="item-price"><ax-skeleton-line width="64px" [height]="12" /></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ion-card>
+    </div>
   }
 
   @if (ui_controls.not_found && !ui_controls.is_loading) {
@@ -38,7 +84,7 @@
     </div>
   }
 
-  @if (order && !ui_controls.is_loading) {
+  @if (order) {
     <!-- Header: reference + status -->
     <ion-card class="detail-card detail-card--head">
       <div class="head-row">
@@ -252,7 +298,7 @@
           expand="block"
           class="pay-card__btn"
           (click)="completePayment()"
-          [disabled]="ui_controls.is_paying"
+          [disabled]="ui_controls.is_paying || ui_controls.is_loading"
           data-testid="complete-payment-btn"
         >
           {{ (ui_controls.is_paying ? 'mgc_completing_payment' : 'mgc_complete_payment') | translate }}

@@ -5,6 +5,8 @@ import { FormsModule } from '@angular/forms';
 import {
   IonCard,
   IonContent,
+  IonFab,
+  IonFabButton,
   IonHeader,
   IonInfiniteScroll,
   IonInfiniteScrollContent,
@@ -15,7 +17,7 @@ import {TranslatePipe} from "../../translate.pipe";
 import {Products} from "../../class/products";
 import {Labels} from "../../class/labels";
 import {Subscription} from "rxjs";
-import {Router, RouterLink} from "@angular/router";
+import {Router} from "@angular/router";
 import {ActionSheetController, InfiniteScrollCustomEvent, Platform} from "@ionic/angular";
 import {ConnectionService} from "../../service/connection.service";
 import {BlockerService} from "../../blocker.service";
@@ -26,6 +28,7 @@ import {PendingOrdersService} from "../../core/services/pending-orders.service";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import { AxAinConciergeSheetComponent, type AinToolKey } from '../../shared/ax-mobile/ain-concierge-sheet';
 import { AddPhoneBannerComponent } from '../../shared/add-phone-banner.component';
 import { AddEmailBannerComponent } from '../../shared/add-email-banner.component';
 interface Category {
@@ -61,14 +64,16 @@ export interface Store {
     IonTitle,
     IonToolbar,
     IonCard,
+    IonFab,
+    IonFabButton,
     IonInfiniteScroll,
     IonInfiniteScrollContent,
     CommonModule,
     FormsModule,
-    RouterLink,
     TranslatePipe,
     AxIconComponent,
     AxLoaderComponent,
+    AxAinConciergeSheetComponent,
     AddPhoneBannerComponent,
     AddEmailBannerComponent,
   ]
@@ -88,6 +93,15 @@ export class HomePage implements OnInit, OnDestroy {
   @Input() rating: number = 4.5;
   @Input() ratingsCount: number | string = '100+';
   imageLoaded: { [key: string]: boolean } = {};
+  /** Ain concierge sheet (opened by the Ain FAB). */
+  ainSheetOpen = false;
+  /**
+   * Guests keep the three Ain tools they had before the sheet (no Search by
+   * photo): its picker's "Take Photo" option kills iOS shells shipped
+   * without NSCameraUsageDescription, and that fix ships only with a store
+   * build while this page ships over OTA.
+   */
+  readonly ainHiddenTools: readonly AinToolKey[] = ['photo'];
   protected readonly category: Category[] = [
     {id: 1, name: 'Abayas'},
     {id: 2, name: 'Mukhawars'},
@@ -275,6 +289,16 @@ export class HomePage implements OnInit, OnDestroy {
   }
   onImageError(key: string) {
     this.imageLoaded[key] = true;
+  }
+
+  /**
+   * Open the Ain concierge sheet from the Ain FAB. Its tools work for guests
+   * too (each page sends the token only when there is one; see
+   * ainHiddenTools for the one left out); the sheet routes to the picked
+   * tool and resets this flag through (dismiss).
+   */
+  openAinSheet() {
+    this.ainSheetOpen = true;
   }
 
   user_register() {

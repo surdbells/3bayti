@@ -1,3 +1,8 @@
+/* Following list. Every colour is a theme token (light + dark in
+   shared/ax-mobile/_tokens.scss). The page used to hard-code a white row
+   (#fff), a cream logo tile and espresso text, which stayed bright white in
+   dark mode while the rest of the app went dark. */
+
 .following-list {
   display: flex;
   flex-direction: column;
@@ -11,9 +16,14 @@
   justify-content: space-between;
   gap: 10px;
   padding: 12px 14px;
-  background: #fff;
-  border: 1px solid #ece5d6;
+  background: var(--ax-color-bg-surface);
+  border: 1px solid var(--ax-color-border-subtle);
   border-radius: 14px;
+}
+
+/* Loading placeholder row: same box as a real row, not interactive. */
+.follow-row--skeleton {
+  pointer-events: none;
 }
 
 .follow-row__store {
@@ -25,16 +35,19 @@
   background: none;
   border: none;
   padding: 0;
+  color: inherit;
+  font-family: inherit;
   text-align: start;
 }
 
 .follow-row__logo {
+  position: relative;
   flex: 0 0 auto;
   width: 48px;
   height: 48px;
   border-radius: 12px;
   overflow: hidden;
-  background: #f4f0ea;
+  background: var(--ax-color-bg-placeholder);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -50,7 +63,7 @@
 .follow-row__logo-blank {
   font-size: 18px;
   font-weight: 700;
-  color: #5a3a2c;
+  color: var(--ax-color-text-brand);
 }
 
 .follow-row__text {
@@ -60,21 +73,26 @@
   gap: 2px;
 }
 
+/* Skeleton text column takes the free width so % bars resolve against it. */
+.follow-row__text--skeleton {
+  flex: 1;
+}
+
 .follow-row__name {
   font-size: 15px;
   font-weight: 600;
-  color: #2e241c;
+  color: var(--ax-color-text-primary);
 }
 
 .follow-row__verified {
-  color: #16a34a;
+  color: var(--ax-color-text-success);
   font-size: 12px;
   margin-inline-start: 3px;
 }
 
 .follow-row__desc {
   font-size: 12px;
-  color: #6b6056;
+  color: var(--ax-color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -85,6 +103,14 @@
   flex: 0 0 auto;
 }
 
+/* color="danger" is pinned to danger-500, which sinks to ~2.4:1 on the
+   espresso surface. Ionic's .ion-color-danger sets --ion-color-base with
+   !important (and clear buttons paint their label from it), so re-point that
+   variable to the danger TEXT token, which brightens in dark mode. */
+.follow-row__unfollow.ion-color-danger {
+  --ion-color-base: var(--ax-color-text-danger) !important;
+}
+
 .following-empty {
   text-align: center;
   padding: 56px 16px;
@@ -92,12 +118,6 @@
 
 .following-empty__text {
   font-size: 15px;
-  color: #6b6056;
+  color: var(--ax-color-text-secondary);
   margin-bottom: 16px;
-}
-
-.following-loading {
-  padding: 48px 16px;
-  text-align: center;
-  color: #6b6056;
 }

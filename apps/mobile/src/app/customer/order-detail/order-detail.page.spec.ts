@@ -1,8 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { OrderDetailPage } from './order-detail.page';
+import { OrderPaymentService } from './order-payment.service';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 
@@ -197,5 +198,35 @@ describe('OrderDetailPage', () => {
     await component.ngOnInit();
     expect(toast.errors.length).toBe(1);
     expect(component.ui_controls.is_loading).toBeFalse();
+  });
+
+  it('keeps "Complete payment" and Cancel locked until the post-payment reload settles', async () => {
+    const { component, adapter } = setup();
+    await component.ngOnInit();
+    expect(component.canPay()).toBeTrue();
+
+    const captured: { handlers?: { onPaid: () => void; onFailed?: () => void } } = {};
+    spyOn(TestBed.inject(OrderPaymentService), 'pay').and.callFake(
+      (_ref: string, _tok: string, h: { onPaid: () => void; onFailed?: () => void }) => { captured.handlers = h; });
+    component.completePayment();
+    expect(component.ui_controls.is_paying).toBeTrue();
+
+    // The reload after a successful payment is still in flight.
+    const reload$ = new Subject<any>();
+    const realGet = adapter.get_v3.bind(adapter);
+    spyOn(adapter, 'get_v3').and.callFake((routeKey: string, opts: any) =>
+      routeKey === 'GET /orders/:id' ? reload$ : realGet(routeKey, opts));
+    captured.handlers!.onPaid();
+
+    // The stale pending_payment order is still on screen: no second payment, no cancel.
+    expect(component.order?.status).toBe('pending_payment');
+    expect(component.ui_controls.is_paying).toBeTrue();
+    expect(component.canPay()).toBeFalse();
+    expect(component.canCancel()).toBeFalse();
+
+    reload$.next(okOrder({ status: 'paid', paid_at: '2026-05-01T10:05:00+00:00' }));
+    expect(component.ui_controls.is_paying).toBeFalse();
+    expect(component.order?.status).toBe('paid');
+    expect(component.canPay()).toBeFalse();
   });
 });

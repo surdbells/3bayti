@@ -19,7 +19,33 @@
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
 
-  @if (!ui_controls.is_loading && !ui_controls.is_empty) {
+  <!-- First load: skeleton cart rows built from the real row classes. A reload
+       after a quantity change / removal keeps the cart on screen and updates
+       it in place (no blank + spinner after every tap). -->
+  @if (ui_controls.is_loading && carts.length === 0) {
+    <div role="status" aria-busy="true" [attr.aria-label]="'cart_loading' | translate">
+      <p class="cart-count" aria-hidden="true"><ax-skeleton-line width="56px" [height]="10" /></p>
+      @for (s of [1, 2]; track s) {
+        <ion-card class="cart-card" aria-hidden="true">
+          <div class="card-row">
+            <div class="img-wrap img-wrap--skeleton"><ax-skeleton-block [fill]="true" radius="0" /></div>
+            <div class="content-wrap">
+              <div class="row row-top">
+                <div class="title"><ax-skeleton-line width="70%" [height]="12" /></div>
+              </div>
+              <div class="row row-mid"><ax-skeleton-line width="45%" [height]="10" /></div>
+              <div class="row row-bottom">
+                <ax-skeleton-line width="64px" [height]="12" />
+                <ax-skeleton-block width="84px" height="26px" radius="6px" />
+              </div>
+            </div>
+          </div>
+        </ion-card>
+      }
+    </div>
+  }
+
+  @if (!ui_controls.is_empty && carts.length > 0) {
     <p class="cart-count">{{ bill.count }} {{ 'label_item' | translate }}</p>
     @if (hasPriceChanges) {
       <div class="price-notice" role="status">
@@ -30,58 +56,59 @@
   }
 
   @for (cart of carts; track cart.id) {
-    @if (!ui_controls.is_loading) {
-      <ion-card class="cart-card">
-        <div class="card-row">
-          <div (click)="open_product(cart.product)" class="img-wrap" role="button">
-            <img loading="lazy" class="cart-img" src="{{ cart.product_image }}" alt="{{ cart.product_name }}" />
+    <ion-card class="cart-card">
+      <div class="card-row">
+        <div (click)="open_product(cart.product)" class="img-wrap" role="button">
+          <img loading="lazy" class="cart-img" src="{{ cart.product_image }}" alt="{{ cart.product_name }}" />
+        </div>
+        <div class="content-wrap">
+          <div class="row row-top">
+            <div (click)="open_product(cart.product)" class="title" title="{{ cart.product_name }}">{{ cart.product_name }}</div>
+            <div class="icons">
+              <ion-button (click)="startAddToCloset(cart.product, cart.product_name, cart.product_image)" fill="clear" size="small" class="icon-btn icon-btn--save" aria-label="Save to closet">
+                <ax-icon name="heart-plus" />
+              </ion-button>
+              <ion-button [disabled]="lineControlsLocked" (click)="startRemove(cart.item, cart.product_name)" fill="clear" size="small" class="icon-btn icon-btn--remove" aria-label="Remove">
+                <ax-icon name="trash-2" />
+              </ion-button>
+            </div>
           </div>
-          <div class="content-wrap">
-            <div class="row row-top">
-              <div (click)="open_product(cart.product)" class="title" title="{{ cart.product_name }}">{{ cart.product_name }}</div>
-              <div class="icons">
-                <ion-button (click)="startAddToCloset(cart.product, cart.product_name, cart.product_image)" fill="clear" size="small" class="icon-btn icon-btn--save" aria-label="Save to closet">
-                  <ax-icon name="heart-plus" />
-                </ion-button>
-                <ion-button (click)="startRemove(cart.item, cart.product_name)" fill="clear" size="small" class="icon-btn icon-btn--remove" aria-label="Remove">
-                  <ax-icon name="trash-2" />
-                </ion-button>
+          <div (click)="open_product(cart.product)" class="row row-mid">
+            <div class="desc" [innerHTML]="cart.description"></div>
+          </div>
+          <div class="row row-bottom">
+            <div class="left-meta">
+              <div (click)="open_product(cart.product)" class="price">
+                Ð{{ cart.price_formatted }}
               </div>
-            </div>
-            <div (click)="open_product(cart.product)" class="row row-mid">
-              <div class="desc" [innerHTML]="cart.description"></div>
-            </div>
-            <div class="row row-bottom">
-              <div class="left-meta">
-                <div (click)="open_product(cart.product)" class="price">
-                  Ð{{ cart.price_formatted }}
+              @if (cart.price_changed && cart.previous_unit_price) {
+                <div class="price-change">
+                  <span class="price-change__dot" aria-hidden="true"></span>
+                  <span class="price-change__label">{{ 'cart_price_updated' | translate }}</span>
+                  <span class="price-change__was">{{ 'cart_price_was' | translate }} <s>Ð{{ cart.previous_unit_price }}</s></span>
                 </div>
-                @if (cart.price_changed && cart.previous_unit_price) {
-                  <div class="price-change">
-                    <span class="price-change__dot" aria-hidden="true"></span>
-                    <span class="price-change__label">{{ 'cart_price_updated' | translate }}</span>
-                    <span class="price-change__was">{{ 'cart_price_was' | translate }} <s>Ð{{ cart.previous_unit_price }}</s></span>
-                  </div>
-                }
-              </div>
-              <div class="size"><strong>{{ cart.size }}</strong></div>
-              <div class="qty-controls">
-                <ion-button [disabled]="cart.quantity === 1" (click)="DecreaseItem(cart.item, cart.quantity)" fill="outline" size="small" class="qty-btn">
-                  <ax-icon name="minus" />
-                </ion-button>
-                <div class="qty" aria-live="polite">{{ cart.quantity }}</div>
-                <ion-button (click)="IncreaseItem(cart.item, cart.quantity)" fill="outline" size="small" class="qty-btn">
-                  <ax-icon name="plus" />
-                </ion-button>
-              </div>
+              }
+            </div>
+            <div class="size"><strong>{{ cart.size }}</strong></div>
+            <div class="qty-controls">
+              <!-- Locked while a write or the reload after it is in flight:
+                   the shown quantity is stale until GET /cart lands, and the
+                   handlers send an absolute quantity computed from it. -->
+              <ion-button [disabled]="cart.quantity === 1 || lineControlsLocked" (click)="DecreaseItem(cart.item, cart.quantity)" fill="outline" size="small" class="qty-btn">
+                <ax-icon name="minus" />
+              </ion-button>
+              <div class="qty" aria-live="polite">{{ cart.quantity }}</div>
+              <ion-button [disabled]="lineControlsLocked" (click)="IncreaseItem(cart.item, cart.quantity)" fill="outline" size="small" class="qty-btn">
+                <ax-icon name="plus" />
+              </ion-button>
             </div>
           </div>
         </div>
-      </ion-card>
-    }
+      </div>
+    </ion-card>
   }
 
-  @if (!ui_controls.is_loading && !ui_controls.is_empty) {
+  @if (!ui_controls.is_empty && carts.length > 0) {
     <!-- Ain gift-card nudge: shopping for someone else? -->
     <button type="button" class="gc-nudge" (click)="openGiftCardNudge()">
       <span class="gc-nudge__icon"><ax-icon name="gift"></ax-icon></span>
@@ -155,11 +182,6 @@
     </div>
   }
 
-  @if (ui_controls.is_loading) {
-    <div class="loader-row">
-      <ax-loader></ax-loader>
-    </div>
-  }
 
   <!-- Wishlist modal (shared component; supports inline label creation) -->
   <ax-wishlist-sheet

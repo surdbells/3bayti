@@ -38,6 +38,7 @@ import { Products } from "../../class/products";
 import { InfiniteScrollCustomEvent } from "@ionic/angular";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
+import { AxSkeletonCardComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 import { AxWishlistSheetComponent } from '../../shared/ax-mobile/wishlist-sheet';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { I18nService } from '../../i18n.service';
@@ -81,7 +82,7 @@ import { cfImage } from '../../shared/cf-image';
     IonInfiniteScrollContent,
     IonRefresher,
     IonRefresherContent,
-    TranslatePipe, AxIconComponent,
+    TranslatePipe, AxIconComponent, AxSkeletonCardComponent, AxSkeletonLineComponent,
     AxWishlistSheetComponent]
 })
 export class DiscountedPage implements OnInit, OnDestroy {
@@ -99,7 +100,9 @@ export class DiscountedPage implements OnInit, OnDestroy {
   imageLoaded: { [key: number]: boolean } = {};
 
   ui_controls = {
-    is_loading: false,
+    // Starts true so the first paint is the skeleton grid, never a flash of
+    // the empty state while the session is read and the first page loads.
+    is_loading: true,
     is_creating: false,
     is_loading_category: false,
     is_empty: false

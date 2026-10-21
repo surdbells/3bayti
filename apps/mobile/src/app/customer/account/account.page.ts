@@ -50,9 +50,18 @@ import {TranslatePipe} from "../../translate.pipe";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxWishlistSheetComponent } from '../../shared/ax-mobile/wishlist-sheet';
+import { AxAinConciergeSheetComponent } from '../../shared/ax-mobile/ain-concierge-sheet';
 import { AddPhoneBannerComponent } from '../../shared/add-phone-banner.component';
 import { AddEmailBannerComponent } from '../../shared/add-email-banner.component';
 import { cfImage } from '../../shared/cf-image';
+
+/**
+ * For-You rail keys the home deliberately does not render. "popular" (the
+ * "Popular right now" cold-start rail) is hidden to declutter the home; the
+ * GET /me/ai/for-you fetch is unchanged and the other rails still show.
+ */
+export const HIDDEN_FOR_YOU_RAILS: ReadonlySet<string> = new Set(['popular']);
+
 interface Category {
   readonly id: number;
   readonly name: string;
@@ -95,7 +104,7 @@ export interface HomeCollection {
   templateUrl: './account.page.html',
   styleUrls: ['./account.page.scss'],
   standalone: true,
-  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonRow, IonCol, IonGrid, IonIcon, IonRefresher, IonRefresherContent, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxWishlistSheetComponent, RouterLink, AppTabBarComponent, AddPhoneBannerComponent, AddEmailBannerComponent]
+  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonRow, IonCol, IonGrid, IonIcon, IonRefresher, IonRefresherContent, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxWishlistSheetComponent, AxAinConciergeSheetComponent, RouterLink, AppTabBarComponent, AddPhoneBannerComponent, AddEmailBannerComponent]
 })
 
 export class AccountPage implements OnInit, OnDestroy {
@@ -130,6 +139,8 @@ export class AccountPage implements OnInit, OnDestroy {
   isOnline = true;
   categories: Labels[] = [];
   isWishOpen = false;
+  /** Ain concierge sheet (opened by the Ain FAB). */
+  ainSheetOpen = false;
   /** True while POST /me/wishlist/labels is in flight (inline label create). */
   isCreatingLabel = false;
   isFilterOpen = false;
@@ -672,9 +683,10 @@ export class AccountPage implements OnInit, OnDestroy {
   /**
    * Ain Personal Style Profile — personalised "For You" rails (Your Style /
    * From Stores You Love / Because You Liked… / New Arrivals For You, or a
-   * "Popular right now" cold-start rail). Authed (GET /v3/me/ai/for-you); every
-   * product is already server-validated as orderable + in stock. Best-effort:
-   * any failure just leaves the rails hidden.
+   * "Popular right now" cold-start rail, which the home skips, see
+   * HIDDEN_FOR_YOU_RAILS). Authed (GET /v3/me/ai/for-you); every product is
+   * already server-validated as orderable + in stock. Best-effort: any failure
+   * just leaves the rails hidden.
    */
   get_for_you() {
     if (!this.single_user?.token) {
@@ -696,7 +708,8 @@ export class AccountPage implements OnInit, OnDestroy {
                   products: Array.isArray(r?.products) ? r.products.map((p: any) => this.forYouCard(p, key)) : [],
                 };
               })
-              .filter((r: { key: string; products: ForYouCard[] }) => r.key !== '' && r.products.length > 0);
+              .filter((r: { key: string; products: ForYouCard[] }) =>
+                r.key !== '' && r.products.length > 0 && !HIDDEN_FOR_YOU_RAILS.has(r.key));
             if (this.forYouRails.length > 0) {
               this.recordAiEvent('for_you_shown', { rails: this.forYouRails.length });
             }
@@ -715,11 +728,12 @@ export class AccountPage implements OnInit, OnDestroy {
     this.open_product(product_id);
   }
 
-  /** Ain concierge entry points (surfaced on the customer landing). */
-  open_ask_ain() { this.router.navigate(['/ask-ain']); }
-  open_gift_ain() { this.router.navigate(['/gift-ain']); }
-  open_outfit() { this.router.navigate(['/outfit']); }
-  open_visual_search() { this.router.navigate(['/visual-search']); }
+  /**
+   * Open the Ain concierge sheet (Ask Ain / Gift Finder / Style me / Search
+   * by photo) from the Ain FAB. The sheet routes to the picked tool itself
+   * and resets this flag through its (dismiss) output.
+   */
+  openAinSheet() { this.ainSheetOpen = true; }
 
   /**
    * Map a v3 listShape product to the legacy card shape the rails render, plus
@@ -912,10 +926,16 @@ export class AccountPage implements OnInit, OnDestroy {
     this.router.navigate(['/', 'cart']);
   }
 
-  open_reviews(id: any, name: any) {
+  /**
+   * Store reviews by the store SLUG (v3), never the legacy store id: v3-native
+   * stores have none (store_id arrives as 0), and the reviews API resolves a
+   * number as a v3 id first, so a legacy id could open another store's reviews.
+   */
+  open_reviews(slug: string | undefined, name: string) {
+    if (!slug) { return; }
     this.router.navigate(
       ['/', 'store_reviews'],
-      { queryParams: { id, name } }
+      { queryParams: { slug, name } }
     );
   }
 

@@ -40,20 +40,21 @@
   gap: 6px;
 }
 
+/* --ion-color-dark is Ionic's fixed #222428: invisible on the dark canvas. */
 .vpo-label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--ion-color-dark, #18181b);
+  color: var(--ax-color-text-primary);
 }
 
 .vpo-input {
   width: 100%;
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid var(--ion-color-light-shade, #e4e4e7);
-  background: #fff;
+  border: 1px solid var(--ax-color-border-default);
+  background: var(--ax-color-bg-surface);
   font-size: 15px;
-  color: var(--ion-color-dark, #18181b);
+  color: var(--ax-color-text-primary);
 
   &:focus {
     outline: none;

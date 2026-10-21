@@ -18,6 +18,7 @@ import { GiftRemindersService, type GiftReminder, type GiftReminderInput } from 
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { TranslatePipe } from '../../translate.pipe';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
+import { AxSkeletonBlockComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 import { I18nService } from '../../i18n.service';
 
 interface StoredUser {
@@ -68,6 +69,8 @@ function localDateStr(d: Date = new Date()): string {
     FormsModule,
     TranslatePipe,
     AxIconComponent,
+    AxSkeletonBlockComponent,
+    AxSkeletonLineComponent,
   ],
 })
 export class GiftRemindersPage implements OnInit {
@@ -124,8 +127,14 @@ export class GiftRemindersPage implements OnInit {
       return;
     }
     this.loading = true;
-    this.reminders = await this.service.list(this.user.token);
-    this.loading = false;
+    try {
+      this.reminders = await this.service.list(this.user.token);
+    } catch {
+      // A transport failure must end the skeleton (empty state + Add button).
+      this.reminders = [];
+    } finally {
+      this.loading = false;
+    }
   }
 
   openCreate(): void {

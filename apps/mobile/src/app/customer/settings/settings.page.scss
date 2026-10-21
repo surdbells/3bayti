@@ -181,8 +181,8 @@
   flex-shrink: 0;
 
   &--danger {
-    background: rgba(192, 57, 43, 0.10);
-    color: #c0392b;
+    background: var(--ax-color-bg-danger-subtle);
+    color: var(--ax-color-text-danger);
   }
 }
 
@@ -197,7 +197,7 @@
   white-space: nowrap;
 
   &--danger {
-    color: #c0392b;
+    color: var(--ax-color-text-danger);
   }
 }
 

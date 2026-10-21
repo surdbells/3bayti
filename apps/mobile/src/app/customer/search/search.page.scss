@@ -14,7 +14,7 @@ ion-content.page-bg {
   z-index: 5;
   padding: 12px 16px;
   background: var(--ax-color-bg-canvas);
-  border-bottom: 1px solid rgba(46, 36, 28, 0.06);
+  border-bottom: 1px solid var(--ax-color-border-subtle);
 
   /* Visually hide the ax-text-field's label, placeholder is enough
      visual cue for a search bar. Label remains accessible to screen
@@ -49,22 +49,10 @@ ion-content.page-bg {
   contain: layout style;
 }
 
-/* Tappable vendor badge override, same visual as global .m6d-vendor-badge
-   but as a button with active-press feedback. */
-.m6d-vendor-badge.vendor-badge--tappable {
-  cursor: pointer;
-  border: none;
-  font-family: inherit;
-  font-size: inherit;
-  color: inherit;
-
-  appearance: none;
-  -webkit-appearance: none;
-
-  &:active {
-    transform: scale(0.97);
-  }
-}
+/* The tappable vendor badge (.m6d-vendor-badge.vendor-badge--tappable) is
+   styled globally in global.scss. The page-level override that used to live
+   here set `color: inherit`, which rendered the store name in the page's
+   dark body colour on the badge's dark scrim. */
 
 /* ----- Initial prompt + empty state ---------------------------------- */
 
@@ -86,15 +74,6 @@ ion-content.page-bg {
     --color: var(--ax-palette-neutral-0);
     --border-radius: 999px;
   }
-}
-
-/* ----- Loader row ----------------------------------------------------- */
-
-.loader-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem 0;
 }
 
 /* ----- Add-to-closet sheet list rows --------------------------------- */
@@ -141,21 +120,40 @@ ion-content.page-bg {
   color: var(--ax-color-text-primary);
 }
 
-/* Ask Ain entry pill (natural-language concierge) */
+/* Ask Ain + Search by photo entry pills.
+   Dark-mode fix: the pill used to hard-code a cream gradient (#fbf7f4 ->
+   #f4ece6) while its text used the theme tokens, so in dark mode the text
+   flipped to near-white on a still-cream pill and became unreadable. Every
+   colour now comes from the --ax-ain-* concierge tokens (the same family Ask
+   Ain / Gift Finder use), which are re-pointed for dark mode in _tokens.scss.
+   The pill also sets its own `color` / `font` so the <button> never falls
+   back to the UA's button text colour. */
 .ask-ain-pill {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   width: calc(100% - 2rem);
+  min-height: 44px;
   margin: 0.25rem 1rem 0.5rem;
   padding: 0.7rem 0.9rem;
-  border: 1px solid #ece3dc;
+  border: 1px solid var(--ax-ain-border-warm);
   border-radius: 1rem;
-  background: linear-gradient(135deg, #fbf7f4, #f4ece6);
+  background: linear-gradient(135deg, var(--ax-ain-cream-1), var(--ax-ain-cream-2));
+  color: var(--ax-ain-ink);
+  font-family: inherit;
   cursor: pointer;
-  text-align: left;
+  text-align: start;
+  -webkit-tap-highlight-color: transparent;
+
+  &:active {
+    background: var(--ax-ain-cream-pressed);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--ax-shadow-focus);
+  }
 }
-.ask-ain-pill:active { background: #f0e6df; }
 .ask-ain-pill__orb {
   flex: 0 0 auto;
   width: 2.25rem;
@@ -163,11 +161,12 @@ ion-content.page-bg {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  color: #fff;
-  background: linear-gradient(135deg, #a27a60, #906952);
+  color: var(--ax-color-text-on-brand);
+  background: var(--ax-color-bg-brand);
 }
 .ask-ain-pill__orb ax-icon { --ax-icon-size: 1.15rem; width: 1.15rem; height: 1.15rem; }
 .ask-ain-pill__text { flex: 1; display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
-.ask-ain-pill__text strong { font-size: 0.92rem; color: var(--ax-color-text-primary, #1a1a1a); }
-.ask-ain-pill__text small { font-size: 0.75rem; color: var(--ax-color-text-tertiary, #8a8a8a); }
-.ask-ain-pill__chevron { --ax-icon-size: 1.1rem; width: 1.1rem; height: 1.1rem; color: #906952; flex: 0 0 auto; }
+.ask-ain-pill__text strong { font-size: 0.92rem; font-weight: 600; color: var(--ax-ain-ink); }
+.ask-ain-pill__text small { font-size: 0.75rem; color: var(--ax-ain-ink-muted); }
+.ask-ain-pill__chevron { --ax-icon-size: 1.1rem; width: 1.1rem; height: 1.1rem; color: var(--ax-ain-accent); flex: 0 0 auto; }
+:host-context([dir='rtl']) .ask-ain-pill__chevron { transform: scaleX(-1); }

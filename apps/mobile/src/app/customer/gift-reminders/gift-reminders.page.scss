@@ -58,7 +58,10 @@
 .grm-btn--primary ion-spinner { width: 1.1rem; height: 1.1rem; }
 .grm-btn--ghost { background: transparent; color: var(--ax-color-text-tertiary, #8a8a8a); border-color: var(--ax-ain-border); }
 
-.grm-loading { display: grid; place-items: center; padding: 3rem 0; }
+/* Loading placeholder row: same box as a reminder row, not interactive.
+   The text column takes the free width so % bars resolve against it. */
+.grm-item--skeleton { pointer-events: none; }
+.grm-item__main--skeleton { flex: 1; }
 
 .grm-empty {
   display: flex;

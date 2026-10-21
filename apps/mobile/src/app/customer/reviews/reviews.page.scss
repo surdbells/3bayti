@@ -88,13 +88,29 @@ ion-content.page-bg {
   }
 
   &__star {
-    color: rgba(46, 36, 28, 0.15);   /* unfilled = soft brown gray */
+    /* unfilled: border token (a 15% espresso wash vanished on dark cards) */
+    color: var(--ax-color-border-default);
     font-size: 14px;
 
     &--filled {
       color: #d6a800;                /* gold star, same accent literal
                                         used elsewhere in the app */
     }
+  }
+}
+
+/* Loading placeholder: a plain div, so it carries the ion-card-content
+   padding itself and is not tappable. */
+.review-card--skeleton {
+  padding: 14px 16px;
+  cursor: default;
+
+  &:active {
+    transform: none;
+  }
+
+  .review-card__body {
+    gap: 10px;
   }
 }
 
@@ -109,6 +125,29 @@ ion-content.page-bg {
     font-size: 48px;
     color: var(--ax-color-text-tertiary);
     opacity: 0.5;
+  }
+}
+
+/* ----- Retry (error state) ------------------------------------------ */
+
+.retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 9px 18px;
+  border: 1px solid var(--ax-color-border-default);
+  border-radius: var(--ax-radius-pill);
+  background: var(--ax-color-bg-surface);
+  color: var(--ax-color-text-brand);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+
+  ax-icon {
+    font-size: 14px;
+    opacity: 1;
+    color: inherit;
   }
 }
 

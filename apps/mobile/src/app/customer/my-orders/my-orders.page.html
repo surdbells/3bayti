@@ -43,13 +43,42 @@
     }
   </div>
 
+  <!-- Loading: skeleton order cards built from the real card's classes
+       (header / one item row / footer), so the list swaps in without a jump. -->
   @if (ui_controls.is_loading){
-    <div class="loader-row">
-      <ax-loader></ax-loader>
+    <div role="status" aria-busy="true" [attr.aria-label]="'orders_loading' | translate">
+      @for (s of skeletonOrders; track s) {
+        <ion-card class="order-card" aria-hidden="true">
+          <div class="order-header">
+            <div class="order-info">
+              <span class="order-date"><ax-skeleton-line width="96px" [height]="12" /></span>
+              <span class="order-ref"><ax-skeleton-line width="132px" [height]="9" /></span>
+            </div>
+            <ax-skeleton-block width="76px" height="21px" radius="999px" />
+          </div>
+          <div class="order-items">
+            <div class="order-item">
+              <ax-skeleton-block width="44px" height="44px" />
+              <div class="order-item__info">
+                <span class="order-item__name"><ax-skeleton-line width="72%" [height]="11" /></span>
+                <span class="order-item__meta"><ax-skeleton-line width="44px" [height]="9" /></span>
+              </div>
+              <span class="order-item__price"><ax-skeleton-line width="56px" [height]="11" /></span>
+            </div>
+          </div>
+          <div class="order-footer">
+            <div class="order-footer__main">
+              <div class="total">
+                <span class="total-label"><ax-skeleton-line width="36px" [height]="8" /></span>
+                <strong class="total-amount"><ax-skeleton-line width="80px" [height]="14" /></strong>
+              </div>
+              <ax-skeleton-block width="116px" height="36px" radius="999px" />
+            </div>
+          </div>
+        </ion-card>
+      }
     </div>
-  }
-
-  @if (!ui_controls.is_loading && orders.length === 0){
+  } @else if (orders.length === 0){
     <div class="empty-state">
       <div class="empty-icon-wrap">
         <ax-icon name="shopping-cart" />
@@ -148,7 +177,7 @@
     }
   }
 
-  @if(!ui_controls.is_empty){
+  @if(!ui_controls.is_empty && !ui_controls.is_loading){
     <ion-infinite-scroll (ionInfinite)="onIonInfinite($event)">
       <ion-infinite-scroll-content [loadingText]="'please_wait' | translate" loadingSpinner="dots"></ion-infinite-scroll-content>
     </ion-infinite-scroll>

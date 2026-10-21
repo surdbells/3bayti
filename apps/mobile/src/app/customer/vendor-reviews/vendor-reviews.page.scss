@@ -79,7 +79,8 @@ ion-content.page-bg {
 /* ----- Star rating (read-only, used in 2 places) ------ */
 
 .rating-star {
-  color: rgba(46, 36, 28, 0.15);
+  /* unfilled: border token (a 15% espresso wash vanished on dark cards) */
+  color: var(--ax-color-border-default);
   font-size: 16px;
 
   &--sm {
@@ -269,9 +270,45 @@ ion-content.page-bg {
     font-size: 14px;
   }
 
-  &:active {
+  &:active,
+  &--active {
     color: var(--ax-color-text-brand);
   }
+}
+
+/* ----- Loading placeholders + error retry -------------- */
+
+.store-info--skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.name-date--skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.review-skeleton-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 9px 18px;
+  border: 1px solid var(--ax-color-border-default);
+  border-radius: var(--ax-radius-pill);
+  background: var(--ax-color-bg-surface);
+  color: var(--ax-color-text-brand);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .verified-badge {
@@ -279,8 +316,8 @@ ion-content.page-bg {
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  background: rgba(34, 197, 94, 0.1);
-  color: #15803d;
+  background: var(--ax-color-bg-success-subtle);
+  color: var(--ax-color-text-success);
   border-radius: 999px;
   font-family: inherit;
   font-size: 11px;
@@ -351,7 +388,7 @@ ion-content.page-bg {
   transition: transform 100ms ease;
 
   ax-icon {
-    color: rgba(46, 36, 28, 0.15);
+    color: var(--ax-color-border-default);
     font-size: 28px;
     transition: color 100ms ease;
   }

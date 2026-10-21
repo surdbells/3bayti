@@ -29,6 +29,7 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
+import { AxSkeletonCardComponent, AxSkeletonCircleComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 
 /**
@@ -64,6 +65,9 @@ import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
     AxIconComponent,
     AxLoaderComponent,
     AxTextFieldComponent,
+    AxSkeletonCardComponent,
+    AxSkeletonCircleComponent,
+    AxSkeletonLineComponent,
     AxBottomSheetComponent,
     AppTabBarComponent,
   ],
@@ -95,10 +99,19 @@ export class WishlistPage implements OnInit, OnDestroy {
 
   ui_controls = {
     is_empty: false,
-    is_loading: false,
+    // Products grid loading. Starts true so the first paint is the skeleton
+    // grid, never a flash of the empty closet.
+    is_loading: true,
     is_creating: false,
     is_deleting: false,
   };
+
+  /**
+   * True once the label list has loaded at least once. Until then the
+   * categories row shows skeleton cards after the static Add / All-saved
+   * cards; later label refreshes (after add / remove) update in place.
+   */
+  labelsLoaded = false;
 
   /** Currently selected label name. Empty = the "All saved" view. */
   selected_label = '';
@@ -158,15 +171,16 @@ export class WishlistPage implements OnInit, OnDestroy {
     return new Wishlist(p.id, p.id, p.name, image);
   }
 
+  // Labels load on their own flag (labelsLoaded) so a label refresh never
+  // blanks the products grid, and picking a label never hides this row.
   async loadLabels() {
-    this.ui_controls.is_loading = true;
     try {
       const labels = await this.wishlistService.listLabels(this.single_user.token);
       this.categories = labels.map(l => new Labels(l.id, l.name, l.count));
     } catch {
       this.categories = [];
     } finally {
-      this.ui_controls.is_loading = false;
+      this.labelsLoaded = true;
     }
   }
 

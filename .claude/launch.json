@@ -41,6 +41,22 @@
         "localhost"
       ],
       "port": 4300
+    },
+    {
+      "name": "mobile",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@3bayti/mobile",
+        "exec",
+        "ng",
+        "serve",
+        "--port",
+        "8100",
+        "--host",
+        "localhost"
+      ],
+      "port": 8100
     }
   ]
 }

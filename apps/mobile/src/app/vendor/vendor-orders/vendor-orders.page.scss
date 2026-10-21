@@ -64,28 +64,30 @@ ion-content.page-bg {
   text-transform: uppercase;
   flex-shrink: 0;
 
+  /* Status tokens (subtle fill + its text-on-*-subtle colour), re-pointed for dark mode;
+     the old hard-coded hues fell to ~2.5:1 on the espresso cards. */
   &--processing {
-    background: rgba(59, 130, 246, 0.12);
-    color: #1e6fdb;
+    background: var(--ax-color-bg-info-subtle);
+    color: var(--ax-color-text-on-info-subtle);
   }
 
   &--shipping {
-    background: rgba(245, 158, 11, 0.14);
-    color: #b45309;
+    background: var(--ax-color-bg-warning-subtle);
+    color: var(--ax-color-text-on-warning-subtle);
   }
 
   &--delivered {
-    background: rgba(34, 197, 94, 0.14);
-    color: #15803d;
+    background: var(--ax-color-bg-success-subtle);
+    color: var(--ax-color-text-on-success-subtle);
   }
 
   &--cancelled {
-    background: rgba(192, 57, 43, 0.12);
-    color: #c0392b;
+    background: var(--ax-color-bg-danger-subtle);
+    color: var(--ax-color-text-on-danger-subtle);
   }
 
   &--pending {
-    background: rgba(46, 36, 28, 0.08);
+    background: var(--ax-color-bg-muted);
     color: var(--ax-color-text-secondary);
   }
 }
@@ -273,13 +275,16 @@ ion-content.page-bg {
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
 }
+// Semantic tokens, not the old --m7-* names: those are defined nowhere, so
+// their light fallbacks always applied (#2c2c2c text on the dark canvas,
+// about 1.25:1, in dark mode).
 .status-chip {
   flex: 0 0 auto;
   padding: 8px 14px;
   border-radius: 999px;
-  border: 1px solid var(--m7-border, #e0d8c7);
+  border: 1px solid var(--ax-color-border-default);
   background: transparent;
-  color: var(--m7-text, #2c2c2c);
+  color: var(--ax-color-text-primary);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
@@ -288,17 +293,17 @@ ion-content.page-bg {
   text-transform: capitalize;
 }
 .status-chip--active {
-  background: var(--m7-accent, #B9935A);
-  color: #fff;
-  border-color: var(--m7-accent, #B9935A);
+  background: var(--ax-color-bg-brand);
+  color: var(--ax-color-text-on-brand);
+  border-color: var(--ax-color-bg-brand);
 }
 .item-count {
   padding: 8px 16px;
   font-size: 13px;
-  color: var(--m7-muted, #777);
+  color: var(--ax-color-text-secondary);
 }
 .manage-btn {
-  --color: #fff;
-  --background: var(--m7-accent, #B9935A);
-  --background-hover: var(--m7-accent-dark, #A07F4A);
+  --color: var(--ax-color-text-on-brand);
+  --background: var(--ax-color-bg-brand);
+  --background-hover: var(--ax-color-bg-brand-hover);
 }

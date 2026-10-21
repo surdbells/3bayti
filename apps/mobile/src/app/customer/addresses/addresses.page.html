@@ -19,10 +19,26 @@
 
 <ion-content [fullscreen]="true" class="page-bg">
   <div class="sheet ion-padding-horizontal">
-    @if (ui_controls.is_loading) {
-      <div class="loader-row">
-        <ax-loader></ax-loader>
-      </div>
+    <!-- First load: skeleton address cards built from the real card classes.
+         A reload after add / edit / delete keeps the book on screen and
+         updates it in place instead of swapping it for a spinner. -->
+    @if (ui_controls.is_loading && addresses.length === 0) {
+      <ul class="address-book" role="status" aria-busy="true" [attr.aria-label]="'addresses_loading' | translate">
+        @for (s of [1, 2]; track s) {
+          <li class="address-card" aria-hidden="true">
+            <div class="address-card__head">
+              <span class="address-card__label"><ax-skeleton-line width="110px" [height]="13" /></span>
+            </div>
+            <p class="address-card__line"><ax-skeleton-line width="85%" [height]="10" /></p>
+            <p class="address-card__line"><ax-skeleton-line width="45%" [height]="10" /></p>
+            <div class="address-card__actions">
+              @for (w of ['92px', '64px', '72px']; track $index) {
+                <ax-skeleton-block [width]="w" height="28px" radius="999px" />
+              }
+            </div>
+          </li>
+        }
+      </ul>
     } @else {
       @if (addresses.length === 0) {
         <p class="address-empty">{{ 'text_no_saved_addresses' | translate }}</p>

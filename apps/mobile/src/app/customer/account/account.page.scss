@@ -143,7 +143,7 @@
 
     &:active {
       border-color: var(--ax-color-text-brand);
-      background: var(--ax-palette-beige-100);
+      background: var(--ax-color-bg-brand-subtle);
     }
 
     .m6-chip-ico {
@@ -228,7 +228,7 @@
     height: 24px;
     border-radius: 50%;
     overflow: hidden;
-    background: var(--ax-palette-beige-100);
+    background: var(--ax-color-bg-brand-subtle);
     color: var(--ax-color-text-brand);
 
     img {
@@ -526,7 +526,7 @@
 
   &:hover,
   &:focus-visible {
-    background: var(--ax-palette-beige-100);
+    background: var(--ax-color-bg-brand-subtle);
     outline: none;
   }
 
@@ -554,7 +554,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--ax-palette-beige-100);
+  background: var(--ax-color-bg-brand-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -979,22 +979,51 @@ ion-modal ion-content {
 }
 
 /* ============================================================
-   Premium floating action buttons (Messages + Vendor Dashboard)
-   Stacked vertically, bottom-end, lifted above the footer tab bar
-   so they never overlap it. Brand-brown fill + soft elevation.
+   Premium floating action buttons (Ain + Vendor Dashboard)
+   Stacked vertically, bottom-end, just above the footer tab bar.
+   Brand-brown fill + soft elevation; Ain (primary) adds a gold ring.
+   Messages lives in the header only (same unread badge), so customers
+   get a single FAB and the stack covers as little of the rails as possible.
+
+   Geometry lives in custom properties on ion-content (ion-fab is
+   slotted into it, so it inherits them) and drives BOTH the stack
+   and the content's bottom padding: the last section can always
+   scroll fully clear of the stack instead of hiding under it.
    ============================================================ */
+ion-content.home-bg {
+  --m6-fab-size: 44px;                 /* one size for every FAB, 44px tap target */
+  --m6-fab-gap: var(--ax-space-2);
+  --m6-fab-offset: var(--ax-space-4);  /* stack <-> tab bar / screen edge */
+  --m6-fab-count: 1;                   /* Ain */
+  /* ion-content already pads for the tab bar (fullscreen offset); this adds
+     the stack's own height plus a little breathing room. */
+  --padding-bottom: calc(
+    var(--m6-fab-offset)
+    + var(--m6-fab-count) * var(--m6-fab-size)
+    + (var(--m6-fab-count) - 1) * var(--m6-fab-gap)
+    + var(--ax-space-4)
+  );
+}
+/* Approved vendors also get the Store dashboard FAB. */
+ion-content.home-bg.home-bg--fab-2 {
+  --m6-fab-count: 2;
+}
+
 .m6-fab-stack {
-  /* The footer tab bar is ~56px tall; clear it plus a comfortable gap
-     and the device safe-area inset. */
-  inset-block-end: calc(56px + 16px + env(safe-area-inset-bottom, 0px));
-  inset-inline-end: 16px;
-  /* Flex column-reverse: the first DOM child (Messages, always shown) sits at
-     the bottom anchor; the conditional Dashboard FAB stacks above it. When the
-     Dashboard FAB is @if-removed there is no empty slot, Messages stays put. */
+  /* ion-fab sits in ion-content's fixed slot, and ion-content ends at the top
+     of the footer tab bar (the footer is in the page's flex flow, it does not
+     overlay the content), so the offset is measured from the tab bar. The
+     old 56px + 16px + safe-area offset double-counted the bar and left the
+     stack floating ~72px up, over the product rails. */
+  inset-block-end: var(--m6-fab-offset);
+  inset-inline-end: var(--m6-fab-offset);
+  /* Flex column-reverse: the first DOM child (Ain, always shown) sits at the
+     bottom anchor and the conditional Dashboard FAB above it. When the
+     Dashboard FAB is @if-removed there is no empty slot. */
   display: flex;
   flex-direction: column-reverse;
   align-items: center;
-  gap: 12px;
+  gap: var(--m6-fab-gap);
 
   ion-fab-button.m6-fab {
     --background: var(--ax-color-bg-brand);          /* #906952 brand brown */
@@ -1003,25 +1032,20 @@ ion-modal ion-content {
     --color: var(--ax-color-text-on-brand);
     --box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
     --border-radius: 50%;
-    width: 40px;   /* 56 * 0.7, reduced 30% */
-    height: 40px;
+    width: var(--m6-fab-size);
+    height: var(--m6-fab-size);
     margin: 0;     /* the flex gap handles spacing */
   }
 
-  .m6-fab-badge {
-    position: absolute;
-    top: 0;
-    inset-inline-end: 0;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 4px;
-    border-radius: 8px;
-    font-size: 9px;
-    line-height: 16px;
-    font-weight: 700;
-    border: 2px solid var(--ax-color-bg-canvas);
-    --padding-start: 4px;
-    --padding-end: 4px;
+  /* Ain, the primary action: deeper brand gradient + a gold ring so it reads
+     as "the AI concierge" at a glance while keeping the shared size. */
+  ion-fab-button.m6-fab--ain {
+    --background: linear-gradient(135deg, var(--ax-color-bg-brand), var(--ax-color-bg-brand-active));
+    --background-activated: var(--ax-color-bg-brand-active);
+    --background-hover: var(--ax-color-bg-brand-hover);
+    --border-width: 2px;
+    --border-style: solid;
+    --border-color: var(--ax-color-bg-gold);
   }
 }
 
@@ -1105,89 +1129,6 @@ ion-modal ion-content {
 .m6d-img-wrap {
   aspect-ratio: 3 / 2;
 }
-
-/* ── Ain concierge row (Ask Ain / Gift Finder / Style me / Search by photo) ──
-   A horizontally-scrolling row of AI entry-point cards, surfaced on the
-   customer landing so the concierge tools are discoverable. Mirrors the
-   .ask-ain-hero styling from the public home page. */
-.ain-concierge {
-  margin: 4px 0 12px;
-  padding-inline: 16px;
-}
-.ain-concierge__eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 0 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ax-ain-accent);
-}
-.ain-concierge__eyebrow ax-icon {
-  --ax-icon-size: 1rem;
-  width: 1rem;
-  height: 1rem;
-  color: var(--ax-ain-gold);
-}
-/* Compact 2×2 grid of horizontal cards (orb + one-line title/subtitle). */
-.ain-concierge__row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.ain-card {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 9px;
-  border: 1px solid var(--ax-ain-border-warm);
-  border-radius: 0.9rem;
-  background: linear-gradient(135deg, var(--ax-ain-cream-1), var(--ax-ain-cream-2));
-  text-align: start;
-  cursor: pointer;
-  min-width: 0;
-}
-.ain-card:active { background: var(--ax-ain-cream-pressed); }
-.ain-card__orb {
-  flex: 0 0 auto;
-  width: 1.85rem;
-  height: 1.85rem;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  background: linear-gradient(135deg, #a27a60, #906952);
-}
-.ain-card__orb ax-icon { --ax-icon-size: 0.95rem; width: 0.95rem; height: 0.95rem; }
-.ain-card__text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-/* Force a single line each — never wrap to two lines. */
-.ain-card__title {
-  font-size: 0.8rem;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--ax-color-text-primary, #1a1a1a);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ain-card__sub {
-  font-size: 0.66rem;
-  line-height: 1.25;
-  color: var(--ax-color-text-tertiary, #8a8a8a);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* Distinct orb tints per tool so the four read as four things at a glance. */
-.ain-card--gift .ain-card__orb { background: linear-gradient(135deg, #c98a6a, #a8563a); }
-.ain-card--style .ain-card__orb { background: linear-gradient(135deg, #b18f5f, #8a6a3a); }
-.ain-card--photo .ain-card__orb { background: linear-gradient(135deg, #8a9a86, #5f7a63); }
 
 /* "For You" placeholder rail shown while the personalised rails load. */
 .fy-placeholder__title,

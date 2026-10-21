@@ -23,7 +23,7 @@ import { apiErrorMessage } from '../../core/http/api-error';
 import { I18nService } from '../../i18n.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
-import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import { AxSkeletonBlockComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { cfImage } from '../../shared/cf-image';
 import { supportWhatsappLink } from '../../core/constants/support.constants';
@@ -152,7 +152,8 @@ interface OrderShipment {
     FormsModule,
     TranslatePipe,
     AxIconComponent,
-    AxLoaderComponent,
+    AxSkeletonBlockComponent,
+    AxSkeletonLineComponent,
     AppTabBarComponent,
   ],
 })
@@ -166,7 +167,9 @@ export class OrderDetailPage implements OnInit {
   timelineEvents: TimelineEvent[] = [];
 
   ui_controls = {
-    is_loading: false,
+    // Starts true so the first paint is the skeleton, not a blank page while
+    // the session is read and GET /orders/:id is in flight.
+    is_loading: true,
     is_cancelling: false,
     is_paying: false,
     is_reordering: false,
@@ -218,7 +221,9 @@ export class OrderDetailPage implements OnInit {
 
   /** True only for pending_payment, mirrors the web/my-orders rule. */
   canCancel(): boolean {
-    return this.order?.status === 'pending_payment' && !this.ui_controls.is_cancelling;
+    return this.order?.status === 'pending_payment'
+      && !this.ui_controls.is_cancelling
+      && !this.ui_controls.is_paying;
   }
 
   /** Show the "Complete payment" affordance only while the order awaits payment. */
@@ -237,8 +242,10 @@ export class OrderDetailPage implements OnInit {
     this.ui_controls.is_paying = true;
     this.orderPayment.pay(order.order_reference, this.token, {
       onPaid: () => {
-        this.ui_controls.is_paying = false;
-        this.loadOrder();
+        // Stay "paying" until the reload settles: the order stays on screen
+        // during the GET, and the stale pending_payment copy must not offer
+        // an enabled "Complete payment" (a second charge) or Cancel.
+        this.loadOrder(() => { this.ui_controls.is_paying = false; });
         void this.pendingOrders.refresh();
       },
       onFailed: () => {

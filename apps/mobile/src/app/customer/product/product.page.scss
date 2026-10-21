@@ -161,7 +161,10 @@ swiper-slide,
   .skeleton {
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, var(--ax-palette-beige-200) 0%, var(--ax-palette-beige-100) 50%, var(--ax-palette-beige-200) 100%);
+    /* Placeholder token (warm cream light / espresso dark). The raw beige
+       palette gradient never flipped, so the gallery flashed a bright beige
+       block in dark mode while the photo decoded. */
+    background: var(--ax-color-bg-placeholder);
     overflow: hidden;
   }
 }
@@ -541,7 +544,7 @@ swiper-slide,
   gap: 4px;
   font-size: 12px;
   font-weight: 600;
-  color: #1a7f37;
+  color: var(--ax-color-text-success);
 
   ax-icon { font-size: 14px; }
 }
@@ -1637,43 +1640,11 @@ swiper-slide,
 .ctl-price { font-size: 0.82rem; font-weight: 700; color: var(--ax-color-text-primary, #1a1a1a); }
 .ctl-price-was { font-size: 0.72rem; color: var(--ax-ain-ink-faint); text-decoration: line-through; }
 
-/* Ain gift-card nudge (PDP): tasteful "gift card instead" prompt */
-.gc-nudge {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  text-align: start;
-  border: 1px solid var(--ax-ain-border-warm);
-  background: linear-gradient(135deg, var(--ax-ain-cream-1), var(--ax-ain-cream-2));
-  border-radius: 1.1rem;
-  padding: 0.85rem 1rem;
-  margin: 0.75rem 0 1.25rem;
-  cursor: pointer;
-}
-.gc-nudge__icon {
-  flex: 0 0 auto;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  background: linear-gradient(135deg, #a27a60, var(--ax-color-bg-brand, #906952));
-}
-.gc-nudge__icon ax-icon { --ax-icon-size: 1.2rem; }
-.gc-nudge__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 0.12rem; }
-.gc-nudge__title { font-size: 0.9rem; font-weight: 700; color: var(--ax-ain-accent); }
-.gc-nudge__sub { font-size: 0.78rem; color: var(--ax-ain-ink-muted); }
-.gc-nudge__cta {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: var(--ax-color-bg-brand, #906952);
-  color: #fff;
-  padding: 0.5rem 0.9rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  white-space: nowrap;
+/* Ain gift-card nudge (PDP): slim row under the secondary actions; the
+   look lives in shared/gift-card-nudge.component.ts. Same rhythm as the
+   try-on / customization CTAs above it. */
+.pdp-gift-nudge {
+  margin-top: 0.75rem;
 }
 
 /* ===== Virtual try-on (Ain) ============================================= */
@@ -1746,7 +1717,7 @@ swiper-slide,
 
 .tryon-error {
   margin: 0;
-  color: #b3261e;
+  color: var(--ax-color-text-danger);
   font-size: 0.78rem;
 }
 

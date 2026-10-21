@@ -31,35 +31,9 @@
   <!-- Update-email nudge (non-deliverable Apple relay / placeholder email) -->
   <app-add-email-banner></app-add-email-banner>
 
-  <!-- Ask Ain: natural-language style & gifting concierge -->
-  <button type="button" class="ask-ain-hero" [routerLink]="['/ask-ain']">
-    <span class="ask-ain-hero__orb"><ax-icon name="sparkles"></ax-icon></span>
-    <span class="ask-ain-hero__body">
-      <span class="ask-ain-hero__title">{{ 'ask_ain_title' | translate }}</span>
-      <span class="ask-ain-hero__sub">{{ 'ask_ain_pill_hint' | translate }}</span>
-    </span>
-    <span class="ask-ain-hero__cta" aria-hidden="true"><ax-icon name="arrow-right"></ax-icon></span>
-  </button>
-
-  <!-- Gift Finder: guided gift concierge -->
-  <button type="button" class="ask-ain-hero ask-ain-hero--gift" [routerLink]="['/gift-ain']">
-    <span class="ask-ain-hero__orb"><ax-icon name="gift"></ax-icon></span>
-    <span class="ask-ain-hero__body">
-      <span class="ask-ain-hero__title">{{ 'gift_ain_title' | translate }}</span>
-      <span class="ask-ain-hero__sub">{{ 'gift_ain_pill_hint' | translate }}</span>
-    </span>
-    <span class="ask-ain-hero__cta" aria-hidden="true"><ax-icon name="arrow-right"></ax-icon></span>
-  </button>
-
-  <!-- Style me: guided outfit generator -->
-  <button type="button" class="ask-ain-hero ask-ain-hero--outfit" [routerLink]="['/outfit']">
-    <span class="ask-ain-hero__orb"><ax-icon name="shirt"></ax-icon></span>
-    <span class="ask-ain-hero__body">
-      <span class="ask-ain-hero__title">{{ 'outfit_title' | translate }}</span>
-      <span class="ask-ain-hero__sub">{{ 'outfit_pill_hint' | translate }}</span>
-    </span>
-    <span class="ask-ain-hero__cta" aria-hidden="true"><ax-icon name="arrow-right"></ax-icon></span>
-  </button>
+  <!-- The Ain concierge tools (Ask Ain / Gift Finder / Style me / Search by
+       photo) live behind the Ain FAB below, which opens the centered
+       <ax-ain-concierge-sheet>, same as the logged-in home. -->
 
   <!-- Best Sellers Section -->
   @if (!ui_controls.is_loading && best_sellers.length > 0) {
@@ -214,6 +188,24 @@
     </ion-infinite-scroll>
   }
 
+  <!-- Ain FAB (bottom-end, just above the sign-in footer): opens the Ain
+       concierge sheet. ion-content's bottom padding (home.page.scss) lets the
+       last section scroll clear of it. -->
+  <ion-fab class="home-fab" vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button
+      class="home-fab__ain"
+      (click)="openAinSheet()"
+      aria-haspopup="dialog"
+      [attr.aria-label]="'fab_ain' | translate">
+      <ax-icon name="sparkles" [size]="22" [style.color]="'var(--ax-color-text-on-brand)'" />
+    </ion-fab-button>
+  </ion-fab>
+
+  <ax-ain-concierge-sheet
+    [isOpen]="ainSheetOpen"
+    [hiddenTools]="ainHiddenTools"
+    (dismiss)="ainSheetOpen = false">
+  </ax-ain-concierge-sheet>
 </ion-content>
 <!-- Footer -->
 <ion-footer class="product-footer ion-no-border">

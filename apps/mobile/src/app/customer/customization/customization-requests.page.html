@@ -10,8 +10,25 @@
 </ion-header>
 
 <ion-content class="page-bg ion-padding" [fullscreen]="true">
-  @if (isLoading && !hasLoaded) {
-    <div class="cust-loading">{{ 'cust_loading' | translate }}</div>
+  <!-- Until the first reply lands (including the moment before the request
+       starts) show skeleton cards built from the real card classes, never a
+       flash of the empty state. -->
+  @if (!hasLoaded) {
+    <div class="cust-list" role="status" aria-busy="true" [attr.aria-label]="'cust_loading' | translate">
+      @for (s of [1, 2]; track s) {
+        <div class="cust-card cust-card--skeleton" aria-hidden="true">
+          <div class="cust-card__head">
+            <span class="cust-card__thumb"><ax-skeleton-block [fill]="true" radius="12px" /></span>
+            <span class="cust-card__head-text">
+              <span class="cust-card__name"><ax-skeleton-line width="65%" [height]="13" /></span>
+              <span class="cust-card__vendor"><ax-skeleton-line width="40%" [height]="10" /></span>
+            </span>
+            <ax-skeleton-block width="64px" height="21px" radius="999px" />
+          </div>
+          <p class="cust-card__notes"><ax-skeleton-line width="90%" [height]="10" /></p>
+        </div>
+      }
+    </div>
   } @else if (requests.length === 0) {
     <div class="cust-empty">
       <p class="cust-empty__text">{{ 'cust_empty' | translate }}</p>

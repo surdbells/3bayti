@@ -1,3 +1,4 @@
+import { provideZoneChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
@@ -39,6 +40,11 @@ function setup(params: Record<string, string | null> = { slug: 'eid-edit', name:
   TestBed.configureTestingModule({
     imports: [CollectionPage],
     providers: [
+      // Match the app's zone-based bootstrap. Zoneless TestBed auto-runs
+      // change detection on the fixture, which fires ngOnInit on its own
+      // alongside each test's explicit await ngOnInit(), a race that
+      // sometimes double-counted the listing call.
+      provideZoneChangeDetection(),
       provideRouter([]),
       provideHttpClient(),
       { provide: MobileNetworkAdapter, useValue: adapter },

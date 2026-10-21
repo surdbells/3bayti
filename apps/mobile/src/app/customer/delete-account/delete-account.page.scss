@@ -1,11 +1,15 @@
+/* Dark-mode audit: every colour on this page is now a theme token. The field
+   label used --ion-color-dark (Ionic's fixed #222428), which was invisible on
+   the espresso canvas, and the warning box / input stayed light pink / white
+   in dark mode. */
 .da-warn {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   padding: 16px;
   border-radius: 16px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--ax-color-bg-danger-subtle);
+  border: 1px solid var(--ax-color-border-subtle);
   margin-bottom: 24px;
 }
 
@@ -17,8 +21,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--ax-color-bg-surface);
+  color: var(--ax-color-text-danger);
   font-size: 20px;
 }
 
@@ -26,14 +30,14 @@
   margin: 0 0 4px;
   font-size: 15px;
   font-weight: 700;
-  color: #991b1b;
+  color: var(--ax-color-text-danger);
 }
 
 .da-warn-text {
   margin: 0;
   font-size: 13px;
   line-height: 1.45;
-  color: #7f1d1d;
+  color: var(--ax-color-text-primary);
 }
 
 .da-form {
@@ -51,21 +55,25 @@
 .da-label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--ion-color-dark, #18181b);
+  color: var(--ax-color-text-primary);
 }
 
 .da-input {
   width: 100%;
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid var(--ion-color-light-shade, #e4e4e7);
-  background: #fff;
+  border: 1px solid var(--ax-color-border-default);
+  background: var(--ax-color-bg-surface);
   font-size: 15px;
-  color: var(--ion-color-dark, #18181b);
+  color: var(--ax-color-text-primary);
+
+  &::placeholder {
+    color: var(--ax-color-text-tertiary);
+  }
 
   &:focus {
     outline: none;
-    border-color: #dc2626;
+    border-color: var(--ax-color-text-danger);
   }
 }
 
@@ -74,8 +82,8 @@
   height: 50px;
   border-radius: 14px;
   border: none;
-  background: #dc2626;
-  color: #fff;
+  background: var(--ax-color-bg-danger);
+  color: var(--ax-palette-neutral-0);
   font-size: 16px;
   font-weight: 600;
   display: flex;
@@ -92,7 +100,7 @@
   border-radius: 14px;
   border: none;
   background: transparent;
-  color: var(--ion-color-medium, #6b7280);
+  color: var(--ax-color-text-secondary);
   font-size: 15px;
   font-weight: 600;
 

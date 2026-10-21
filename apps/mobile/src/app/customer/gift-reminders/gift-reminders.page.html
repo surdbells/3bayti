@@ -50,8 +50,24 @@
     </form>
   }
 
+  <!-- Loading: reminder rows drawn with the real row classes, so the list
+       swaps in without a jump. -->
   @if (loading) {
-    <div class="grm-loading"><ion-spinner name="dots"></ion-spinner></div>
+    <div class="grm-list" role="status" aria-busy="true" [attr.aria-label]="'gift_reminders_loading' | translate">
+      @for (s of [1, 2, 3]; track s) {
+        <div class="grm-item grm-item--skeleton" aria-hidden="true">
+          <div class="grm-item__main grm-item__main--skeleton">
+            <span class="grm-item__recipient"><ax-skeleton-line width="60%" [height]="13" /></span>
+            <span class="grm-item__meta"><ax-skeleton-line width="80%" [height]="10" /></span>
+          </div>
+          <div class="grm-item__actions">
+            <ax-skeleton-block width="64px" height="30px" radius="999px" />
+            <ax-skeleton-block width="44px" height="30px" radius="999px" />
+            <ax-skeleton-block width="38px" height="30px" radius="999px" />
+          </div>
+        </div>
+      }
+    </div>
   } @else if (reminders.length === 0 && !showForm) {
     <div class="grm-empty">
       <div class="grm-empty__orb"><ax-icon name="gift" /></div>

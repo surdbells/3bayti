@@ -43,6 +43,7 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
+import { GiftCardNudgeComponent } from '../../shared/gift-card-nudge.component';
 import { cfImage } from '../../shared/cf-image';
 export interface StoreMeasurement {
   id: number;
@@ -88,6 +89,7 @@ export interface ColorOption {
     AxLoaderComponent,
     AxTextFieldComponent,
     AxBottomSheetComponent,
+    GiftCardNudgeComponent,
   ]
 })
 export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
@@ -1456,6 +1458,13 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     this.tryOnLoading = false;
     this.tryOnError = this.i18n.t('tryon_error_generate');
     this.cdr.markForCheck();
+  }
+
+  /** Show the gift-card nudge once a real product has loaded. Keyed on the v3
+   *  id (`single.product`): transformProductDetailResponse emits no `id`, so
+   *  the old `single.id > 0` guard was always false and hid the nudge. */
+  get showGiftCardNudge(): boolean {
+    return (Number(this.single?.product) || 0) > 0;
   }
 
   /** Contextual "send a gift card instead" nudge → the gift-card journey. */

@@ -45,6 +45,12 @@ ion-content.page-bg {
   cursor: pointer;
 }
 
+/* Skeleton image tile (first load): not interactive. */
+.img-wrap--skeleton {
+  cursor: default;
+  pointer-events: none;
+}
+
 .cart-img {
   width: 100%;
   height: 100%;
@@ -433,15 +439,6 @@ ion-content.page-bg {
     font-weight: 500;
     text-transform: none;
   }
-}
-
-/* ----- Loader row -------------------------------------- */
-
-.loader-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem 0;
 }
 
 /* ============================================================================

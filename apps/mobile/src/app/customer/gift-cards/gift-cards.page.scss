@@ -66,10 +66,10 @@
 
 // ── Intro ─────────────────────────────────────────────────────
 
-.gc-loader {
-  display: flex;
-  justify-content: center;
-  padding: 48px 0;
+/* Loading placeholder row: same box as a theme card, not interactive. */
+.gc-theme-card--skeleton {
+  pointer-events: none;
+  cursor: default;
 }
 
 .gc-intro {
@@ -489,9 +489,9 @@
 
 /* Keeping it for yourself, positive/green treatment. */
 .gc-hint--keep-active {
-  background: rgba(45, 125, 79, 0.08);
-  border-color: rgba(45, 125, 79, 0.25);
-  color: #2d7d4f;
+  background: var(--ax-color-bg-success-subtle);
+  border-color: var(--ax-color-text-success);
+  color: var(--ax-color-text-success);
 }
 
 // Phone block: a single label on top, then one aligned row of

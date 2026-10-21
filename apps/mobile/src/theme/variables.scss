@@ -129,6 +129,21 @@
 	--radius-lg:  var(--ax-radius-lg);
 	--radius-xl:  var(--ax-radius-xl);
 	--radius-2xl: var(--ax-radius-2xl);
+
+	/* Names pages reference that were never defined anywhere, so every use
+	   fell back to its light-mode literal and stayed light in dark mode
+	   (e.g. the success / gift-card-success receipts drew #2e241c text on
+	   espresso cards, success pages kept a #fdf8f0 cream canvas, borders kept
+	   rgba(0,0,0,.15), danger text kept #c0392b). Retargeted to the semantic
+	   ax tokens, so they follow dark mode with no per-page edits. */
+	--text-primary:            var(--ax-color-text-primary);
+	--text-secondary:          var(--ax-color-text-secondary);
+	--ax-color-bg-page:        var(--ax-color-bg-canvas);
+	--ax-color-bg-subtle:      rgba(46, 36, 28, 0.04);   /* faint press / inset tint */
+	--ax-color-border:         var(--ax-color-border-default);
+	--ax-color-danger:         var(--ax-color-text-danger);
+	--ax-color-status-danger:  var(--ax-color-text-danger);
+	--ax-color-success:        var(--ax-color-bg-success);
 }
 
 
@@ -165,6 +180,10 @@
 	--card:        var(--ax-color-bg-surface);
 	--header-bg:   var(--ax-color-bg-surface);
 	--header-text: var(--ax-color-text-primary);
+
+	/* Faint tint: the light value is a 4% espresso wash, invisible on
+	   espresso, so use a 6% white wash on dark surfaces instead. */
+	--ax-color-bg-subtle: rgba(255, 255, 255, 0.06);
 }
 
 :root:not([data-ax-theme='light']) {

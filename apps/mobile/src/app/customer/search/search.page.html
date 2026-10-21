@@ -112,10 +112,18 @@
       </div>
     }
 
+    <!-- Loading: the same grid / column structure as the results, filled with
+         the shared product-card skeleton, so results swap in without a jump. -->
     @if (ui_controls.is_loading) {
-      <div class="loader-row">
-        <ax-loader></ax-loader>
-      </div>
+      <ion-grid class="products-grid" role="status" aria-busy="true" [attr.aria-label]="'search_loading' | translate">
+        <ion-row>
+          @for (i of skeletonCards; track i) {
+            <ion-col size="6">
+              <ax-skeleton-card />
+            </ion-col>
+          }
+        </ion-row>
+      </ion-grid>
     }
   </div>
 

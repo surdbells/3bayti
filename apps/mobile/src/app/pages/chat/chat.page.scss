@@ -27,8 +27,12 @@
   margin: 0 auto;
 }
 
+/* Dark-mode audit: --ion-color-step-* is never defined in this app (Ionic 8
+   dropped the defaults), so every step-* colour here fell back to its light
+   literal: a #f6f7f9 thread behind dark bubbles, light pills and borders.
+   They now use the ax semantic tokens, which flip with the theme. */
 .chat-content {
-  --background: var(--ion-color-step-50, #f6f7f9);
+  --background: var(--ax-color-bg-canvas);
 }
 
 .loading-messages {
@@ -53,7 +57,7 @@
     font-size: 0.7rem;
     font-weight: 500;
     color: var(--ion-color-medium, #8a8a8a);
-    background: var(--ion-color-step-100, #eceef1);
+    background: var(--ax-color-bg-muted);
     padding: 0.2rem 0.7rem;
     border-radius: 999px;
   }
@@ -72,9 +76,9 @@
   font-family: inherit;
   font-size: 0.78rem;
   line-height: 1.5;
-  color: var(--ion-color-step-650, #4a4a4a);
-  background: var(--ion-color-step-100, #eceef1);
-  border: 1px solid var(--ion-color-step-150, #e2e5e9);
+  color: var(--ax-color-text-secondary);
+  background: var(--ax-color-bg-muted);
+  border: 1px solid var(--ax-color-border-subtle);
   border-radius: 14px;
   white-space: pre-wrap;
   word-break: break-word;
@@ -92,8 +96,8 @@
 .message-bubble {
   max-width: 78%;
   padding: 0.55rem 0.75rem;
-  background: var(--ion-background-color, #fff);
-  border: 1px solid var(--ion-color-step-150, #e2e5e9);
+  background: var(--ax-color-bg-surface);
+  border: 1px solid var(--ax-color-border-subtle);
   border-radius: 16px 16px 16px 4px;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
 
@@ -151,7 +155,7 @@
 // Composer.
 .chat-footer {
   --background: var(--ion-background-color, #fff);
-  border-top: 1px solid var(--ion-color-step-150, #e2e5e9);
+  border-top: 1px solid var(--ax-color-border-subtle);
 }
 .disabled-notice {
   text-align: center;
@@ -232,7 +236,8 @@
   padding: 10px;
   border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.08));
   border-radius: 12px;
-  background: var(--ax-palette-neutral-0, #fff);
+  /* Surface token (raw palette white never flipped: light text on white). */
+  background: var(--ax-color-bg-surface);
 }
 
 .chat-prompts__cat {

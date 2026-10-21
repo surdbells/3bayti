@@ -29,7 +29,7 @@ import {ActionSheetController} from "@ionic/angular";
 import {TranslatePipe} from "../../translate.pipe";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
-import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import { AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 @Component({
   selector: 'app-reviews',
   templateUrl: './reviews.page.html',
@@ -48,7 +48,7 @@ import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
     FormsModule,
     TranslatePipe,
     AxIconComponent,
-    AxLoaderComponent,
+    AxSkeletonLineComponent,
   ]
 })
 export class ReviewsPage implements OnInit, OnDestroy {
@@ -73,10 +73,19 @@ export class ReviewsPage implements OnInit, OnDestroy {
   // instead of the old forced navigateRoot('/settings').
   ui_controls = {
     is_empty: false,
-    is_loading: false,
+    // The list request failed (HTTP error envelope or a transport error);
+    // shows a retry state instead of an empty page.
+    is_error: false,
+    // Starts true: the list loads on every entry, so the first frame is the
+    // skeleton rather than an empty page.
+    is_loading: true,
     is_loading_area: false,
     is_deleting: false
   }
+  /** i18n key for the failure message (offline vs any other error). */
+  errorKey = 'text_something_went_wrong';
+  /** Skeleton placeholders shown while the list loads. */
+  readonly skeletonRows = [0, 1, 2];
   single_user = {
     id: 0,
     token: "",
@@ -132,20 +141,35 @@ export class ReviewsPage implements OnInit, OnDestroy {
   }
 get_reviews() {
     this.ui_controls.is_empty = false;
+    this.ui_controls.is_error = false;
     this.ui_controls.is_loading = true;
     // Direct v3 (GET /v3/me/reviews). The transformReviewDisplayResponse
     // response transform still applies via get_v3, so response.data keeps
     // the legacy Reviews[] shape, no field remapping needed here.
+    //
+    // Every outcome must land in a visible state. v3 answers "no reviews"
+    // with 200 + data: [] (the legacy API answered it with a non-success
+    // envelope), so the empty state is driven by the list length, and a
+    // transport error (offline, or the request WKWebView drops when the app
+    // is backgrounded) arrives on the rx error channel, not in `next`.
     this.networkAdapter.get_v3('GET /me/reviews', { authToken: this.single_user.token })
       .subscribe(({
         next: (response: any) => {
+          this.ui_controls.is_loading = false;
           if (response.response_code === 200 && response.status === "success") {
-            this.reviews = response.data;
-            this.ui_controls.is_loading = false;
+            this.reviews = Array.isArray(response.data) ? response.data : [];
+            this.ui_controls.is_empty = this.reviews.length === 0;
           }else{
-            this.ui_controls.is_empty = true;
-            this.ui_controls.is_loading = false;
+            this.reviews = [];
+            this.errorKey = 'text_something_went_wrong';
+            this.ui_controls.is_error = true;
           }
+        },
+        error: () => {
+          this.ui_controls.is_loading = false;
+          this.reviews = [];
+          this.errorKey = this.isOnline ? 'text_something_went_wrong' : 'text_offline_check_connection';
+          this.ui_controls.is_error = true;
         }
       }))
   }
@@ -162,8 +186,10 @@ delete_reviews(review: number) {
           next: (response: any) => {
             this.ui_controls.is_deleting = false;
             if (response.response_code === 200 && response.status === "success") {
-              this.success_notification(response.message);
-              this.get_reviews();
+              // DELETE is a 204: the envelope message is empty, so use our own.
+              this.success_notification(this.i18n.t('review_deleted'));
+              this.reviews = this.reviews.filter(r => r.id !== review);
+              this.ui_controls.is_empty = this.reviews.length === 0;
             } else {
               this.error_notification(response.message || this.i18n.t('text_offline_check_connection'));
             }

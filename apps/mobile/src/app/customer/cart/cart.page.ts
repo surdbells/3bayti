@@ -36,7 +36,7 @@ import { I18nService } from '../../i18n.service';
 import {TranslatePipe} from "../../translate.pipe";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
-import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import { AxSkeletonBlockComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 import { AxWishlistSheetComponent } from '../../shared/ax-mobile/wishlist-sheet';
 import { WishlistService } from '../../core/services/wishlist.service';
 @Component({
@@ -62,7 +62,8 @@ import { WishlistService } from '../../core/services/wishlist.service';
     FormsModule,
     TranslatePipe,
     AxIconComponent,
-    AxLoaderComponent,
+    AxSkeletonBlockComponent,
+    AxSkeletonLineComponent,
     AxWishlistSheetComponent,
     AppTabBarComponent
   ]
@@ -95,11 +96,26 @@ export class CartPage implements OnInit, OnDestroy {
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
   }
   ui_controls = {
-    is_loading: false,
+    // Starts true so the first paint is the skeleton rows, not a blank page
+    // while the session is read and GET /cart is in flight.
+    is_loading: true,
     is_creating: false,
     is_loading_category: false,
-    is_empty: false
+    is_empty: false,
+    // A quantity change / removal write is in flight. Together with
+    // is_loading (the reload that follows it) it disables the line controls:
+    // the handlers send an ABSOLUTE quantity computed from the displayed one,
+    // which is stale until GET /cart lands, so a quick second tap would
+    // resend the same quantity and lose the increment.
+    is_updating: false,
   }
+  /** Line controls (qty -/+ and remove) are locked while the cart is stale. */
+  get lineControlsLocked(): boolean {
+    return this.ui_controls.is_loading || this.ui_controls.is_updating;
+  }
+  /** Bumped per cart load; a reply for an older load (e.g. a quick second
+   *  quantity tap) is dropped so it can't overwrite the newer cart. */
+  private cartSeq = 0;
   rqst_param = {
     id: 0,
     token: ""
@@ -219,8 +235,14 @@ export class CartPage implements OnInit, OnDestroy {
     }
   }
   load_cart() {
-    this.carts = [];
+    // The loaded lines stay on screen while the cart reloads (after a qty
+    // change / removal) and are replaced in place when the reply lands; only
+    // the very first load, with nothing to show yet, renders the skeleton.
+    const seq = ++this.cartSeq;
     this.ui_controls.is_loading = true;
+    // The write (if any) has landed; from here is_loading keeps the line
+    // controls locked until the fresh quantities arrive.
+    this.ui_controls.is_updating = false;
     this.ui_controls.is_empty = false;
 
     // Guest path: read from IndexedDB, bypass network entirely.
@@ -237,6 +259,9 @@ export class CartPage implements OnInit, OnDestroy {
     this.networkAdapter.get_v3('GET /cart', { authToken: this.single_user.token })
       .subscribe(({
         next: (response: any) => {
+          if (seq !== this.cartSeq) {
+            return;
+          }
           if (response.response_code === 200) {
             // Dual-shape support during M3.1.6 strangler-fig migration:
             //   Legacy shape: response.data = items[], response.message = bill
@@ -280,9 +305,20 @@ export class CartPage implements OnInit, OnDestroy {
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = this.carts.length === 0;
           }else{
+            this.carts = [];
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = true;
           }
+        },
+        // Transport-level failure (no HTTP status): end the loading state so
+        // the skeleton never sticks; keep any lines already on screen.
+        error: () => {
+          if (seq !== this.cartSeq) {
+            return;
+          }
+          this.ui_controls.is_loading = false;
+          this.ui_controls.is_empty = this.carts.length === 0;
+          this.error_notification(this.i18n.t('network_error_retry'));
         }
       }))
   }
@@ -357,18 +393,35 @@ export class CartPage implements OnInit, OnDestroy {
       this.ui_controls.is_empty = this.carts.length === 0;
     } catch (err) {
       console.warn('[Cart] guest cart load failed', err);
+      this.carts = [];
       this.ui_controls.is_loading = false;
       this.ui_controls.is_empty = true;
     }
   }
 
+  /**
+   * A line write failed: unlock the controls and say so. The adapter hands
+   * HTTP errors over on the success channel with the API's message (e.g. the
+   * stock limit), so that text is shown when present.
+   */
+  private onLineWriteFailed(response?: any): void {
+    this.ui_controls.is_updating = false;
+    const message = typeof response?.message === 'string' ? response.message.trim() : '';
+    this.error_notification(message || this.i18n.t('network_error_retry'));
+  }
+
   removeItem(item: number) {
+    if (this.lineControlsLocked) { return; }
+    this.ui_controls.is_updating = true;
     // Guest path
     if (this.isGuest) {
       this.localCart.remove(item).then(() => {
         this.success_notification(this.i18n.t('text_item_removed'));
         this.load_cart();
-      }).catch((err) => console.warn('[Cart] guest remove failed', err));
+      }).catch((err) => {
+        console.warn('[Cart] guest remove failed', err);
+        this.onLineWriteFailed();
+      });
       return;
     }
 
@@ -386,17 +439,25 @@ export class CartPage implements OnInit, OnDestroy {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(this.i18n.t('text_item_removed'));
             this.load_cart();
+          } else {
+            this.onLineWriteFailed(response);
           }
-        }
+        },
+        error: () => this.onLineWriteFailed(),
       }))
   }
   IncreaseItem(item: number, quantity: number) {
+    if (this.lineControlsLocked) { return; }
+    this.ui_controls.is_updating = true;
     const newQty = quantity + 1;
 
     if (this.isGuest) {
       this.localCart.updateQuantity(item, newQty).then(() => {
         this.load_cart();
-      }).catch((err) => console.warn('[Cart] guest increase failed', err));
+      }).catch((err) => {
+        console.warn('[Cart] guest increase failed', err);
+        this.onLineWriteFailed();
+      });
       return;
     }
 
@@ -414,11 +475,16 @@ export class CartPage implements OnInit, OnDestroy {
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.load_cart();
+          } else {
+            this.onLineWriteFailed(response);
           }
-        }
+        },
+        error: () => this.onLineWriteFailed(),
       }))
   }
   DecreaseItem(item: number, quantity: number) {
+    if (this.lineControlsLocked) { return; }
+    this.ui_controls.is_updating = true;
     const newQty = quantity - 1;
 
     if (this.isGuest) {
@@ -426,7 +492,10 @@ export class CartPage implements OnInit, OnDestroy {
       // matching the user intent on the last decrement.
       this.localCart.updateQuantity(item, newQty).then(() => {
         this.load_cart();
-      }).catch((err) => console.warn('[Cart] guest decrease failed', err));
+      }).catch((err) => {
+        console.warn('[Cart] guest decrease failed', err);
+        this.onLineWriteFailed();
+      });
       return;
     }
 
@@ -445,8 +514,11 @@ export class CartPage implements OnInit, OnDestroy {
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.load_cart();
+          } else {
+            this.onLineWriteFailed(response);
           }
-        }
+        },
+        error: () => this.onLineWriteFailed(),
       }))
   }
   async startRemove(item: number, name: string) {

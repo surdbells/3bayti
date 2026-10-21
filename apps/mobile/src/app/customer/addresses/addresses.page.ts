@@ -28,6 +28,7 @@ import { TranslatePipe } from '../../translate.pipe';
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import { AxSkeletonBlockComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { AxPlaceAutocompleteComponent, PlaceDetails } from '../../shared/ax-mobile/place-autocomplete';
@@ -54,6 +55,8 @@ import { AddressService, SavedAddress, NewAddress } from '../../core/services/ad
     TranslatePipe,
     AxIconComponent,
     AxLoaderComponent,
+    AxSkeletonBlockComponent,
+    AxSkeletonLineComponent,
     AxTextFieldComponent,
     AxBottomSheetComponent,
     AxPlaceAutocompleteComponent,
@@ -73,7 +76,9 @@ export class AddressesPage implements OnInit, OnDestroy {
   addresses: SavedAddress[] = [];
 
   ui_controls = {
-    is_loading: false,
+    // Starts true so the first paint is the skeleton, not a flash of
+    // "no saved addresses" while the session is read.
+    is_loading: true,
     is_saving: false,
     /** id of the address a set-default / delete round-trip is in flight for. */
     busy_id: 0,

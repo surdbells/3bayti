@@ -17,7 +17,9 @@ import { TranslatePipe } from '../../translate.pipe';
 import { I18nService } from '../../i18n.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
+import { AxSkeletonBlockComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
+import { storeFollowMessage } from '../../shared/store-follow-messages';
 
 /** A store the user follows (v3 VendorSerializer::publicShape, is_following=true). */
 interface FollowedStore {
@@ -52,6 +54,8 @@ interface FollowedStore {
     IonButton,
     TranslatePipe,
     AxIconComponent,
+    AxSkeletonBlockComponent,
+    AxSkeletonLineComponent,
     AppTabBarComponent,
   ],
 })
@@ -116,15 +120,24 @@ export class FollowingPage implements OnInit {
     this.unfollowing.add(store.id);
     this.cdr.markForCheck();
     try {
-      await firstValueFrom(
+      const res: any = await firstValueFrom(
         this.networkAdapter.delete_v3('DELETE /following/:vendorId', {
           authToken: this.token,
           pathParams: { vendorId: String(store.id) },
         }),
       );
-      this.stores = this.stores.filter((s) => s.id !== store.id);
+      // HTTP failures resolve through the SUCCESS channel with an error
+      // envelope (only transport errors throw), so check the envelope rather
+      // than treating any resolution as success — that dropped the row even
+      // when the server refused the unfollow.
+      if (res?.response_code === 200 && res?.status === 'success') {
+        this.stores = this.stores.filter((s) => s.id !== store.id);
+        this.toast.success(storeFollowMessage(this.i18n, 'unfollowed', store.name), { position: 'top-center' });
+      } else {
+        this.toast.error(storeFollowMessage(this.i18n, 'unfollow_failed'), { position: 'top-center' });
+      }
     } catch {
-      this.toast.error(this.i18n.t('following_unfollow_failed'), { position: 'top-center' });
+      this.toast.error(storeFollowMessage(this.i18n, 'unfollow_failed'), { position: 'top-center' });
     } finally {
       this.unfollowing.delete(store.id);
       this.cdr.markForCheck();

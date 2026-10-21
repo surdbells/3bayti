@@ -28,7 +28,7 @@ import {TranslatePipe} from "../../translate.pipe";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
-import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import { AxSkeletonCardComponent } from '../../shared/ax-mobile/skeleton';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxWishlistSheetComponent } from '../../shared/ax-mobile/wishlist-sheet';
 import { WishlistService } from '../../core/services/wishlist.service';
@@ -53,7 +53,7 @@ import { cfImage } from '../../shared/cf-image';
     FormsModule,
     TranslatePipe,
     AxIconComponent,
-    AxLoaderComponent,
+    AxSkeletonCardComponent,
     AxTextFieldComponent,
     AxWishlistSheetComponent,
     AppTabBarComponent
@@ -101,6 +101,10 @@ export class SearchPage implements OnInit, OnDestroy {
   }
   /** Per-product image-loaded tracking for the m6d card skeleton overlay */
   imageLoaded: { [key: number]: boolean } = {};
+  /** Placeholder cards rendered while a search is in flight (3 rows of 2). */
+  readonly skeletonCards = [1, 2, 3, 4, 5, 6];
+  /** Bumped per search; a reply for an older query is dropped. */
+  private searchSeq = 0;
   /** Debounce timer for onInputChange, prevents firing a search request
       on every keystroke. Reset on each input change, fires after 300ms
       of inactivity. */
@@ -160,6 +164,7 @@ export class SearchPage implements OnInit, OnDestroy {
     }
   }
   searchProduct() {
+    const seq = ++this.searchSeq;
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
     this.imageLoaded = {};
@@ -171,14 +176,31 @@ export class SearchPage implements OnInit, OnDestroy {
     this.networkAdapter.get_v3('GET /mobile/search', { queryParams: { q: this.search.search } })
       .subscribe(({
         next: (response: any) => {
+          // A reply for an older query (the user kept typing) must not
+          // overwrite the newer one or end its skeleton early.
+          if (seq !== this.searchSeq) {
+            return;
+          }
           if (response.response_code === 200 && response.status === "success") {
-            this.products = response.data;
+            this.products = Array.isArray(response.data) ? response.data : [];
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = false;
           }else{
+            this.products = [];
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = true;
           }
+        },
+        // Transport-level failures (no HTTP status) arrive here; without this
+        // the skeleton would stay up forever.
+        error: () => {
+          if (seq !== this.searchSeq) {
+            return;
+          }
+          this.products = [];
+          this.ui_controls.is_loading = false;
+          this.ui_controls.is_empty = true;
+          this.error_notification(this.i18n.t('network_error_retry'));
         }
       }))
   }
@@ -282,13 +304,18 @@ export class SearchPage implements OnInit, OnDestroy {
     }
     /* Empty input, clear results immediately, show initial prompt */
     if (!value || !value.trim()) {
+      this.searchSeq++; // drop any in-flight reply for the old query
       this.products = [];
       this.imageLoaded = {};
       this.ui_controls.is_loading = false;
       this.ui_controls.is_empty = false;
       return;
     }
-    /* Non-empty input, debounce the actual network call */
+    /* Non-empty input: show the skeleton straight away so the debounce window
+       never flashes the "no products found" empty state, then debounce the
+       actual network call. */
+    this.ui_controls.is_loading = true;
+    this.ui_controls.is_empty = false;
     this.searchTimer = setTimeout(() => {
       this.searchProduct();
       this.searchTimer = null;

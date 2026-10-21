@@ -24,8 +24,16 @@ import {HScrollProgressComponent} from "../../h-scroll-progress/h-scroll-progres
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
-import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import {
+  AxSkeletonBlockComponent,
+  AxSkeletonCardComponent,
+  AxSkeletonLineComponent,
+} from '../../shared/ax-mobile/skeleton';
 import { cfImage } from '../../shared/cf-image';
+import { storeFollowMessage } from '../../shared/store-follow-messages';
+
+/** Default cover shown when a store has none (or its cover fails to load). */
+const DEFAULT_VENDOR_COVER = 'assets/images/vendor-cover-default.png';
 @Component({
   selector: 'app-vendors',
   templateUrl: './vendors.page.html',
@@ -39,13 +47,24 @@ import { cfImage } from '../../shared/cf-image';
     TranslatePipe,
     HScrollProgressComponent,
     AxIconComponent,
-    AxLoaderComponent,
+    AxSkeletonBlockComponent,
+    AxSkeletonCardComponent,
+    AxSkeletonLineComponent,
     AppTabBarComponent
   ]
 })
 export class VendorsPage implements OnInit {
   /** Expose cfImage for template usage. */
   readonly cfImage = cfImage;
+  /** Skeleton placeholders (counts / widths only, geometry comes from the
+      real wrappers). Chip widths vary so the row reads as labels. */
+  readonly chipSkeletonWidths = ['52px', '88px', '74px', '96px', '66px'];
+  readonly railSkeleton = [1, 2, 3];
+  readonly gridSkeleton = [1, 2, 3, 4, 5, 6];
+  /** Cover image decode state: fades the photo in over the placeholder, and
+      falls back to the default cover when the store's URL is broken. */
+  coverLoaded = false;
+  coverFailed = false;
   latest: Products[] = [];
   products: Products[] = [];
   categories: Labels[] = [];
@@ -69,13 +88,30 @@ export class VendorsPage implements OnInit {
     private toast: AxNotificationService,
     private i18n: I18nService,
   ) {}
+  /** Each region has its OWN loading flag so it swaps skeleton -> content
+      independently (a chip tap reloads only the grid; the header, chips and
+      Latest rail stay put). All start `true`, so the very first paint is the
+      skeleton rather than a flash of the empty state. */
   ui_controls = {
     best_seller_empty: false,
     is_empty: false,
-    is_loading: false,
+    vendor_loading: true,
+    latest_loading: true,
+    labels_loading: true,
+    products_loading: true,
+    /** A follow / unfollow write is in flight (blocks double taps). */
+    follow_busy: false,
     is_creating: false,
     is_deleting: false
   }
+  /** Slug whose storefront is currently rendered. Re-entering the SAME store
+      refreshes in place (no skeleton flash); a different store resets to the
+      skeleton. null until the first load. */
+  private loadedSlug: string | null = null;
+  /** Id of the latest product-grid request. Responses from an earlier chip
+      tap that land late are dropped, so the grid never shows the wrong
+      collection. */
+  private productsRequestSeq = 0;
   rqst_param = {
     id: 0,
     token: "",
@@ -103,8 +139,10 @@ export class VendorsPage implements OnInit {
     // by-legacy-id catalog shims). 0 until the vendor read returns.
     id: 0,
     name: "",
-    logo: "assets/images/placeholder.png",
-    cover: "assets/images/placeholder.png",
+    // Empty until the read lands (the header shows its skeleton meanwhile);
+    // an empty logo renders the store initial, an empty cover the default.
+    logo: "",
+    cover: "",
     description: "",
     tagline: "",
     following: false
@@ -124,9 +162,36 @@ export class VendorsPage implements OnInit {
   isFollowing = false;
 
   toggleFollow() {
+    if (this.ui_controls.follow_busy) {
+      return;
+    }
     if (this.view_vendor.following ){
       this.user_unfollow_vendor();
     }else{  this.user_follow_vendor(); }
+  }
+
+  /** Store name for toasts / header fallback: the vendor read, else the
+      name the caller passed in the query string. */
+  get storeDisplayName(): string {
+    return (this.view_vendor.name || this.rqst_param.store_name || '').trim();
+  }
+
+  /** Cover src: the store's cover, else (missing or failed) the default. */
+  get coverSrc(): string {
+    return !this.coverFailed && this.view_vendor.cover ? this.view_vendor.cover : DEFAULT_VENDOR_COVER;
+  }
+
+  onCoverLoad(): void {
+    this.coverLoaded = true;
+  }
+
+  onCoverError(): void {
+    if (!this.coverFailed && this.view_vendor.cover) {
+      // Retry once with the default cover; its own load event fades it in.
+      this.coverFailed = true;
+      return;
+    }
+    this.coverLoaded = true;
   }
 
 goToReviews(slug: string, vendorId: number, name: string) {
@@ -149,7 +214,7 @@ goToReviews(slug: string, vendorId: number, name: string) {
     if (!slug) {
       return;
     }
-    const name = (this.view_vendor as any)?.name ?? '';
+    const name = this.storeDisplayName;
     let url = `${this.storefrontBase()}/stores/${slug}`;
     if (this.single_user.token) {
       const tracked = await this.hotlinks.createShortUrl('store', slug, this.single_user.token);
@@ -199,10 +264,51 @@ goToReviews(slug: string, vendorId: number, name: string) {
   private skipReloadOnEnter = false;
   ionViewDidEnter(){
     if (this.skipReloadOnEnter) { this.skipReloadOnEnter = false; return; }
-    this.rqst_param.store_slug = this.route.snapshot.queryParamMap.get('slug') || '';
-    this.getObject();
+    const slug = this.route.snapshot.queryParamMap.get('slug') || '';
+    // Same store already on screen → refresh in place; otherwise reset to the
+    // skeleton so the previous store's content never shows under a new name.
+    const silent = this.loadedSlug !== null && this.loadedSlug === slug;
+    this.rqst_param.store_slug = slug;
+    this.rqst_param.store_name = this.route.snapshot.queryParamMap.get('name') || '';
+    if (!silent) {
+      this.resetStorefront();
+    }
+    this.getObject(silent);
   }
-  async getObject() {
+
+  /** Clear the previous store's content and put every region back into its
+      skeleton state (first load, or a different store). */
+  private resetStorefront(): void {
+    this.view_vendor = {
+      id: 0,
+      name: "",
+      logo: "",
+      cover: "",
+      description: "",
+      tagline: "",
+      following: false
+    };
+    this.latest = [];
+    this.products = [];
+    this.categories = [];
+    this.selectedLabelId = null;
+    this.rqst_param.label = 0;
+    // Invalidate any grid request still in flight for the previous store.
+    this.productsRequestSeq++;
+    this.coverLoaded = false;
+    this.coverFailed = false;
+    this.ui_controls.vendor_loading = true;
+    this.ui_controls.latest_loading = true;
+    this.ui_controls.labels_loading = true;
+    this.ui_controls.products_loading = true;
+  }
+
+  /**
+   * @param silent  true when re-entering the store that is already rendered:
+   *                data refreshes in place without flipping regions back to
+   *                their skeletons.
+   */
+  async getObject(silent = false) {
     const ret: any = await Preferences.get({ key: 'user' });
     if (ret.value == null){
       this.router.navigate(['/', 'login']);
@@ -222,34 +328,53 @@ goToReviews(slug: string, vendorId: number, name: string) {
       this.unfollow_vendor.id = this.single_user.id;
       this.unfollow_vendor.token = this.single_user.token;
       this.unfollow_vendor.store_name = this.route.snapshot.queryParamMap.get('name') || '';
-      this.get_latest();
+      this.loadedSlug = this.rqst_param.store_slug;
+      // Header, Latest rail and labels (→ grid) load in PARALLEL, each
+      // region leaving its skeleton as soon as its own data lands. (The rail
+      // used to gate the labels + grid, so a failed rail left the page empty.)
       this.get_vendor();
+      this.get_latest(silent);
+      this.get_label(silent);
     }
   }
-  get_latest() {
-    this.ui_controls.is_empty = false;
-    this.ui_controls.is_loading = true;
+  get_latest(silent = false) {
+    if (!silent) {
+      this.ui_controls.latest_loading = true;
+    }
     // Direct v3 (GET /v3/vendors/by-legacy-id/{id}/products). Public catalog
     // read, no authToken. transformStoreLatestRequest maps store_id into the
     // {id} path param (and drops the legacy id/token/label); the v3 endpoint
     // hardcodes sort=newest, so no query params are needed. The registered
     // response transform still applies via get_v3, so response.data keeps the
     // legacy Products[] shape.
+    const slug = this.rqst_param.store_slug;
     this.networkAdapter.get_v3('GET /mobile/store-latest', {
-      pathParams: { slug: this.rqst_param.store_slug },
+      pathParams: { slug },
     })
       .subscribe(({
         next: (response: any) => {
+          if (this.isStaleStore(slug)) { return; }
           if (response.response_code === 200 && response.status === "success") {
             this.latest = response.data;
-            this.ui_controls.is_loading = false;
-            this.get_label();
+            this.ui_controls.best_seller_empty = false;
           }else{
             this.ui_controls.best_seller_empty = true;
-            this.ui_controls.is_loading = false;
           }
+          this.ui_controls.latest_loading = false;
+        },
+        // Network-level failure (no response): drop the skeleton; with no
+        // items the rail simply doesn't render.
+        error: () => {
+          if (this.isStaleStore(slug)) { return; }
+          this.ui_controls.latest_loading = false;
         }
       }))
+  }
+
+  /** True when a response belongs to a store the page has since left (the
+   *  page instance was re-entered for a different slug mid-flight). */
+  private isStaleStore(slug: string): boolean {
+    return slug !== this.rqst_param.store_slug;
   }
   get_vendor() {
     // Direct v3 (GET /v3/vendors/{slug}), read AUTHENTICATED so the
@@ -257,15 +382,23 @@ goToReviews(slug: string, vendorId: number, name: string) {
     // (transformVendorResponse maps it to view_vendor.following, driving the
     // Follow/Following pill). Response transform applies via get_v3, so
     // response.data keeps the legacy storefront-header shape.
+    const slug = this.rqst_param.store_slug;
     this.networkAdapter.get_v3('GET /mobile/read-vendor', {
-      pathParams: { slug: this.rqst_param.store_slug },
+      pathParams: { slug },
       authToken: this.read_vendor.token,
     })
       .subscribe(({
         next: (response: any) => {
+          if (this.isStaleStore(slug)) { return; }
           if (response.response_code === 200 && response.status === "success") {
             this.view_vendor = response.data;
           }
+          // On failure the header keeps the query-string name + default cover.
+          this.ui_controls.vendor_loading = false;
+        },
+        error: () => {
+          if (this.isStaleStore(slug)) { return; }
+          this.ui_controls.vendor_loading = false;
         }
       }))
   }
@@ -282,21 +415,28 @@ goToReviews(slug: string, vendorId: number, name: string) {
       this.error_notification(this.i18n.t('error_vendor_not_loaded'));
       return;
     }
+    this.ui_controls.follow_busy = true;
     this.networkAdapter.post_v3('POST /following/:vendorId', {}, {
       authToken: this.follow_vendor.token,
       pathParams: { vendorId: String(this.view_vendor.id) },
     })
       .subscribe(({
         next: (response: any) => {
+          this.ui_controls.follow_busy = false;
           if (response.response_code === 200 && response.status === "success") {
-            this.success_notification(response.message);
-            // Optimistic local flip (avoids a re-fetch for one flag); the
-            // authenticated get_vendor() read already seeds the correct
-            // initial state on page load.
+            // Local flip (avoids a re-fetch for one flag); the authenticated
+            // get_vendor() read already seeds the correct initial state.
             this.view_vendor.following = true;
+            // The v3 response carries no message (the envelope's is always
+            // ''), so toasting response.message showed an empty green toast.
+            this.success_notification(storeFollowMessage(this.i18n, 'followed', this.storeDisplayName));
           }else {
-            this.error_notification(response.message);
+            this.error_notification(storeFollowMessage(this.i18n, 'follow_failed'));
           }
+        },
+        error: () => {
+          this.ui_controls.follow_busy = false;
+          this.error_notification(storeFollowMessage(this.i18n, 'follow_failed'));
         }
       }))
   }
@@ -310,19 +450,25 @@ goToReviews(slug: string, vendorId: number, name: string) {
       this.error_notification(this.i18n.t('error_vendor_not_loaded'));
       return;
     }
+    this.ui_controls.follow_busy = true;
     this.networkAdapter.delete_v3('DELETE /following/:vendorId', {
       authToken: this.unfollow_vendor.token,
       pathParams: { vendorId: String(this.view_vendor.id) },
     })
       .subscribe(({
         next: (response: any) => {
+          this.ui_controls.follow_busy = false;
           if (response.response_code === 200 && response.status === "success") {
-            this.success_notification(response.message);
-            // Optimistic local flip (see the follow handler above).
+            // Local flip (see the follow handler above).
             this.view_vendor.following = false;
+            this.success_notification(storeFollowMessage(this.i18n, 'unfollowed', this.storeDisplayName));
           }else {
-            this.error_notification(response.message);
+            this.error_notification(storeFollowMessage(this.i18n, 'unfollow_failed'));
           }
+        },
+        error: () => {
+          this.ui_controls.follow_busy = false;
+          this.error_notification(storeFollowMessage(this.i18n, 'unfollow_failed'));
         }
       }))
   }
@@ -332,16 +478,43 @@ goToReviews(slug: string, vendorId: number, name: string) {
    * @param labelId  null === the "All" chip → full vendor catalog
    *                 (incl. products with no label). A positive number is a
    *                 label id → only that collection's products.
+   * @param silent   refresh the grid in place (same-store re-enter) instead
+   *                 of showing the grid skeleton.
    */
-  selectLabel(labelId: number | null) {
+  selectLabel(labelId: number | null, silent = false) {
     this.selectedLabelId = labelId;
     if (labelId === null) {
       this.rqst_param.label = 0;
-      this.get_all_products();
+      this.get_all_products(silent);
     } else {
       this.rqst_param.label = labelId;
-      this.get_product_by_label();
+      this.get_product_by_label(silent);
     }
+  }
+
+  /** Start a product-grid request: bump the sequence (so a slower, earlier
+   *  response is ignored) and, unless silent, show the grid skeleton. */
+  private beginProductsRequest(silent: boolean): number {
+    this.ui_controls.is_empty = false;
+    if (!silent) {
+      this.ui_controls.products_loading = true;
+    }
+    return ++this.productsRequestSeq;
+  }
+
+  /** Apply a product-grid reply (`null` = network failure) unless a newer
+   *  request superseded it. A failed silent refresh keeps the current grid. */
+  private finishProductsRequest(seq: number, silent: boolean, response: any): void {
+    if (seq !== this.productsRequestSeq) {
+      return;
+    }
+    if (response?.response_code === 200 && response.status === "success") {
+      this.products = response.data;
+    }else if (!silent) {
+      this.products = [];
+    }
+    this.ui_controls.is_empty = this.products.length === 0;
+    this.ui_controls.products_loading = false;
   }
 
   /**
@@ -351,30 +524,19 @@ goToReviews(slug: string, vendorId: number, name: string) {
    * filter (unlike products-by-labels, which needs a label_id). This replaces
    * the old hard-coded label=4 fetch that only ever surfaced one collection.
    */
-  get_all_products() {
-    this.ui_controls.is_empty = false;
-    this.ui_controls.is_loading = true;
+  get_all_products(silent = false) {
+    const seq = this.beginProductsRequest(silent);
     this.networkAdapter.get_v3('GET /mobile/vendors-products', {
       pathParams: { slug: this.rqst_param.store_slug },
     })
       .subscribe(({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.products = response.data;
-            this.ui_controls.is_empty = this.products.length === 0;
-            this.ui_controls.is_loading = false;
-          }else{
-            this.products = [];
-            this.ui_controls.is_empty = true;
-            this.ui_controls.is_loading = false;
-          }
-        }
+        next: (response: any) => this.finishProductsRequest(seq, silent, response),
+        error: () => this.finishProductsRequest(seq, silent, null)
       }))
   }
 
-  get_product_by_label() {
-    this.ui_controls.is_empty = false;
-    this.ui_controls.is_loading = true;
+  get_product_by_label(silent = false) {
+    const seq = this.beginProductsRequest(silent);
     // Direct v3 (GET /v3/products). Public catalog read, no authToken.
     // transformProductsByLabelsRequest maps the legacy label → label_id and
     // store_id → vendor_id query params, omitting each when it's 0 (the
@@ -397,46 +559,54 @@ goToReviews(slug: string, vendorId: number, name: string) {
       queryParams: labelQuery,
     })
       .subscribe(({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.products = response.data;
-            this.ui_controls.is_empty = this.products.length === 0;
-            this.ui_controls.is_loading = false;
-          }else{
-            this.products = [];
-            this.ui_controls.is_empty = true;
-            this.ui_controls.is_loading = false;
-          }
-        }
+        next: (response: any) => this.finishProductsRequest(seq, silent, response),
+        error: () => this.finishProductsRequest(seq, silent, null)
       }))
   }
-  get_label() {
-    this.ui_controls.is_empty = false;
-    this.ui_controls.is_loading = true;
+  get_label(silent = false) {
+    if (!silent) {
+      this.ui_controls.labels_loading = true;
+    }
     // Direct v3 (GET /v3/vendors/by-legacy-id/{id}/labels). Public read, no
     // authToken. transformStoreLabelsRequest maps store_id into the {id} path
     // param (dropping the legacy id/token/label/store_name). Response transform
     // applies via get_v3, so response.data keeps the legacy Labels[] shape.
+    const slug = this.rqst_param.store_slug;
     this.networkAdapter.get_v3('GET /mobile/store-labels', {
-      pathParams: { slug: this.rqst_param.store_slug },
+      pathParams: { slug },
     })
       .subscribe(({
         next: (response: any) => {
+          if (this.isStaleStore(slug)) { return; }
           if (response.response_code === 200 && response.status === "success") {
             this.categories = response.data;
-            this.ui_controls.is_loading = false;
-            // Default to the "All" chip → full vendor catalog. This replaces
-            // the old get_product_by_label() call that fetched only label 4.
-            this.selectLabel(null);
           }else{
             // No labels is NOT an error, the vendor may simply have no
             // collections. Still load the full catalog under "All".
             this.categories = [];
-            this.ui_controls.is_loading = false;
-            this.selectLabel(null);
           }
+          this.ui_controls.labels_loading = false;
+          this.loadGridAfterLabels(silent);
+        },
+        error: () => {
+          if (this.isStaleStore(slug)) { return; }
+          if (!silent) {
+            this.categories = [];
+          }
+          this.ui_controls.labels_loading = false;
+          this.loadGridAfterLabels(silent);
         }
       }))
+  }
+
+  /** After the labels land: a fresh load defaults to the "All" chip (full
+   *  catalog, replacing the old hard-coded label-4 fetch); a silent refresh
+   *  keeps the shopper's chip if that collection still exists. */
+  private loadGridAfterLabels(silent: boolean): void {
+    const keep = silent
+      && this.selectedLabelId !== null
+      && this.categories.some((c) => c.id === this.selectedLabelId);
+    this.selectLabel(keep ? this.selectedLabelId : null, silent);
   }
   orders() {
     this.skipReloadOnEnter = true;

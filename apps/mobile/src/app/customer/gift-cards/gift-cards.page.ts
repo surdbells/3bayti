@@ -11,7 +11,7 @@ import { apiErrorMessage } from '../../core/http/api-error';
 import { Preferences } from '@capacitor/preferences';
 import { GiftCardPaymentService } from './gift-card-payment.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
-import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import { AxSkeletonBlockComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -47,7 +47,7 @@ export interface GiftCardTheme {
     CommonModule, FormsModule, TranslatePipe,
     IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent,
     IonSpinner,
-    AxLoaderComponent, AxIconComponent, AxTextFieldComponent,
+    AxSkeletonBlockComponent, AxSkeletonLineComponent, AxIconComponent, AxTextFieldComponent,
     AxBottomSheetComponent,
   ],
 })

@@ -47,7 +47,9 @@ ion-content.start-bg {
 
   .title {
     font-weight: 900;
-    color: #000;
+    /* Theme text tokens: the page canvas is var(--ax-color-bg-canvas), which
+       goes espresso in dark mode, so fixed #000 text disappeared there. */
+    color: var(--ax-color-text-primary);
     letter-spacing: 0.4px;
     line-height: 1.2;
     font-size: 17px;
@@ -57,7 +59,7 @@ ion-content.start-bg {
   .subtitle {
     margin: 0 auto;
     max-width: 92%;
-    color: rgba(0, 0, 0, 0.72);
+    color: var(--ax-color-text-secondary);
     font-size: 14.5px;
     line-height: 1.45;
   }

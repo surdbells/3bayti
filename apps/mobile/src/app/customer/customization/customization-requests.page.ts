@@ -17,6 +17,7 @@ import { TranslatePipe } from '../../translate.pipe';
 import { I18nService } from '../../i18n.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
+import { AxSkeletonBlockComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { CustomizationPaymentService } from './customization-payment.service';
 
@@ -54,6 +55,8 @@ interface CustomizationRequestItem {
     IonButton,
     TranslatePipe,
     AxIconComponent,
+    AxSkeletonBlockComponent,
+    AxSkeletonLineComponent,
     AppTabBarComponent,
   ],
 })

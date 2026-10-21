@@ -688,8 +688,13 @@ export class ProfilePage implements OnInit, OnDestroy {
               }
               this.single_user.whatsapp_phone = u.whatsapp_phone ?? null;
             }
-            this.ui_controls.is_loading = false;
           }
+          // Always end the loading state: a non-200 reply used to leave it
+          // set, so the Update button stayed replaced by a spinner forever.
+          this.ui_controls.is_loading = false;
+        },
+        error: () => {
+          this.ui_controls.is_loading = false;
         }
       }))
   }

@@ -145,37 +145,6 @@ ion-content.page-bg {
   padding: 60px;
 }
 
-/* ----- Skeleton text placeholders ----------------------------- */
-
-.skeleton-text {
-  position: relative;
-  border-radius: 6px;
-  overflow: hidden;
-
-  &.name-sk {
-    height: 14px;
-    width: 90%;
-    background: linear-gradient(
-      135deg,
-      var(--ax-palette-brown-100) 0%,
-      var(--ax-palette-brown-50, #f5ebe4) 50%,
-      var(--ax-palette-brown-100) 100%
-    );
-    margin-bottom: 10px;
-  }
-
-  &.price-sk {
-    height: 16px;
-    width: 50%;
-    background: linear-gradient(
-      135deg,
-      var(--ax-palette-brown-200, #dbc8bc) 0%,
-      var(--ax-palette-brown-100) 50%,
-      var(--ax-palette-brown-200, #dbc8bc) 100%
-    );
-  }
-}
-
 /* ----- Responsive --------------------------------------------- */
 
 @media (min-width: 768px) {

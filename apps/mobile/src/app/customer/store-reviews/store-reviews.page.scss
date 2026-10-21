@@ -105,6 +105,30 @@
   }
 }
 
+// Comment lines of the loading placeholder card.
+.review-skeleton-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+// Retry button of the error state.
+.retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 9px 18px;
+  border: 1px solid var(--ax-color-border-default);
+  border-radius: var(--ax-radius-pill);
+  background: var(--ax-color-bg-surface);
+  color: var(--ax-color-text-brand);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+}
+
 // =========================================================
 // Loader
 // =========================================================

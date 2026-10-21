@@ -162,8 +162,12 @@
   text-transform: none;
   margin: 0;
 
-  &--danger {
-    --color: var(--ion-color-danger, #c0362c);
+  // Danger TEXT token: ion-color-danger is pinned to danger-500, ~2.4:1 on
+  // the espresso card in dark mode. Ionic's .ion-color-danger sets
+  // --ion-color-base with !important and clear buttons paint their label from
+  // it, so that is the variable to re-point (a plain --color is ignored).
+  &--danger.ion-color-danger {
+    --ion-color-base: var(--ax-color-text-danger) !important;
   }
 }
 

@@ -1,0 +1,55 @@
+<ng-template #sheetTemplate>
+  <div
+    class="ax-ain-sheet"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    [attr.aria-labelledby]="uid + '-title'"
+    [attr.aria-describedby]="uid + '-intro'">
+
+    <header class="ax-ain-sheet__head">
+      <span class="ax-ain-sheet__badge" aria-hidden="true">
+        <ax-icon name="sparkles" [size]="20" />
+      </span>
+      <p class="ax-ain-sheet__eyebrow">{{ 'ain_sheet_eyebrow' | translate }}</p>
+      <h2 class="ax-ain-sheet__title" [id]="uid + '-title'">{{ 'ain_sheet_title' | translate }}</h2>
+      <p class="ax-ain-sheet__intro" [id]="uid + '-intro'">{{ 'ain_sheet_intro' | translate }}</p>
+      <button
+        type="button"
+        class="ax-ain-sheet__close"
+        (click)="close()"
+        [attr.aria-label]="'close' | translate">
+        <ax-icon name="x" [size]="18" />
+      </button>
+    </header>
+
+    <!-- role="list": WebKit drops list semantics when list-style is none. -->
+    <ul class="ax-ain-sheet__list" role="list">
+      @for (tool of tools; track tool.key) {
+        <li>
+          <button
+            type="button"
+            class="ax-ain-tool ax-ain-tool--{{ tool.key }}"
+            [attr.aria-labelledby]="uid + '-' + tool.key + '-title'"
+            [attr.aria-describedby]="uid + '-' + tool.key + '-desc ' + uid + '-' + tool.key + '-example'"
+            (click)="choose(tool)">
+            <span class="ax-ain-tool__orb" aria-hidden="true">
+              <ax-icon [name]="tool.icon" [size]="20" />
+            </span>
+            <span class="ax-ain-tool__text">
+              <span class="ax-ain-tool__title" [id]="uid + '-' + tool.key + '-title'">{{ tool.titleKey | translate }}</span>
+              <span class="ax-ain-tool__desc" [id]="uid + '-' + tool.key + '-desc'">{{ tool.descKey | translate }}</span>
+              <span class="ax-ain-tool__example" [id]="uid + '-' + tool.key + '-example'">
+                <span class="ax-ain-tool__try">{{ 'ain_sheet_try' | translate }}</span>
+                {{ tool.exampleKey | translate }}
+              </span>
+            </span>
+            <span class="ax-ain-tool__chev" aria-hidden="true">
+              <ax-icon name="chevron-right" [size]="18" />
+            </span>
+          </button>
+        </li>
+      }
+    </ul>
+  </div>
+</ng-template>

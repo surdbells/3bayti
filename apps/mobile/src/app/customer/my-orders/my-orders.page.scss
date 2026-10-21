@@ -36,10 +36,13 @@ ion-content.page-bg {
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 
+  /* Fill is the brand TEXT colour (brown-600 light / beige-300 dark), so the
+     label must be the inverse text colour: hard white was unreadable on the
+     beige dark-mode fill. */
   &--active {
     background: var(--ax-color-text-brand);
     border-color: var(--ax-color-text-brand);
-    color: var(--ax-palette-neutral-0, #fff);
+    color: var(--ax-color-text-inverse);
     font-weight: 600;
   }
 }
@@ -108,40 +111,44 @@ ion-content.page-bg {
   text-transform: uppercase;
   flex-shrink: 0;
 
-  /* paid / fulfilling / processing, in-progress (blue) */
+  /* Status colours are the theme's status tokens (subtle fill + its text-on-*-subtle colour),
+     re-pointed for dark mode in _tokens.scss. The old hard-coded hues (e.g.
+     #6d28d9 purple, #c0392b red) dropped to ~2:1 on the espresso cards. */
+
+  /* paid / fulfilling / processing, in-progress (info) */
   &--processing,
   &--paid,
   &--fulfilling {
-    background: rgba(59, 130, 246, 0.12);
-    color: #1e6fdb;
+    background: var(--ax-color-bg-info-subtle);
+    color: var(--ax-color-text-on-info-subtle);
   }
 
-  /* shipping / shipped, in transit (amber) */
+  /* shipping / shipped, in transit (warning) */
   &--shipping,
   &--shipped {
-    background: rgba(245, 158, 11, 0.14);
-    color: #b45309;
+    background: var(--ax-color-bg-warning-subtle);
+    color: var(--ax-color-text-on-warning-subtle);
   }
 
   &--delivered {
-    background: rgba(34, 197, 94, 0.14);
-    color: #15803d;
+    background: var(--ax-color-bg-success-subtle);
+    color: var(--ax-color-text-on-success-subtle);
   }
 
   &--cancelled,
   &--failed {
-    background: rgba(192, 57, 43, 0.12);
-    color: #c0392b;
+    background: var(--ax-color-bg-danger-subtle);
+    color: var(--ax-color-text-on-danger-subtle);
   }
 
   &--refunded {
-    background: rgba(139, 92, 246, 0.14);
-    color: #6d28d9;
+    background: var(--ax-color-bg-brand-subtle);
+    color: var(--ax-color-text-brand);
   }
 
   &--pending,
   &--pending_payment {
-    background: rgba(46, 36, 28, 0.08);
+    background: var(--ax-color-bg-muted);
     color: var(--ax-color-text-secondary);
   }
 }
@@ -187,8 +194,8 @@ ion-content.page-bg {
   }
 
   &__thumb--gift {
-    color: #8b6f47;
-    background: linear-gradient(135deg, #fbf4e4, #f7ecd4);
+    color: var(--ax-color-text-on-gold-subtle);
+    background: var(--ax-color-bg-gold-subtle);
   }
 
   &__info {
@@ -233,11 +240,11 @@ ion-content.page-bg {
     background: var(--ax-color-bg-brand-subtle);
     color: var(--ax-color-text-secondary);
 
-    &--pending { background: rgba(245, 158, 11, 0.14); color: #a16207; }
-    &--processing { background: rgba(59, 130, 246, 0.14); color: #1d4ed8; }
+    &--pending { background: var(--ax-color-bg-warning-subtle); color: var(--ax-color-text-on-warning-subtle); }
+    &--processing { background: var(--ax-color-bg-info-subtle); color: var(--ax-color-text-on-info-subtle); }
     &--completed,
-    &--delivered { background: rgba(34, 197, 94, 0.14); color: #15803d; }
-    &--cancelled { background: rgba(192, 57, 43, 0.14); color: #b91c1c; }
+    &--delivered { background: var(--ax-color-bg-success-subtle); color: var(--ax-color-text-on-success-subtle); }
+    &--cancelled { background: var(--ax-color-bg-danger-subtle); color: var(--ax-color-text-on-danger-subtle); }
   }
 
   &__price {
@@ -319,7 +326,9 @@ ion-content.page-bg {
   border: none;
   border-radius: 999px;
   background: var(--ax-color-text-brand);
-  color: var(--ax-palette-neutral-0, #fff);
+  /* Inverse text: white on the brown light fill, espresso on the beige dark
+     fill (hard white was unreadable there). */
+  color: var(--ax-color-text-inverse);
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -356,13 +365,4 @@ ion-content.page-bg {
   .empty-icon-wrap ax-icon {
     font-size: 36px;
   }
-}
-
-/* ----- Loader row -------------------------------------- */
-
-.loader-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem 0;
 }

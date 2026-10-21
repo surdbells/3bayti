@@ -10,7 +10,7 @@ import { apiErrorMessage } from '../../core/http/api-error';
 import { Preferences } from '@capacitor/preferences';
 import { GiftCardPaymentService } from '../gift-cards/gift-card-payment.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
-import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import { AxSkeletonBlockComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { GlobalComponent } from '../../global-component';
 import { cfImage } from '../../shared/cf-image';
@@ -28,7 +28,7 @@ type GiftCardFilter = 'all' | 'active' | 'pending_payment' | 'used' | 'expired' 
   imports: [
     CommonModule, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton,
     IonContent, IonRefresher, IonRefresherContent,
-    AxLoaderComponent, AxIconComponent, TranslatePipe,
+    AxSkeletonBlockComponent, AxSkeletonLineComponent, AxIconComponent, TranslatePipe,
   ],
 })
 export class MyGiftCardsPage implements OnInit {
@@ -102,13 +102,16 @@ export class MyGiftCardsPage implements OnInit {
     private i18n: I18nService,
     private giftCardPayment: GiftCardPaymentService,
   ) {
+    // Colours are theme tokens (bound via [style.color]) so the status text
+    // brightens on the dark-mode surface; the old hard-coded hexes fell to
+    // roughly 2.5:1 there.
     this.statusMeta = {
-      pending_payment: { label: this.i18n.t('mgc_status_pending_payment'), color: '#F5A623' },
-      active:          { label: this.i18n.t('gift_card_status_active'),    color: '#2D7D4F' },
-      partially_used:  { label: this.i18n.t('gift_card_status_partial'),   color: '#2D7D4F' },
-      exhausted:       { label: this.i18n.t('gift_card_status_exhausted'), color: '#8B6F47' },
-      expired:         { label: this.i18n.t('gift_card_status_expired'),   color: '#C0392B' },
-      voided:          { label: this.i18n.t('mgc_status_voided'),          color: '#C0392B' },
+      pending_payment: { label: this.i18n.t('mgc_status_pending_payment'), color: 'var(--ax-color-text-warning)' },
+      active:          { label: this.i18n.t('gift_card_status_active'),    color: 'var(--ax-color-text-success)' },
+      partially_used:  { label: this.i18n.t('gift_card_status_partial'),   color: 'var(--ax-color-text-success)' },
+      exhausted:       { label: this.i18n.t('gift_card_status_exhausted'), color: 'var(--ax-color-text-secondary)' },
+      expired:         { label: this.i18n.t('gift_card_status_expired'),   color: 'var(--ax-color-text-danger)' },
+      voided:          { label: this.i18n.t('mgc_status_voided'),          color: 'var(--ax-color-text-danger)' },
     };
   }
 

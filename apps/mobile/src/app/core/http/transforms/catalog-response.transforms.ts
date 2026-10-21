@@ -40,6 +40,8 @@
  * deleted in one cleanup commit.
  */
 
+import { apiDateMs, formatRelativeDate } from '../../utils/api-date';
+
 /* ============================================================== *
  * Types
  * ============================================================== */
@@ -487,40 +489,44 @@ export function transformVendorResponse(data: unknown): unknown {
   };
 }
 
-/** Human "x ago" from an ISO timestamp, for review cards. */
-function relativeTime(iso: string): string {
-  if (!iso) return '';
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return '';
-  const diff = Date.now() - then;
-  if (diff < 60_000) return 'Just now';
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
-  if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)}d ago`;
-  return new Date(iso).toLocaleDateString();
-}
-
 /**
  * v3 review lists -> legacy review-card shape. The review pages assign
- * response.data directly and bind derived display fields. v3 publicShape
- * gives id/star/title/comment/product_name/reviewer/created_at; we add
- * the derived rating/author/authorInitial/relativeDate/aria. Used for
- * both store reviews and the user's own reviews (extra fields are inert
- * where a template doesn't read them).
+ * response.data directly and bind derived display fields. v3 publicShape /
+ * mineShape give id/star/title/comment/product_name/reviewer/is_verified/
+ * helpful_count/created_at; we add the names the review templates bind:
+ * rating/star (numbers), author/customer/authorInitial, text, helpfulCount,
+ * verified, createdAtMs (sort key) and relativeDate. Used for both store
+ * reviews and the user's own reviews (extra fields are inert where a
+ * template doesn't read them).
+ *
+ * Dates go through parseApiDate, never `new Date(str)`: Safari/WKWebView
+ * returns Invalid Date for non-ISO shapes Chrome accepts, so the old parse
+ * left iOS with empty dates and a NaN sort key.
+ *
+ * A non-array payload becomes [] so a page's @for never iterates an object.
  */
 export function transformReviewDisplayResponse(data: unknown): unknown {
-  if (!Array.isArray(data)) return data;
+  if (!Array.isArray(data)) return [];
   return data.map((r) => {
     if (!isRecord(r)) return r;
     const reviewer = asString(r['reviewer']);
     const starNum = Number(r['star'] ?? 0);
-    const star = Number.isFinite(starNum) ? starNum : 0;
+    const star = Number.isFinite(starNum) ? Math.max(0, Math.min(5, starNum)) : 0;
     return {
       ...r,
+      star,
       rating: star,
       author: reviewer,
+      // Legacy store-reviews binding (v3 renamed customer -> reviewer).
+      customer: reviewer,
       authorInitial: reviewer ? reviewer.charAt(0).toUpperCase() : '',
-      relativeDate: relativeTime(asString(r['created_at'])),
+      title: asString(r['title']),
+      comment: asString(r['comment']),
+      text: asString(r['comment']),
+      helpfulCount: asNumber(r['helpful_count']),
+      verified: r['is_verified'] === true,
+      createdAtMs: apiDateMs(r['created_at']),
+      relativeDate: formatRelativeDate(r['created_at']),
       aria: `${star} out of 5 stars`,
     };
   });

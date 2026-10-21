@@ -13,12 +13,24 @@
   <div class="reviews-sheet ion-padding-horizontal">
 
     @if (ui_controls.is_loading) {
-      <div class="loader-row">
-        <ax-loader></ax-loader>
+      <!-- Card-shaped shimmer: same geometry as .review-card, no layout jump on swap -->
+      <div class="reviews-list" aria-busy="true">
+        @for (n of skeletonRows; track n) {
+          <div class="review-card review-card--skeleton">
+            <div class="review-card__header">
+              <ax-skeleton-line width="45%" [height]="13"></ax-skeleton-line>
+            </div>
+            <div class="review-card__body">
+              <ax-skeleton-line width="100%" [height]="12"></ax-skeleton-line>
+              <ax-skeleton-line width="70%" [height]="12"></ax-skeleton-line>
+              <ax-skeleton-line width="76px" [height]="12"></ax-skeleton-line>
+            </div>
+          </div>
+        }
       </div>
     }
 
-    @if (!ui_controls.is_loading) {
+    @if (!ui_controls.is_loading && !ui_controls.is_error) {
       <div class="reviews-list">
         @for (item of reviews; track item.id) {
           <ion-card (click)="start_delete_review(item.id)" class="review-card">
@@ -43,11 +55,22 @@
       </div>
     }
 
-    @if (ui_controls.is_empty && !ui_controls.is_loading) {
+    @if (ui_controls.is_empty && !ui_controls.is_loading && !ui_controls.is_error) {
       <div class="empty-state">
         <ax-icon name="shopping-basket" />
         <h2>{{ 'heading_no_reviews' | translate }}</h2>
         <p>{{ 'text_no_reviews_description' | translate }}</p>
+      </div>
+    }
+
+    @if (ui_controls.is_error && !ui_controls.is_loading) {
+      <div class="empty-state" role="alert">
+        <ax-icon name="circle-alert" />
+        <p>{{ errorKey | translate }}</p>
+        <button type="button" class="retry-btn" (click)="get_reviews()">
+          <ax-icon name="rotate-ccw" [size]="14" />
+          <span>{{ 'button_try_again' | translate }}</span>
+        </button>
       </div>
     }
   </div>

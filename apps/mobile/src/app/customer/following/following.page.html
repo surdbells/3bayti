@@ -10,8 +10,24 @@
 </ion-header>
 
 <ion-content class="page-bg ion-padding" [fullscreen]="true">
-  @if (isLoading && !hasLoaded) {
-    <div class="following-loading">{{ 'following_loading' | translate }}</div>
+  <!-- Until the first reply lands (including the moment before the request
+       starts, while the session is read) show skeleton rows built from the
+       real row classes, never a flash of the empty state. -->
+  @if (!hasLoaded) {
+    <div class="following-list" role="status" aria-busy="true" [attr.aria-label]="'following_loading' | translate">
+      @for (s of [1, 2, 3, 4]; track s) {
+        <div class="follow-row follow-row--skeleton" aria-hidden="true">
+          <span class="follow-row__store">
+            <span class="follow-row__logo"><ax-skeleton-block [fill]="true" radius="12px" /></span>
+            <span class="follow-row__text follow-row__text--skeleton">
+              <span class="follow-row__name"><ax-skeleton-line width="60%" [height]="13" /></span>
+              <span class="follow-row__desc"><ax-skeleton-line width="80%" [height]="10" /></span>
+            </span>
+          </span>
+          <ax-skeleton-block width="72px" height="28px" radius="999px" />
+        </div>
+      }
+    </div>
   } @else if (stores.length === 0) {
     <div class="following-empty">
       <p class="following-empty__text">{{ 'following_empty' | translate }}</p>

@@ -17,6 +17,9 @@
   </ion-refresher>
 
   <!-- Results Count -->
+  @if(ui_controls.is_loading){
+    <div class="results-count" aria-hidden="true"><span><ax-skeleton-line width="96px" [height]="11" /></span></div>
+  }
   @if(!ui_controls.is_loading && discounted.length > 0){
     <div class="results-count">
       <span>{{ discounted.length }} {{ 'label_products_found' | translate }}</span>
@@ -85,27 +88,15 @@
     </ion-grid>
   }
 
-  <!-- Loading Skeleton Grid -->
+  <!-- Loading skeleton: the same grid / column structure as the products,
+       filled with the shared product-card skeleton (shared/ax-mobile/skeleton),
+       so the real cards swap in without a layout jump. -->
   @if(ui_controls.is_loading){
-    <ion-grid class="products-grid">
+    <ion-grid class="products-grid" role="status" aria-busy="true" [attr.aria-label]="'products_loading' | translate">
       <ion-row>
         @for(skeleton of [1,2,3,4,5,6]; track skeleton){
           <ion-col size="6">
-            <article class="m6d-product-card">
-              <div class="m6d-img-wrap">
-                <div class="m6d-img-skeleton">
-                  <div class="skeleton-shimmer"></div>
-                </div>
-              </div>
-              <div class="m6d-info">
-                <div class="skeleton-text name-sk">
-                  <div class="skeleton-shimmer"></div>
-                </div>
-                <div class="skeleton-text price-sk">
-                  <div class="skeleton-shimmer"></div>
-                </div>
-              </div>
-            </article>
+            <ax-skeleton-card />
           </ion-col>
         }
       </ion-row>

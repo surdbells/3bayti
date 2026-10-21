@@ -24,13 +24,13 @@ import {GlobalComponent} from "../../global-component";
 import {TranslatePipe} from "../../translate.pipe";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
-import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import { AxSkeletonCircleComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 @Component({
   selector: 'app-store-reviews',
   templateUrl: './store-reviews.page.html',
   styleUrls: ['./store-reviews.page.scss'],
   standalone: true,
-  imports: [IonContent, IonHeader, IonTitle, IonToolbar, FormsModule, IonButton, IonButtons, TranslatePipe, AxIconComponent, AxLoaderComponent]
+  imports: [IonContent, IonHeader, IonTitle, IonToolbar, FormsModule, IonButton, IonButtons, TranslatePipe, AxIconComponent, AxSkeletonCircleComponent, AxSkeletonLineComponent]
 })
 export class StoreReviewsPage implements OnInit, OnDestroy {
   reviews: Reviews[] = [];
@@ -55,8 +55,16 @@ export class StoreReviewsPage implements OnInit, OnDestroy {
   // instead of the old forced navigateRoot('/settings') overrides.
   ui_controls = {
     is_empty: false,
-    is_loading: false,
+    // The list request failed; shows a retry state instead of a blank page.
+    is_error: false,
+    // Starts true: the list loads on every entry, so the first frame is the
+    // skeleton rather than an empty page.
+    is_loading: true,
   }
+  /** i18n key for the failure message (offline vs any other error). */
+  errorKey = 'text_something_went_wrong';
+  /** Skeleton placeholders shown while the list loads. */
+  readonly skeletonRows = [0, 1, 2];
   single_user = {
     id: 0,
     token: "",
@@ -81,27 +89,32 @@ export class StoreReviewsPage implements OnInit, OnDestroy {
   };
 
   ngOnInit() {
-    this.rqst_param.store = Number(this.route.snapshot.queryParamMap.get('id'));
-    this.store_reviews.store = Number(this.route.snapshot.queryParamMap.get('id'));
+    // The store is addressed by its SLUG (v3), never the legacy store id:
+    // v3-native stores have no legacy id (it arrived as 0 -> 404 -> "No
+    // reviews"), and the API resolves a number as a v3 id FIRST, so a legacy
+    // id equal to another store's v3 id showed that other store's reviews.
+    this.store_reviews.store = (this.route.snapshot.queryParamMap.get('slug') || '').trim();
     this.rqst_param.store_name = this.route.snapshot.queryParamMap.get('name') || '';
-    this.getObject();
   }
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
   }
-  // Called when the page becomes active (Ionic RouterOutlet triggers this)
-  ionViewDidEnter() {
+  // Load on every entry (Ionic caches the page, so ngOnInit runs once).
+  // WillEnter, not DidEnter: the request starts with the transition instead
+  // of after it, and this is the ONLY load (ngOnInit used to fire a second,
+  // racing request for the same list).
+  ionViewWillEnter() {
     this.getObject();
   }
   rqst_param = {
     id: 0,
-    store: 0,
     token: "",
     store_name: ""
   }
   store_reviews = {
     id: 0,
-    store: 0,
+    /** Store slug; the reviews endpoint's {vendorId} accepts a slug. */
+    store: '',
     token: "",
   }
 
@@ -123,6 +136,14 @@ export class StoreReviewsPage implements OnInit, OnDestroy {
   }
   get_reviews() {
     this.ui_controls.is_empty = false;
+    this.ui_controls.is_error = false;
+    if (!this.store_reviews.store) {
+      // Opened without a store slug: nothing to load.
+      this.reviews = [];
+      this.ui_controls.is_loading = false;
+      this.ui_controls.is_empty = true;
+      return;
+    }
     this.ui_controls.is_loading = true;
     // Direct v3 (GET /v3/vendors/:vendorId/reviews), public list of a
     // store's approved reviews, no authToken. The legacy request transform
@@ -130,18 +151,34 @@ export class StoreReviewsPage implements OnInit, OnDestroy {
     // (store_id/store) into the vendorId path param; replicated here. The
     // registered response transform still applies via get_v3, so
     // response.data keeps the legacy Reviews[] shape.
+    //
+    // v3 answers "no reviews" with 200 + data: [] (legacy answered it with a
+    // non-success envelope), so the empty state follows the list length, and
+    // transport errors (rx error channel) get a retry state, never a blank page.
     this.networkAdapter.get_v3('GET /vendors/:vendorId/reviews', {
-      pathParams: { vendorId: String(this.store_reviews.store) },
+      pathParams: { vendorId: this.store_reviews.store },
     })
       .subscribe(({
         next: (response: any) => {
+          this.ui_controls.is_loading = false;
           if (response.response_code === 200 && response.status === "success") {
-            this.reviews = response.data;
-            this.ui_controls.is_loading = false;
-          }else{
+            this.reviews = Array.isArray(response.data) ? response.data : [];
+            this.ui_controls.is_empty = this.reviews.length === 0;
+          } else if (response.response_code === 404) {
+            // Unknown store id: nothing to show, same as an empty store.
+            this.reviews = [];
             this.ui_controls.is_empty = true;
-            this.ui_controls.is_loading = false;
+          } else {
+            this.reviews = [];
+            this.errorKey = 'text_something_went_wrong';
+            this.ui_controls.is_error = true;
           }
+        },
+        error: () => {
+          this.ui_controls.is_loading = false;
+          this.reviews = [];
+          this.errorKey = this.isOnline ? 'text_something_went_wrong' : 'text_offline_check_connection';
+          this.ui_controls.is_error = true;
         }
       }))
   }

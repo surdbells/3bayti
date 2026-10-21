@@ -1,0 +1,306 @@
+/* ============================================================================
+   AxAinConciergeSheet, centered floating card listing the four Ain tools
+   ============================================================================
+   Rendered into a CDK overlay (global position strategy, centered both ways),
+   so these selectors are global (ViewEncapsulation.None) and every class is
+   prefixed ax-ain-sheet / ax-ain-tool. Colours are ax tokens only, so the
+   card follows dark mode; layout uses logical properties for RTL.
+   ============================================================================ */
+
+/* ----- Backdrop (CDK overlay backdrop) ---------------------------------- */
+
+.ax-ain-sheet__backdrop {
+  background: var(--ax-color-bg-overlay);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  transition-duration: 200ms;
+}
+
+/* ----- The card ---------------------------------------------------------- */
+
+.ax-ain-sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(calc(100vw - 32px), 420px);
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+  background: var(--ax-color-bg-surface);
+  color: var(--ax-color-text-primary);
+  border: 1px solid var(--ax-ain-border-warm);
+  border-radius: var(--ax-radius-3xl);
+  box-shadow: var(--ax-shadow-2xl);
+  font-family: var(--ax-font-body);
+  outline: none;
+  animation: ax-ain-sheet-in 240ms var(--ax-ease-emphasized) both;
+}
+
+.ax-ain-sheet__panel--closing .ax-ain-sheet {
+  animation: ax-ain-sheet-out 160ms var(--ax-ease-in) forwards;
+  pointer-events: none;
+}
+
+/* ----- Header ------------------------------------------------------------ */
+
+.ax-ain-sheet__head {
+  position: relative;
+  flex-shrink: 0;
+  padding: var(--ax-space-6) var(--ax-space-8) var(--ax-space-3);
+  text-align: center;
+  background: linear-gradient(180deg, var(--ax-ain-cream-2), var(--ax-color-bg-surface));
+}
+
+.ax-ain-sheet__badge {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto var(--ax-space-2);
+  border-radius: var(--ax-radius-full);
+  background: linear-gradient(135deg, var(--ax-color-bg-brand), var(--ax-color-bg-brand-active));
+  color: var(--ax-color-text-on-brand);
+  box-shadow: var(--ax-shadow-md);
+}
+
+.ax-ain-sheet__eyebrow {
+  margin: 0 0 2px;
+  font-size: var(--ax-fs-3xs);
+  font-weight: var(--ax-fw-semibold);
+  letter-spacing: var(--ax-ls-wider);
+  text-transform: uppercase;
+  /* text-brand, not --ax-ain-accent: 11px text needs 4.5:1, and the accent
+     is 4.0:1 on the cream header in light mode (brown-600 is 5.3:1; dark
+     mode resolves to beige-300 either way). */
+  color: var(--ax-color-text-brand);
+}
+
+/* Tracking breaks Arabic's cursive joins (WebKit spaces the letters apart),
+   and uppercase means nothing in Arabic script. */
+:lang(ar) .ax-ain-sheet__eyebrow {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ax-ain-sheet__title {
+  margin: 0;
+  font-family: var(--ax-font-display);
+  font-size: var(--ax-fs-xl);
+  font-weight: var(--ax-fw-regular);
+  line-height: var(--ax-lh-snug);
+  color: var(--ax-ain-ink);
+}
+
+.ax-ain-sheet__intro {
+  margin: var(--ax-space-1) auto 0;
+  max-width: 34ch;
+  font-size: var(--ax-fs-xs);
+  line-height: var(--ax-lh-normal);
+  color: var(--ax-ain-ink-muted);
+}
+
+.ax-ain-sheet__close {
+  position: absolute;
+  top: var(--ax-space-3);
+  inset-inline-end: var(--ax-space-3);
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--ax-ain-border-warm);
+  border-radius: var(--ax-radius-full);
+  background: var(--ax-ain-surface);
+  color: var(--ax-color-text-secondary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--ax-duration-fast) var(--ax-ease-out),
+              color var(--ax-duration-fast) var(--ax-ease-out);
+
+  /* 44px hit area around the 36px visual circle (same pattern as the
+     vendor page's cover buttons). */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+  }
+
+  &:active {
+    background: var(--ax-ain-pressed);
+  }
+
+  &:focus-visible {
+    outline: none;
+    color: var(--ax-color-text-primary);
+    box-shadow: var(--ax-shadow-focus);
+  }
+}
+
+/* ----- Tool list (scrolls when the card hits its max height) ------------- */
+
+.ax-ain-sheet__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: var(--ax-space-1) var(--ax-space-4) var(--ax-space-4);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ax-space-2);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.ax-ain-tool {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ax-space-3);
+  margin: 0;
+  padding: var(--ax-space-3);
+  padding-inline-end: var(--ax-space-2);
+  border: 1px solid var(--ax-ain-border-warm);
+  border-radius: var(--ax-radius-xl);
+  background: linear-gradient(135deg, var(--ax-ain-cream-1), var(--ax-ain-cream-2));
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--ax-duration-fast) var(--ax-ease-out),
+              border-color var(--ax-duration-fast) var(--ax-ease-out);
+
+  &:active {
+    background: var(--ax-ain-cream-pressed);
+    transform: scale(0.985);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--ax-color-border-focus);
+    box-shadow: var(--ax-shadow-focus);
+  }
+}
+
+.ax-ain-tool__orb {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--ax-radius-lg);
+  /* Per-tool tint below; Ask Ain (the flagship) gets the solid brand fill. */
+  background: var(--ax-color-bg-brand);
+  color: var(--ax-color-text-on-brand);
+}
+
+.ax-ain-tool--gift .ax-ain-tool__orb {
+  background: var(--ax-color-bg-gold-subtle);
+  color: var(--ax-color-text-gold);
+}
+
+.ax-ain-tool--style .ax-ain-tool__orb {
+  background: var(--ax-color-bg-brand-muted);
+  color: var(--ax-color-text-brand);
+}
+
+.ax-ain-tool--photo .ax-ain-tool__orb {
+  background: var(--ax-color-bg-success-subtle);
+  color: var(--ax-color-text-success);
+}
+
+.ax-ain-tool__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ax-ain-tool__title {
+  font-size: var(--ax-fs-md);
+  font-weight: var(--ax-fw-bold);
+  line-height: var(--ax-lh-snug);
+  color: var(--ax-ain-ink);
+}
+
+.ax-ain-tool__desc {
+  font-size: var(--ax-fs-xs);
+  line-height: var(--ax-lh-snug);
+  color: var(--ax-ain-ink-muted);
+}
+
+.ax-ain-tool__example {
+  margin-top: var(--ax-space-1);
+  font-size: var(--ax-fs-2xs);
+  line-height: var(--ax-lh-snug);
+  color: var(--ax-ain-ink-muted);
+}
+
+.ax-ain-tool__try {
+  display: inline-block;
+  margin-inline-end: var(--ax-space-1);
+  padding: 1px 7px;
+  border-radius: var(--ax-radius-pill);
+  background: var(--ax-ain-pill);
+  /* text-brand: the accent is 3.8:1 on the pill in light mode (brown-600
+     is 5.0:1; 6.4:1 on the dark pill). */
+  color: var(--ax-color-text-brand);
+  font-weight: var(--ax-fw-semibold);
+}
+
+.ax-ain-tool__chev {
+  flex: 0 0 auto;
+  align-self: center;
+  display: inline-flex;
+  color: var(--ax-ain-accent);
+}
+
+/* The layout is pinned LTR today (I18nService), but flip the chevron if the
+   document ever switches to RTL, matching the other pages' chevrons. */
+[dir='rtl'] .ax-ain-tool__chev {
+  transform: scaleX(-1);
+}
+
+/* ----- Motion ------------------------------------------------------------ */
+
+@keyframes ax-ain-sheet-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ax-ain-sheet-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ax-ain-sheet,
+  .ax-ain-sheet__panel--closing .ax-ain-sheet {
+    animation: none;
+  }
+
+  .ax-ain-sheet__backdrop {
+    transition: none;
+  }
+
+  .ax-ain-tool,
+  .ax-ain-sheet__close {
+    transition: none;
+  }
+
+  .ax-ain-tool:active {
+    transform: none;
+  }
+}

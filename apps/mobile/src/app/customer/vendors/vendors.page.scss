@@ -1,5 +1,11 @@
 /* ============================================================================
    Vendor profile page (single vendor), compact redesign
+   ----------------------------------------------------------------------------
+   Everything drawn over the cover photo (back / share buttons, reviews chip,
+   follow pill, header skeletons) uses the --ax-color-media-* tokens: the
+   photo always sits under a dark scrim, so the same glass treatment reads in
+   light AND dark mode. Loading states use the shared ax-skeleton primitives
+   inside the real wrappers, so skeleton -> content never shifts the layout.
    ============================================================================ */
 
 ion-content.page-bg {
@@ -39,17 +45,18 @@ ion-header.vendor-header {
   }
 }
 
-/* Floating back button, overlays the cover image, top-start */
-.vendor-back-btn {
+/* Round glass buttons over the cover: back (top-start) + share (top-end).
+   Same look as each other, the reviews chip and the following-state pill. */
+.vendor-cover-btn {
   position: absolute;
   top: calc(env(safe-area-inset-top, 0px) + 12px);
-  inset-inline-start: 16px;
   z-index: 2;
   width: 38px;
   height: 38px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.45);
-  color: var(--ax-palette-neutral-0, #ffffff);
+  padding: 0;
+  border-radius: var(--ax-radius-full);
+  background: var(--ax-color-media-scrim);
+  color: var(--ax-color-text-on-media);
   border: none;
   display: flex;
   align-items: center;
@@ -60,15 +67,36 @@ ion-header.vendor-header {
   -webkit-backdrop-filter: blur(6px);
   transition: background 0.18s ease, transform 0.12s ease;
 
+  /* 44px hit area around the 38px visual */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+  }
+
   &:active {
     transform: scale(0.94);
-    background: rgba(0, 0, 0, 0.65);
+    background: var(--ax-color-media-scrim-pressed);
   }
+
+  &:focus-visible {
+    outline: 2px solid var(--ax-color-text-on-media);
+    outline-offset: 2px;
+  }
+}
+
+.vendor-back-btn {
+  inset-inline-start: 16px;
 
   /* Mirror the back arrow in RTL */
   :host-context([dir="rtl"]) & ax-icon {
     transform: scaleX(-1);
   }
+}
+
+.vendor-share-btn {
+  inset-inline-end: 16px;
 }
 
 .vendor-cover {
@@ -77,6 +105,13 @@ ion-header.vendor-header {
   height: 100%;
   object-fit: cover;
   object-position: center;
+  /* Fade the photo in over the placeholder once decoded (no hard pop). */
+  opacity: 0;
+  transition: opacity var(--ax-duration-slow, 300ms) ease;
+
+  &.loaded {
+    opacity: 1;
+  }
 }
 
 .vendor-overlay {
@@ -91,6 +126,8 @@ ion-header.vendor-header {
 }
 
 .vendor-logo {
+  /* positioned: the loading skeleton fills this circle */
+  position: relative;
   flex-shrink: 0;
   width: 50px;
   height: 50px;
@@ -122,7 +159,7 @@ ion-header.vendor-header {
 .vendor-meta {
   flex: 1;
   min-width: 0;
-  color: var(--ax-palette-neutral-0);
+  color: var(--ax-color-text-on-media);
 
   h2 {
     font-family: var(--ax-font-display);
@@ -130,7 +167,7 @@ ion-header.vendor-header {
     font-size: 18px;
     margin: 0 0 2px;
     line-height: 1.15;
-    color: var(--ax-palette-neutral-0);
+    color: var(--ax-color-text-on-media);
 
     /* Single-line ellipsis */
     white-space: nowrap;
@@ -153,61 +190,126 @@ ion-header.vendor-header {
   }
 }
 
-/* Inline Reviews link under the name (replaces the full-width Reviews button) */
-.vendor-reviews-link {
-  margin-top: 3px;
-  padding: 0;
-  background: none;
-  border: none;
-  display: inline-flex;
+/* Secondary actions row under the tagline. Fixed 32px row (= the follow
+   pill's height, which is bottom-aligned beside it), so the reviews chip and
+   the follow pill share one centre line and the skeleton row is identical. */
+.vendor-meta-actions {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  color: var(--ax-palette-neutral-0);
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  opacity: 0.95;
-
-  ax-icon { color: #ffd166; }
-
-  span { text-decoration: underline; text-underline-offset: 2px; }
-
-  &:active { opacity: 0.7; }
+  gap: var(--ax-space-2);
+  height: 32px;
+  margin-top: var(--ax-space-1);
 }
 
-/* Compact Follow pill in the cover overlay (replaces the actions strip) */
-.vendor-follow-pill {
+/* Reviews chip: glass pill, the secondary sibling of the follow pill. */
+.vendor-reviews-chip {
+  position: relative;
   flex-shrink: 0;
-  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--ax-radius-pill);
+  border: 1px solid var(--ax-color-media-hairline);
+  background: var(--ax-color-media-glass);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--ax-color-text-on-media);
+  font-family: inherit;
+  font-size: var(--ax-fs-2xs);
+  font-weight: var(--ax-fw-semibold);
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, background 0.18s ease;
+
+  ax-icon {
+    color: var(--ax-color-media-accent);
+  }
+
+  /* 44px-tall hit area around the 28px visual */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -8px -4px;
+  }
+
+  &:active {
+    transform: scale(0.95);
+    background: var(--ax-color-media-scrim);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ax-color-text-on-media);
+    outline-offset: 2px;
+  }
+}
+
+/* Compact Follow pill in the cover overlay. Bottom-aligned (with the
+   actions row) so it stays clear of the top-end share button on notched
+   phones, where the cover's top band is under the status bar. */
+.vendor-follow-pill {
+  position: relative;
+  flex-shrink: 0;
+  align-self: flex-end;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   height: 32px;
   padding: 0 14px;
-  border-radius: 999px;
-  border: 1.5px solid var(--ax-palette-neutral-0);
-  background: var(--ax-color-bg-brand);
-  color: var(--ax-palette-neutral-0);
+  border-radius: var(--ax-radius-pill);
+  border: 1.5px solid var(--ax-color-text-on-media);
+  /* media-brand, not bg-brand: bg-brand lightens to brown-400 in dark mode,
+     where the white 12.5px label drops to 3.8:1. Over the cover photo the
+     pill is mode-independent like the other over-photo controls. */
+  background: var(--ax-color-media-brand);
+  color: var(--ax-color-text-on-media);
   font-family: inherit;
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: var(--ax-fw-semibold);
   letter-spacing: 0.01em;
+  white-space: nowrap;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
-  transition: transform 0.12s ease, background 0.18s ease;
+  transition: transform 0.12s ease, background 0.18s ease, opacity 0.18s ease;
+
+  /* 44px-tall hit area around the 32px visual */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -6px -2px;
+  }
 
   &:active { transform: scale(0.95); }
 
-  /* Following state: translucent / outline look */
-  &.is-following {
-    background: rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+  &:focus-visible {
+    outline: 2px solid var(--ax-color-text-on-media);
+    outline-offset: 2px;
   }
+
+  /* Following state: the same glass as the reviews chip */
+  &.is-following {
+    background: var(--ax-color-media-glass);
+    border-color: var(--ax-color-media-hairline);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  /* Write in flight: dimmed, taps ignored (no double follow / unfollow) */
+  &.is-busy,
+  &:disabled {
+    opacity: 0.7;
+    cursor: progress;
+  }
+}
+
+/* Follow-pill skeleton: same box + alignment as the pill */
+.vendor-follow-skeleton {
+  align-self: flex-end;
 }
 
 /* ----- Filter chip row (vendor labels) ------------------------------- */
@@ -221,6 +323,9 @@ ion-header.vendor-header {
   -webkit-overflow-scrolling: touch;
 
   &::-webkit-scrollbar { display: none; }
+
+  /* Skeleton pills simply run off the edge; nothing to scroll. */
+  &--skeleton { overflow: hidden; }
 }
 
 .filter-chip {
@@ -244,7 +349,9 @@ ion-header.vendor-header {
 
   &.active {
     background: var(--ax-color-bg-brand);
-    color: var(--ax-palette-neutral-0);
+    /* text-on-brand: white in light (4.85:1), espresso-900 in dark (5.0:1 on
+       the lighter dark-mode brown, where white was 3.8:1). */
+    color: var(--ax-color-text-on-brand);
     border-color: var(--ax-color-bg-brand);
   }
 
@@ -285,7 +392,8 @@ ion-header.vendor-header {
   padding: 4px 16px 16px;
 
   /* .m6d-product-card is fluid (100%) outside .h-scroll, so it fills each
-     grid cell, no 158px pin here (that rule is scoped to .h-scroll). */
+     grid cell, no 158px pin here (that rule is scoped to .h-scroll). The
+     <ax-skeleton-card> placeholders render the same frame. */
 }
 
 /* ----- Per-filter empty state --------------------------------------- */
@@ -308,13 +416,4 @@ ion-header.vendor-header {
     font-size: 13.5px;
     line-height: 1.4;
   }
-}
-
-/* ----- Loader row --------------------------------------------------- */
-
-.loader-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 2rem 0;
 }

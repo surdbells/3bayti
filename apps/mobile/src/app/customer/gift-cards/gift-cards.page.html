@@ -32,14 +32,27 @@
 
   <!-- ── STEP 1: Pick theme ──────────────────────────────────────── -->
   @if (ui.step === 1) {
-    @if (ui.loading_themes) {
-      <div class="gc-loader"><ax-loader /></div>
-    } @else {
-      <div class="gc-intro">
-        <h2 class="gc-intro__title">{{ 'gc_intro_title' | translate }}</h2>
-        <p class="gc-intro__sub">{{ 'gc_intro_sub' | translate }}</p>
-      </div>
+    <!-- Intro copy is static, so it renders straight away. -->
+    <div class="gc-intro">
+      <h2 class="gc-intro__title">{{ 'gc_intro_title' | translate }}</h2>
+      <p class="gc-intro__sub">{{ 'gc_intro_sub' | translate }}</p>
+    </div>
 
+    <!-- Loading: theme rows drawn with the real card classes, so the list
+         swaps in without a jump. -->
+    @if (ui.loading_themes) {
+      <div class="gc-theme-grid" role="status" aria-busy="true" [attr.aria-label]="'gift_card_themes_loading' | translate">
+        @for (s of [1, 2, 3, 4]; track s) {
+          <div class="gc-theme-card gc-theme-card--skeleton" aria-hidden="true">
+            <ax-skeleton-block width="72px" height="46px" radius="8px" />
+            <div class="gc-theme-card__info">
+              <span class="gc-theme-card__name"><ax-skeleton-line width="55%" [height]="13" /></span>
+              <span class="gc-theme-card__arabic"><ax-skeleton-line width="35%" [height]="11" /></span>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
       <div class="gc-theme-grid">
         @for (key of themeKeys; track key) {
           <button

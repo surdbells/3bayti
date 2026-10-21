@@ -88,6 +88,9 @@ import {
   UserCheck,
   UserMinus,
   UserPen,
+  UserPlus,
+  Share,
+  Share2,
   Wallet,
   X
 } from 'lucide-angular';
@@ -170,6 +173,11 @@ export const AX_ICON_SET: Record<string, LucideIconData> = {
   'user-check': UserCheck,
   'user-minus': UserMinus,
   'user-pen': UserPen,
+  'user-plus': UserPlus,
+  // 'share' (vendor storefront) and 'share-2' (gift-card detail) were used in
+  // templates but never registered, so those buttons rendered no icon.
+  'share': Share,
+  'share-2': Share2,
   'wallet': Wallet,
   'x': X
 };

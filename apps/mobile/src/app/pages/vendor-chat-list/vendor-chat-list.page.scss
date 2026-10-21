@@ -1,9 +1,12 @@
-.cv-toolbar { --background: var(--ion-background-color, #fff); }
-.cv-back { --color: var(--ion-text-color, #1a1a1a); }
+/* Inbox list. Colours are ax theme tokens (light + dark in
+   shared/ax-mobile/_tokens.scss). The old values leaned on Ionic's
+   --ion-color-step-* variables, which this app never defines, so the light
+   fallbacks always won: a #f6f7f9 page behind dark rows, light #eceef1
+   separators and #5a5a5a previews (about 2:1) in dark mode. */
+.cv-toolbar { --background: var(--ax-color-bg-canvas); }
+.cv-back { --color: var(--ax-color-text-primary); }
 .cv-title { font-weight: 600; }
-.cv-content { --background: var(--ion-color-step-50, #f6f7f9); }
-
-.cv-loading { display: flex; justify-content: center; padding-top: 3rem; }
+.cv-content { --background: var(--ax-color-bg-canvas); }
 
 .cv-empty {
   display: flex;
@@ -12,7 +15,7 @@
   gap: 0.75rem;
   padding: 4rem 2rem;
   text-align: center;
-  color: var(--ion-color-medium, #8a8a8a);
+  color: var(--ax-color-text-tertiary);
 
   ax-icon { font-size: 2.5rem; opacity: 0.6; }
   p { margin: 0; font-size: 0.9rem; }
@@ -26,11 +29,15 @@
   width: 100%;
   padding: 0.85rem 1rem;
   border: none;
-  border-bottom: 1px solid var(--ion-color-step-100, #eceef1);
-  background: var(--ion-background-color, #fff);
-  text-align: left;
+  border-bottom: 1px solid var(--ax-color-border-subtle);
+  background: var(--ax-color-bg-surface);
+  color: var(--ax-color-text-primary);
+  font-family: inherit;
+  text-align: start;
   cursor: pointer;
 }
+/* Loading placeholder row: same box as a real row, not interactive. */
+.cv-item--skeleton { pointer-events: none; cursor: default; }
 .cv-avatar {
   display: flex;
   align-items: center;
@@ -39,8 +46,8 @@
   height: 2.6rem;
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--ion-color-primary-tint, #e7d9b8);
-  color: var(--ion-color-primary-shade, #a07d2e);
+  background: var(--ax-color-bg-brand-subtle);
+  color: var(--ax-color-text-brand);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -48,19 +55,19 @@
 .cv-top { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
 .cv-name {
   font-weight: 600;
-  color: var(--ion-text-color, #1a1a1a);
+  color: var(--ax-color-text-primary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.cv-time { font-size: 0.7rem; color: var(--ion-color-medium, #8a8a8a); flex-shrink: 0; }
+.cv-time { font-size: 0.7rem; color: var(--ax-color-text-tertiary); flex-shrink: 0; }
 .cv-meta {
   font-size: 0.72rem;
-  color: var(--ion-color-medium, #8a8a8a);
+  color: var(--ax-color-text-tertiary);
   margin-top: 0.1rem;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .cv-preview {
   font-size: 0.8rem;
-  color: var(--ion-color-step-600, #5a5a5a);
+  color: var(--ax-color-text-secondary);
   margin-top: 0.2rem;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -75,7 +82,7 @@
   flex-shrink: 0;
   font-size: 0.7rem;
   font-weight: 700;
-  color: var(--ion-color-primary-contrast, #fff);
-  background: var(--ion-color-primary, #c8a04a);
+  color: var(--ax-color-text-on-brand);
+  background: var(--ax-color-bg-brand);
   border-radius: 999px;
 }

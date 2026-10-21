@@ -1,66 +1,101 @@
 <ion-header class="vendor-header ion-no-border">
-  <!-- Cover image with gradient overlay -->
+  <!-- Cover image with gradient overlay. While the vendor read is in flight
+       every header piece renders its skeleton IN PLACE (same boxes), so the
+       swap to real content never moves anything. -->
   <div class="vendor-cover-wrapper">
-    <img loading="lazy"
-         class="vendor-cover"
-         [src]="view_vendor.cover || 'assets/images/vendor-cover-default.png'"
-         alt="Vendor cover" />
+    @if (ui_controls.vendor_loading) {
+      <ax-skeleton-block [fill]="true" radius="0" />
+    } @else {
+      <img class="vendor-cover"
+           [class.loaded]="coverLoaded"
+           [src]="coverSrc"
+           (load)="onCoverLoad()"
+           (error)="onCoverError()"
+           alt="" />
+    }
 
-    <!-- Floating back button (overlay, top-left) -->
+    <!-- Floating glass actions over the cover: back (start) + share (end).
+         Always live, even while loading (share only needs the slug). -->
     <button type="button"
-            class="vendor-back-btn"
+            class="vendor-cover-btn vendor-back-btn"
             (click)="goBack()"
-            aria-label="Back">
+            [attr.aria-label]="'button_back' | translate">
       <ax-icon name="arrow-left" [size]="20" />
     </button>
+    <button type="button"
+            class="vendor-cover-btn vendor-share-btn"
+            (click)="shareStore()"
+            [attr.aria-label]="'button_share' | translate">
+      <ax-icon name="share" [size]="18" />
+    </button>
 
-    <!-- Logo + name + tagline + inline actions overlay -->
+    <!-- Logo + name + tagline + reviews chip + follow pill overlay -->
     <div class="vendor-overlay">
       <div class="vendor-logo">
-        @if (view_vendor.logo) {
-          <img loading="lazy" [src]="view_vendor.logo" alt="{{ view_vendor.name }}" />
+        @if (ui_controls.vendor_loading) {
+          <ax-skeleton-block [fill]="true" radius="50%" />
+        } @else if (view_vendor.logo) {
+          <img loading="lazy" [src]="view_vendor.logo" alt="{{ storeDisplayName }}" />
         } @else {
-          <span class="logo-initial">{{ view_vendor.name | slice:0:1 }}</span>
+          <span class="logo-initial">{{ storeDisplayName | slice:0:1 }}</span>
         }
       </div>
       <div class="vendor-meta">
-        <h2>{{ view_vendor.name }}</h2>
-        <p [innerHTML]="view_vendor.tagline || ('text_vendor_tagline_fallback' | translate)"></p>
-        <!-- Inline reviews link (compact, replaces the full-width Reviews button) -->
-        <button type="button"
-                class="vendor-reviews-link"
-                (click)="goToReviews(rqst_param.store_slug, view_vendor.id, view_vendor.name)">
-          <ax-icon name="star" [size]="13" />
-          <span>{{ 'button_reviews' | translate }}</span>
-        </button>
-        <button type="button"
-                class="vendor-reviews-link"
-                (click)="shareStore()"
-                aria-label="Share store">
-          <ax-icon name="share" [size]="13" />
-          <span>{{ 'button_share' | translate }}</span>
-        </button>
+        @if (ui_controls.vendor_loading) {
+          <h2><ax-skeleton-line width="62%" [height]="14" tone="on-media" /></h2>
+          <p><ax-skeleton-line width="82%" [height]="9" tone="on-media" /></p>
+          <div class="vendor-meta-actions">
+            <ax-skeleton-block width="92px" height="28px" radius="999px" tone="on-media" />
+          </div>
+        } @else {
+          <h2>{{ storeDisplayName }}</h2>
+          <p [innerHTML]="view_vendor.tagline || ('text_vendor_tagline_fallback' | translate)"></p>
+          <div class="vendor-meta-actions">
+            <button type="button"
+                    class="vendor-reviews-chip"
+                    (click)="goToReviews(rqst_param.store_slug, view_vendor.id, storeDisplayName)">
+              <ax-icon name="star" [size]="13" />
+              <span>{{ 'button_reviews' | translate }}</span>
+            </button>
+          </div>
+        }
       </div>
 
       <!-- Compact Follow pill (overlay, near the name) -->
-      <button type="button"
-              class="vendor-follow-pill"
-              [class.is-following]="view_vendor.following"
-              (click)="toggleFollow()">
-        @if (view_vendor.following) {
-          <ax-icon name="user-check" [size]="15" />
-        } @else {
-          <ax-icon name="user-minus" [size]="15" />
-        }
-        <span>{{ (view_vendor.following ? 'button_followed' : 'button_follow') | translate }}</span>
-      </button>
+      @if (ui_controls.vendor_loading) {
+        <ax-skeleton-block class="vendor-follow-skeleton"
+                           width="96px" height="32px" radius="999px" tone="on-media" />
+      } @else {
+        <button type="button"
+                class="vendor-follow-pill"
+                [class.is-following]="view_vendor.following"
+                [class.is-busy]="ui_controls.follow_busy"
+                [disabled]="ui_controls.follow_busy"
+                [attr.aria-pressed]="view_vendor.following"
+                [attr.aria-busy]="ui_controls.follow_busy"
+                (click)="toggleFollow()">
+          @if (view_vendor.following) {
+            <ax-icon name="user-check" [size]="15" />
+          } @else {
+            <ax-icon name="user-plus" [size]="15" />
+          }
+          <span>{{ (view_vendor.following ? 'button_followed' : 'button_follow') | translate }}</span>
+        </button>
+      }
     </div>
   </div>
 </ion-header>
 
 <ion-content [fullscreen]="true" class="page-bg">
-  <!-- Filter chip row: "All" first + one chip per vendor label -->
-  @if (!ui_controls.is_loading) {
+  <!-- Filter chip row: "All" first + one chip per vendor label. The skeleton
+       row uses the same container + 34px pills, so the row height is fixed. -->
+  @if (ui_controls.labels_loading) {
+    <div class="filter-chip-row filter-chip-row--skeleton" aria-hidden="true">
+      @for (width of chipSkeletonWidths; track $index) {
+        <ax-skeleton-block [width]="width" height="34px" radius="999px" />
+      }
+    </div>
+  } @else {
     <div class="filter-chip-row">
       <button type="button"
               class="filter-chip"
@@ -83,81 +118,96 @@
   }
 
   <!-- Latest strip (only on the "All" view, when present) -->
-  @if (!ui_controls.is_loading && selectedLabelId === null && latest.length > 0) {
-    <section class="section section--latest">
-      <h2 class="section-title">{{ 'heading_latest' | translate }}</h2>
-      <app-h-scroll-progress>
-        @for (latest_product of latest; track latest_product.product_id) {
-          <article class="m6d-product-card">
-            <div class="m6d-img-wrap">
-              <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['latest-' + latest_product.product_id]">
-                <div class="skeleton-shimmer"></div>
+  @if (selectedLabelId === null) {
+    @if (ui_controls.latest_loading) {
+      <!-- inert as well as aria-hidden: app-h-scroll-progress's scroller has
+           tabindex="0", so without inert a keyboard / switch user could tab
+           onto this hidden, unnamed placeholder. -->
+      <section class="section section--latest" aria-hidden="true" inert>
+        <h2 class="section-title"><ax-skeleton-line width="76px" [height]="14" /></h2>
+        <app-h-scroll-progress>
+          @for (i of railSkeleton; track i) {
+            <ax-skeleton-card />
+          }
+        </app-h-scroll-progress>
+      </section>
+    } @else if (latest.length > 0) {
+      <section class="section section--latest">
+        <h2 class="section-title">{{ 'heading_latest' | translate }}</h2>
+        <app-h-scroll-progress>
+          @for (latest_product of latest; track latest_product.product_id) {
+            <article class="m6d-product-card">
+              <div class="m6d-img-wrap">
+                <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['latest-' + latest_product.product_id]">
+                  <div class="skeleton-shimmer"></div>
+                </div>
+                <img
+                  (click)="open_product(latest_product.product_id, latest_product.product_name)"
+                  [class.loaded]="imageLoaded['latest-' + latest_product.product_id]"
+                  (load)="onImageLoad('latest-' + latest_product.product_id)"
+                  (error)="onImageError('latest-' + latest_product.product_id)"
+                  [src]="cfImage(latest_product.image_1, 'card')"
+                  alt="{{latest_product.product_name}}" />
               </div>
-              <img
-                (click)="open_product(latest_product.product_id, latest_product.product_name)"
-                [class.loaded]="imageLoaded['latest-' + latest_product.product_id]"
-                (load)="onImageLoad('latest-' + latest_product.product_id)"
-                (error)="onImageError('latest-' + latest_product.product_id)"
-                [src]="cfImage(latest_product.image_1, 'card')"
-                alt="{{latest_product.product_name}}" />
-            </div>
-            <div (click)="open_product(latest_product.product_id, latest_product.product_name)" class="m6d-info">
-              <p class="m6d-name">{{latest_product.product_name}}</p>
-              <div class="m6d-price-row">
-                <span class="m6d-price">Ð{{latest_product.price}}</span>
-                <button (click)="open_product(latest_product.product_id, latest_product.product_name); $event.stopPropagation()" class="m6d-add-to-cart" type="button" aria-label="Add to cart">
-                  <ax-icon name="plus" />
-                </button>
+              <div (click)="open_product(latest_product.product_id, latest_product.product_name)" class="m6d-info">
+                <p class="m6d-name">{{latest_product.product_name}}</p>
+                <div class="m6d-price-row">
+                  <span class="m6d-price">Ð{{latest_product.price}}</span>
+                  <button (click)="open_product(latest_product.product_id, latest_product.product_name); $event.stopPropagation()" class="m6d-add-to-cart" type="button" aria-label="Add to cart">
+                    <ax-icon name="plus" />
+                  </button>
+                </div>
               </div>
-            </div>
-          </article>
-        }
-      </app-h-scroll-progress>
-    </section>
-  }
-
-  <!-- Dense 2-column product grid for the selected filter -->
-  @if (!ui_controls.is_loading) {
-    @if (products.length > 0) {
-      <div class="product-grid">
-        @for (product of products; track product.product_id) {
-          <article class="m6d-product-card">
-            <div class="m6d-img-wrap">
-              <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['grid-' + product.product_id]">
-                <div class="skeleton-shimmer"></div>
-              </div>
-              <img
-                (click)="open_product(product.product_id, product.product_name)"
-                [class.loaded]="imageLoaded['grid-' + product.product_id]"
-                (load)="onImageLoad('grid-' + product.product_id)"
-                (error)="onImageError('grid-' + product.product_id)"
-                [src]="cfImage(product.image_1, 'card')"
-                alt="{{product.product_name}}" />
-            </div>
-            <div (click)="open_product(product.product_id, product.product_name)" class="m6d-info">
-              <p class="m6d-name">{{product.product_name}}</p>
-              <div class="m6d-price-row">
-                <span class="m6d-price">Ð{{product.price}}</span>
-                <button (click)="open_product(product.product_id, product.product_name); $event.stopPropagation()" class="m6d-add-to-cart" type="button" aria-label="Add to cart">
-                  <ax-icon name="plus" />
-                </button>
-              </div>
-            </div>
-          </article>
-        }
-      </div>
-    } @else {
-      <!-- Per-filter empty state -->
-      <div class="grid-empty">
-        <ax-icon name="package" [size]="40" />
-        <p>{{ 'text_no_products_in_collection' | translate }}</p>
-      </div>
+            </article>
+          }
+        </app-h-scroll-progress>
+      </section>
     }
   }
 
-  @if (ui_controls.is_loading) {
-    <div class="loader-row">
-      <ax-loader></ax-loader>
+  <!-- Dense 2-column product grid for the selected filter -->
+  @if (ui_controls.products_loading) {
+    <div class="product-grid"
+         role="status"
+         aria-busy="true"
+         [attr.aria-label]="'store_loading' | translate">
+      @for (i of gridSkeleton; track i) {
+        <ax-skeleton-card />
+      }
+    </div>
+  } @else if (products.length > 0) {
+    <div class="product-grid">
+      @for (product of products; track product.product_id) {
+        <article class="m6d-product-card">
+          <div class="m6d-img-wrap">
+            <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['grid-' + product.product_id]">
+              <div class="skeleton-shimmer"></div>
+            </div>
+            <img
+              (click)="open_product(product.product_id, product.product_name)"
+              [class.loaded]="imageLoaded['grid-' + product.product_id]"
+              (load)="onImageLoad('grid-' + product.product_id)"
+              (error)="onImageError('grid-' + product.product_id)"
+              [src]="cfImage(product.image_1, 'card')"
+              alt="{{product.product_name}}" />
+          </div>
+          <div (click)="open_product(product.product_id, product.product_name)" class="m6d-info">
+            <p class="m6d-name">{{product.product_name}}</p>
+            <div class="m6d-price-row">
+              <span class="m6d-price">Ð{{product.price}}</span>
+              <button (click)="open_product(product.product_id, product.product_name); $event.stopPropagation()" class="m6d-add-to-cart" type="button" aria-label="Add to cart">
+                <ax-icon name="plus" />
+              </button>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <!-- Per-filter empty state -->
+    <div class="grid-empty">
+      <ax-icon name="package" [size]="40" />
+      <p>{{ 'text_no_products_in_collection' | translate }}</p>
     </div>
   }
 </ion-content>

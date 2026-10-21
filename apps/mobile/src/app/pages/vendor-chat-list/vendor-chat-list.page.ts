@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonButtons,
-  IonRefresher, IonRefresherContent, IonSpinner, NavController,
+  IonRefresher, IonRefresherContent, NavController,
 } from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
@@ -12,6 +12,7 @@ import { ChatService } from '../../service/chat.service';
 import { ChatConversationSummary } from '../../models/chat.models';
 import { TranslatePipe } from '../../translate.pipe';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
+import { AxSkeletonCircleComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 
 /**
  * Vendor conversation list (v3). The vendor's order chats with customers;
@@ -25,12 +26,15 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonButtons,
-    IonRefresher, IonRefresherContent, IonSpinner, TranslatePipe, AxIconComponent,
+    IonRefresher, IonRefresherContent, TranslatePipe, AxIconComponent,
+    AxSkeletonCircleComponent, AxSkeletonLineComponent,
   ],
 })
 export class VendorChatListPage implements OnInit, OnDestroy {
   conversations: ChatConversationSummary[] = [];
   isLoading = true;
+  /** Placeholder rows for the first load. */
+  readonly skeletonRows = [1, 2, 3, 4, 5];
 
   private subscriptions: Subscription[] = [];
 

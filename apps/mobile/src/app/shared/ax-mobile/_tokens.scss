@@ -95,6 +95,7 @@
   --ax-palette-warning-600: #7d4f12;   /* dark-mode subtle bg */
 
   --ax-palette-danger-100: #f9dfd9;
+  --ax-palette-danger-300: #e8836f;   /* dark-mode foreground (>= 4.5:1 on espresso surfaces) */
   --ax-palette-danger-400: #d1543f;
   --ax-palette-danger-500: #a53826;
   --ax-palette-danger-600: #822518;
@@ -163,6 +164,16 @@
   --ax-color-bg-danger-subtle:  var(--ax-palette-danger-100);
   --ax-color-bg-info-subtle:    var(--ax-palette-info-100);
 
+  /* Status, text ON the matching subtle fill (status pills / badges). Pill
+     text is small (9-10px), so it needs 4.5:1 against the tint; the plain
+     text-* status colours fall short there (text-warning is 3.2:1 on
+     warning-100, text-gold 2.7:1 on gold-100). All >= 5.7:1 here. */
+  --ax-color-text-on-success-subtle: var(--ax-palette-success-600);
+  --ax-color-text-on-warning-subtle: var(--ax-palette-warning-600);
+  --ax-color-text-on-danger-subtle:  var(--ax-palette-danger-600);
+  --ax-color-text-on-info-subtle:    var(--ax-palette-info-500);
+  --ax-color-text-on-gold-subtle:    var(--ax-palette-gold-700);
+
   /* Gold accent */
   --ax-color-bg-gold:        var(--ax-palette-gold-400);
   --ax-color-bg-gold-subtle: var(--ax-palette-gold-100);
@@ -173,6 +184,27 @@
      Placeholder: warm cream in light, dark espresso in dark. */
   --ax-color-bg-toolbar:     var(--ax-palette-beige-200);
   --ax-color-bg-placeholder: var(--ax-palette-brown-100);
+
+  /* Skeleton / shimmer loading placeholders (shared/ax-mobile/skeleton).
+     base = resting bar fill, highlight = the sweeping band, sheen = the
+     translucent sweep the global .skeleton-shimmer overlay draws on image
+     placeholders. Re-pointed in ax-dark-tokens. */
+  --ax-color-skeleton-base:      var(--ax-palette-neutral-200);
+  --ax-color-skeleton-highlight: var(--ax-palette-neutral-50);
+  --ax-color-skeleton-sheen:     rgba(255, 255, 255, 0.35);
+
+  /* Controls and placeholders drawn OVER photos / cover images. The image
+     always sits under a dark scrim, so one set of values serves light AND
+     dark mode (deliberately not re-pointed in ax-dark-tokens). */
+  --ax-color-media-scrim:         rgba(0, 0, 0, 0.45);   /* round glass buttons */
+  --ax-color-media-scrim-pressed: rgba(0, 0, 0, 0.65);
+  --ax-color-media-glass:         rgba(255, 255, 255, 0.18); /* light glass pills */
+  --ax-color-media-hairline:      rgba(255, 255, 255, 0.42); /* glass outlines */
+  --ax-color-text-on-media:       var(--ax-palette-neutral-0);
+  --ax-color-media-accent:        var(--ax-palette-gold-300); /* e.g. review star */
+  --ax-color-media-brand:         var(--ax-palette-brown-500); /* solid CTA (Follow), white text 4.85:1 */
+  --ax-color-skeleton-on-media:       rgba(255, 255, 255, 0.20);
+  --ax-color-skeleton-on-media-sheen: rgba(255, 255, 255, 0.32);
 
   /* Focus ring */
   --ax-color-ring:        rgba(144, 105, 82, 0.35);
@@ -412,7 +444,10 @@
   /* Status, foreground (lighten so text stays legible on dark surfaces) */
   --ax-color-text-success: var(--ax-palette-success-400);
   --ax-color-text-warning: var(--ax-palette-warning-300);
-  --ax-color-text-danger:  var(--ax-palette-danger-400);
+  /* danger-300, not -400: danger-400 is 3.7:1 on the espresso-700 surface
+     (e.g. the Following page's Unfollow label); -300 is 5.9:1 there and
+     6.6:1 on the canvas. */
+  --ax-color-text-danger:  var(--ax-palette-danger-300);
   --ax-color-text-info:    var(--ax-palette-info-400);
 
   /* Status, backgrounds (subtle, for badges/alerts on dark surfaces).
@@ -425,6 +460,15 @@
   --ax-color-bg-danger-subtle:  var(--ax-palette-danger-700);
   --ax-color-bg-info-subtle:    var(--ax-palette-info-700);
 
+  /* Text on those dark tints: the lightened status hues are only 2.9-4.0:1
+     on them, so pills use near-white text and let the fill carry the hue
+     (6.0-11.7:1). */
+  --ax-color-text-on-success-subtle: var(--ax-palette-neutral-100);
+  --ax-color-text-on-warning-subtle: var(--ax-palette-neutral-100);
+  --ax-color-text-on-danger-subtle:  var(--ax-palette-neutral-100);
+  --ax-color-text-on-info-subtle:    var(--ax-palette-neutral-100);
+  --ax-color-text-on-gold-subtle:    var(--ax-palette-neutral-100);
+
   /* Gold accent, brighten so it pops on dark surfaces */
   --ax-color-bg-gold:        var(--ax-palette-gold-300);
   --ax-color-bg-gold-subtle: var(--ax-palette-gold-700);
@@ -433,6 +477,12 @@
   /* Surface variants, flip from warm light to dark espresso. */
   --ax-color-bg-toolbar:     var(--ax-palette-espresso-700);
   --ax-color-bg-placeholder: var(--ax-palette-espresso-600);
+
+  /* Skeletons, a step lighter than the espresso surfaces they sit on, with
+     a soft sweep (the light-mode 35% white sheen glares on espresso). */
+  --ax-color-skeleton-base:      var(--ax-palette-espresso-600);
+  --ax-color-skeleton-highlight: var(--ax-palette-espresso-500);
+  --ax-color-skeleton-sheen:     rgba(255, 255, 255, 0.07);
 
   --ax-color-ring:        rgba(201, 174, 133, 0.3);
   --ax-color-ring-strong: rgba(201, 174, 133, 0.55);

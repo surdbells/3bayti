@@ -158,25 +158,27 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   flex-shrink: 0;
-  background: rgba(46, 36, 28, 0.08);
-  color: var(--ax-color-text-secondary, #6b6056);
+  /* Status tokens (subtle fill + its text-on-*-subtle colour), re-pointed for dark mode in
+     _tokens.scss. The old hard-coded hues fell to ~2:1 on espresso cards. */
+  background: var(--ax-color-bg-muted);
+  color: var(--ax-color-text-secondary);
 
-  &--pending_payment { background: rgba(245, 158, 11, 0.14); color: #b45309; }
-  &--paid { background: rgba(59, 130, 246, 0.12); color: #1e6fdb; }
+  &--pending_payment { background: var(--ax-color-bg-warning-subtle); color: var(--ax-color-text-on-warning-subtle); }
+  &--paid { background: var(--ax-color-bg-info-subtle); color: var(--ax-color-text-on-info-subtle); }
   &--processing,
-  &--fulfilling { background: rgba(59, 130, 246, 0.12); color: #1e6fdb; }
+  &--fulfilling { background: var(--ax-color-bg-info-subtle); color: var(--ax-color-text-on-info-subtle); }
   &--shipping,
-  &--shipped { background: rgba(245, 158, 11, 0.14); color: #b45309; }
-  &--delivered { background: rgba(34, 197, 94, 0.14); color: #15803d; }
+  &--shipped { background: var(--ax-color-bg-warning-subtle); color: var(--ax-color-text-on-warning-subtle); }
+  &--delivered { background: var(--ax-color-bg-success-subtle); color: var(--ax-color-text-on-success-subtle); }
   &--cancelled,
-  &--failed { background: rgba(192, 57, 43, 0.12); color: #c0392b; }
-  &--refunded { background: rgba(139, 92, 246, 0.14); color: #6d28d9; }
+  &--failed { background: var(--ax-color-bg-danger-subtle); color: var(--ax-color-text-on-danger-subtle); }
+  &--refunded { background: var(--ax-color-bg-brand-subtle); color: var(--ax-color-text-brand); }
   /* return statuses */
-  &--requested { background: rgba(245, 158, 11, 0.14); color: #b45309; }
-  &--approved { background: rgba(34, 197, 94, 0.14); color: #15803d; }
+  &--requested { background: var(--ax-color-bg-warning-subtle); color: var(--ax-color-text-on-warning-subtle); }
+  &--approved { background: var(--ax-color-bg-success-subtle); color: var(--ax-color-text-on-success-subtle); }
   &--rejected,
-  &--denied { background: rgba(192, 57, 43, 0.12); color: #c0392b; }
-  &--received { background: rgba(59, 130, 246, 0.12); color: #1e6fdb; }
+  &--denied { background: var(--ax-color-bg-danger-subtle); color: var(--ax-color-text-on-danger-subtle); }
+  &--received { background: var(--ax-color-bg-info-subtle); color: var(--ax-color-text-on-info-subtle); }
 }
 
 /* ----- Items ------------------------------------------------ */
@@ -239,7 +241,7 @@
   color: var(--ax-color-text-secondary, #6b6056);
 
   &--custom {
-    color: #6d28d9;
+    color: var(--ax-color-text-brand);
     font-weight: 600;
   }
 }
@@ -293,7 +295,7 @@
   color: var(--ax-color-text-primary, #2e241c);
 
   &--discount {
-    color: #15803d;
+    color: var(--ax-color-text-success);
   }
 
   &--total {
@@ -352,6 +354,14 @@
 
 .cancel-wrap {
   margin: 16px 0 24px;
+}
+
+/* Outline "Cancel order" / "Remove" buttons: color="danger" is pinned to
+   danger-500, ~2.4:1 on the espresso canvas in dark mode. Use the danger
+   TEXT token (brightens in dark) for the label + outline. */
+.cancel-wrap ion-button.ion-color-danger,
+.failed-actions ion-button.ion-color-danger {
+  --ion-color-base: var(--ax-color-text-danger) !important;
 }
 
 .empty-state {
@@ -434,5 +444,5 @@
 .track-store { font-weight: 600; font-size: 14px; }
 .track-line { margin-top: 2px; font-size: 13px; }
 .track-status { font-weight: 600; color: var(--ax-color-bg-brand, #906952); }
-.track-carrier { color: var(--m7-muted, #777); }
-.track-num { margin-top: 2px; font-size: 12px; color: var(--m7-muted, #777); }
+.track-carrier { color: var(--ax-color-text-secondary); }
+.track-num { margin-top: 2px; font-size: 12px; color: var(--ax-color-text-secondary); }

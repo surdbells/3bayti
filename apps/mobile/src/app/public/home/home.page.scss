@@ -489,35 +489,38 @@ ion-header.public-header {
   font-size: 20px;
   color: var(--ax-color-text-brand, #906952);
 }
-/* Ask Ain hero entry (natural-language style & gifting concierge) */
-.ask-ain-hero {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  width: calc(100% - 2rem);
-  margin: 0.5rem 1rem 0.75rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid #ece3dc;
-  border-radius: 1.1rem;
-  background: linear-gradient(135deg, #fbf7f4, #f2e8e1);
-  cursor: pointer;
-  text-align: left;
+
+/* ============================================================================
+   Ain FAB (opens the centered Ain concierge sheet)
+   ----------------------------------------------------------------------------
+   Same look + size as the logged-in home's primary Ain FAB (account.page.scss
+   .m6-fab--ain). ion-fab sits in ion-content's fixed slot and ion-content ends
+   at the top of the sign-in footer, so the offset is measured from the footer.
+   The content's bottom padding reserves the FAB's height so the last section
+   can scroll clear of it.
+   ============================================================================ */
+ion-content.page-bg {
+  --home-fab-size: 44px;
+  --home-fab-offset: var(--ax-space-4);
+  --padding-bottom: calc(var(--home-fab-offset) + var(--home-fab-size) + var(--ax-space-4));
 }
-.ask-ain-hero:active { background: #efe4dc; }
-.ask-ain-hero__orb {
-  flex: 0 0 auto;
-  width: 2.6rem;
-  height: 2.6rem;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  background: linear-gradient(135deg, #a27a60, #906952);
-  box-shadow: 0 6px 16px rgba(144, 105, 82, 0.25);
+
+.home-fab {
+  inset-block-end: var(--home-fab-offset);
+  inset-inline-end: var(--home-fab-offset);
+
+  ion-fab-button.home-fab__ain {
+    --background: linear-gradient(135deg, var(--ax-color-bg-brand), var(--ax-color-bg-brand-active));
+    --background-activated: var(--ax-color-bg-brand-active);
+    --background-hover: var(--ax-color-bg-brand-hover);
+    --color: var(--ax-color-text-on-brand);
+    --box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+    --border-radius: 50%;
+    --border-width: 2px;
+    --border-style: solid;
+    --border-color: var(--ax-color-bg-gold);
+    width: var(--home-fab-size);
+    height: var(--home-fab-size);
+    margin: 0;
+  }
 }
-.ask-ain-hero__orb ax-icon { --ax-icon-size: 1.3rem; width: 1.3rem; height: 1.3rem; }
-.ask-ain-hero__body { flex: 1; display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
-.ask-ain-hero__title { font-size: 1rem; font-weight: 700; color: var(--ax-color-text-primary, #1a1a1a); }
-.ask-ain-hero__sub { font-size: 0.8rem; color: var(--ax-color-text-tertiary, #8a8a8a); }
-.ask-ain-hero__cta { flex: 0 0 auto; color: #906952; }
-.ask-ain-hero__cta ax-icon { --ax-icon-size: 1.15rem; width: 1.15rem; height: 1.15rem; }

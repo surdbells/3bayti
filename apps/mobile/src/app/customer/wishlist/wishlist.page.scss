@@ -115,6 +115,13 @@ ion-content.page-bg {
   color: var(--ax-color-text-secondary);
 }
 
+/* Skeleton label card (first load only): same box as a real label card,
+   not interactive. */
+.category-card--skeleton {
+  pointer-events: none;
+  cursor: default;
+}
+
 /* Add card variant, dashed border, no fill */
 .category-card--add {
   background: transparent;

@@ -942,7 +942,7 @@ ion-header.md ion-toolbar {
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 
   &:active {
-    background: var(--ax-palette-beige-100);
+    background: var(--ax-color-bg-brand-subtle);  /* beige-100 light; flips in dark (raw beige left light text on near-white while pressed) */
   }
 }
 
@@ -1125,7 +1125,9 @@ ion-header.md ion-toolbar {
     border-radius: 4px;
     font-size: 10px;
     font-weight: 400;
-    color: var(--ax-palette-neutral-0);
+    /* Always light: the badge sits on its own dark scrim over the photo,
+       in light AND dark mode. */
+    color: var(--ax-color-text-on-media);
     letter-spacing: 0;
     text-transform: none;
     z-index: 3;
@@ -1133,6 +1135,43 @@ ion-header.md ion-toolbar {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* Tappable badge (a <button> that opens the store: search, Ask Ain, Gift
+     Finder). Only strip the UA button chrome. Never `color: inherit` /
+     `font-size: inherit` here: that pulled the page's espresso body colour
+     onto the dark scrim (dark text on a dark badge in light mode) and blew
+     the 10px label up to the button's inherited size. */
+  .m6d-vendor-badge.vendor-badge--tappable {
+    /* Hit area: the 10px label is only ~19px tall. A ::before can't extend
+       it (the badge's overflow:hidden for the ellipsis clips it), so a 6px
+       TRANSPARENT border does: it is part of the button's own hit box
+       (~31px tall) while background-clip keeps the visual chip unchanged.
+       Offsets, radius and max-width are shifted by the 6px so the visible
+       chip sits exactly where the plain badge does (8px in, 4px corners). */
+    box-sizing: border-box;
+    border: 6px solid transparent;
+    background-clip: padding-box;
+    border-radius: 10px;
+    left: 2px;
+    bottom: 2px;
+    max-width: calc(100% - 38px);
+    margin: 0;
+    font-family: inherit;
+    line-height: normal;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -webkit-tap-highlight-color: transparent;
+
+    &:active {
+      transform: scale(0.97);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--ax-color-text-on-media);
+      outline-offset: -5px;
+    }
   }
 }
 
@@ -1443,7 +1482,10 @@ ion-header.md ion-toolbar {
 }
 
 .skeleton-shimmer {
-  --skeleton-shimmer-color: rgba(255, 255, 255, 0.35);
+  /* Theme-aware default (35% white in light, a soft 7% in dark so the sweep
+     doesn't glare on espresso placeholders). Pages that set their own
+     --skeleton-shimmer-color on .skeleton-shimmer still win. */
+  --skeleton-shimmer-color: var(--ax-color-skeleton-sheen, rgba(255, 255, 255, 0.35));
 
   position: absolute;
   inset: 0;

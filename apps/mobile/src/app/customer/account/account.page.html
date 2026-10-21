@@ -111,7 +111,8 @@
   </div>
 </ion-header>
 
-<ion-content fullscreen="true" class="home-bg">
+<ion-content fullscreen="true" class="home-bg"
+             [class.home-bg--fab-2]="single_user.is_vendor && single_user.is_store_approved">
   <!-- Pull-to-refresh: re-pull profile, gift balance, product rails and cart. -->
   <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
     <ion-refresher-content></ion-refresher-content>
@@ -140,45 +141,9 @@
   <!-- Update-email nudge (non-deliverable Apple relay / placeholder email) -->
   <app-add-email-banner></app-add-email-banner>
 
-  <!-- Ain concierge: quick access to the AI style & gifting tools. Surfaced
-       here (the customer landing / "home" tab) so they're discoverable — the
-       public /home page that also carries them isn't in the tab bar. -->
-  <section class="ain-concierge">
-    <p class="ain-concierge__eyebrow">
-      <ax-icon name="sparkles"></ax-icon>
-      {{ 'ask_ain_pill_hint' | translate }}
-    </p>
-    <div class="ain-concierge__row">
-      <button type="button" class="ain-card ain-card--ask" (click)="open_ask_ain()">
-        <span class="ain-card__orb"><ax-icon name="sparkles"></ax-icon></span>
-        <span class="ain-card__text">
-          <span class="ain-card__title">{{ 'ask_ain_title' | translate }}</span>
-          <span class="ain-card__sub">{{ 'account_ain_ask_sub' | translate }}</span>
-        </span>
-      </button>
-      <button type="button" class="ain-card ain-card--gift" (click)="open_gift_ain()">
-        <span class="ain-card__orb"><ax-icon name="gift"></ax-icon></span>
-        <span class="ain-card__text">
-          <span class="ain-card__title">{{ 'gift_ain_title' | translate }}</span>
-          <span class="ain-card__sub">{{ 'account_ain_gift_sub' | translate }}</span>
-        </span>
-      </button>
-      <button type="button" class="ain-card ain-card--style" (click)="open_outfit()">
-        <span class="ain-card__orb"><ax-icon name="shirt"></ax-icon></span>
-        <span class="ain-card__text">
-          <span class="ain-card__title">{{ 'account_ain_style_title' | translate }}</span>
-          <span class="ain-card__sub">{{ 'account_ain_style_sub' | translate }}</span>
-        </span>
-      </button>
-      <button type="button" class="ain-card ain-card--photo" (click)="open_visual_search()">
-        <span class="ain-card__orb"><ax-icon name="camera"></ax-icon></span>
-        <span class="ain-card__text">
-          <span class="ain-card__title">{{ 'visual_search_title' | translate }}</span>
-          <span class="ain-card__sub">{{ 'account_ain_photo_sub' | translate }}</span>
-        </span>
-      </button>
-    </div>
-  </section>
+  <!-- The Ain concierge tools (Ask Ain / Gift Finder / Style me / Search by
+       photo) moved off the top of the page into the Ain FAB at the bottom,
+       which opens <ax-ain-concierge-sheet> (see the FAB stack below). -->
 
   <!--
     Gift-card promo, compact by default, tap the row to expand.
@@ -458,7 +423,7 @@
               <div class="m6e-featured-hero-overlay">
                 <h3 class="m6e-featured-store-name">{{ vendor_feature.store_name }}</h3>
                 @if(vendor_feature.rating_count !== 0){
-                  <div class="m6e-featured-rating" (click)="open_reviews(vendor_feature.store_id, vendor_feature.store_name); $event.stopPropagation()">
+                  <div class="m6e-featured-rating" (click)="open_reviews(vendor_feature.store_slug, vendor_feature.store_name); $event.stopPropagation()">
                     <ax-icon name="star" class="m6e-rating-star" />
                     <span>{{ vendor_feature.rating }} · {{ vendor_feature.rating_count }} {{ 'label_reviews_count' | translate }}</span>
                   </div>
@@ -523,10 +488,24 @@
     (createLabel)="onCreateLabel($event)">
   </ax-wishlist-sheet>
 
-  <!-- Premium floating action buttons (stacked above the footer tab bar).
-       FAB 1 (Messages) is shown for any logged-in customer; FAB 2 (Vendor
-       Dashboard) only for approved vendors. -->
+  <!-- Premium floating action buttons (stacked just above the footer tab bar).
+       The stack is flex column-reverse, so DOM order runs bottom -> top:
+         1. Ain (primary, always shown) opens the centered Ain concierge sheet
+         2. Vendor Dashboard, approved vendors only (@if-removed otherwise,
+            leaving no empty slot)
+       Messages is NOT a FAB: the header Messages button already carries the
+       same unread badge, and a second round button only grew the stack over
+       the product rails. ion-content's bottom padding (account.page.scss,
+       .home-bg--fab-2 for the vendor stack) lets the last section scroll
+       clear of the stack. -->
   <ion-fab class="m6-fab-stack" vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button
+      class="m6-fab m6-fab--ain"
+      (click)="openAinSheet()"
+      aria-haspopup="dialog"
+      [attr.aria-label]="'fab_ain' | translate">
+      <ax-icon name="sparkles" [size]="22" [style.color]="'var(--ax-color-text-on-brand)'" />
+    </ion-fab-button>
     @if (single_user.is_vendor && single_user.is_store_approved) {
       <ion-fab-button
         class="m6-fab m6-fab--dashboard"
@@ -535,16 +514,13 @@
         <ax-icon name="layout-dashboard" [style.color]="'var(--ax-color-text-on-brand)'" />
       </ion-fab-button>
     }
-    <ion-fab-button
-      class="m6-fab m6-fab--messages"
-      (click)="user_messages()"
-      [attr.aria-label]="'fab_messages' | translate">
-      <ax-icon name="message-square-more" [style.color]="'var(--ax-color-text-on-brand)'" />
-      @if (unreadMessages() > 0) {
-        <ion-badge class="m6-fab-badge" color="danger">{{ unreadMessages() > 99 ? '99+' : unreadMessages() }}</ion-badge>
-      }
-    </ion-fab-button>
   </ion-fab>
+
+  <!-- Ain concierge: centered floating sheet opened by the Ain FAB. -->
+  <ax-ain-concierge-sheet
+    [isOpen]="ainSheetOpen"
+    (dismiss)="ainSheetOpen = false">
+  </ax-ain-concierge-sheet>
 </ion-content>
 
 <app-tab-bar active="home"></app-tab-bar>
