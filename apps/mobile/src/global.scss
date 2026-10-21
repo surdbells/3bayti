@@ -1579,3 +1579,17 @@ ion-header.md ion-toolbar {
   padding: 13px 14px 13px 40px;
   background-position: left 14px center;
 }
+
+/* Filled rating stars. Lucide's star is stroke-only (fill="none"), so a
+   "filled" star that only changes colour still reads as an empty outline
+   (a 5/5 rating looked like five empty stars). Fill the SVG for every star
+   the review screens mark as filled; empty stars stay outlines. Global (not
+   page-scoped) because the SVG is rendered inside ax-icon/lucide-icon. */
+ax-icon.rating-star--filled svg,
+ax-icon.rating__star--filled svg,
+ax-icon.review-card__star--filled svg,
+.reviews-stars ax-icon.is-filled svg,
+.review-stars ax-icon.is-filled svg,
+.rating-star-btn--filled ax-icon svg {
+  fill: currentColor;
+}

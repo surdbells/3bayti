@@ -425,7 +425,7 @@
                 @if(vendor_feature.rating_count !== 0){
                   <div class="m6e-featured-rating" (click)="open_reviews(vendor_feature.store_slug, vendor_feature.store_name); $event.stopPropagation()">
                     <ax-icon name="star" class="m6e-rating-star" />
-                    <span>{{ vendor_feature.rating }} · {{ vendor_feature.rating_count }} {{ 'label_reviews_count' | translate }}</span>
+                    <span>{{ vendor_feature.rating }} · {{ vendor_feature.rating_count }} {{ (vendor_feature.rating_count === 1 ? 'label_review_count_one' : 'label_reviews_count') | translate }}</span>
                   </div>
                 }
               </div>

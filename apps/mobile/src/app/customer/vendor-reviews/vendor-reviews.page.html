@@ -41,7 +41,7 @@
           }
         </div>
         <div class="rating-sub">
-          {{ summaryRating }} {{ 'label_out_of_5' | translate }} ({{ reviewsTotal }} {{ 'label_reviews_count' | translate }})
+          {{ summaryRating }} {{ 'label_out_of_5' | translate }} ({{ reviewsTotal }} {{ (reviewsTotal === 1 ? 'label_review_count_one' : 'label_reviews_count') | translate }})
         </div>
       </div>
     </div>
