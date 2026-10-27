@@ -13,6 +13,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -26,6 +27,16 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * Incremental: a source_hash (product text + embedding model) skips unchanged
  * products, so nightly runs only touch new/edited items. No-op when AI is
  * disabled. Run via aaPanel cron like build:recommendations.
+ *
+ * Progress: in a terminal a live bar (per product, elapsed / time left,
+ * enriched / unchanged / failed counts); in cron logs or piped output one
+ * line per batch. --limit is exact (the last page is trimmed).
+ *
+ * Failures are never persisted: a product whose tagging or embedding call
+ * failed is skipped (not stored with empty tags + its source_hash), so the
+ * next run retries it. OpenAI 429s are retried with back-off; an auth error
+ * aborts at once, and MAX_CONSECUTIVE_FAILURES failed products in a row abort
+ * the run (out of credit / outage) instead of burning through the catalogue.
  */
 #[AsCommand(
     name: 'ai:build-product-attributes',
@@ -35,13 +46,40 @@ final class BuildProductAiAttributesCommand extends Command
 {
     private const DEFAULT_BATCH = 50;
 
+    /** Seconds to wait before each retry of a rate-limited (HTTP 429) call. */
+    private const RATE_LIMIT_BACKOFF = [2, 5, 15];
+
+    /** Abort after this many products in a row fail (credit, outage, …). */
+    private const MAX_CONSECUTIVE_FAILURES = 5;
+
+    /** @var \Closure(int): void */
+    private readonly \Closure $sleep;
+
+    private ?ProgressBar $bar = null;
+    private ?SymfonyStyle $io = null;
+
+    private int $processed = 0;
+    private int $enriched = 0;
+    private int $skipped = 0;
+    private int $failed = 0;
+    private int $consecutiveFailures = 0;
+    private ?string $lastError = null;
+
+    /**
+     * @param (\Closure(int): void)|null $sleep back-off sleeper (seconds);
+     *        injectable so tests don't wait
+     */
     public function __construct(
         private readonly AiProviderInterface $ai,
         private readonly EntityManagerInterface $em,
         private readonly ProductAiAttributesStore $store,
         private readonly LoggerInterface $logger,
+        ?\Closure $sleep = null,
     ) {
         parent::__construct();
+        $this->sleep = $sleep ?? static function (int $seconds): void {
+            sleep($seconds);
+        };
     }
 
     protected function configure(): void
@@ -65,21 +103,48 @@ final class BuildProductAiAttributesCommand extends Command
         $batch = max(1, (int) $input->getOption('batch'));
         $dryRun = (bool) $input->getOption('dry-run');
         $model = $this->ai->embedModel() ?? 'unknown';
+        $startedAt = microtime(true);
+
+        $this->io = $io;
+        $this->processed = $this->enriched = $this->skipped = $this->failed = $this->consecutiveFailures = 0;
+        $this->lastError = null;
 
         /** @var ProductRepository $products */
         $products = $this->em->getRepository(Product::class);
 
-        $processed = 0;
-        $enriched = 0;
-        $skipped = 0;
-        $offset = 0;
+        $first = $products->findActivePaginated(['limit' => $batch, 'offset' => 0]);
+        $total = $first['total'];
+        $target = $limit > 0 ? min($limit, $total) : $total;
 
-        while (true) {
-            $page = $products->findActivePaginated(['limit' => $batch, 'offset' => $offset])['items'];
-            if ($page === []) {
-                break;
-            }
+        $io->text(sprintf(
+            'Enriching %d of %d active product(s) · batch %d · model %s%s',
+            $target,
+            $total,
+            $batch,
+            $model,
+            $dryRun ? ' · DRY RUN (nothing is saved, but OpenAI is still called and billed)' : '',
+        ));
+
+        // Live bar in a terminal; one line per batch in cron logs / pipes.
+        if ($output->isDecorated() && !$output->isQuiet() && $target > 0) {
+            $this->bar = $io->createProgressBar($target);
+            $this->bar->setFormat(
+                " %current%/%max% [%bar%] %percent:3s%%  %elapsed:6s% elapsed · ~%remaining:-6s% left\n %message%",
+            );
+            $this->bar->setMessage($this->countsLine());
+            $this->bar->start();
+        }
+
+        $offset = 0;
+        $page = $first['items'];
+        $aborted = null;
+
+        while ($page !== [] && ($limit === 0 || $this->processed < $limit)) {
             $offset += count($page);
+            if ($limit > 0) {
+                // Exact --limit: never tag more products than asked for.
+                $page = array_slice($page, 0, $limit - $this->processed);
+            }
 
             // Work out which products in this page actually need (re-)enriching.
             /** @var array<int, Product> $byId */
@@ -98,66 +163,172 @@ final class BuildProductAiAttributesCommand extends Command
             $toEnrich = [];
             foreach ($byId as $id => $p) {
                 if (($existing[$id] ?? null) === $hashOf[$id]) {
-                    $skipped++;
+                    $this->skipped++;
+                    $this->processed++;
+                    $this->tick();
                     continue;
                 }
                 $toEnrich[$id] = $p;
             }
 
-            $this->enrichBatch($toEnrich, $hashOf, $model, $dryRun, $io, $enriched);
-
-            $processed += count($byId);
-            if ($limit > 0 && $processed >= $limit) {
+            try {
+                $this->enrichBatch($toEnrich, $hashOf, $model, $dryRun);
+            } catch (AbortEnrichment $e) {
+                $aborted = $e->getMessage();
                 break;
             }
+
+            if ($this->bar === null) {
+                $io->writeln(sprintf(
+                    '[%s] %d/%d processed · %s',
+                    self::duration(microtime(true) - $startedAt),
+                    $this->processed,
+                    $target,
+                    $this->countsLine(),
+                ));
+            }
+
+            if ($limit > 0 && $this->processed >= $limit) {
+                break;
+            }
+            $page = $products->findActivePaginated(['limit' => $batch, 'offset' => $offset])['items'];
         }
 
+        if ($this->bar !== null) {
+            if ($aborted === null) {
+                $this->bar->finish();
+            } else {
+                $this->bar->display();
+            }
+            $io->newLine(2);
+            $this->bar = null;
+        }
         $this->em->clear();
-        $io->success(sprintf(
-            '%s: %d processed, %d enriched, %d unchanged.',
+
+        $summary = sprintf(
+            '%s: %d processed, %d enriched, %d unchanged, %d failed in %s.',
             $dryRun ? 'Dry run' : 'Done',
-            $processed,
-            $enriched,
-            $skipped,
-        ));
+            $this->processed,
+            $this->enriched,
+            $this->skipped,
+            $this->failed,
+            self::duration(microtime(true) - $startedAt),
+        );
+
+        if ($aborted !== null) {
+            $io->error([$aborted, str_replace(['Done: ', 'Dry run: '], 'Stopped after ', $summary)]);
+            return Command::FAILURE;
+        }
+        if ($this->failed > 0) {
+            $io->warning([
+                $summary,
+                "{$this->failed} product(s) were not saved because the AI call failed"
+                    . ($this->lastError !== null ? " (last error: {$this->lastError})" : '')
+                    . '. Run the command again: only those (and any new or edited products) are retried.',
+            ]);
+            return Command::SUCCESS;
+        }
+        $io->success($summary);
         return Command::SUCCESS;
     }
 
+    /** "12 enriched · 3 unchanged · 0 failed" */
+    private function countsLine(): string
+    {
+        return sprintf('%d enriched · %d unchanged · %d failed', $this->enriched, $this->skipped, $this->failed);
+    }
+
+    /** Advance the live bar (no-op in line mode) and refresh its counts. */
+    private function tick(): void
+    {
+        if ($this->bar !== null) {
+            $this->bar->setMessage($this->countsLine());
+            $this->bar->advance();
+        }
+    }
+
+    /** Print a warning without tearing the live bar. */
+    private function note(string $message): void
+    {
+        if ($this->bar !== null) {
+            $this->bar->clear();
+            $this->io?->warning($message);
+            $this->bar->display();
+            return;
+        }
+        $this->io?->warning($message);
+    }
+
+    private static function duration(float $seconds): string
+    {
+        $s = (int) round($seconds);
+        return $s >= 3600
+            ? sprintf('%dh%02dm%02ds', intdiv($s, 3600), intdiv($s % 3600, 60), $s % 60)
+            : sprintf('%dm%02ds', intdiv($s, 60), $s % 60);
+    }
+
     /**
+     * Tag each product (one structured call each), embed the page in one
+     * call, then persist. A product whose tagging or embedding failed is NOT
+     * persisted (its source_hash isn't stored), so the next run retries it.
+     *
      * @param array<int, Product> $toEnrich
      * @param array<int, string> $hashOf
+     * @throws AbortEnrichment on an auth error or too many failures in a row
      */
-    private function enrichBatch(array $toEnrich, array $hashOf, string $model, bool $dryRun, SymfonyStyle $io, int &$enriched): void
+    private function enrichBatch(array $toEnrich, array $hashOf, string $model, bool $dryRun): void
     {
         if ($toEnrich === []) {
             return;
         }
 
-        // 1) Per-product tags (one structured call each).
+        // 1) Per-product tags (one structured call each), the slow part, so
+        //    the bar advances per product here.
         $tags = [];
         $embedInputs = [];
         foreach ($toEnrich as $id => $p) {
-            $tags[$id] = $this->deriveTags($p);
-            $search = $tags[$id]['search_text'] !== '' ? $tags[$id]['search_text'] : $this->plainText($p);
-            $embedInputs[$id] = $search;
-        }
-
-        // 2) One batched embeddings call for the whole page.
-        $vectors = [];
-        try {
-            $vecList = $this->ai->embed(array_values($embedInputs));
-            $ids = array_keys($embedInputs);
-            foreach ($ids as $i => $id) {
-                $vectors[$id] = $vecList[$i] ?? [];
+            $derived = $this->deriveTags($p);
+            $this->processed++;
+            if ($derived === null) {
+                $this->recordFailure($id, 'tagging');
+                $this->tick();
+                continue;
             }
-        } catch (AiException $e) {
-            $this->logger->warning('ai.enrich_embed_failed', ['error' => $e->getMessage()]);
+            $tags[$id] = $derived;
+            $embedInputs[$id] = $derived['search_text'] !== '' ? $derived['search_text'] : $this->plainText($p);
+            $this->tick();
+        }
+        if ($embedInputs === []) {
+            return;
         }
 
-        // 3) Persist.
-        foreach ($toEnrich as $id => $p) {
+        // 2) One batched embeddings call for the products that were tagged.
+        try {
+            $vecList = $this->withRateLimitRetry(fn (): array => $this->ai->embed(array_values($embedInputs)));
+        } catch (AiException $e) {
+            $this->abortOnAuth($e);
+            $this->lastError = $e->getMessage();
+            $this->logger->warning('ai.enrich_embed_failed', ['error' => $e->getMessage()]);
+            foreach (array_keys($embedInputs) as $id) {
+                $this->recordFailure($id, 'embedding');
+            }
+            $this->refresh();
+            return;
+        }
+        $vectors = [];
+        foreach (array_keys($embedInputs) as $i => $id) {
+            $vectors[$id] = $vecList[$i] ?? [];
+        }
+
+        // 3) Persist (skipped in a dry run).
+        foreach ($embedInputs as $id => $search) {
+            if (($vectors[$id] ?? []) === []) {
+                $this->lastError = 'empty embedding returned';
+                $this->recordFailure($id, 'embedding');
+                continue;
+            }
             if ($dryRun) {
-                $enriched++;
+                $this->recordSuccess();
                 continue;
             }
             try {
@@ -166,29 +337,38 @@ final class BuildProductAiAttributesCommand extends Command
                     $tags[$id]['occasions'],
                     $tags[$id]['colours'],
                     $tags[$id]['styles'],
-                    $embedInputs[$id],
-                    $vectors[$id] ?? [],
+                    $search,
+                    $vectors[$id],
                     $model,
                     $hashOf[$id],
                 );
-                $enriched++;
+                $this->recordSuccess();
             } catch (\Throwable $e) {
-                $io->warning("Failed to enrich product {$id}: {$e->getMessage()}");
+                $this->failed++;
+                $this->lastError = $e->getMessage();
+                $this->note("Failed to save product {$id}: {$e->getMessage()}");
                 $this->logger->error('ai.enrich_upsert_failed', ['product_id' => $id, 'error' => $e->getMessage()]);
             }
         }
+        $this->refresh();
     }
 
     /**
-     * @return array{occasions: list<string>, colours: list<string>, styles: list<string>, search_text: string}
+     * @return array{occasions: list<string>, colours: list<string>, styles: list<string>, search_text: string}|null
+     *         null when the AI call failed (the product is retried next run)
+     * @throws AbortEnrichment on an auth error
      */
-    private function deriveTags(Product $p): array
+    private function deriveTags(Product $p): ?array
     {
-        $default = ['occasions' => [], 'colours' => [], 'styles' => [], 'search_text' => ''];
         try {
-            $raw = $this->ai->completeJson(self::tagSystemPrompt(), $this->plainText($p), self::tagSchema(), 'product_tags');
-        } catch (AiException) {
-            return $default;
+            $raw = $this->withRateLimitRetry(
+                fn (): array => $this->ai->completeJson(self::tagSystemPrompt(), $this->plainText($p), self::tagSchema(), 'product_tags'),
+            );
+        } catch (AiException $e) {
+            $this->abortOnAuth($e);
+            $this->lastError = $e->getMessage();
+            $this->logger->warning('ai.enrich_tags_failed', ['product_id' => $p->getId(), 'error' => $e->getMessage()]);
+            return null;
         }
 
         return [
@@ -197,6 +377,68 @@ final class BuildProductAiAttributesCommand extends Command
             'styles' => self::strList($raw['styles'] ?? []),
             'search_text' => is_string($raw['search_text'] ?? null) ? trim($raw['search_text']) : '',
         ];
+    }
+
+    /**
+     * Run an AI call, retrying HTTP 429 (rate limited) with back-off.
+     *
+     * @template T
+     * @param callable(): T $call
+     * @return T
+     */
+    private function withRateLimitRetry(callable $call): mixed
+    {
+        foreach (self::RATE_LIMIT_BACKOFF as $seconds) {
+            try {
+                return $call();
+            } catch (AiException $e) {
+                if ($e->kind !== AiException::KIND_RATE_LIMITED) {
+                    throw $e;
+                }
+                ($this->sleep)($seconds);
+            }
+        }
+        return $call();
+    }
+
+    /** A bad or revoked key fails every call: stop now with a clear message. */
+    private function abortOnAuth(AiException $e): void
+    {
+        if ($e->kind === AiException::KIND_AUTH) {
+            throw new AbortEnrichment(
+                'OpenAI rejected the API key (' . $e->getMessage() . '). Check OPENAI_API_KEY in apps/api/.env, then run the command again.',
+            );
+        }
+    }
+
+    private function recordSuccess(): void
+    {
+        $this->enriched++;
+        $this->consecutiveFailures = 0;
+    }
+
+    /** @throws AbortEnrichment after MAX_CONSECUTIVE_FAILURES in a row */
+    private function recordFailure(int $productId, string $step): void
+    {
+        $this->failed++;
+        $this->consecutiveFailures++;
+        $this->logger->warning('ai.enrich_product_failed', ['product_id' => $productId, 'step' => $step, 'error' => $this->lastError]);
+        if ($this->consecutiveFailures >= self::MAX_CONSECUTIVE_FAILURES) {
+            throw new AbortEnrichment(sprintf(
+                '%d products in a row failed (last error: %s). OpenAI may be out of credit, rate limiting hard or down: check your OpenAI account (billing and usage), then run the command again. It resumes where it stopped.',
+                $this->consecutiveFailures,
+                $this->lastError ?? 'unknown',
+            ));
+        }
+    }
+
+    /** Refresh the bar's counts without advancing it. */
+    private function refresh(): void
+    {
+        if ($this->bar !== null) {
+            $this->bar->setMessage($this->countsLine());
+            $this->bar->display();
+        }
     }
 
     private function plainText(Product $p): string
