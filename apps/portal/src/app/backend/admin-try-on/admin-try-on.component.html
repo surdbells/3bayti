@@ -1,0 +1,129 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> {{ 'tryon.back' | translate }}
+        </button>
+        <span class="ax-page-header-eyebrow">{{ 'tryon.eyebrow' | translate }}</span>
+        <h1 class="ax-page-title">{{ 'tryon.title' | translate }}</h1>
+        <p class="ax-page-subtitle">{{ 'tryon.subtitle' | translate }}</p>
+
+        <!-- Status line (T1) -->
+        <div class="tryon-status" role="status" aria-live="polite">
+          <ng-container *ngIf="status() as s; else statusPending">
+            <span class="ax-badge tryon-status-badge" [class.ax-badge-success]="s.available" [class.ax-badge-warning]="!s.available">
+              <app-icon [name]="s.available ? 'check_circle' : 'block'" aria-hidden="true"></app-icon>
+              {{ (s.available ? 'tryon.status_on' : 'tryon.status_off') | translate }}
+            </span>
+            <span class="tryon-status-count">{{ 'tryon.enabled_count' | translate: { count: s.enabled_products } }}</span>
+            <span *ngIf="statusLoading()" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+          </ng-container>
+          <ng-template #statusPending>
+            <ng-container *ngIf="statusLoading()">
+              <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+              <span class="tryon-status-count">{{ 'tryon.status_loading' | translate }}</span>
+            </ng-container>
+          </ng-template>
+        </div>
+      </div>
+    </header>
+
+    <!-- Status could not be loaded -->
+    <section *ngIf="statusError()" class="ax-card tryon-panel tryon-panel--error" role="alert">
+      <app-icon name="error" aria-hidden="true" class="tryon-panel-icon"></app-icon>
+      <div class="tryon-panel-body">
+        <p class="tryon-panel-title">{{ 'tryon.status_error_title' | translate }}</p>
+        <p class="tryon-panel-text">{{ statusError() }}</p>
+      </div>
+      <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="loadStatus()" [disabled]="statusLoading()">
+        <app-icon name="refresh" aria-hidden="true"></app-icon> {{ 'tryon.retry' | translate }}
+      </button>
+    </section>
+
+    <!-- Try-On is off: explain which flags, but still allow preparing products -->
+    <section *ngIf="offReasons().length" class="ax-card tryon-panel tryon-panel--off" aria-labelledby="tryon_off_title">
+      <app-icon name="info" aria-hidden="true" class="tryon-panel-icon"></app-icon>
+      <div class="tryon-panel-body">
+        <h2 class="tryon-panel-title" id="tryon_off_title">{{ 'tryon.off.title' | translate }}</h2>
+        <ul class="tryon-panel-list">
+          <li *ngFor="let k of offReasons()">{{ k | translate }}</li>
+        </ul>
+        <p class="tryon-panel-text">{{ 'tryon.off.prepare' | translate }}</p>
+      </div>
+    </section>
+
+    <!-- The garment-image rule -->
+    <p class="tryon-note">
+      <app-icon name="image" aria-hidden="true"></app-icon>
+      <span>{{ 'tryon.rule' | translate }}</span>
+    </p>
+    <p *ngIf="!canEdit()" class="tryon-note">
+      <app-icon name="lock" aria-hidden="true"></app-icon>
+      <span>{{ 'tryon.read_only_note' | translate }}</span>
+    </p>
+    <p *axCan="'products.edit'" class="tryon-note tryon-note--muted">
+      <app-icon name="done_all" aria-hidden="true"></app-icon>
+      <span>{{ 'tryon.bulk_hint' | translate }}</span>
+    </p>
+
+    <div *ngIf="!config" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner" role="status" [attr.aria-label]="'tryon.loading' | translate"></span>
+    </div>
+
+    <section *ngIf="config" class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource" (bulkAction)="onBulkAction($event)">
+
+        <!-- Thumbnail -->
+        <ng-template axCell="image" let-row>
+          <div class="tryon-thumb">
+            <img *ngIf="row.image; else noImage" [src]="row.image | cfImage:'thumb'" alt="" loading="lazy" />
+            <ng-template #noImage><app-icon name="hide_image" aria-hidden="true"></app-icon></ng-template>
+          </div>
+        </ng-template>
+
+        <!-- Product (links to the admin product page by v3 id) -->
+        <ng-template axCell="name" let-row>
+          <div class="tryon-name">
+            <a class="tryon-name-link" [routerLink]="['/admin/products', row.id]">{{ row.name }}</a>
+            <span class="tryon-name-meta">
+              <span *ngIf="row.slug" class="tryon-name-slug">{{ row.slug }}</span>
+              <span *ngIf="showStatus(row.status)" class="ax-badge ax-badge-neutral">{{ statusLabel(row.status) }}</span>
+            </span>
+          </div>
+        </ng-template>
+
+        <!-- Garment image eligibility -->
+        <ng-template axCell="eligibility" let-row>
+          <span [ngClass]="badgeOf(row).badgeClass" class="tryon-elig" tabindex="0"
+                [axTooltip]="eligibilityHint(row)"
+                [attr.aria-label]="(badgeOf(row).labelKey | translate) + '. ' + eligibilityHint(row)">
+            {{ badgeOf(row).labelKey | translate }}
+          </span>
+        </ng-template>
+
+        <!-- Try-On switch (products.edit) / read-only state -->
+        <ng-template axCell="try_on_enabled" let-row>
+          <ng-container *ngIf="canEdit(); else readOnlyState">
+            <label class="ax-switch tryon-switch" [axTooltip]="toggleHint(row)">
+              <input type="checkbox"
+                     [checked]="enabledOf(row)"
+                     [disabled]="toggleOf(row).disabled"
+                     (change)="toggle(row, $event)"
+                     [attr.aria-label]="toggleAriaLabel(row)" />
+              <span class="ax-switch-track" aria-hidden="true"></span>
+              <span class="tryon-switch-busy" aria-hidden="true">
+                <span *ngIf="busyOf(row)" class="ax-spinner ax-spinner-sm"></span>
+              </span>
+            </label>
+          </ng-container>
+          <ng-template #readOnlyState>
+            <span class="ax-badge" [class.ax-badge-success]="enabledOf(row)" [class.ax-badge-neutral]="!enabledOf(row)">
+              {{ (enabledOf(row) ? 'tryon.state_on' : 'tryon.state_off') | translate }}
+            </span>
+          </ng-template>
+        </ng-template>
+      </app-ax-data-table>
+    </section>
+  </div>
+</app-admin-shell>

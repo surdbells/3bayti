@@ -1,17 +1,19 @@
-import { Component, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { PermissionService } from '../../services/permission.service';
 import { PortalAuthService } from '../../services/portal-auth.service';
+import { TryOnAdminService } from '../../services/try-on-admin.service';
 import { AxCanDirective } from '../../shared/security/ax-can.directive';
+import { TranslatePipe } from '../../translate.pipe';
 import { NavBadgeService } from './nav-badge.service';
 
 import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-aside',
-  imports: [CommonModule, RouterLink, RouterLinkActive, IconComponent, AxCanDirective],
+  imports: [CommonModule, RouterLink, RouterLinkActive, IconComponent, AxCanDirective, TranslatePipe],
   standalone: true,
   templateUrl: './aside.component.html',
   styleUrl: './aside.component.css'
@@ -27,11 +29,32 @@ export class AsideComponent implements OnInit {
   /** "New items" count badges (pending applications, new sales). */
   protected readonly navBadges = inject(NavBadgeService);
 
+  /**
+   * Virtual Try-On entry: shown only while Try-On is available. The status is
+   * fetched once per session for staff who can view products; unknown or
+   * failed = hidden.
+   */
+  protected readonly tryOn = inject(TryOnAdminService);
+
+  /** Admin / finance / support session (set on init). */
+  private readonly isStaff = signal(false);
+
+  /** Show the "Virtual Try-On" entry: staff with products.view, Try-On live. */
+  protected readonly showTryOnNav = computed(
+    () => this.isStaff() && this.perms.can('products.view') && this.tryOn.available(),
+  );
+
   constructor(
     private router: Router,
     private toast: HotToastService,
     private auth: PortalAuthService,
-  ) {}
+  ) {
+    effect(() => {
+      if (this.isStaff() && this.perms.can('products.view')) {
+        untracked(() => this.tryOn.ensureStatus());
+      }
+    });
+  }
 
   ui_controls = {
     is_loading: false
@@ -51,7 +74,7 @@ export class AsideComponent implements OnInit {
     'vendors-customers': ['/admin/stores', '/admin/vendor-applications', '/admin/customers'],
     'catalog': ['/admin/products', '/admin/collections', '/admin/campaigns', '/admin/gift-cards', '/admin/coupons'],
     'orders-sales': ['/admin/orders', '/admin/sales', '/admin/returns', '/admin/commissions', '/admin/logistics'],
-    'engagement': ['/admin/ai', '/admin/notifications', '/admin/notification-templates', '/admin/notification-schedules', '/admin/notification-broadcasts', '/admin/notification-logs'],
+    'engagement': ['/admin/ai', '/admin/try-on', '/admin/notifications', '/admin/notification-templates', '/admin/notification-schedules', '/admin/notification-broadcasts', '/admin/notification-logs'],
     'system': ['/admin/users', '/admin/ota', '/admin/otp-providers', '/admin/notification-settings'],
     'account': ['/profile', '/security', '/store', '/payment_info', '/tax_information'],
   };
@@ -100,6 +123,7 @@ export class AsideComponent implements OnInit {
     if (this.user_session?.is_admin || this.user_session?.is_finance || this.user_session?.is_support) {
       this.perms.load();
       this.navBadges.start();
+      this.isStaff.set(true);
     }
   }
 

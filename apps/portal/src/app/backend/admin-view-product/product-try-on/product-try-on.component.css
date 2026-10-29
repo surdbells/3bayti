@@ -1,0 +1,59 @@
+.pto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ax-space-3);
+}
+
+.pto__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ax-space-2);
+  flex-wrap: wrap;
+}
+.pto__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ax-space-2);
+}
+
+.pto__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ax-color-text-tertiary);
+}
+
+.pto__switch {
+  align-self: flex-start;
+}
+
+.pto__elig {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ax-space-2);
+  flex-wrap: wrap;
+}
+.pto__elig .ax-badge {
+  flex: 0 0 auto;
+}
+.pto__elig-text {
+  flex: 1 1 12rem;
+  font-size: 0.8125rem;
+  color: var(--ax-color-text-secondary);
+}
+
+.pto__note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ax-space-2);
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ax-color-text-tertiary);
+}
+.pto__note app-icon {
+  flex: 0 0 auto;
+  margin-top: 0.125rem;
+}
+.pto__note--warn {
+  color: var(--ax-color-text-warning);
+}

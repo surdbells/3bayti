@@ -1975,6 +1975,24 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'PUT /admin/otp/providers': {
     target: 'new', oldPath: '', newPath: '/v3/admin/otp/providers', shape: 'v3-envelope',
   },
+  // Virtual Try-On admin: which products offer the customer "Try it on" CTA
+  // (products.try_on_enabled). Status = provider availability (TRYON_ENABLED +
+  // AI_ENABLED + key) and the enabled-product count; the product list carries
+  // each garment image's eligibility (JPEG/PNG/WebP hosted on 3bayti). Per-
+  // product toggle is keyed by the v3 product id. products.view / products.edit.
+  // v3-only.
+  'GET /admin/try-on/status': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/try-on/status', shape: 'v3-envelope',
+  },
+  'GET /admin/try-on/products': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/try-on/products', shape: 'v3-envelope',
+  },
+  'PUT /admin/products/:id/try-on': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/products/:id/try-on', shape: 'v3-envelope',
+  },
+  'POST /admin/try-on/products/bulk': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/try-on/products/bulk', shape: 'v3-envelope',
+  },
   // Customer-notification toggles (e.g. suppress per-item vendor status updates
   // to the customer). v3-only.
   'GET /admin/settings/notifications': {

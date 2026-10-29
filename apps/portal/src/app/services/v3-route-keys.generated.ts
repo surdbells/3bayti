@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 383 route keys.
+ * 387 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -89,6 +89,8 @@ export type V3RouteKey =
   | 'GET /admin/top-customers'
   | 'GET /admin/top-stores'
   | 'GET /admin/transactions'
+  | 'GET /admin/try-on/products'
+  | 'GET /admin/try-on/status'
   | 'GET /admin/users'
   | 'GET /admin/users/:id'
   | 'GET /admin/vendor-applications'
@@ -267,6 +269,7 @@ export type V3RouteKey =
   | 'POST /admin/promo-codes'
   | 'POST /admin/roles'
   | 'POST /admin/shipping/pickup-locations'
+  | 'POST /admin/try-on/products/bulk'
   | 'POST /admin/users'
   | 'POST /admin/users/:id/activate'
   | 'POST /admin/users/:id/deactivate'
@@ -377,6 +380,7 @@ export type V3RouteKey =
   | 'PUT /admin/otp/providers'
   | 'PUT /admin/products/:id'
   | 'PUT /admin/products/:id/collections'
+  | 'PUT /admin/products/:id/try-on'
   | 'PUT /admin/promo-codes/:id'
   | 'PUT /admin/roles/:id'
   | 'PUT /admin/settings/notifications'
@@ -475,6 +479,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/top-customers',
   'GET /admin/top-stores',
   'GET /admin/transactions',
+  'GET /admin/try-on/products',
+  'GET /admin/try-on/status',
   'GET /admin/users',
   'GET /admin/users/:id',
   'GET /admin/vendor-applications',
@@ -653,6 +659,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /admin/promo-codes',
   'POST /admin/roles',
   'POST /admin/shipping/pickup-locations',
+  'POST /admin/try-on/products/bulk',
   'POST /admin/users',
   'POST /admin/users/:id/activate',
   'POST /admin/users/:id/deactivate',
@@ -763,6 +770,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PUT /admin/otp/providers',
   'PUT /admin/products/:id',
   'PUT /admin/products/:id/collections',
+  'PUT /admin/products/:id/try-on',
   'PUT /admin/promo-codes/:id',
   'PUT /admin/roles/:id',
   'PUT /admin/settings/notifications',

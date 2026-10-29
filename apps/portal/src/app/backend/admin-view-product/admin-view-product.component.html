@@ -297,6 +297,14 @@
 
         <!-- ═══════ RIGHT COLUMN: Sidebar ═══════ -->
         <aside class="ax-flex ax-flex-col ax-gap-4">
+          <!-- Virtual Try-On (shown only while Try-On is available). -->
+          <app-product-try-on
+            [productId]="productId"
+            [productName]="update.name"
+            [enabled]="tryOn.enabled"
+            [available]="tryOn.available"
+            [eligibility]="tryOn.eligibility"></app-product-try-on>
+
           <!-- Storefront collections (a product can be in many). -->
           <app-product-collections *axCan="'catalog.collections_view'" [productId]="productId"></app-product-collections>
 

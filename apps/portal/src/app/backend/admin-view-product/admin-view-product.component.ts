@@ -28,6 +28,8 @@ import {
 import { apiErrorMessage } from '../../shared/http/api-error';
 import { AxCanDirective } from '../../shared/security/ax-can.directive';
 import { ProductCollectionsComponent } from './product-collections/product-collections.component';
+import { ProductTryOnComponent } from './product-try-on/product-try-on.component';
+import { TryOnEligibility, parseTryOnEligibility } from '../../services/try-on-admin.service';
 
 interface ColorOption {
   id: string;
@@ -106,7 +108,7 @@ const SIZE_FLAGS: Record<string, string> = {
     AxRichEditorComponent,
     AxAccordionComponent,
     AxAccordionItemComponent, IconComponent, AxComboboxComponent,
-    AxCanDirective, ProductCollectionsComponent],
+    AxCanDirective, ProductCollectionsComponent, ProductTryOnComponent],
   templateUrl: './admin-view-product.component.html',
   styleUrl: './admin-view-product.component.css',
 })
@@ -148,6 +150,13 @@ export class AdminViewProductComponent implements OnInit {
   vendorId = 0;
   vendorName = '';
   productStatus = '';
+  /**
+   * Virtual Try-On, from the admin detail payload: the RAW stored flag, whether
+   * Try-On is live (null = payload predates the field) and the garment image's
+   * eligibility (null = unknown). Edited by the sidebar's Try-On card.
+   */
+  tryOn: { enabled: boolean; available: boolean | null; eligibility: TryOnEligibility | null } =
+    { enabled: false, available: null, eligibility: null };
   /** The label stored on the product when it was loaded (null = none). */
   currentLabelId: number | null = null;
   /** Stored sizes this page has no checkbox for, round-tripped as-is. */
@@ -356,6 +365,7 @@ export class AdminViewProductComponent implements OnInit {
     this.vendorId = 0;
     this.vendorName = '';
     this.productStatus = '';
+    this.tryOn = { enabled: false, available: null, eligibility: null };
     this.labels = undefined;
     this.labels_error = '';
     this.newLabelName = '';
@@ -585,6 +595,11 @@ export class AdminViewProductComponent implements OnInit {
     u.store = vendorId;
     this.vendorName = p.store_name ?? p.vendor?.name ?? (vendorId ? `Store #${vendorId}` : '');
     this.productStatus = p.status ?? '';
+    this.tryOn = {
+      enabled: p.try_on_enabled === true,
+      available: typeof p.try_on_available === 'boolean' ? p.try_on_available : null,
+      eligibility: parseTryOnEligibility(p.try_on_eligibility),
+    };
 
     this.update = u;
     this.featuredChanged = false;

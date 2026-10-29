@@ -1,0 +1,163 @@
+/* ── Status line ─────────────────────────────────────────────────────── */
+.tryon-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ax-space-3);
+  margin-top: var(--ax-space-3);
+  min-height: 1.5rem;
+}
+.tryon-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ax-space-1);
+}
+.tryon-status-count {
+  font-size: 0.875rem;
+  color: var(--ax-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Info / error panels ─────────────────────────────────────────────── */
+.tryon-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ax-space-4);
+  padding: var(--ax-space-4) var(--ax-space-5);
+  margin-bottom: var(--ax-space-5);
+}
+.tryon-panel--off {
+  background: var(--ax-color-bg-warning-subtle);
+  border-color: var(--ax-color-border-subtle);
+}
+.tryon-panel--error {
+  background: var(--ax-color-bg-danger-subtle);
+  align-items: center;
+}
+.tryon-panel-icon {
+  flex: 0 0 auto;
+  font-size: 1.25rem;
+  margin-top: 0.125rem;
+  color: var(--ax-color-text-secondary);
+}
+.tryon-panel--off .tryon-panel-icon { color: var(--ax-color-text-warning); }
+.tryon-panel--error .tryon-panel-icon { color: var(--ax-color-text-danger); }
+.tryon-panel-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ax-space-2);
+}
+.tryon-panel-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ax-color-text-primary);
+}
+.tryon-panel-text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ax-color-text-secondary);
+}
+.tryon-panel-list {
+  margin: 0;
+  padding-inline-start: 1.125rem;
+  font-size: 0.875rem;
+  color: var(--ax-color-text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ax-space-1);
+}
+
+/* ── Notes above the table ───────────────────────────────────────────── */
+.tryon-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ax-space-2);
+  margin: 0 0 var(--ax-space-3);
+  font-size: 0.875rem;
+  color: var(--ax-color-text-secondary);
+}
+.tryon-note app-icon {
+  flex: 0 0 auto;
+  margin-top: 0.125rem;
+  color: var(--ax-color-text-tertiary);
+}
+.tryon-note--muted {
+  color: var(--ax-color-text-tertiary);
+  margin-bottom: var(--ax-space-4);
+}
+
+/* ── Table cells ─────────────────────────────────────────────────────── */
+.tryon-thumb {
+  width: 2.75rem;
+  height: 3.5rem;
+  border-radius: var(--ax-radius-md);
+  border: 1px solid var(--ax-color-border-subtle);
+  background: var(--ax-color-bg-muted);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  color: var(--ax-color-text-tertiary);
+}
+.tryon-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+.tryon-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+.tryon-name-link {
+  font-weight: 500;
+  color: var(--ax-color-text-primary);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tryon-name-link:hover,
+.tryon-name-link:focus-visible {
+  color: var(--ax-color-text-brand);
+  text-decoration: underline;
+}
+.tryon-name-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ax-space-2);
+}
+.tryon-name-slug {
+  font-size: 0.75rem;
+  color: var(--ax-color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 14rem;
+}
+
+.tryon-elig {
+  cursor: help;
+  white-space: nowrap;
+}
+.tryon-elig:focus-visible {
+  outline: 2px solid var(--ax-color-bg-brand);
+  outline-offset: 2px;
+}
+
+.tryon-switch {
+  gap: var(--ax-space-2);
+}
+.tryon-switch-busy {
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+  align-items: center;
+  justify-content: center;
+}

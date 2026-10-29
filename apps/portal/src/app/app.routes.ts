@@ -229,6 +229,15 @@ export const routes: Routes = [
     title: 'Ain concierge'
   },
   {
+    // Virtual Try-On: which products show customers "Try it on". Viewable
+    // with products.view; the switches and bulk actions are gated to
+    // products.edit inside the page.
+    path: 'admin/try-on',
+    loadComponent: () => import('./backend/admin-try-on/admin-try-on.component').then(m => m.AdminTryOnComponent),
+    canActivate: [adminGuard, requirePermission('products.view')],
+    title: 'Virtual Try-On'
+  },
+  {
     path: 'admin/hotlinks',
     loadComponent: () => import('./backend/hotlink-analytics/hotlink-analytics.component').then(m => m.HotlinkAnalyticsComponent),
     canActivate: [adminGuard, requirePermission('hotlinks.view')],

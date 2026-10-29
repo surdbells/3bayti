@@ -1,0 +1,35 @@
+<section *ngIf="visible" class="ax-card ax-p-5 pto" aria-labelledby="pto_title">
+  <div class="pto__head">
+    <h3 class="ax-h5 ax-m-0 pto__title" id="pto_title">
+      <app-icon name="visibility" aria-hidden="true"></app-icon>
+      {{ 'tryon.card.title' | translate }}
+    </h3>
+    <a routerLink="/admin/try-on" class="ax-btn ax-btn-ghost ax-btn-sm">{{ 'tryon.card.manage_all' | translate }}</a>
+  </div>
+  <p class="pto__hint">{{ 'tryon.card.hint' | translate }}</p>
+
+  <label class="ax-switch pto__switch" [axTooltip]="toggleHint">
+    <input type="checkbox"
+           [checked]="isOn"
+           [disabled]="state.disabled"
+           (change)="toggle($event)"
+           aria-describedby="pto_elig" />
+    <span class="ax-switch-track" aria-hidden="true"></span>
+    <span class="ax-switch-label">{{ 'tryon.card.switch_label' | translate }}</span>
+    <span *ngIf="busy" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+  </label>
+
+  <div class="pto__elig" id="pto_elig">
+    <span [ngClass]="badge.badgeClass">{{ badge.labelKey | translate }}</span>
+    <span class="pto__elig-text">{{ eligibilityMessage }}</span>
+  </div>
+
+  <p *ngIf="enabledButBlocked" class="pto__note pto__note--warn" role="status">
+    <app-icon name="info" aria-hidden="true"></app-icon>
+    <span>{{ 'tryon.card.enabled_but_ineligible' | translate }}</span>
+  </p>
+  <p *ngIf="!canEdit" class="pto__note">
+    <app-icon name="lock" aria-hidden="true"></app-icon>
+    <span>{{ 'tryon.card.read_only' | translate }}</span>
+  </p>
+</section>
