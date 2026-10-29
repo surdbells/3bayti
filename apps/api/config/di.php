@@ -215,13 +215,18 @@ return [
         return new JwtSettings(
             signingSecret: $secret,
             accessTtlSeconds: (int) ($_ENV['JWT_ACCESS_TOKEN_TTL'] ?? 900),
-            // Refresh tokens ROTATE on every use (RefreshController), so this is
-            // a SLIDING window: an active user's session keeps extending and
-            // effectively never lapses. Default raised to 1 year (was 7 days)
-            // so even an infrequent user isn't logged out, the session ends on
-            // manual logout or a real auth rejection, not from sitting idle.
-            // Override with JWT_REFRESH_TOKEN_TTL (seconds).
-            refreshTtlSeconds: (int) ($_ENV['JWT_REFRESH_TOKEN_TTL'] ?? 31536000),
+            // Product rule: a customer stays signed in until they explicitly
+            // log out. Refresh tokens ROTATE on every use (RefreshController),
+            // so this is a SLIDING window that an active user never reaches;
+            // 5 years means even a customer who doesn't open the app for years
+            // is still signed in. Enforced as a FLOOR: JWT_REFRESH_TOKEN_TTL
+            // may only lengthen it. Older runbooks seeded
+            // JWT_REFRESH_TOKEN_TTL=604800 (7 days), which silently signed out
+            // anyone idle for a week; a value like that is now ignored.
+            refreshTtlSeconds: max(
+                JwtSettings::REFRESH_TTL_SECONDS, // 157680000 = 5 years
+                (int) ($_ENV['JWT_REFRESH_TOKEN_TTL'] ?? JwtSettings::REFRESH_TTL_SECONDS),
+            ),
             issuer: $_ENV['JWT_ISSUER'] ?? '3bayti-api',
         );
     },

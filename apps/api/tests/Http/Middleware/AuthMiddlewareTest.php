@@ -150,6 +150,72 @@ final class AuthMiddlewareTest extends TestCase
     }
 
     #[Test]
+    public function tokenIssuedRightAfterPasswordChangeIsAcceptedDespiteSubSecondTimestamp(): void
+    {
+        // change-password / reset-confirm issue the returned pair AFTER the
+        // hash change. The pwd_changed_at claim is whole seconds; the user's
+        // value can carry microseconds. The comparison is in whole seconds,
+        // so that token is valid on first use.
+        $user = $this->makeUser();
+        $user->setPasswordHash('rotated-hash');
+        (new \ReflectionProperty(User::class, 'passwordChangedAt'))->setValue(
+            $user,
+            new \DateTimeImmutable('2026-10-29 12:00:00.987654'),
+        );
+        $pair = $this->jwt->issueTokenPair($user);
+
+        $reached = false;
+        foreach ([
+            new AuthMiddleware($this->jwt, $this->stubEm($user), $this->responseFactory),
+            new OptionalAuthMiddleware($this->jwt, $this->stubEm($user)),
+        ] as $middleware) {
+            $request = $this->makeRequest()->withHeader('Authorization', "Bearer {$pair->accessToken}");
+            $captured = null;
+            $handler = new class ($captured, $this->responseFactory) implements RequestHandlerInterface {
+                public function __construct(
+                    private mixed &$captured,
+                    private readonly ResponseFactory $rf,
+                ) {}
+                public function handle(ServerRequestInterface $request): ResponseInterface
+                {
+                    $this->captured = $request;
+                    return $this->rf->createResponse(200);
+                }
+            };
+
+            $response = $middleware->process($request, $handler);
+
+            self::assertSame(200, $response->getStatusCode());
+            self::assertSame($user, $captured?->getAttribute(AuthMiddleware::ATTR_USER), $middleware::class);
+            $reached = true;
+        }
+        self::assertTrue($reached);
+    }
+
+    #[Test]
+    public function tokenFromBeforeASecondPasswordChangeIsStillRejected(): void
+    {
+        $user = $this->makeUser();
+        $user->setPasswordHash('first');
+        (new \ReflectionProperty(User::class, 'passwordChangedAt'))->setValue(
+            $user,
+            new \DateTimeImmutable('2026-10-29 12:00:00'),
+        );
+        $pair = $this->jwt->issueTokenPair($user); // claim = 12:00:00
+
+        // Changed again one second later: the old token is stale.
+        (new \ReflectionProperty(User::class, 'passwordChangedAt'))->setValue(
+            $user,
+            new \DateTimeImmutable('2026-10-29 12:00:01'),
+        );
+
+        $middleware = new AuthMiddleware($this->jwt, $this->stubEm($user), $this->responseFactory);
+        $request = $this->makeRequest()->withHeader('Authorization', "Bearer {$pair->accessToken}");
+
+        self::assertSame(401, $middleware->process($request, $this->failingHandler())->getStatusCode());
+    }
+
+    #[Test]
     public function passesThroughAndDecoratesRequestWhenTokenValid(): void
     {
         $user = $this->makeUser();

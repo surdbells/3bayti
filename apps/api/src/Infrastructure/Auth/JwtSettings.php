@@ -16,6 +16,14 @@ namespace Bayti\Api\Infrastructure\Auth;
 final class JwtSettings
 {
     /**
+     * Refresh-token lifetime: 5 years, sliding (every refresh rotates and
+     * re-issues with a fresh expiry). Product rule: a customer stays signed
+     * in until they explicitly log out. config/di.php enforces this as a
+     * FLOOR over JWT_REFRESH_TOKEN_TTL.
+     */
+    public const REFRESH_TTL_SECONDS = 157680000;
+
+    /**
      * @param string $signingSecret HS256 signing key. Must be at
      *                              least 32 bytes; we recommend 64
      *                              (use bin2hex(random_bytes(64))).
@@ -24,8 +32,11 @@ final class JwtSettings
      *                              defense for a JWT setup.
      * @param int $accessTtlSeconds Access-token lifetime. Per
      *                              Decision A.6.1 = 900 (15 min).
-     * @param int $refreshTtlSeconds Refresh-token lifetime. Per
-     *                              Decision A.6.1 = 604800 (7 days).
+     * @param int $refreshTtlSeconds Refresh-token lifetime. Default
+     *                              REFRESH_TTL_SECONDS = 157680000
+     *                              (5 years, sliding). Replaces
+     *                              Decision A.6.1's 604800 (7 days),
+     *                              which logged idle customers out.
      * @param string $issuer        iss claim value. Stable identifier
      *                              for this service. Default
      *                              '3bayti-api'.
@@ -39,7 +50,7 @@ final class JwtSettings
     public function __construct(
         public readonly string $signingSecret,
         public readonly int $accessTtlSeconds = 900,
-        public readonly int $refreshTtlSeconds = 604800,
+        public readonly int $refreshTtlSeconds = self::REFRESH_TTL_SECONDS,
         public readonly string $issuer = '3bayti-api',
         public readonly int $clockSkewSeconds = 5,
     ) {

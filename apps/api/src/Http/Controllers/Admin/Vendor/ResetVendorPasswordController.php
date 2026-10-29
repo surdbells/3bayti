@@ -6,8 +6,6 @@ namespace Bayti\Api\Http\Controllers\Admin\Vendor;
 
 use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\Catalog\Vendor;
-use Bayti\Api\Domain\User\RefreshToken;
-use Bayti\Api\Domain\User\RefreshTokenRepository;
 use Bayti\Api\Domain\User\TemporaryPassword;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Controllers\Admin\Vendor\Dto\ResetVendorPasswordInput;
@@ -37,12 +35,15 @@ use Psr\Log\NullLogger;
  *
  * Side effects, committed atomically in one transaction:
  *   1. New bcrypt hash, generated (generate) or admin-supplied (manual).
- *      setPasswordHash() bumps password_changed_at, which invalidates every
- *      existing ACCESS token for the owner on their next request.
+ *      setPasswordHash() bumps password_changed_at; the owner's existing
+ *      ACCESS tokens fail the staleness check once and their clients
+ *      recover transparently via /v3/auth/refresh.
  *   2. must_change_password = true, so the vendor replaces the admin-known
- *      credential on next sign-in (portal guard enforces it).
- *   3. All of the owner's REFRESH tokens are revoked ('admin_password_reset'),
- *      so every session on every device is terminated.
+ *      credential (portal guard enforces it).
+ *   No session is revoked. Product rule: nobody is signed out of any
+ *   device except by their own explicit logout / logout-all. The response
+ *   and audit still carry `sessions_revoked` for compatibility; it is
+ *   always 0.
  *
  * After commit:
  *   - Audit row (ACTION_OVERRIDDEN on the owner User) with the mode, vendor,
@@ -60,7 +61,7 @@ use Psr\Log\NullLogger;
  *
  * Returns 200:
  *   { "vendor_id", "owner_user_id", "mode", "email", "email_sent",
- *     "must_change_password": true, "sessions_revoked": int }
+ *     "must_change_password": true, "sessions_revoked": 0 }
  *
  * Errors: 404 unknown vendor, 422 invalid body or guard failure, 403 staff
  * owner or missing permission.
@@ -70,7 +71,11 @@ final class ResetVendorPasswordController
     use Responder;
     use RequestContext;
 
-    public const REVOKE_REASON = 'admin_password_reset';
+    /**
+     * Kept in the response + audit payload for compatibility (the portal
+     * dialog types it). Always 0: a reset no longer ends any session.
+     */
+    private const SESSIONS_REVOKED = 0;
 
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
@@ -118,18 +123,13 @@ final class ResetVendorPasswordController
         $newHash = password_hash($plain, PASSWORD_BCRYPT);
         $mustChangeBefore = $owner->mustChangePassword();
 
-        /** @var RefreshTokenRepository $refreshRepo */
-        $refreshRepo = $this->em->getRepository(RefreshToken::class);
-
-        $revoked = $this->em->wrapInTransaction(
-            function () use ($owner, $newHash, $refreshRepo): int {
+        $this->em->wrapInTransaction(
+            function () use ($owner, $newHash): void {
                 // Hash first: setPasswordHash() clears must_change_password,
                 // so the requirement has to be (re)applied after it.
                 $owner->setPasswordHash($newHash);
                 $owner->requirePasswordChange();
-                $count = $refreshRepo->revokeAllForUser($owner, self::REVOKE_REASON);
                 $this->em->flush();
-                return $count;
             },
         );
 
@@ -150,7 +150,7 @@ final class ResetVendorPasswordController
                 'action' => 'vendor.password_reset',
                 'vendor_id' => $vendor->getId(),
                 'mode' => $input->mode,
-                'sessions_revoked' => (int) $revoked,
+                'sessions_revoked' => self::SESSIONS_REVOKED,
                 'email_sent' => $emailSent,
             ],
         );
@@ -160,7 +160,7 @@ final class ResetVendorPasswordController
             'vendor_id' => $vendor->getId(),
             'owner_user_id' => $owner->getId(),
             'mode' => $input->mode,
-            'sessions_revoked' => (int) $revoked,
+            'sessions_revoked' => self::SESSIONS_REVOKED,
             'email_sent' => $emailSent,
             'ip' => $this->extractIp($request),
         ]);
@@ -172,7 +172,7 @@ final class ResetVendorPasswordController
             'email' => $owner->getEmail(),
             'email_sent' => $emailSent,
             'must_change_password' => true,
-            'sessions_revoked' => (int) $revoked,
+            'sessions_revoked' => self::SESSIONS_REVOKED,
         ]);
     }
 

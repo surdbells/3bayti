@@ -182,9 +182,10 @@ services:
       - key: JWT_ACCESS_TOKEN_TTL
         scope: RUN_TIME
         value: "900"
+      # 5 years, sliding. The API enforces this as a floor (config/di.php).
       - key: JWT_REFRESH_TOKEN_TTL
         scope: RUN_TIME
-        value: "31536000"
+        value: "157680000"
       - key: JWT_ISSUER
         scope: RUN_TIME
         value: 3bayti-api

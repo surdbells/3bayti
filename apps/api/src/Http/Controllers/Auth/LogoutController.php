@@ -8,7 +8,6 @@ use Bayti\Api\Domain\User\RefreshToken;
 use Bayti\Api\Domain\User\RefreshTokenRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Controllers\Auth\Dto\LogoutInput;
-use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Responder;
@@ -22,51 +21,43 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * POST /v3/auth/logout
  *
- * Authenticated endpoint. Revokes a single refresh token, the
- * one tied to the device/session being logged out.
+ * Ends ONE device's session: the whole session family of the refresh
+ * token in the body. Other devices are never affected.
  *
  * Auth model
  * ----------
- *   - Access token in `Authorization: Bearer ...` (AuthMiddleware
- *     verifies + loads User into request attribute).
- *   - Refresh token in body (identifies WHICH session to kill).
+ *   - Refresh token in the body (REQUIRED). It identifies WHICH session
+ *     to end, and possessing it is the proof of ownership: whoever holds
+ *     a valid refresh token can already act as that session.
+ *   - Access token in `Authorization: Bearer ...` (OPTIONAL, the route
+ *     runs OptionalAuthMiddleware). Clients call logout fire-and-forget
+ *     right after clearing their local session, often with an expired
+ *     or missing access token; requiring one would leave the session
+ *     alive server-side whenever the access token had lapsed.
  *
- * Why both
- * --------
- * We need the user identity (from access token) to ensure callers
- * can't revoke other users' refresh tokens. We need the refresh
- * token to know WHICH session to kill, a user can be logged in
- * on multiple devices, each with its own refresh token. The body
- * carries the specific one.
+ * Cross-user guard: when a VALID bearer is present and the refresh
+ * token belongs to a different user, 403. A signed-in caller can't end
+ * someone else's session with a token they somehow obtained.
  *
- * Cross-user attack guard: we verify the refresh token's user
- * matches the access token's user. Without this, a logged-in
- * attacker who somehow knew another user's refresh token could
- * log them out at will.
+ * Why the whole family
+ * --------------------
+ * A token revoked by rotation stays re-issuable (RefreshController), so
+ * revoking only the presented token would let an older token of the
+ * same device bring the session back. revokeFamily() ends every token
+ * the device has ever held, and nothing else.
  *
- * Response: 204 No Content on success.
+ * Response: 204 No Content.
  *
  * Idempotency
  * -----------
- * Calling /logout with an already-revoked, expired, unknown, or
- * malformed refresh token still returns 204. A logged-out user
- * shouldn't see "you were already logged out" errors. The only
- * paths that 401 are:
- *   - No access token / invalid access token (AuthMiddleware,
- *     before this controller runs)
- *   - Refresh token belongs to a DIFFERENT user (cross-user attack)
+ * Unknown, malformed, expired or already-revoked refresh tokens still
+ * return 204: a signed-out user never sees "you were already logged
+ * out". The only non-204 paths are the cross-user 403 and a 422 for a
+ * missing body field.
  *
- * Note: this controller does NOT also revoke the access token.
- * Access tokens are stateless; we'd need a denylist to invalidate
- * them, which we deliberately don't have (would add ~10ms per
- * request for the lookup). Instead, the access token expires on
- * its own ~15 minutes later. The access token's pwd_changed_at
- * mechanism handles the password-change case.
- *
- * If immediate access-token revocation matters (rare in practice),
- * the user can call /logout-all which doesn't fix the access-token
- * problem either, but does kill all refresh tokens so when the
- * access token expires there's no way to refresh.
+ * Note: this controller does NOT revoke the access token. Access tokens
+ * are stateless (no denylist, it would add a DB lookup to every request)
+ * and expire on their own within ~15 minutes.
  */
 final class LogoutController
 {
@@ -87,44 +78,39 @@ final class LogoutController
 
     public function __invoke(ServerRequestInterface $request): ResponseInterface
     {
-        // AuthMiddleware has already verified the access token + loaded
-        // the user. Defensive null-check: if the route was wired
-        // without middleware (config error), 401 rather than null-deref.
+        // Set by OptionalAuthMiddleware only for a valid bearer; absent
+        // (null) when there is no header or the access token is invalid
+        // or expired, which is fine, see class docblock.
         $authedUser = $request->getAttribute(AuthMiddleware::ATTR_USER);
-        if (!$authedUser instanceof User) {
-            throw HttpException::unauthorized(
-                ErrorCodes::AUTH_INVALID_TOKEN,
-                'Authentication required.',
-            );
-        }
 
         $input = $this->validator->parse($request, LogoutInput::class);
 
-        // Try to find the refresh token in DB. We don't fail-loud if
-        // any of these checks fail, logout is idempotent (see class
-        // docblock).
+        // Any failed check below just falls through to 204, logout is
+        // idempotent (see class docblock).
         $claims = $this->jwt->verifyRefreshToken($input->refresh_token);
-        if ($claims !== null) {
-            /** @var RefreshTokenRepository $refreshRepo */
-            $refreshRepo = $this->em->getRepository(RefreshToken::class);
-            $row = $refreshRepo->findByJti($claims->jti);
-
-            if ($row !== null) {
-                // Cross-user guard: a logged-in attacker presenting
-                // someone else's refresh token MUST be rejected even
-                // though logout is otherwise idempotent. The user
-                // identity comes from the access token (AuthMiddleware);
-                // the refresh row's user must match.
-                if ($row->getUser()->getId() !== $authedUser->getId()) {
-                    throw HttpException::forbidden(
-                        'Cannot revoke another user\'s session.',
-                    );
-                }
-
-                $row->revoke('logout');
-                $this->em->flush();
-            }
+        if ($claims === null) {
+            return $this->noContent();
         }
+
+        /** @var RefreshTokenRepository $refreshRepo */
+        $refreshRepo = $this->em->getRepository(RefreshToken::class);
+        $row = $refreshRepo->findByJti($claims->jti);
+        if ($row === null || !$row->matchesToken($input->refresh_token)) {
+            return $this->noContent();
+        }
+
+        // Cross-user guard: a signed-in caller presenting someone else's
+        // refresh token MUST be rejected even though logout is otherwise
+        // idempotent.
+        if ($authedUser instanceof User && $row->getUser()->getId() !== $authedUser->getId()) {
+            throw HttpException::forbidden(
+                'Cannot revoke another user\'s session.',
+            );
+        }
+
+        // End this device's session family. Already-ended tokens are left
+        // as they are, so repeating the call is harmless.
+        $refreshRepo->revokeFamily($row->getFamilyId(), 'logout');
 
         return $this->noContent();
     }

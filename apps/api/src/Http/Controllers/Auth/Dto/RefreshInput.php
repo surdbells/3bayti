@@ -11,8 +11,8 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Single field, the refresh token. The client presents this when
  * its access token has expired (or is about to). On success we
- * issue a fresh access + refresh pair and revoke the presented
- * refresh token (single-use rotation, Decision A.6.1).
+ * issue a fresh access + refresh pair and mark the presented
+ * refresh token 'rotated' (it stays re-issuable, see RefreshController).
  *
  * No size constraint
  * ------------------

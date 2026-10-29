@@ -18,6 +18,7 @@ use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\UserSerializer;
 use Bayti\Api\Http\Validator\RequestValidator;
 use Bayti\Api\Infrastructure\Auth\JwtService;
+use Bayti\Api\Infrastructure\Auth\TokenPair;
 use Bayti\Api\Infrastructure\Otp\OtpProviderException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -29,15 +30,23 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Completes password reset:
  *   1. Verify OTP against MessageCentral
- *   2. Set new password (which updates password_changed_at →
- *      invalidates ALL old access tokens via AuthMiddleware
- *      pwd_changed_at staleness check)
- *   3. Revoke ALL refresh tokens for the user (logout-everywhere
- *      per Decision A.6.2)
- *   4. Issue a fresh access + refresh token pair
- *   5. Persist the new refresh-token row
+ *   2. Set new password (which updates password_changed_at; access
+ *      tokens minted before it fail the AuthMiddleware staleness check
+ *      once and their clients recover via /v3/auth/refresh)
+ *   3. Issue a fresh access + refresh token pair AFTER step 2, so the
+ *      access token carries the new pwd_changed_at and is valid on
+ *      first use
+ *   4. Persist the new refresh-token row: in the caller's session
+ *      family when the request carries a valid access token of this same
+ *      user (a signed-in device resetting its password), otherwise a new
+ *      family (see callerFamilyId)
  *
- * Steps 2-5 happen in a single Doctrine transaction. The OTP itself
+ * No session is revoked. Product rule: a customer stays signed in on
+ * every device until they explicitly log out, so resetting a forgotten
+ * password on one device must not sign any other device out. Ending
+ * other sessions is the separate, explicit /v3/auth/logout-all.
+ *
+ * Steps 2-4 happen in a single Doctrine transaction. The OTP itself
  * is consumed (step 1) in OtpService::verify's own flush; consuming
  * an OTP without changing the password is harmless, the user just
  * retries with a fresh OTP.
@@ -114,26 +123,29 @@ final class ResetConfirmController
             throw $this->verificationFailed();
         }
 
-        // OTP verified. Set new password + logout-everywhere + issue
-        // fresh tokens, all in one transaction.
-        $pair = $this->jwt->issueTokenPair($user);
+        // OTP verified. Set new password + issue fresh tokens, in one
+        // transaction. The bcrypt hash is computed outside it (slow).
         $newPasswordHash = password_hash($input->new_password, PASSWORD_BCRYPT);
         $clientIp = $this->extractIp($request);
         $userAgent = $this->extractUserAgent($request);
+        $familyId = $this->callerFamilyId($request, $user);
 
-        $this->em->wrapInTransaction(function () use ($user, $pair, $newPasswordHash, $clientIp, $userAgent): void {
-            // setPasswordHash() also bumps user.password_changed_at,
-            // which makes ALL old access tokens stale via the
-            // AuthMiddleware pwd_changed_at check.
+        /** @var TokenPair $pair */
+        $pair = $this->em->wrapInTransaction(function () use ($user, $newPasswordHash, $clientIp, $userAgent, $familyId): TokenPair {
+            // setPasswordHash() also bumps user.password_changed_at.
+            // Older access tokens fail the AuthMiddleware staleness check
+            // once and their clients recover via /refresh. No refresh
+            // token is revoked: every other device stays signed in.
             $user->setPasswordHash($newPasswordHash);
 
-            // Revoke all refresh tokens, including the requesting
-            // client's. We then issue a fresh pair, so the user stays
-            // logged in on THIS device. All others are kicked out
-            // (Decision A.6.2).
+            // Issue the pair AFTER the hash change so the access token
+            // carries the NEW pwd_changed_at and passes AuthMiddleware on
+            // first use. The claim is whole seconds, and so is the stored
+            // timestamp.
+            $pair = $this->jwt->issueTokenPair($user, familyId: $familyId);
+
             /** @var RefreshTokenRepository $refreshRepo */
             $refreshRepo = $this->em->getRepository(RefreshToken::class);
-            $refreshRepo->revokeAllForUser($user, 'password_changed');
 
             // Persist the new refresh-token row.
             $refreshRow = new RefreshToken(
@@ -143,12 +155,15 @@ final class ResetConfirmController
                 expiresAt: $pair->refreshTokenExpiresAt,
                 issuedIp: $clientIp,
                 userAgent: $userAgent,
+                familyId: $pair->familyId,
             );
             $refreshRepo->save($refreshRow, flush: false);
 
             $user->recordLogin($clientIp);
 
             $this->em->flush();
+
+            return $pair;
         });
 
         return $this->ok([
@@ -158,6 +173,30 @@ final class ResetConfirmController
             'refresh_token_expires_at' => $pair->refreshTokenExpiresAt->format(\DateTimeInterface::ATOM),
             'user' => $this->userSerializer->publicProfile($user),
         ]);
+    }
+
+    /**
+     * The session family of a caller that is still signed in as $user:
+     * the `sid` claim of a valid access token in the Authorization header.
+     * The new pair then joins it, so the device keeps ONE family and its
+     * later logout also ends the tokens it held before the reset (see
+     * ChangePasswordController). Null (a new family) when there is no
+     * bearer, it is invalid or expired, it belongs to someone else, or it
+     * predates the sid claim.
+     *
+     * Read directly rather than through OptionalAuthMiddleware: this route
+     * is anonymous and only needs the signed claim, not the user lookup.
+     */
+    private function callerFamilyId(ServerRequestInterface $request, User $user): ?string
+    {
+        if (!preg_match('/^\s*Bearer\s+(.+?)\s*$/i', $request->getHeaderLine('Authorization'), $m)) {
+            return null;
+        }
+        $claims = $this->jwt->verifyAccessToken($m[1]);
+        if ($claims === null || $claims->userId !== $user->getId()) {
+            return null;
+        }
+        return $claims->sessionFamilyId;
     }
 
     private function verificationFailed(): HttpException

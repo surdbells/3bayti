@@ -36,9 +36,9 @@ final class ChangePasswordControllerTest extends HttpTestCase
         $userRepo->method('findById')->willReturn($user);
 
         $refreshRepo = $this->createMock(RefreshTokenRepository::class);
-        $refreshRepo->expects(self::once())
-            ->method('revokeAllForUser')
-            ->with($user, 'password_changed');
+        // Product rule: a password change signs NO device out.
+        $refreshRepo->expects(self::never())->method('revokeAllForUser');
+        $refreshRepo->expects(self::never())->method('revokeFamily');
         $refreshRepo->expects(self::once())->method('save');
 
         // UserSerializer::publicProfile() (in the 200 response) derives store
@@ -78,6 +78,28 @@ final class ChangePasswordControllerTest extends HttpTestCase
         self::assertArrayHasKey('refresh_token_expires_at', $body);
         self::assertArrayHasKey('user', $body);
         self::assertSame(100, $body['user']['id']);
+
+        // The returned access token carries the NEW pwd_changed_at, so it
+        // passes AuthMiddleware on its very first use (issued before the
+        // hash change it would be rejected as stale).
+        $claims = $jwt->verifyAccessToken($body['access_token']);
+        self::assertNotNull($claims);
+        self::assertSame(
+            $user->getPasswordChangedAt()?->getTimestamp(),
+            $claims->passwordChangedAt?->getTimestamp(),
+        );
+        $me = $this->handle($this->jsonRequest('GET', '/v3/auth/me', [], [
+            'Authorization' => 'Bearer ' . $body['access_token'],
+        ]));
+        self::assertSame(200, $me->getStatusCode());
+
+        // ... while the token minted before the change is now stale (the
+        // client recovers via /refresh; no session was ended).
+        $stale = $this->handle($this->jsonRequest('GET', '/v3/auth/me', [], [
+            'Authorization' => 'Bearer ' . $pair->accessToken,
+        ]));
+        self::assertSame(401, $stale->getStatusCode());
+        self::assertSame('AUTH_INVALID_TOKEN', $this->jsonBody($stale)['error']['code']);
 
         // Password actually rotated on the entity (verified via password_verify
         // since the hash itself is opaque).
@@ -293,29 +315,32 @@ final class ChangePasswordControllerTest extends HttpTestCase
     }
 
     // ---------------------------------------------------------------
-    // Session security: other refresh tokens are revoked
+    // Sessions: no device is signed out
     // ---------------------------------------------------------------
 
     #[Test]
-    public function successfulChangeRevokesAllExistingRefreshTokens(): void
+    public function successfulChangeSignsNoDeviceOut(): void
     {
-        // This is the key security property of the change: all existing
-        // sessions (including the one on the current device) are revoked,
-        // then a fresh pair is issued for the current device. The user
-        // stays logged in HERE; everywhere else is kicked out.
+        // Product rule: a customer stays signed in on every device until
+        // they log out themselves. Changing the password on one device must
+        // not revoke any refresh token; only a fresh row for THIS device is
+        // persisted, in THIS device's session family (the access token's
+        // sid), so the device still has one family to log out of.
         $user = $this->makeUser(id: 106, passwordPlain: 'OldPass123');
 
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->willReturn($user);
 
+        $saved = [];
         $refreshRepo = $this->createMock(RefreshTokenRepository::class);
-        $refreshRepo->expects(self::once())
-            ->method('revokeAllForUser')
-            ->with(
-                self::identicalTo($user),
-                self::identicalTo('password_changed'),
-            );
-        $refreshRepo->expects(self::once())->method('save');
+        $refreshRepo->expects(self::never())->method('revokeAllForUser');
+        $refreshRepo->expects(self::never())->method('revokeFamily');
+        $refreshRepo->expects(self::never())->method('reassignUser');
+        $refreshRepo->expects(self::once())->method('save')->willReturnCallback(
+            function (RefreshToken $t) use (&$saved): void {
+                $saved[] = $t;
+            },
+        );
 
         // UserSerializer::publicProfile() (in the 200 response) derives store
         // flags via getRepository(Vendor::class)->findBy(); stub it so the
@@ -345,5 +370,66 @@ final class ChangePasswordControllerTest extends HttpTestCase
         );
 
         self::assertSame(200, $response->getStatusCode());
+        $body = $this->jsonBody($response);
+        self::assertCount(1, $saved);
+        self::assertTrue($saved[0]->matchesToken($body['refresh_token']));
+        self::assertFalse($saved[0]->isRevoked());
+        self::assertSame($pair->familyId, $saved[0]->getFamilyId());
+        self::assertNotSame($saved[0]->getJti(), $saved[0]->getFamilyId(), 'not a new family');
+        self::assertSame($pair->familyId, $jwt->verifyAccessToken($body['access_token'])?->sessionFamilyId);
+    }
+
+    #[Test]
+    public function accessTokenWithoutSidFallsBackToANewFamily(): void
+    {
+        // Access tokens minted before the sid claim existed (live for up to
+        // 15 minutes after the deploy) name no family: the pair then starts
+        // its own, exactly as before.
+        $user = $this->makeUser(id: 107, passwordPlain: 'OldPass123');
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->willReturn($user);
+        $saved = [];
+        $refreshRepo = $this->createMock(RefreshTokenRepository::class);
+        $refreshRepo->method('save')->willReturnCallback(
+            function (RefreshToken $t) use (&$saved): void {
+                $saved[] = $t;
+            },
+        );
+        $vendorRepo = $this->createMock(\Doctrine\ORM\EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $refreshRepo, $vendorRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [RefreshToken::class, $refreshRepo],
+                [Vendor::class, $vendorRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $settings = $this->app->getContainer()->get(\Bayti\Api\Infrastructure\Auth\JwtSettings::class);
+        $legacyAccess = \Firebase\JWT\JWT::encode([
+            'iss' => $settings->issuer,
+            'sub' => '107',
+            'aud' => JwtService::AUDIENCE_ACCESS,
+            'iat' => time(),
+            'exp' => time() + 900,
+            'jti' => 'legacy-access-jti',
+            'roles' => ['customer'],
+        ], $settings->signingSecret, JwtService::ALGORITHM);
+
+        $response = $this->handle(
+            $this->jsonRequest('PATCH', '/v3/me/password', [
+                'current_password' => 'OldPass123',
+                'new_password' => 'NewPass4567',
+            ], [
+                'Authorization' => 'Bearer ' . $legacyAccess,
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertCount(1, $saved);
+        self::assertSame($saved[0]->getJti(), $saved[0]->getFamilyId());
     }
 }

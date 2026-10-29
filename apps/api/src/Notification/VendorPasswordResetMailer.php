@@ -20,8 +20,9 @@ use Psr\Log\LoggerInterface;
  *     out-of-band; the email NEVER contains it, it only tells the vendor the
  *     reset happened (security notice) and how to recover if unexpected.
  *
- * Both variants tell the vendor they were signed out everywhere and will be
- * asked to choose a new password on next sign-in.
+ * Both variants tell the vendor they will be asked to choose a new password
+ * and to contact support if the reset was unexpected. (A reset no longer
+ * signs any device out, so the email no longer claims it did.)
  *
  * Non-blocking: a mailer failure is logged and swallowed, the reset itself is
  * already committed by the time this runs. The return value lets the caller
@@ -82,11 +83,9 @@ final class VendorPasswordResetMailer
                 . 'your own as soon as you sign in.</p>';
         }
 
-        $securityText = "For your security you've been signed out on all devices. If you didn't "
-            . "expect this change, please contact 3bayti support.";
-        $securityHtml = '<p style="font-size:13px;color:#8a8378;line-height:1.6;">For your security '
-            . 'you\'ve been signed out on all devices. If you didn\'t expect this change, please contact '
-            . '3bayti support.</p>';
+        $securityText = "If you didn't expect this change, please contact 3bayti support right away.";
+        $securityHtml = '<p style="font-size:13px;color:#8a8378;line-height:1.6;">If you didn\'t expect '
+            . 'this change, please contact 3bayti support right away.</p>';
 
         $text = "Hello {$greeting},\n\n"
             . $bodyText . "\n\n"

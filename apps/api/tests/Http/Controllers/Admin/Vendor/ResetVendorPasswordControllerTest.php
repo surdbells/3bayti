@@ -34,7 +34,9 @@ use Psr\Log\NullLogger;
  * Verifies:
  *   - generate mode: new temp password hashed, emailed, never returned
  *   - manual mode: admin password hashed, notice email carries no password
- *   - both: must_change_password set, all refresh tokens revoked, audit row
+ *   - both: must_change_password set, NO session revoked (product rule:
+ *     stay signed in until you log out; sessions_revoked stays 0 for
+ *     compatibility), audit row, email no longer claims a sign-out
  *   - email failure is non-blocking (reset committed, email_sent=false)
  *   - validation (mode, password-per-mode, length)
  *   - guards: 404, no owner, own account, staff owner, inactive owner
@@ -68,7 +70,7 @@ final class ResetVendorPasswordControllerTest extends HttpTestCase
     // -----------------------------------------------------------------
 
     #[Test]
-    public function generateModeIssuesEmailedTempPasswordAndRevokesSessions(): void
+    public function generateModeIssuesEmailedTempPasswordAndSignsNoDeviceOut(): void
     {
         $admin = $this->makeAdminUser(99);
         $owner = $this->makeOwner(55, 'seller@bayti.example', 'oldPass!');
@@ -86,14 +88,15 @@ final class ResetVendorPasswordControllerTest extends HttpTestCase
         self::assertSame('seller@bayti.example', $body['email']);
         self::assertTrue($body['email_sent']);
         self::assertTrue($body['must_change_password']);
-        self::assertSame(3, $body['sessions_revoked']);
+        // Key kept for compatibility; a reset no longer ends any session.
+        self::assertSame(0, $body['sessions_revoked']);
         self::assertArrayNotHasKey('password', $body, 'generated password is never returned');
 
         self::assertNotSame($oldHash, $owner->getPasswordHash());
         self::assertTrue($owner->mustChangePassword());
-        self::assertSame(1, $this->revokeAllCalls);
-        self::assertSame('admin_password_reset', $this->lastRevokeReason);
-        self::assertSame($owner, $this->lastRevokedUser);
+        self::assertSame(0, $this->revokeAllCalls, 'no session is ended');
+        self::assertNull($this->lastRevokeReason);
+        self::assertNull($this->lastRevokedUser);
 
         // The emailed temporary password is the one that now verifies.
         $sent = $this->mailer->sent();
@@ -104,6 +107,10 @@ final class ResetVendorPasswordControllerTest extends HttpTestCase
         self::assertSame(1, preg_match('/Password: (\S+)/', $sent[0]['text_body'], $m));
         self::assertSame(12, strlen($m[1]));
         self::assertTrue(password_verify($m[1], (string) $owner->getPasswordHash()));
+        // The email must not claim a sign-out that no longer happens.
+        self::assertStringNotContainsString('signed out', $sent[0]['text_body']);
+        self::assertStringNotContainsString('signed out', $sent[0]['html_body']);
+        self::assertStringContainsString('contact 3bayti support', $sent[0]['text_body']);
 
         // Audit: override on the owner, with reason, never the secret.
         self::assertCount(1, $this->recordedAuditLogs);
@@ -114,6 +121,7 @@ final class ResetVendorPasswordControllerTest extends HttpTestCase
         self::assertSame('generate', $changes['mode']);
         self::assertSame(42, $changes['vendor_id']);
         self::assertTrue($changes['email_sent']);
+        self::assertSame(0, $changes['sessions_revoked']);
         $encoded = (string) json_encode($changes);
         self::assertStringNotContainsString($m[1], $encoded);
         self::assertStringNotContainsString((string) $owner->getPasswordHash(), $encoded);
@@ -136,7 +144,7 @@ final class ResetVendorPasswordControllerTest extends HttpTestCase
             'password is stored untrimmed',
         );
         self::assertTrue($owner->mustChangePassword());
-        self::assertSame(1, $this->revokeAllCalls);
+        self::assertSame(0, $this->revokeAllCalls, 'no session is ended');
 
         $sent = $this->mailer->sent();
         self::assertCount(1, $sent);
@@ -165,7 +173,7 @@ final class ResetVendorPasswordControllerTest extends HttpTestCase
         self::assertSame(200, $response->getStatusCode());
         self::assertFalse($this->jsonBody($response)['email_sent']);
         self::assertNotSame($oldHash, $owner->getPasswordHash());
-        self::assertSame(1, $this->revokeAllCalls);
+        self::assertSame(0, $this->revokeAllCalls, 'no session is ended');
         self::assertFalse($this->recordedAuditLogs[0]->getChanges()['email_sent']);
     }
 
@@ -418,6 +426,8 @@ final class ResetVendorPasswordControllerTest extends HttpTestCase
                 return 3;
             },
         );
+        // A vendor reset never ends a session in any form.
+        $refreshRepo->expects(self::never())->method('revokeFamily');
 
         $auditRepo = new class($this->recordedAuditLogs) extends \Doctrine\ORM\EntityRepository {
             public function __construct(private array &$sink) {}

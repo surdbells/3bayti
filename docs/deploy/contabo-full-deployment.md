@@ -293,9 +293,13 @@ REDIS_PORT=6379
 REDIS_PASSWORD=
 REDIS_DB=0
 
+# NEW install only: generate it. MIGRATING an existing install: COPY
+# JWT_SECRET (and JWT_ISSUER) from the old server's .env, see the warning
+# below this block.
 JWT_SECRET=<run: openssl rand -hex 32>
 JWT_ACCESS_TOKEN_TTL=900
-JWT_REFRESH_TOKEN_TTL=604800
+# 5 years, sliding. The API enforces this as a minimum; never set 604800.
+JWT_REFRESH_TOKEN_TTL=157680000
 JWT_ISSUER=3bayti-api
 
 # All browser origins allowed to call this API
@@ -334,9 +338,17 @@ NOON_VERIFY_SIGNATURE=true
 LOG_LEVEL=warning
 ```
 
+> **WARNING: migrating an EXISTING install? COPY `JWT_SECRET` and `JWT_ISSUER`, do NOT generate new ones.**
+> Every customer's refresh token is signed with the current `JWT_SECRET` and
+> carries the current `JWT_ISSUER`. A new secret (or a different issuer)
+> makes every existing token fail verification, which signs **every customer
+> out on every device** the moment traffic reaches the new server. Copy both
+> values verbatim from the old server's `apps/api/.env`. Generate a fresh
+> secret only for a brand-new install with no existing users.
+
 Generate secrets:
 ```bash
-# For APP_SECRET and JWT_SECRET:
+# For APP_SECRET and (new install only) JWT_SECRET:
 openssl rand -hex 32
 ```
 

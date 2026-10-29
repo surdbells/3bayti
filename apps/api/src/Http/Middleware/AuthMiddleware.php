@@ -157,10 +157,16 @@ final class AuthMiddleware implements MiddlewareInterface
         // pwd_changed_at staleness check. If the token has a
         // pwd_changed_at claim and the user's current value is
         // newer, the token is stale, reject.
+        //
+        // Compared in whole seconds: the claim is a unix timestamp, so a
+        // token minted right after a password change (change-password /
+        // reset-confirm return one) must not lose to the sub-second part
+        // of an in-memory DateTimeImmutable. (The DB column is stored in
+        // whole seconds, so a freshly loaded user compares the same way.)
         $userPwdChanged = $user->getPasswordChangedAt();
         $tokenPwdChanged = $claims->passwordChangedAt;
         if ($userPwdChanged !== null && $tokenPwdChanged !== null) {
-            if ($tokenPwdChanged < $userPwdChanged) {
+            if ($tokenPwdChanged->getTimestamp() < $userPwdChanged->getTimestamp()) {
                 return null;
             }
         } elseif ($userPwdChanged !== null) {

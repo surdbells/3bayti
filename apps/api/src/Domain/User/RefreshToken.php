@@ -22,12 +22,21 @@ use Doctrine\ORM\Mapping as ORM;
  * When an access token expires, the client calls /v3/auth/refresh
  * with its refresh token. We:
  *   1. Look up the refresh token by jti (jwt id) in this table
- *   2. Verify it's not expired AND not revoked
- *   3. Mark it revoked (single-use rotation per Decision A.6.1)
- *   4. Issue a new access + refresh token pair
+ *   2. Verify it's not expired AND its session has not ended (a token
+ *      revoked only by ROTATION is still accepted, see RefreshController)
+ *   3. Mark it revoked with reason 'rotated'
+ *   4. Issue a new access + refresh token pair in the SAME family
  *
- * Logout = mark revoked. Logout-everywhere = mark all of a user's
- * tokens revoked (Decision A.6.2). Password change = same.
+ * Session families
+ * ----------------
+ * Every sign-in starts a new family (family_id = the first token's
+ * jti) and every rotation's replacement inherits it, so one family is
+ * one signed-in device/browser. Logout ends that device's family only
+ * (RefreshTokenRepository::revokeFamily); logout-everywhere ends every
+ * family of the user (revokeAllForUser). Nothing else ends a session:
+ * not a password change/reset, an admin reset, a refresh-token replay
+ * or an account merge. Product rule: a customer stays signed in until
+ * they explicitly log out.
  *
  * Storage details
  * ---------------
@@ -47,8 +56,15 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(columns: ['user_id'], name: 'idx_refresh_tokens_user')]
 #[ORM\Index(columns: ['jti'], name: 'idx_refresh_tokens_jti')]
 #[ORM\Index(columns: ['expires_at'], name: 'idx_refresh_tokens_expiry')]
+#[ORM\Index(columns: ['family_id'], name: 'idx_refresh_tokens_family')]
 class RefreshToken
 {
+    /**
+     * The one revoke reason that keeps a token re-issuable (see
+     * wasRotated). Written by RefreshController on every rotation.
+     */
+    public const REASON_ROTATED = 'rotated';
+
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     #[ORM\Column(type: 'bigint')]
@@ -66,6 +82,24 @@ class RefreshToken
      */
     #[ORM\Column(type: 'string', length: 36, unique: true)]
     private string $jti;
+
+    /**
+     * Session family: the jti of the token that started this sign-in
+     * (login, OTP, social, a password reset made while signed out). Every
+     * rotation copies it onto the replacement row, and so do a password
+     * change, a reset made while signed in and a phone-claim merge (from
+     * the access token's `sid` claim), so all the tokens one device has
+     * ever held share it. Logout revokes the whole family at once, which
+     * stops an older, already-rotated token of a logged-out device from
+     * being re-issued.
+     *
+     * NULL only on rows written before the column existed
+     * (Version20261029000001 deliberately does not backfill them). Such a
+     * row is its own family: read it through getFamilyId(), which falls
+     * back to the jti, as RefreshTokenRepository::revokeFamily() does.
+     */
+    #[ORM\Column(name: 'family_id', type: 'string', length: 36, nullable: true)]
+    private ?string $familyId = null;
 
     /**
      * SHA-256 hash of the refresh token string. Used to detect
@@ -87,25 +121,30 @@ class RefreshToken
     private DateTimeImmutable $issuedAt;
 
     /**
-     * When this token expires (issued_at + JWT_REFRESH_TOKEN_TTL,
-     * which defaults to 7 days per Decision A.6.1).
+     * When this token expires (issued_at + JWT_REFRESH_TOKEN_TTL, 5 years,
+     * enforced as a floor in config/di.php). Sliding: every rotation
+     * issues the replacement with a fresh 5-year expiry.
      */
     #[ORM\Column(name: 'expires_at', type: 'datetimetz_immutable')]
     private DateTimeImmutable $expiresAt;
 
     /**
      * When this token was revoked, or null if still active.
-     * Single-use rotation: tokens are revoked the moment they're
-     * used to refresh. Logout sets this for the active token;
-     * logout-everywhere sets it for all of a user's tokens.
+     * Rotation sets it (reason 'rotated') the moment a token is used to
+     * refresh; a rotated token can still be re-presented and is re-issued.
+     * Logout sets it for the device's whole family; logout-everywhere
+     * for all of a user's tokens.
      */
     #[ORM\Column(name: 'revoked_at', type: 'datetimetz_immutable', nullable: true)]
     private ?DateTimeImmutable $revokedAt = null;
 
     /**
-     * Why was the token revoked? Useful for security audits.
-     * Values: 'logout', 'logout_all', 'rotated', 'password_changed',
-     * 'admin_force_logout', 'expired_cleanup'.
+     * Why was the token revoked? Only 'rotated' keeps the token usable
+     * (it is re-issued); every other value means the session is over.
+     * Written today: 'rotated', 'logout', 'logout_all'.
+     * Historical (no longer written, may remain on old rows):
+     * 'reuse_detected', 'password_changed', 'admin_password_reset',
+     * 'account_merged_into_<id>'.
      */
     #[ORM\Column(name: 'revoked_reason', type: 'string', length: 30, nullable: true)]
     private ?string $revokedReason = null;
@@ -136,9 +175,12 @@ class RefreshToken
         DateTimeImmutable $expiresAt,
         ?string $issuedIp = null,
         ?string $userAgent = null,
+        ?string $familyId = null,
     ) {
         $this->user = $user;
         $this->jti = $jti;
+        // No family given = a fresh sign-in, which starts its own family.
+        $this->familyId = $familyId ?? $jti;
         $this->tokenHash = $tokenHash;
         $this->expiresAt = $expiresAt;
         $this->issuedIp = $issuedIp;
@@ -149,6 +191,7 @@ class RefreshToken
     public function getId(): ?int                      { return $this->id; }
     public function getUser(): User                    { return $this->user; }
     public function getJti(): string                   { return $this->jti; }
+    public function getFamilyId(): string              { return $this->familyId ?? $this->jti; }
     public function getTokenHash(): string             { return $this->tokenHash; }
     public function getIssuedAt(): DateTimeImmutable   { return $this->issuedAt; }
     public function getExpiresAt(): DateTimeImmutable  { return $this->expiresAt; }
@@ -161,24 +204,20 @@ class RefreshToken
     public function isExpired(): bool { return $this->expiresAt <= new DateTimeImmutable(); }
 
     /**
-     * True when this token was revoked specifically by ROTATION (single-use
-     * refresh) within the last $graceSeconds.
+     * True when this token was revoked by ROTATION (single-use refresh),
+     * no matter how long ago.
      *
-     * This distinguishes an innocent lost-response retry, the same client
-     * re-presenting a token that was just rotated because it never received
-     * or persisted the replacement (dropped connection, app suspended
-     * mid-refresh), from genuine refresh-token reuse/theft. Only the
-     * 'rotated' reason qualifies: a token revoked by logout / logout_all /
-     * password_changed / admin_force_logout is deliberately dead and must
-     * never be honoured, regardless of how recently it happened.
+     * Such a token is re-issued when re-presented: it is the same client
+     * retrying after the rotation response was lost (dropped connection,
+     * app suspended or killed mid-refresh, days in the background), a
+     * parallel refresh from a second tab, or a stale copy of the session
+     * the app wrote back. None of those may sign the customer out. Every
+     * other reason (logout, logout_all and the historical ones) means the
+     * session is over.
      */
-    public function wasRotatedWithin(int $graceSeconds): bool
+    public function wasRotated(): bool
     {
-        if ($this->revokedReason !== 'rotated' || $this->revokedAt === null) {
-            return false;
-        }
-        $elapsed = (new DateTimeImmutable())->getTimestamp() - $this->revokedAt->getTimestamp();
-        return $elapsed >= 0 && $elapsed <= $graceSeconds;
+        return $this->revokedAt !== null && $this->revokedReason === self::REASON_ROTATED;
     }
 
     /** Token is usable iff not revoked AND not expired. */
@@ -198,8 +237,9 @@ class RefreshToken
     }
 
     /**
-     * Mark this token revoked. After this, any attempt to refresh
-     * with it gets a 401. Reason is recorded for audit.
+     * Mark this token revoked. Reason 'rotated' keeps it re-issuable
+     * (see wasRotated); with any other reason a refresh with it gets a
+     * 401. Reason is recorded for audit.
      */
     public function revoke(string $reason): void
     {

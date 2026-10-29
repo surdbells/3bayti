@@ -332,6 +332,82 @@ final class UserEntityTest extends TestCase
         self::assertSame('logout', $token->getRevokedReason());
     }
 
+    #[Test]
+    public function refreshTokenStartsItsOwnFamilyByDefault(): void
+    {
+        // A fresh sign-in (no family passed) starts a new family: its jti.
+        $token = new RefreshToken(
+            $this->makeUser(),
+            'jti-first',
+            hash('sha256', 'r'),
+            (new DateTimeImmutable())->modify('+5 years'),
+        );
+
+        self::assertSame('jti-first', $token->getFamilyId());
+    }
+
+    #[Test]
+    public function refreshTokenJoinsAGivenFamily(): void
+    {
+        // A rotation's replacement inherits the presented token's family.
+        $token = new RefreshToken(
+            $this->makeUser(),
+            'jti-second',
+            hash('sha256', 'r'),
+            (new DateTimeImmutable())->modify('+5 years'),
+            familyId: 'jti-first',
+        );
+
+        self::assertSame('jti-first', $token->getFamilyId());
+        self::assertSame('jti-second', $token->getJti());
+    }
+
+    #[Test]
+    public function refreshTokenWithoutStoredFamilyFallsBackToJti(): void
+    {
+        // A row written before family_id existed hydrates with NULL.
+        $token = new RefreshToken(
+            $this->makeUser(),
+            'jti-legacy',
+            hash('sha256', 'r'),
+            (new DateTimeImmutable())->modify('+1 year'),
+        );
+        (new \ReflectionProperty(RefreshToken::class, 'familyId'))->setValue($token, null);
+
+        self::assertSame('jti-legacy', $token->getFamilyId());
+    }
+
+    #[Test]
+    public function refreshTokenWasRotatedAtAnyAgeButOnlyForTheRotatedReason(): void
+    {
+        $make = fn (): RefreshToken => new RefreshToken(
+            $this->makeUser(),
+            'j',
+            hash('sha256', 'r'),
+            (new DateTimeImmutable())->modify('+5 years'),
+        );
+
+        $active = $make();
+        self::assertFalse($active->wasRotated(), 'an active token was not rotated');
+
+        $rotated = $make();
+        $rotated->revoke('rotated');
+        self::assertTrue($rotated->wasRotated());
+
+        // No grace window any more: a rotation from a year ago still counts.
+        $old = $make();
+        $old->revoke('rotated');
+        (new \ReflectionProperty(RefreshToken::class, 'revokedAt'))
+            ->setValue($old, (new DateTimeImmutable())->modify('-400 days'));
+        self::assertTrue($old->wasRotated());
+
+        foreach (['logout', 'logout_all', 'reuse_detected', 'password_changed', 'admin_password_reset'] as $reason) {
+            $ended = $make();
+            $ended->revoke($reason);
+            self::assertFalse($ended->wasRotated(), "'{$reason}' ends the session");
+        }
+    }
+
     // -------------------------------------------------------------------
     // OtpAttempt
     // -------------------------------------------------------------------

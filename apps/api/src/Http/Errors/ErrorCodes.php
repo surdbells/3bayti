@@ -53,7 +53,12 @@ final class ErrorCodes
     /** User exists but phone hasn't been OTP-verified yet (registration incomplete). */
     public const AUTH_PHONE_NOT_VERIFIED = 'AUTH_PHONE_NOT_VERIFIED';
 
-    /** Refresh token unknown, already revoked, or expired in DB. */
+    /**
+     * The refresh token's session is over: logged out (device family or
+     * logout-all), account deactivated/deleted, expired, or unknown. The
+     * ONE definitive "end the local session" signal for clients; a rotated
+     * token is NOT rejected (RefreshController re-issues it).
+     */
     public const AUTH_REFRESH_TOKEN_INVALID = 'AUTH_REFRESH_TOKEN_INVALID';
 
     // -------------------------------------------------------------------

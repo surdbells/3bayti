@@ -48,6 +48,12 @@ use Ramsey\Uuid\Uuid;
  *   token's pwd_changed_at to the user's current value and rejects
  *   tokens that are stale).
  *
+ * - Access tokens also carry `sid`, the session family of the refresh
+ *   token issued with them (see RefreshToken). Endpoints that hand a
+ *   signed-in device a new pair (change password, phone-claim merge)
+ *   put it in that family, so the device's explicit logout still ends
+ *   every token it ever held.
+ *
  * Error model
  * -----------
  * verifyAccessToken / verifyRefreshToken return a TokenClaims on
@@ -90,21 +96,31 @@ final class JwtService
     /**
      * Issue a fresh access + refresh token pair for a user.
      * Caller is responsible for persisting the refresh token's hash
-     * via RefreshTokenRepository.
+     * via RefreshTokenRepository, in session family $pair->familyId.
+     *
+     * $familyId is the device's existing session family (refresh
+     * rotation, or a password change / account merge made from a
+     * signed-in device). Null starts a new family: the new refresh
+     * token's jti, the same default RefreshToken applies. Either way the
+     * access token carries it as the `sid` claim, so a later request
+     * from that device can name its family (TokenClaims::$sessionFamilyId).
      */
-    public function issueTokenPair(User $user, ?int $impersonatorId = null): TokenPair
+    public function issueTokenPair(User $user, ?int $impersonatorId = null, ?string $familyId = null): TokenPair
     {
         $now = new DateTimeImmutable();
+
+        // Refresh jti first: a new session family is named after it.
+        $refreshJti = (string) Uuid::uuid7();
+        $familyId ??= $refreshJti;
 
         // Access token, short-lived, role-laden, stateless.
         $accessExp = $now->modify("+{$this->settings->accessTtlSeconds} seconds");
         $accessJti = (string) Uuid::uuid7();
-        $accessPayload = $this->buildAccessPayload($user, $now, $accessExp, $accessJti, $impersonatorId);
+        $accessPayload = $this->buildAccessPayload($user, $now, $accessExp, $accessJti, $impersonatorId, $familyId);
         $accessToken = JWT::encode($accessPayload, $this->settings->signingSecret, self::ALGORITHM);
 
         // Refresh token, long-lived, opaque, server-validated.
         $refreshExp = $now->modify("+{$this->settings->refreshTtlSeconds} seconds");
-        $refreshJti = (string) Uuid::uuid7();
         $refreshPayload = $this->buildRefreshPayload($user, $now, $refreshExp, $refreshJti, $impersonatorId);
         $refreshToken = JWT::encode($refreshPayload, $this->settings->signingSecret, self::ALGORITHM);
 
@@ -114,6 +130,7 @@ final class JwtService
             refreshToken: $refreshToken,
             refreshTokenExpiresAt: $refreshExp,
             refreshTokenJti: $refreshJti,
+            familyId: $familyId,
         );
     }
 
@@ -241,7 +258,8 @@ final class JwtService
         DateTimeImmutable $iat,
         DateTimeImmutable $exp,
         string $jti,
-        ?int $impersonatorId = null,
+        ?int $impersonatorId,
+        string $familyId,
     ): array {
         $payload = [
             'iss' => $this->settings->issuer,
@@ -254,6 +272,9 @@ final class JwtService
             // 3bayti claims
             'email' => $user->getEmail(),
             'roles' => $this->extractActiveRoles($user),
+            // Session family of the refresh token issued alongside, so an
+            // authenticated request can keep the device in ONE family.
+            'sid' => $familyId,
         ];
 
         // pwd_changed_at, only present when the user has actually
@@ -409,6 +430,14 @@ final class JwtService
             $impersonatorId = $candidate > 0 ? $candidate : null;
         }
 
+        // sid, the session family (access tokens only; absent on tokens
+        // minted before the claim existed). Bounded like the family_id
+        // column it is written to.
+        $sessionFamilyId = isset($decoded->sid) && is_string($decoded->sid)
+            && $decoded->sid !== '' && strlen($decoded->sid) <= 36
+            ? $decoded->sid
+            : null;
+
         return new TokenClaims(
             issuer: $this->settings->issuer,
             userId: $userId,
@@ -420,6 +449,7 @@ final class JwtService
             passwordChangedAt: $passwordChangedAt,
             roles: $roles,
             impersonatorId: $impersonatorId,
+            sessionFamilyId: $sessionFamilyId,
         );
     }
 }

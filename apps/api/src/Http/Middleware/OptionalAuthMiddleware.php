@@ -71,11 +71,12 @@ final class OptionalAuthMiddleware implements MiddlewareInterface
             return $handler->handle($request);
         }
 
-        // pwd_changed_at staleness, same logic as AuthMiddleware.
+        // pwd_changed_at staleness, same logic (and whole-second
+        // comparison) as AuthMiddleware.
         $userPwdChanged = $user->getPasswordChangedAt();
         $tokenPwdChanged = $claims->passwordChangedAt;
         if ($userPwdChanged !== null) {
-            if ($tokenPwdChanged === null || $tokenPwdChanged < $userPwdChanged) {
+            if ($tokenPwdChanged === null || $tokenPwdChanged->getTimestamp() < $userPwdChanged->getTimestamp()) {
                 return $handler->handle($request);
             }
         }

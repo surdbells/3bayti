@@ -132,8 +132,11 @@ return function (App $app): void {
 
         // M1.4.5, token lifecycle
         $group->post('/refresh', RefreshController::class); // anonymous (refresh token in body)
+        // Bearer OPTIONAL: the refresh token in the body is the credential.
+        // Clients log out fire-and-forget after clearing their local
+        // session, often with an expired access token (LogoutController).
         $group->post('/logout', LogoutController::class)
-            ->add(AuthMiddleware::class);
+            ->add(\Bayti\Api\Http\Middleware\OptionalAuthMiddleware::class);
         $group->post('/logout-all', LogoutAllController::class)
             ->add(AuthMiddleware::class);
     });
@@ -231,9 +234,9 @@ return function (App $app): void {
         );
 
         // M3.1.1f, change password (authenticated, re-auth via current_password).
-        // Mirrors /v3/auth/reset/confirm's session-handling pattern:
-        // revokes all refresh tokens + issues a fresh pair on success.
-        // See ChangePasswordController docblock for the full rationale.
+        // Mirrors /v3/auth/reset/confirm's session-handling pattern: issues a
+        // fresh pair on success and signs NO device out (stay signed in until
+        // you log out). See ChangePasswordController docblock for the rationale.
         $group->patch('/password', ChangePasswordController::class);
 
         // Social sign-in, connected Google/Apple accounts management.
@@ -844,7 +847,7 @@ return function (App $app): void {
         $group->post('/vendors/{id:[0-9]+}/impersonate',
             \Bayti\Api\Http\Controllers\Admin\Vendor\ImpersonateVendorController::class)->add($perm->for('vendors.impersonate'));
         // Reset the vendor owner's password (generated + emailed, or admin-set).
-        // Revokes every session and forces a change on next sign-in.
+        // Forces a password change; signs no device out (product rule).
         $group->post('/vendors/{id:[0-9]+}/reset-password',
             \Bayti\Api\Http\Controllers\Admin\Vendor\ResetVendorPasswordController::class)->add($perm->for('vendors.reset_password'));
 

@@ -30,6 +30,13 @@ final class TokenPair
         public readonly string $refreshToken,
         public readonly DateTimeImmutable $refreshTokenExpiresAt,
         public readonly string $refreshTokenJti,
+        /**
+         * Session family the refresh token belongs to (also the access
+         * token's `sid` claim): the device's existing family, or
+         * $refreshTokenJti for a new sign-in. Persist the refresh row with
+         * it (RefreshToken's familyId).
+         */
+        public readonly string $familyId,
     ) {
     }
 

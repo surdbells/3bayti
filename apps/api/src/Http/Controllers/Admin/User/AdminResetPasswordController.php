@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Admin\User;
 
-use Bayti\Api\Domain\User\RefreshToken;
-use Bayti\Api\Domain\User\RefreshTokenRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Admin\User\Dto\AdminResetPasswordInput;
@@ -28,17 +26,18 @@ use Psr\Log\LoggerInterface;
  * self-service change, this does not require the target's current password -
  * an admin is overriding it (locked-out staff, compromised credential).
  *
- * Security properties (matching the self-service flow):
- *   1. setPasswordHash() bumps password_changed_at, which invalidates every
- *      existing ACCESS token for the target on their next request.
- *   2. All of the target's REFRESH tokens are revoked, so they can't mint a
- *      new access token, every session is terminated.
- *   Together: an admin reset fully kicks the target out everywhere, which is
- *   the correct default for a credential-rotation / lockout-recovery action.
+ * Sessions (matching the self-service flow):
+ *   1. setPasswordHash() bumps password_changed_at. The target's existing
+ *      ACCESS tokens fail the staleness check once and their clients
+ *      recover transparently via /v3/auth/refresh.
+ *   2. No REFRESH token is revoked. Product rule: a customer stays signed
+ *      in on every device until they explicitly log out, so the reset only
+ *      changes the password used for the NEXT sign-in. Ending sessions is
+ *      the target's own /v3/auth/logout-all.
  *
- * The write is wrapped in a single transaction so the hash change and token
- * revocation commit atomically. Guarded by AdminAuthMiddleware + Auth; the
- * acting admin and target are recorded in the audit log.
+ * The write is wrapped in a single transaction. Guarded by
+ * AdminAuthMiddleware + Auth; the acting admin and target are recorded in
+ * the audit log.
  *
  * Returns 200 with the target's public profile (no tokens, the admin is not
  * the target, so there is nothing to re-issue for this session).
@@ -74,16 +73,12 @@ final class AdminResetPasswordController
 
         $newHash = password_hash($input->password, PASSWORD_BCRYPT);
 
-        /** @var RefreshTokenRepository $refreshRepo */
-        $refreshRepo = $this->em->getRepository(RefreshToken::class);
-
-        $this->em->wrapInTransaction(function () use ($target, $users, $refreshRepo, $newHash): void {
-            // 1. New hash (also bumps password_changed_at → access tokens die).
+        $this->em->wrapInTransaction(function () use ($target, $users, $newHash): void {
+            // New hash (also bumps password_changed_at; stale access tokens
+            // recover via refresh). Sessions are deliberately left alone,
+            // see class docblock.
             $target->setPasswordHash($newHash);
             $users->save($target, flush: false);
-
-            // 2. Revoke all refresh tokens → no new access tokens can be minted.
-            $refreshRepo->revokeAllForUser($target, 'admin_password_reset');
 
             $this->em->flush();
         });

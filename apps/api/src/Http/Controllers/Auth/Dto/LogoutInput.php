@@ -9,10 +9,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * Input for POST /v3/auth/logout.
  *
- * Single field, the refresh token to revoke. The access token in
- * the Authorization header identifies the user; the refresh token
- * here identifies WHICH session to kill (a user with 5 logged-in
- * devices revokes the current device's refresh token).
+ * Single field, the refresh token whose session to end. It identifies
+ * WHICH device's session family to revoke (a user signed in on 5
+ * devices ends only the current one) and is itself the credential; the
+ * Authorization header is optional (see LogoutController).
  *
  * Why we don't infer the refresh token from server state
  * ------------------------------------------------------

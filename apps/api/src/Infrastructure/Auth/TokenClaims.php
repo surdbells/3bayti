@@ -34,6 +34,9 @@ use DateTimeImmutable;
  *   roles            - array of active role flags, e.g.
  *                      ['customer', 'vendor']. Middleware uses this
  *                      for role checks without a DB query.
+ *   sid              - session family of the refresh token issued
+ *                      alongside (user_refresh_tokens.family_id), so a
+ *                      new pair handed to this device can join it.
  *
  * Why pwd_changed_at as a claim
  * -----------------------------
@@ -64,6 +67,12 @@ final class TokenClaims
         public readonly array $roles = [],
         /** Admin user id when this token was minted for an impersonation session. */
         public readonly ?int $impersonatorId = null,
+        /**
+         * `sid` claim: the session family of the refresh token this access
+         * token was issued with. Null for tokens minted before the claim
+         * existed (and for refresh tokens, which never carry it).
+         */
+        public readonly ?string $sessionFamilyId = null,
     ) {
     }
 

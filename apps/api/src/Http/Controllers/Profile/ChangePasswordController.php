@@ -17,6 +17,8 @@ use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\UserSerializer;
 use Bayti\Api\Http\Validator\RequestValidator;
 use Bayti\Api\Infrastructure\Auth\JwtService;
+use Bayti\Api\Infrastructure\Auth\TokenClaims;
+use Bayti\Api\Infrastructure\Auth\TokenPair;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -46,39 +48,31 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Session handling after successful change
  * ----------------------------------------
- * Following the same pattern as /v3/auth/reset/confirm:
+ * Product rule: a customer stays signed in until they explicitly log
+ * out, so a password change ends NO session on any device.
  *
  *   1. user.password_changed_at is bumped (by User::setPasswordHash).
- *      This invalidates ALL access tokens for this user via the
- *      AuthMiddleware pwd_changed_at staleness check on the NEXT
- *      request.
+ *      Access tokens minted before the change fail the AuthMiddleware
+ *      pwd_changed_at staleness check once (401 AUTH_INVALID_TOKEN);
+ *      each client recovers transparently via /v3/auth/refresh, whose
+ *      new access token carries the new value.
  *
- *   2. All existing refresh tokens are revoked (including the
- *      requesting client's).
+ *   2. No refresh token is revoked. Every other device stays signed in.
  *
- *   3. A fresh token pair is issued and returned in the response.
- *      The user stays logged in on THIS device; all other sessions
- *      are kicked out.
+ *   3. A fresh token pair is issued AFTER the hash change and returned,
+ *      so its access token already carries the new pwd_changed_at and
+ *      is valid on first use. It joins the calling device's session
+ *      family (the access token's sid claim), so the device still has
+ *      ONE family: the client swaps to the new pair, its previous
+ *      tokens go unused, and its later explicit logout (which ends the
+ *      family) ends those too. Access tokens minted before sid existed
+ *      fall back to a new family.
  *
- * This is the security-correct default: if someone hijacked the
- * account on another device, changing the password kicks them out.
+ * Signing other devices out is a separate, explicit choice:
+ * POST /v3/auth/logout-all.
  *
- * Deviation from 0e.2 contract
- * ----------------------------
- * The 0e.2 contract specified:
- *   - status 204 (no content)
- *   - "Does NOT revoke other sessions"
- *
- * Both were based on an incorrect assumption: the contract author
- * (me, when designing 0e.2) didn't know about the pwd_changed_at
- * token-invalidation mechanism. In practice, changing the hash
- * always invalidates the current access token on next request, so
- * "204 + don't revoke other sessions" would still kick the user
- * out, just inconsistently.
- *
- * Mirroring /v3/auth/reset/confirm gives consistent UX, consistent
- * security properties, and a single audit trail. M3.1.1h will
- * reconcile the 0e.2 contract text.
+ * Response shape: 200 + token pair (not the 0e.2 contract's 204), kept
+ * identical to /v3/auth/reset/confirm so clients handle both the same.
  *
  * Request body
  * ------------
@@ -214,37 +208,47 @@ final class ChangePasswordController
         // log hashes.
         $beforeSnapshot = $this->minimalSnapshot($user);
 
-        // Pre-compute fresh token pair + new bcrypt hash OUTSIDE the
-        // transaction so the transaction is fast (the hash itself
-        // is bcrypt-slow). Doing it inside would hold a row lock
-        // for tens of ms.
-        $pair = $this->jwt->issueTokenPair($user);
+        // Pre-compute the new bcrypt hash OUTSIDE the transaction so the
+        // transaction is fast (bcrypt is slow). Doing it inside would
+        // hold a row lock for tens of ms.
         $newPasswordHash = password_hash($input->new_password, PASSWORD_BCRYPT);
         $clientIp = $this->extractIp($request);
         $userAgent = $this->extractUserAgent($request);
 
+        // This device's session family, from the access token's sid claim
+        // (null for tokens minted before the claim existed: the new pair
+        // then starts a family of its own).
+        $claims = $request->getAttribute(AuthMiddleware::ATTR_CLAIMS);
+        $familyId = $claims instanceof TokenClaims ? $claims->sessionFamilyId : null;
+
         // All mutations in one transaction. Mirror reset-confirm's pattern.
-        $this->em->wrapInTransaction(function () use (
+        /** @var TokenPair $pair */
+        $pair = $this->em->wrapInTransaction(function () use (
             $user,
-            $pair,
             $newPasswordHash,
             $clientIp,
             $userAgent,
-        ): void {
-            // setPasswordHash() also bumps user.password_changed_at,
-            // which makes ALL old access tokens stale via the
-            // AuthMiddleware pwd_changed_at check on the next request.
+            $familyId,
+        ): TokenPair {
+            // setPasswordHash() also bumps user.password_changed_at.
+            // Older access tokens fail the AuthMiddleware staleness check
+            // once and their clients recover via /refresh. No refresh
+            // token is revoked: every other device stays signed in.
             $user->setPasswordHash($newPasswordHash);
 
-            // Revoke all refresh tokens, including the requesting
-            // client's. We then issue a fresh pair, so the user stays
-            // logged in on THIS device. All others are kicked out.
-            // Same security posture as reset-confirm.
+            // Issue the pair AFTER the hash change so the access token
+            // carries the NEW pwd_changed_at and passes AuthMiddleware on
+            // first use. (Issued before, it would carry the old value and
+            // be rejected as stale on the very next request.) The claim
+            // is whole seconds, and so is the stored timestamp.
+            $pair = $this->jwt->issueTokenPair($user, familyId: $familyId);
+
             /** @var RefreshTokenRepository $refreshRepo */
             $refreshRepo = $this->em->getRepository(RefreshToken::class);
-            $refreshRepo->revokeAllForUser($user, 'password_changed');
 
-            // Persist the new refresh-token row for THIS session.
+            // Persist the new refresh-token row for THIS session, in the
+            // device's own family so its later logout ends the tokens it
+            // held before the change too.
             $refreshRow = new RefreshToken(
                 user: $user,
                 jti: $pair->refreshTokenJti,
@@ -252,10 +256,13 @@ final class ChangePasswordController
                 expiresAt: $pair->refreshTokenExpiresAt,
                 issuedIp: $clientIp,
                 userAgent: $userAgent,
+                familyId: $pair->familyId,
             );
             $refreshRepo->save($refreshRow, flush: false);
 
             $this->em->flush();
+
+            return $pair;
         });
 
         // Audit AFTER flush so the change is durable when the row lands.

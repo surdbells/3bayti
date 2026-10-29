@@ -35,24 +35,20 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Side effects
  * ------------
- *   - revokeAllForUser(user, 'logout_all') sets revoked_at on every
- *     row where user matches AND revoked_at IS NULL. After this,
- *     every refresh token the user holds (including the one the
- *     calling client is using) is invalid; the next /refresh call
- *     from any device returns 401.
+ *   - revokeAllForUser(user, 'logout_all') revokes every still-active
+ *     row of the user AND relabels every 'rotated' row as 'logout_all',
+ *     so no token the user ever held stays re-issuable. After this,
+ *     every refresh token (including the calling client's) is dead;
+ *     the next /refresh from any device returns 401.
  *
  *   - Access tokens are NOT revoked here (same reasoning as /logout):
  *     they're stateless. The user remains authenticated for the
- *     rest of their access token's TTL (~15 minutes max). If
- *     immediate access-token revocation matters, the user should
- *     also change their password (which bumps password_changed_at
- *     and invalidates access tokens via AuthMiddleware staleness
- *     check).
+ *     rest of their access token's TTL (~15 minutes max).
  *
- * Why no separate /logout-all-and-change-password
- * -----------------------------------------------
- * That's just /reset/confirm, already does both. /logout-all is
- * for the "I trust my password but want to reset all sessions" case.
+ * This is the ONLY action that ends sessions on other devices, and it is
+ * always the user's own explicit choice. Password change/reset, admin
+ * password resets and account merges deliberately leave every session
+ * signed in (product rule: stay signed in until you log out).
  */
 final class LogoutAllController
 {

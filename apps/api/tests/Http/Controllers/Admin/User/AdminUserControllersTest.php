@@ -35,7 +35,8 @@ use Psr\Http\Message\ResponseInterface;
  *   - Create returns 409 on a taken email.
  *   - Create returns 422 on validation errors (missing name, short pw).
  *   - Create requires admin tier, 403 for a non-admin, 401 unauthenticated.
- *   - Password reset re-hashes and revokes ALL the target's refresh tokens.
+ *   - Password reset re-hashes and revokes NONE of the target's sessions
+ *     (product rule: stay signed in until you log out).
  *   - Password reset returns 404 for an unknown target.
  *   - Password reset requires admin tier.
  */
@@ -257,7 +258,7 @@ final class AdminUserControllersTest extends HttpTestCase
     // ----------------------------------------------------------------
 
     #[Test]
-    public function resetRehashesAndRevokesSessions(): void
+    public function resetRehashesAndSignsNoDeviceOut(): void
     {
         $admin = $this->makeAdmin();
         $target = $this->makeUser(id: 55, email: 'locked@bayti.example', passwordPlain: 'oldPass!');
@@ -274,8 +275,11 @@ final class AdminUserControllersTest extends HttpTestCase
             password_verify('brandN3wPass!', $target->getPasswordHash()),
             'new password verifies',
         );
-        self::assertSame(1, $this->revokeAllCalls, 'all refresh tokens revoked once');
-        self::assertSame('admin_password_reset', $this->lastRevokeReason);
+        // Product rule: the target stays signed in on every device; the reset
+        // only changes the password for the next sign-in.
+        self::assertSame(0, $this->revokeAllCalls, 'no session is ended');
+        self::assertNull($this->lastRevokeReason);
+        self::assertNotNull($target->getPasswordChangedAt());
     }
 
     #[Test]
@@ -401,6 +405,8 @@ final class AdminUserControllersTest extends HttpTestCase
                 return 1;
             },
         );
+        // An admin reset never ends a session in any form.
+        $refreshRepo->expects(self::never())->method('revokeFamily');
 
         // The 200 response serializes the target via publicProfile(), which
         // reads the user's vendor(s) for store flags — stub an empty set.

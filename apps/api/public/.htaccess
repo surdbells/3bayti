@@ -17,6 +17,17 @@
 
 RewriteEngine On
 
+# Hand the Authorization header (the bearer access token) to PHP. Apache
+# with PHP-FPM / CGI strips it by default; the aaPanel vhost restores it
+# with SetEnvIf, but if that vhost line is ever lost every authenticated
+# request would 401 (AUTH_MISSING_TOKEN) and apps would keep refreshing.
+# This makes the passthrough part of the app. After the index.php rewrite
+# below Apache exposes it as REDIRECT_HTTP_AUTHORIZATION, which slim/psr7
+# (Headers::parseAuthorizationHeader) reads when getallheaders() has no
+# Authorization. Harmless when the header is already passed through.
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
 # Pass requests for real files through directly. This is what allows
 # /favicon.ico (or any future static asset placed here) to work without
 # going through Slim. The check is "if the URI maps to an existing file,

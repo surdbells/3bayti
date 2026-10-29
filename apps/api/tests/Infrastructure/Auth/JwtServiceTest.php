@@ -172,6 +172,59 @@ final class JwtServiceTest extends TestCase
         self::assertSame($pair->refreshTokenJti, $claims->jti);
     }
 
+    #[Test]
+    public function newSignInStartsAFamilyNamedAfterTheRefreshJti(): void
+    {
+        // No family given = a fresh sign-in: the family is the new refresh
+        // token's jti (RefreshToken's own default), carried as `sid`.
+        $pair = $this->jwt->issueTokenPair($this->makeUser());
+
+        self::assertSame($pair->refreshTokenJti, $pair->familyId);
+        $access = $this->jwt->verifyAccessToken($pair->accessToken);
+        self::assertNotNull($access);
+        self::assertSame($pair->familyId, $access->sessionFamilyId);
+    }
+
+    #[Test]
+    public function givenFamilyIsCarriedInTheAccessTokenOnly(): void
+    {
+        $pair = $this->jwt->issueTokenPair($this->makeUser(), familyId: 'family-of-this-phone');
+
+        self::assertSame('family-of-this-phone', $pair->familyId);
+        self::assertNotSame('family-of-this-phone', $pair->refreshTokenJti);
+        self::assertSame(
+            'family-of-this-phone',
+            $this->jwt->verifyAccessToken($pair->accessToken)?->sessionFamilyId,
+        );
+        // Refresh tokens stay minimal; their family lives in the DB row.
+        self::assertNull($this->jwt->verifyRefreshToken($pair->refreshToken)?->sessionFamilyId);
+    }
+
+    #[Test]
+    public function accessTokenWithoutOrWithMalformedSidHasNoFamily(): void
+    {
+        // Tokens minted before the claim existed, and defensive bounds
+        // (the family_id column is VARCHAR(36)).
+        foreach ([null, '', 42, str_repeat('x', 37)] as $sid) {
+            $payload = [
+                'iss' => $this->settings->issuer,
+                'sub' => '1',
+                'aud' => JwtService::AUDIENCE_ACCESS,
+                'iat' => time(),
+                'exp' => time() + 900,
+                'jti' => (string) Uuid::uuid7(),
+            ];
+            if ($sid !== null) {
+                $payload['sid'] = $sid;
+            }
+            $token = JWT::encode($payload, $this->settings->signingSecret, JwtService::ALGORITHM);
+
+            $claims = $this->jwt->verifyAccessToken($token);
+            self::assertNotNull($claims);
+            self::assertNull($claims->sessionFamilyId, 'sid ' . var_export($sid, true));
+        }
+    }
+
     // -------------------------------------------------------------------
     // Verification, happy path
     // -------------------------------------------------------------------

@@ -10,6 +10,7 @@ use Bayti\Api\Domain\User\OtpAttemptRepository;
 use Bayti\Api\Domain\User\RefreshToken;
 use Bayti\Api\Domain\User\RefreshTokenRepository;
 use Bayti\Api\Domain\User\User;
+use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Auth\Dto\ResetConfirmInput;
 use Bayti\Api\Http\Controllers\Auth\ResetConfirmController;
 use Bayti\Api\Http\Errors\ErrorCodes;
@@ -21,6 +22,7 @@ use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
 #[CoversClass(ResetConfirmController::class)]
@@ -41,10 +43,13 @@ final class ResetConfirmControllerTest extends HttpTestCase
     // -------------------------------------------------------------------
 
     #[Test]
-    public function happyPathSetsNewPasswordRevokesAllAndIssuesTokens(): void
+    public function happyPathSetsNewPasswordIssuesTokensAndSignsNoDeviceOut(): void
     {
         $user = $this->makeUser(id: 7, passwordPlain: 'oldpass123');
         $oldHash = $user->getPasswordHash();
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        // A session on another device, minted before the reset.
+        $otherDevicePair = $jwt->issueTokenPair($user);
 
         $verificationId = $this->otpProvider->send($user->getPhone());
 
@@ -60,10 +65,9 @@ final class ResetConfirmControllerTest extends HttpTestCase
         $otpRepo->method('findByVerificationId')->willReturn($attempt);
 
         $refreshRepo = $this->createMock(RefreshTokenRepository::class);
-        // Logout-everywhere: revokeAllForUser MUST be called.
-        $refreshRepo->expects(self::once())
-            ->method('revokeAllForUser')
-            ->with($user, 'password_changed');
+        // Product rule: resetting a forgotten password signs NO device out.
+        $refreshRepo->expects(self::never())->method('revokeAllForUser');
+        $refreshRepo->expects(self::never())->method('revokeFamily');
         // New refresh row MUST be persisted.
         $refreshRepo->expects(self::once())->method('save');
 
@@ -72,11 +76,16 @@ final class ResetConfirmControllerTest extends HttpTestCase
         $vendorRepo = $this->createMock(EntityRepository::class);
         $vendorRepo->method('findBy')->willReturn([]);
 
+        // AuthMiddleware (for the /me round-trips below) loads the user.
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->willReturn($user);
+
         $em = $this->stubEm(fn ($em) =>
             $em->method('getRepository')->willReturnMap([
                 [OtpAttempt::class, $otpRepo],
                 [RefreshToken::class, $refreshRepo],
                 [Vendor::class, $vendorRepo],
+                [User::class, $userRepo],
             ]));
         $this->bind(EntityManagerInterface::class, $em);
 
@@ -104,10 +113,25 @@ final class ResetConfirmControllerTest extends HttpTestCase
         self::assertNotNull($user->getPasswordChangedAt());
 
         // Round-trip: issued token verifies via real JwtService
-        $jwt = $this->app->getContainer()->get(JwtService::class);
         $claims = $jwt->verifyAccessToken($body['access_token']);
         self::assertNotNull($claims);
         self::assertSame(7, $claims->userId);
+
+        // ... and is valid on FIRST use: it was issued after the hash change,
+        // so it carries the new pwd_changed_at.
+        $me = $this->handle($this->jsonRequest('GET', '/v3/auth/me', [], [
+            'Authorization' => 'Bearer ' . $body['access_token'],
+        ]));
+        self::assertSame(200, $me->getStatusCode());
+
+        // The other device's pre-reset access token gets one
+        // AUTH_INVALID_TOKEN (its client refreshes; its refresh token was
+        // never revoked).
+        $stale = $this->handle($this->jsonRequest('GET', '/v3/auth/me', [], [
+            'Authorization' => 'Bearer ' . $otherDevicePair->accessToken,
+        ]));
+        self::assertSame(401, $stale->getStatusCode());
+        self::assertSame('AUTH_INVALID_TOKEN', $this->jsonBody($stale)['error']['code']);
     }
 
     // -------------------------------------------------------------------
@@ -215,6 +239,95 @@ final class ResetConfirmControllerTest extends HttpTestCase
             'new_password',
             $this->jsonBody($response)['error']['details']['fields'],
         );
+    }
+
+    // -------------------------------------------------------------------
+    // Session family of the new pair
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function signedInCallerKeepsItsSessionFamily(): void
+    {
+        // A device still signed in as this user resets its password: the
+        // new pair joins that device's family, so its later logout also
+        // ends the tokens it held before the reset.
+        $user = $this->makeUser(id: 70, passwordPlain: 'oldpass123');
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $devicePair = $jwt->issueTokenPair($user);
+
+        $saved = $this->resetWithBearer($user, 'Bearer ' . $devicePair->accessToken);
+
+        self::assertCount(1, $saved);
+        self::assertSame($devicePair->familyId, $saved[0]->getFamilyId());
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function foreignCallers(): iterable
+    {
+        yield 'no bearer' => ['none'];
+        yield 'garbage bearer' => ['garbage'];
+        yield 'another user\'s access token' => ['other-user'];
+    }
+
+    #[Test]
+    #[DataProvider('foreignCallers')]
+    public function anonymousOrOtherUsersBearerStartsANewFamily(string $caller): void
+    {
+        $user = $this->makeUser(id: 71, passwordPlain: 'oldpass123');
+        $other = $this->makeUser(id: 72, email: 'other@example.com');
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+
+        $header = match ($caller) {
+            'none' => null,
+            'garbage' => 'Bearer not-a-jwt',
+            default => 'Bearer ' . $jwt->issueTokenPair($other)->accessToken,
+        };
+        $saved = $this->resetWithBearer($user, $header);
+
+        self::assertCount(1, $saved);
+        self::assertSame($saved[0]->getJti(), $saved[0]->getFamilyId());
+    }
+
+    /** @return list<RefreshToken> the refresh rows persisted by one reset */
+    private function resetWithBearer(User $user, ?string $authorization): array
+    {
+        $verificationId = $this->otpProvider->send($user->getPhone());
+        $attempt = new OtpAttempt(
+            verificationId: $verificationId,
+            phone: $user->getPhone(),
+            purpose: OtpAttempt::PURPOSE_PASSWORD_RESET,
+            expiresAt: (new DateTimeImmutable())->modify('+5 minutes'),
+            user: $user,
+        );
+        $otpRepo = $this->createMock(OtpAttemptRepository::class);
+        $otpRepo->method('findByVerificationId')->willReturn($attempt);
+
+        $saved = [];
+        $refreshRepo = $this->createMock(RefreshTokenRepository::class);
+        $refreshRepo->method('save')->willReturnCallback(
+            function (RefreshToken $t) use (&$saved): void {
+                $saved[] = $t;
+            },
+        );
+        $vendorRepo = $this->createMock(EntityRepository::class);
+        $vendorRepo->method('findBy')->willReturn([]);
+
+        $em = $this->stubEm(fn ($em) =>
+            $em->method('getRepository')->willReturnMap([
+                [OtpAttempt::class, $otpRepo],
+                [RefreshToken::class, $refreshRepo],
+                [Vendor::class, $vendorRepo],
+            ]));
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle($this->jsonRequest('POST', '/v3/auth/reset/confirm', [
+            'verification_id' => $verificationId,
+            'code' => '000000',
+            'new_password' => 'newSecret123',
+        ], $authorization === null ? [] : ['Authorization' => $authorization]));
+        self::assertSame(200, $response->getStatusCode());
+
+        return $saved;
     }
 
     #[Test]
