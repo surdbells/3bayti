@@ -277,19 +277,33 @@ export class PushManager {
   }
 
   /**
-   * Called on sign-out. Deactivates this device's token on the backend
-   * using the auth token that's still valid at logout time. No-op on
-   * non-native platforms or when there's no device token.
+   * Called on sign-out, after the session was cleared locally, with the
+   * access token captured before. Deactivates this device's token on the
+   * backend. That token lives ~15 minutes, so it has often expired by the
+   * time the customer taps "Log out": when the backend rejects the
+   * deactivation (an HTTP error, not a network failure) and
+   * `renewAccessToken` is given, it is asked ONCE for a fresh access token
+   * and the deactivation is retried with it. No-op (renewAccessToken never
+   * called) on non-native platforms or when there's no device token.
+   * Never throws.
    *
-   * @param authToken the (still-valid) auth token captured before the
-   *        session is cleared.
+   * @param authToken the auth token captured before the session was cleared.
+   * @param renewAccessToken resolves a fresh access token for the ended
+   *        session, or null when none can be had.
    */
-  async onSignedOut(authToken: string): Promise<void> {
-    if (!Capacitor.isNativePlatform() || this.deviceToken === null || authToken === '') {
+  async onSignedOut(authToken: string, renewAccessToken?: () => Promise<string | null>): Promise<void> {
+    if (!Capacitor.isNativePlatform() || this.deviceToken === null) {
       return;
     }
+    const deviceToken = this.deviceToken;
     try {
-      await this.registration.deactivate(authToken, this.deviceToken);
+      if (authToken !== '' && (await this.registration.deactivate(authToken, deviceToken))) {
+        return;
+      }
+      const fresh = renewAccessToken ? await renewAccessToken() : null;
+      if (fresh) {
+        await this.registration.deactivate(fresh, deviceToken);
+      }
     } catch (e) {
       console.warn('[push] onSignedOut deactivate failed', e);
     }

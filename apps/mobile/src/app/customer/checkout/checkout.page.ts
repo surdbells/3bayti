@@ -30,6 +30,7 @@ import {Router, RouterLink} from "@angular/router";
 import {ActionSheetController, AlertController} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { SessionStore } from '../../core/services/session-store.service';
 import { apiErrorMessage } from '../../core/http/api-error';
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
@@ -149,6 +150,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private clipboard: ClipboardService,
     private checkoutActivity: CheckoutActivityService,
+    private session: SessionStore,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -1573,10 +1575,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
               this.single_user.billing_area = this.update.area;
               this.single_user.billing_street = this.update.street;
               this.single_user.villa_number = this.update.villa_number;
-              Preferences.set({
-                key: 'user',
-                value: JSON.stringify(this.single_user)
-              });
+              void this.session.saveProfile(this.single_user);
               this.toggleAccordion();
             }else{
               this.ui_controls.is_updating = false

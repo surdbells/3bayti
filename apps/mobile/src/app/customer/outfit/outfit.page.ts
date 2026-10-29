@@ -15,6 +15,7 @@ import { Preferences } from '@capacitor/preferences';
 import { firstValueFrom } from 'rxjs';
 
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { SessionStore } from '../../core/services/session-store.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { TranslatePipe } from '../../translate.pipe';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -132,6 +133,7 @@ export class OutfitPage implements OnInit {
     private networkAdapter: MobileNetworkAdapter,
     private i18n: I18nService,
     private toast: AxNotificationService,
+    private session: SessionStore,
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -273,7 +275,10 @@ export class OutfitPage implements OnInit {
     if (this.pieces.length === 0 || this.isAdding) {
       return;
     }
-    if (!this.user?.token) {
+    // Gate on the LIVE session, not the ngOnInit copy (a cached page must not
+    // ask a signed-in customer to sign in). The adapter sends the live token.
+    // Only a session the store KNOWS is gone prompts (never a storage glitch).
+    if (this.session.isSignedOut()) {
       this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
       return;
     }
@@ -292,7 +297,7 @@ export class OutfitPage implements OnInit {
       };
       try {
         const res: any = await firstValueFrom(
-          this.networkAdapter.post_v3('POST /cart/items', body, { authToken: this.user.token }),
+          this.networkAdapter.post_v3('POST /cart/items', body, { authToken: this.user?.token ?? '' }),
         );
         const ok = res?.response_code === 200 && (res?.status === 'success' || (res?.data && res.data.success === true));
         if (ok) {

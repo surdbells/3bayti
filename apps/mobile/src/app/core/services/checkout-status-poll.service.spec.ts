@@ -7,7 +7,7 @@ import {
   type PollOutcome,
   _internals,
 } from './checkout-status-poll.service';
-import { NetworkService } from '../../service/network.service';
+import { MobileNetworkAdapter } from '../http/mobile-network-adapter';
 
 /**
  * Unit tests for the M3.1.6i.2-D checkout status poll service.
@@ -41,6 +41,11 @@ class MockNetworkService {
   post_request(_body: unknown, _url: string): Observable<unknown> {
     return throwError(() => new Error('post_request not used by poll service'));
   }
+
+  /** The service reads through MobileNetworkAdapter.get_v3 (v3-direct). */
+  get_v3(routeKey: string, _opts?: unknown): Observable<unknown> {
+    return this.get_request(routeKey);
+  }
 }
 
 describe('CheckoutStatusPollService', () => {
@@ -52,7 +57,8 @@ describe('CheckoutStatusPollService', () => {
     TestBed.configureTestingModule({
       providers: [
         CheckoutStatusPollService,
-        { provide: NetworkService, useValue: mockNet },
+        // The service talks to MobileNetworkAdapter; stub it (never the network).
+        { provide: MobileNetworkAdapter, useValue: mockNet },
       ],
     });
     service = TestBed.inject(CheckoutStatusPollService);

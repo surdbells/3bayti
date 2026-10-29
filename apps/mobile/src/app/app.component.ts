@@ -16,6 +16,7 @@ import {I18nService} from "./i18n.service";
 import {OtaUpdateService} from "./core/services/ota-update.service";
 import {PendingOrdersService} from "./core/services/pending-orders.service";
 import {PushManager, resolvePushDeepLink} from "./core/services/push-manager.service";
+import {AuthSessionService} from "./core/services/auth-session.service";
 
 @Component({
   selector: 'app-root',
@@ -94,6 +95,7 @@ export class AppComponent {
     private router: Router,
     private ota: OtaUpdateService,
     private pendingOrders: PendingOrdersService,
+    private authSession: AuthSessionService,
   ) {
       /* OTA (self-hosted Capgo), confirm the freshly-booted web bundle is
          healthy. MUST run on EVERY native cold start as early as possible: if
@@ -106,6 +108,12 @@ export class AppComponent {
       this.initOtaUpdater();
 
       this.initializeApp();
+
+      /* A session the SERVER ended (refresh rejected) gets the same local
+         teardown as "Log out", one "please sign in again" toast and a root
+         navigation, see AuthSessionService. Transient refresh failures never
+         end a session, so this only fires on a definitive rejection. */
+      this.authSession.watchSessionEnd();
 
       /* Enable the update-debug overlay when ?debug=update appears in the
          URL OR localStorage flag 'ax_debug_update' is set. Devs can toggle

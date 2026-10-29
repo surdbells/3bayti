@@ -21,7 +21,7 @@ import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
 import { apiErrorMessage } from '../../core/http/api-error';
 import { I18nService } from '../../i18n.service';
-import { PushManager } from '../../core/services/push-manager.service';
+import { AuthSessionService } from '../../core/services/auth-session.service';
 
 /**
  * In-app account deletion (App Store requirement, Apple 5.1.1(v)).
@@ -74,7 +74,7 @@ export class DeleteAccountPage implements OnInit {
     private adapter: MobileNetworkAdapter,
     private i18n: I18nService,
     private alertCtrl: AlertController,
-    private pushManager: PushManager,
+    private authSession: AuthSessionService,
   ) {}
 
   async ngOnInit() {
@@ -155,15 +155,13 @@ export class DeleteAccountPage implements OnInit {
 
   /** Server already revoked the session; clear local state + leave. */
   private async teardownAndLeave() {
-    // Best-effort: deactivate this device's push token while the (now
-    // soon-invalid) auth token is still in Preferences. Fire-safe.
+    // Same teardown as logout: end the local session FIRST, then best-effort
+    // push deactivation + session revoke in the background. Never throws.
     try {
-      await this.pushManager.onSignedOutReadingToken();
+      await this.authSession.endAfterAccountDeletion();
     } catch {
       /* swallow, account is gone regardless */
     }
-    await Preferences.remove({ key: 'keep_session' });
-    await Preferences.remove({ key: 'user' });
     this.busy = false;
     this.toast.success(this.i18n.t('account_deleted'), { position: 'top-center' });
     this.router.navigate(['/', 'home'], { replaceUrl: true });

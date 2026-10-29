@@ -24,6 +24,7 @@ import { environment } from '../../../environments/environment';
 import { ConnectionService } from '../../service/connection.service';
 import { NetworkService } from '../../service/network.service';
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { SessionStore } from '../../core/services/session-store.service';
 import { apiErrorMessage } from '../../core/http/api-error';
 import { I18nService } from '../../i18n.service';
 import { TranslatePipe } from '../../translate.pipe';
@@ -158,6 +159,7 @@ export class SettingsPage implements OnInit, OnDestroy {
     private toast: AxNotificationService,
     private i18n: I18nService,
     private authSession: AuthSessionService,
+    private session: SessionStore,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -372,7 +374,7 @@ export class SettingsPage implements OnInit, OnDestroy {
           if (typeof user.avatar_url !== 'string') return;
           if (user.avatar_url === this.single_user.avatar) return;
           this.single_user.avatar = user.avatar_url;
-          Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+          void this.session.saveProfile(this.single_user);
         },
         error: () => { /* silent, fallback avatar applies */ },
       });
@@ -580,10 +582,7 @@ export class SettingsPage implements OnInit, OnDestroy {
             // free-form label; keep persisting the display string locally so
             // the account screen still shows the readable address.
             this.single_user.location = this.u_location.location;
-            Preferences.set({
-              key: 'user',
-              value: JSON.stringify(this.single_user)
-            });
+            void this.session.saveProfile(this.single_user);
             this.ui_controls.updating_location = false;
             this.cancel();
             this.showSuccess(this.i18n.t('text_location_updated'));

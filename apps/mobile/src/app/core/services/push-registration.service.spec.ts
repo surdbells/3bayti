@@ -93,6 +93,17 @@ describe('PushRegistrationService', () => {
       expect(ok).toBeTrue();
     });
 
+    it('is detached: sends exactly the captured token, never the next session\'s', async () => {
+      await service.deactivate('auth-tok', 'fcm-device-1');
+      expect(adapter.lastDelete.opts.detached).toBeTrue();
+    });
+
+    it('returns false on an error envelope (e.g. an expired token)', async () => {
+      adapter.deleteResp = { response_code: 401, status: 'error', error_code: 'AUTH_INVALID_TOKEN', data: null };
+      const ok = await service.deactivate('auth-tok', 'fcm-device-1');
+      expect(ok).toBeFalse();
+    });
+
     it('treats 204 as success', async () => {
       adapter.deleteResp = { response_code: 204, status: 'success', data: null };
       const ok = await service.deactivate('auth-tok', 'fcm-device-1');

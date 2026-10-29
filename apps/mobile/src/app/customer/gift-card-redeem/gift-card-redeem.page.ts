@@ -14,6 +14,7 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { TranslatePipe } from '../../translate.pipe';
 import { I18nService } from '../../i18n.service';
 import { ClipboardService } from '../../core/services/clipboard.service';
+import { SessionStore } from '../../core/services/session-store.service';
 
 @Component({
   selector: 'app-gift-card-redeem',
@@ -41,6 +42,7 @@ export class GiftCardRedeemPage {
     private notify: AxNotificationService,
     private i18n: I18nService,
     private clipboard: ClipboardService,
+    private session: SessionStore,
   ) {
     this.loadAuthToken();
   }
@@ -123,9 +125,11 @@ export class GiftCardRedeemPage {
         }
         // v3-direct surfaces HTTP errors through this success channel as a
         // legacy envelope ({ response_code, status:'error', message }). Redeem
-        // requires auth, on 401 send the user to login, returning here (web
-        // uses returnUrl=/gift-cards/redeem).
-        if (res?.response_code === 401) {
+        // requires auth, on a 401 with NO live session (guest, or the server
+        // ended it) send the user to login, returning here (web uses
+        // returnUrl=/gift-cards/redeem). A 401 while still signed in (or while
+        // the stored session can't be read) is shown as a message below.
+        if (res?.response_code === 401 && this.session.isSignedOut()) {
           this.router.navigate(['/login'], { queryParams: { returnUrl: '/gift-cards/redeem' } });
           return;
         }

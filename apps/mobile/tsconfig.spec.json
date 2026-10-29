@@ -5,7 +5,16 @@
     "outDir": "./out-tsc/spec",
     "types": [
       "jasmine"
-    ]
+    ],
+    /* Karma's webpack build can't follow @3bayti/api-client's ESM-style
+       './feature-flags.js' re-exports, so the package resolved to an EMPTY
+       module in specs (resolveConfig undefined -> every adapter call was
+       ROUTE_NOT_FOUND). The app only uses the routing helpers, which live
+       in feature-flags.ts (no imports of its own), so specs map the package
+       straight to that file. The app build is unaffected. */
+    "paths": {
+      "@3bayti/api-client": ["../../packages/api-client/src/feature-flags.ts"]
+    }
   },
   "files": [
     "src/test.ts",
@@ -13,6 +22,7 @@
   ],
   "include": [
     "src/**/*.spec.ts",
-    "src/**/*.d.ts"
+    "src/**/*.d.ts",
+    "../../packages/api-client/src/feature-flags.ts"
   ]
 }

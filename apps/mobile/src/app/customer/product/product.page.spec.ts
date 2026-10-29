@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
-import { of } from 'rxjs';
+import { NEVER, of } from 'rxjs';
 import { ProductPage } from './product.page';
-import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { MobileNetworkAdapter, NETWORK_UNAVAILABLE } from '../../core/http/mobile-network-adapter';
+import { SESSION_PERSISTENCE, SessionStore, type SessionPersistence } from '../../core/services/session-store.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { transformProductDetailResponse } from '../../core/http/transforms/catalog-response.transforms';
 
@@ -124,5 +125,147 @@ describe('ProductPage', () => {
       }));
       expect(router.navigate).toHaveBeenCalledOnceWith(['/', 'gift-cards']);
     });
+  });
+});
+
+describe('ProductPage auth gates (live session)', () => {
+  class MemoryPersistence implements SessionPersistence {
+    constructor(public value: string | null, private unreadable = false) {}
+    read(): Promise<string | null> {
+      return this.unreadable ? Promise.reject(new Error('storage busy')) : Promise.resolve(this.value);
+    }
+    write(value: string): Promise<void> { this.value = value; return Promise.resolve(); }
+    remove(): Promise<void> { this.value = null; return Promise.resolve(); }
+  }
+
+  /** post_v3 answers with whatever the spec queues (default: never). */
+  class ScriptedAdapter {
+    next: unknown = null;
+    posts = 0;
+    get_v3() { return of({ response_code: 200, status: 'success', data: [] }); }
+    post_v3(route: string) {
+      if (route !== 'POST /cart/items') return of({ response_code: 200, status: 'success', data: {} });
+      this.posts++;
+      return this.next === null ? NEVER : of(this.next);
+    }
+  }
+
+  async function setupWithSession(session: Record<string, unknown> | null, unreadable = false) {
+    const toast = new ToastStub();
+    const adapter = new ScriptedAdapter();
+    TestBed.configureTestingModule({
+      imports: [ProductPage],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        { provide: MobileNetworkAdapter, useValue: adapter },
+        { provide: AxNotificationService, useValue: toast },
+        {
+          provide: SESSION_PERSISTENCE,
+          useValue: new MemoryPersistence(session ? JSON.stringify(session) : null, unreadable),
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: { get: (k: string) => (k === 'id' ? '42' : null) } } },
+        },
+      ],
+    });
+    const store = TestBed.inject(SessionStore);
+    await store.ready();
+    const fixture = TestBed.createComponent(ProductPage);
+    const router = TestBed.inject(Router);
+    spyOn(router, 'navigate');
+    const component = fixture.componentInstance;
+    component.add_cart.product_id = 42;
+    return { component, router, toast, adapter, store };
+  }
+
+  const SESSION = { id: 9, token: 'live-token', refresh_token: 'r' };
+
+  it('lets a signed-in customer through even when the page copy says guest', async () => {
+    const { component, router, toast } = await setupWithSession(SESSION);
+    component.isGuest = true;            // stale ngOnInit copy
+    component.single_user.token = '';
+    (component.single as any).slug = 'abaya-1';
+
+    component.requestCustomization();
+
+    expect(toast.errors).toEqual([]);
+    expect(router.navigate).toHaveBeenCalled();
+  });
+
+  it('never treats a stored session it cannot READ as a guest (no sign-in prompt)', async () => {
+    const { component, toast, adapter, store } = await setupWithSession(SESSION, true);
+    expect(store.isLoaded()).toBeFalse();
+    adapter.next = null; // the POST is what matters, not its answer
+
+    component.addToCart();
+
+    expect(toast.errors).toEqual([]);
+    expect(adapter.posts).toBe(1);
+  });
+
+  it('prompts sign-in when there is no live session even if the page copy has a token', async () => {
+    const { component, toast, adapter } = await setupWithSession(null);
+    component.isGuest = false;
+    component.single_user.token = 'old-copy';
+
+    component.addToCart();
+
+    expect(toast.errors).toEqual(['sign_in_to_add_to_cart']);
+    expect(adapter.posts).toBe(0);
+  });
+
+  it('ignores a second tap while the first add is in flight (one POST, no duplicate toast)', async () => {
+    const { component, adapter, toast } = await setupWithSession(SESSION);
+    adapter.next = null; // first POST never answers
+
+    component.addToCart();
+    component.addToCart();
+
+    expect(adapter.posts).toBe(1);
+    expect(component.ui_controls.is_adding_to_cart).toBeTrue();
+    expect(toast.errors).toEqual([]);
+  });
+
+  it('a transient NETWORK_UNAVAILABLE shows the connection message, never the sign-in prompt', async () => {
+    const { component, adapter, toast } = await setupWithSession(SESSION);
+    adapter.next = {
+      response_code: 503,
+      status: 'error',
+      message: 'Connection problem. Please try again.',
+      error_code: NETWORK_UNAVAILABLE,
+      data: null,
+    };
+
+    component.addToCart();
+
+    expect(toast.errors).toEqual(['Connection problem. Please try again.']);
+    expect(component.ui_controls.is_adding_to_cart).toBeFalse();
+    expect(component.ui_controls.is_empty).toBeFalse();
+  });
+
+  it('a 401 while the session is still live is NOT treated as signed out', async () => {
+    const { component, adapter, toast } = await setupWithSession(SESSION);
+    adapter.next = { response_code: 401, status: 'error', message: 'Nope.', error_code: 'SOMETHING', data: null };
+
+    component.addToCart();
+
+    expect(toast.errors).toEqual(['Nope.']);
+  });
+
+  it('a 401 after the server ended the session shows the sign-in prompt', async () => {
+    const { component, adapter, toast, store } = await setupWithSession(SESSION);
+    adapter.next = { response_code: 401, status: 'error', message: 'x', error_code: 'AUTH_INVALID_TOKEN', data: null };
+    // The adapter ends the session before handing the 401 back.
+    spyOn(adapter, 'post_v3').and.callFake((route: string) => {
+      void store.endSession('rejected', 'r');
+      return ScriptedAdapter.prototype.post_v3.call(adapter, route);
+    });
+
+    component.addToCart();
+    await Promise.resolve();
+
+    expect(toast.errors).toEqual(['sign_in_to_add_to_cart']);
   });
 });

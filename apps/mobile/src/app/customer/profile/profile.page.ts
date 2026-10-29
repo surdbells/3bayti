@@ -20,6 +20,7 @@ import {ActivatedRoute, Router, RouterLink} from "@angular/router";
 import {ActionSheetController} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { SessionStore } from '../../core/services/session-store.service';
 import { apiErrorMessage } from '../../core/http/api-error';
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
@@ -83,6 +84,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     private toast: AxNotificationService,
     private i18n: I18nService,
     private http: HttpClient,
+    private session: SessionStore,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -327,7 +329,7 @@ export class ProfilePage implements OnInit, OnDestroy {
             this.single_user.phone =
               typeof newPhone === 'string' && newPhone.length > 0 ? newPhone : this.changeFullPhone;
             try {
-              await Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+              await this.session.saveProfile(this.single_user);
             } catch {
               /* non-fatal */
             }
@@ -532,7 +534,7 @@ export class ProfilePage implements OnInit, OnDestroy {
             // Server returns false here; clears the "update your email" banner.
             this.single_user.needs_email_update = response.data?.needs_email_update === true;
             try {
-              await Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+              await this.session.saveProfile(this.single_user);
             } catch {
               /* non-fatal */
             }
@@ -774,7 +776,7 @@ export class ProfilePage implements OnInit, OnDestroy {
             this.single_user.whatsapp_phone =
               response.data?.whatsapp_phone ?? this.normaliseWhatsapp(this.whatsappFlow.phone);
             try {
-              await Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+              await this.session.saveProfile(this.single_user);
             } catch { /* non-fatal */ }
             this.whatsappFlow.isOpen = false;
             this.success_notification(this.i18n.t('whatsapp_link_success'));
@@ -799,7 +801,7 @@ export class ProfilePage implements OnInit, OnDestroy {
           this.whatsappFlow.loading = false;
           this.single_user.whatsapp_phone = null;
           try {
-            await Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+            await this.session.saveProfile(this.single_user);
           } catch { /* non-fatal */ }
           this.success_notification(this.i18n.t('whatsapp_unlink_success'));
         },
@@ -938,15 +940,23 @@ export class ProfilePage implements OnInit, OnDestroy {
       this.error_notification(this.i18n.t('text_offline_check_connection'));
       return;
     }
-    const token = this.single_user.token || '';
-    const headers = new HttpHeaders(token ? { Authorization: `Bearer ${token}` } : {});
     this.ui_controls.avatar_uploading = true;
-    this.http.post(`${V3_BASE}/v3/me/avatar`, { image: dataUrl }, { headers }).subscribe({
+    // Raw HttpClient upload routed through the adapter's session handling:
+    // live session token, refresh-and-retry on a token 401, and a transient
+    // "connection problem" error instead of a 401 when the refresh can't run.
+    this.networkAdapter.authedRequest(
+      (authHeader) => this.http.post(
+        `${V3_BASE}/v3/me/avatar`,
+        { image: dataUrl },
+        { headers: new HttpHeaders(authHeader ? { Authorization: authHeader } : {}) },
+      ),
+      this.single_user.token || '',
+    ).subscribe({
       next: async (response: any) => {
         const url = response?.data?.avatar_url;
         if (url) {
           this.single_user.avatar = url;
-          await Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+          await this.session.saveProfile(this.single_user);
           this.success_notification(this.i18n.t('text_avatar_updated'));
         }
         this.ui_controls.avatar_uploading = false;

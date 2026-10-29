@@ -23,7 +23,6 @@ import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {GlobalComponent} from "../../global-component";
 import { I18nService } from '../../i18n.service';
 import {TranslatePipe} from "../../translate.pipe";
-import {Preferences} from "@capacitor/preferences";
 import {FirebaseAuthentication} from "@capacitor-firebase/authentication";
 import {parseSocialAuthError, socialAuthErrorMessage} from "../../core/auth/social-auth-error";
 import {BlockerService} from "../../blocker.service";
@@ -36,6 +35,7 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import {transformV3LoginResponse} from "../login/login-response.transform";
 import {CartMergeService} from "../../core/services/cart-merge.service";
 import {PushManager} from "../../core/services/push-manager.service";
+import {SessionStore, type SessionBlob} from "../../core/services/session-store.service";
 import {DIAL_CODES, DialCode, mapDialToIso} from "../shared/dial-codes";
 
 /**
@@ -66,7 +66,7 @@ import {DIAL_CODES, DialCode, mapDialToIso} from "../shared/dial-codes";
  *   Step 4 (Verify email): "We sent a code to <email>" + OTP.
  *     [Verify] -> POST /auth/register/confirm-email { verification_id, code }
  *       -> data { tokens, user } (same shape /auth/confirm returns).
- *       transformV3LoginResponse -> Preferences.set('user') ->
+ *       transformV3LoginResponse -> SessionStore.signIn ->
  *       cartMerge.mergeIfAny (non-blocking) -> pushManager.onSignedIn() ->
  *       navigate /account (auto-login).
  *     Resend -> re-call submit with same data. Back -> Step 3.
@@ -133,6 +133,7 @@ export class RegisterPage implements OnInit, OnDestroy {
     private i18n: I18nService,
     private cartMerge: CartMergeService,
     private pushManager: PushManager,
+    private session: SessionStore,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -524,7 +525,7 @@ export class RegisterPage implements OnInit, OnDestroy {
         this.ui_controls.loading = false;
         if (response.response_code === 200 && response.status === 'success') {
           const userToStore = transformV3LoginResponse(response.data) ?? response.data;
-          Preferences.set({ key: 'user', value: JSON.stringify(userToStore) });
+          void this.session.signIn(userToStore as SessionBlob);
 
           const authBody = {
             id: typeof (userToStore as any)?.id === 'number' ? (userToStore as any).id : 0,
@@ -809,7 +810,7 @@ export class RegisterPage implements OnInit, OnDestroy {
    */
   private onSocialLoginSuccess(data: any): void {
     const userToStore = transformV3LoginResponse(data) ?? data;
-    Preferences.set({ key: 'user', value: JSON.stringify(userToStore) });
+    void this.session.signIn(userToStore as SessionBlob);
     void this.pushManager.onSignedIn();
 
     if ((userToStore as any)?.is_phone_verified === false) {
@@ -915,17 +916,8 @@ export class RegisterPage implements OnInit, OnDestroy {
 
   /** Flip the cached phone-verified flag + navigate home. */
   private async finishSocialGate(): Promise<void> {
-    try {
-      const ret = await Preferences.get({ key: 'user' });
-      if (ret.value) {
-        const blob = JSON.parse(ret.value);
-        blob.is_phone_verified = true;
-        blob.phone = this.fullSocialPhone;
-        await Preferences.set({ key: 'user', value: JSON.stringify(blob) });
-      }
-    } catch {
-      /* non-fatal */
-    }
+    // Atomic field update via the session store (tokens untouched). Never rejects.
+    await this.session.patchProfile({ is_phone_verified: true, phone: this.fullSocialPhone });
     this.clearOtpTimer();
     this.router.navigate(['/account'], { replaceUrl: true });
   }

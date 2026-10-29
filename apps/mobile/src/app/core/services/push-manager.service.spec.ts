@@ -158,9 +158,12 @@ describe('PushManager', () => {
       expect(registration.registerCalls.length).toBe(0);
     });
 
-    it('onSignedOut does not attempt deactivation', async () => {
-      await manager.onSignedOut('auth-tok');
+    it('onSignedOut does not attempt deactivation (nor a token renewal)', async () => {
+      (manager as any).deviceToken = 'fcm-dev-1';
+      const renew = jasmine.createSpy('renew').and.resolveTo('fresh-tok');
+      await manager.onSignedOut('auth-tok', renew);
       expect(registration.deactivateCalls.length).toBe(0);
+      expect(renew).not.toHaveBeenCalled();
     });
   });
 
@@ -204,10 +207,66 @@ describe('PushManager', () => {
       registration.deactivate = () => Promise.reject(new Error('boom'));
       await expectAsync(manager.onSignedOut('auth-tok')).toBeResolved();
     });
+
+    it('renews an expired access token ONCE and retries the deactivation with it', async () => {
+      (manager as any).deviceToken = 'fcm-dev-1';
+      const results = [false, true]; // 1st: rejected (expired), 2nd: ok
+      registration.deactivate = async (authToken: string, deviceToken: string) => {
+        registration.deactivateCalls.push({ authToken, deviceToken });
+        return results.shift()!;
+      };
+      const renew = jasmine.createSpy('renew').and.resolveTo('fresh-tok');
+
+      await manager.onSignedOut('expired-tok', renew);
+
+      expect(renew).toHaveBeenCalledTimes(1);
+      expect(registration.deactivateCalls).toEqual([
+        { authToken: 'expired-tok', deviceToken: 'fcm-dev-1' },
+        { authToken: 'fresh-tok', deviceToken: 'fcm-dev-1' },
+      ]);
+    });
+
+    it('does not renew when the first deactivation succeeds', async () => {
+      (manager as any).deviceToken = 'fcm-dev-1';
+      const renew = jasmine.createSpy('renew').and.resolveTo('fresh-tok');
+      await manager.onSignedOut('auth-tok', renew);
+      expect(renew).not.toHaveBeenCalled();
+      expect(registration.deactivateCalls.length).toBe(1);
+    });
+
+    it('stops when no fresh token can be had (or the network is down)', async () => {
+      (manager as any).deviceToken = 'fcm-dev-1';
+      registration.deactivateResult = false;
+      await manager.onSignedOut('expired-tok', () => Promise.resolve(null));
+      expect(registration.deactivateCalls.length).toBe(1);
+
+      registration.deactivateCalls = [];
+      const renew = jasmine.createSpy('renew').and.resolveTo('fresh-tok');
+      registration.deactivate = () => Promise.reject(new Error('offline'));
+      await expectAsync(manager.onSignedOut('auth-tok', renew)).toBeResolved();
+      expect(renew).not.toHaveBeenCalled();
+    });
+
+    it('renews when only a refresh token survived (empty access token)', async () => {
+      (manager as any).deviceToken = 'fcm-dev-1';
+      await manager.onSignedOut('', () => Promise.resolve('fresh-tok'));
+      expect(registration.deactivateCalls).toEqual([{ authToken: 'fresh-tok', deviceToken: 'fcm-dev-1' }]);
+    });
+
+    it('never renews without a device token', async () => {
+      (manager as any).deviceToken = null;
+      const renew = jasmine.createSpy('renew').and.resolveTo('fresh-tok');
+      await manager.onSignedOut('auth-tok', renew);
+      expect(renew).not.toHaveBeenCalled();
+    });
   });
 
   describe('onSignedOutReadingToken (native)', () => {
-    beforeEach(() => spyOn(Capacitor, 'isNativePlatform').and.returnValue(true));
+    beforeEach(() => {
+      spyOn(Capacitor, 'isNativePlatform').and.returnValue(true);
+      // Start from "no stored user" whatever ran before (specs run in random order).
+      window.localStorage.removeItem('CapacitorStorage.user');
+    });
     afterEach(() => window.localStorage.removeItem('CapacitorStorage.user'));
 
     it('reads the token from Preferences then deactivates', async () => {

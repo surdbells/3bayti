@@ -11,6 +11,7 @@ import { I18nService } from '../../i18n.service';
 import { CartMergeService } from '../../core/services/cart-merge.service';
 import { PushManager } from '../../core/services/push-manager.service';
 import { BlockerService } from '../../blocker.service';
+import { SESSION_PERSISTENCE, SessionStore } from '../../core/services/session-store.service';
 
 // ---------------------------------------------------------------------------
 // Stubs (useValue), no real network / no real constructors.
@@ -50,6 +51,15 @@ class BlockerStub {
   block = jasmine.createSpy('block');
 }
 
+function memoryPersistence() {
+  let value: string | null = null;
+  return {
+    read: () => Promise.resolve(value),
+    write: (v: string) => { value = v; return Promise.resolve(); },
+    remove: () => { value = null; return Promise.resolve(); },
+  };
+}
+
 function setup() {
   const net = new ConnectionStub();
   const adapter = new AdapterStub();
@@ -70,6 +80,9 @@ function setup() {
       { provide: CartMergeService, useValue: cartMerge },
       { provide: PushManager, useValue: pushManager },
       { provide: BlockerService, useValue: blocker },
+      // In-memory session backing: sign-ins must not leak into localStorage
+      // (other specs read CapacitorStorage.user).
+      { provide: SESSION_PERSISTENCE, useValue: memoryPersistence() },
     ],
   });
 
@@ -432,6 +445,11 @@ describe('RegisterPage (v3 phone-first 4-step flow)', () => {
       expect(pushManager.onSignedIn).toHaveBeenCalled();
       expect(navSpy).toHaveBeenCalledWith(['/account'], { replaceUrl: true });
       expect(blocker.block).toHaveBeenCalled();
+      // The session is stored through SessionStore (the only blob writer).
+      const store = TestBed.inject(SessionStore);
+      const stored = await store.get();
+      expect(stored?.token).toBe('access-tok');
+      expect(stored?.refresh_token).toBe('refresh-tok');
       // let the cartMerge promise settle to avoid leaks
       await Promise.resolve();
     });

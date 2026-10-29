@@ -44,9 +44,14 @@ export class PushRegistrationService {
   }
 
   /**
-   * Deactivate this device's push token (sign-out / opt-out).
-   * Idempotent server-side; an unknown token still returns 204.
-   * Returns true on success.
+   * Deactivate this device's push token on sign-out. Idempotent
+   * server-side; an unknown token still returns 204. Returns true on
+   * success.
+   *
+   * Runs AFTER the session was cleared locally, with the token captured
+   * before, so the call is `detached`: exactly that token is sent (never
+   * the store's, which may already be the next account's) and a 401 is
+   * not refreshed here (PushManager.onSignedOut renews the token itself).
    */
   async deactivate(authToken: string, deviceToken: string): Promise<boolean> {
     if (authToken === '' || deviceToken === '') {
@@ -56,6 +61,7 @@ export class PushRegistrationService {
       this.adapter.delete_v3('DELETE /me/device-tokens', {
         authToken,
         body: { token: deviceToken },
+        detached: true,
       }),
     );
     return this.ok(res) || res?.response_code === 204;

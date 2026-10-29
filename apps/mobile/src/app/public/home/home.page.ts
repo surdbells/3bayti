@@ -23,6 +23,7 @@ import {ConnectionService} from "../../service/connection.service";
 import {BlockerService} from "../../blocker.service";
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { SessionStore } from '../../core/services/session-store.service';
 import {OtaUpdateService} from "../../core/services/ota-update.service";
 import {PendingOrdersService} from "../../core/services/pending-orders.service";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
@@ -126,6 +127,7 @@ export class HomePage implements OnInit, OnDestroy {
     private i18n: I18nService,
     private ota: OtaUpdateService,
     public pendingOrders: PendingOrdersService,
+    private session: SessionStore,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
     });
@@ -360,6 +362,14 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   startAddToCloset(product_id: number, product_name: string, image_1: string) {
+    // This guest landing can still be on screen (cached) for a customer who
+    // is signed in: check the LIVE session and send them to their dashboard,
+    // where the wishlist works, rather than asking them to sign in. Only a
+    // session the store KNOWS is gone prompts (never a storage glitch).
+    if (!this.session.isSignedOut()) {
+      this.router.navigate(['/account'], { replaceUrl: true });
+      return;
+    }
     // Guest wishlist tap -> prompt sign-in/up with the wishlist-specific message.
     this.error_notification(this.i18n.t('sign_in_to_add_to_wishlist'));
   }

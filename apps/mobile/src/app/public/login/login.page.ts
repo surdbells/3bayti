@@ -22,6 +22,7 @@ import { I18nService } from '../../i18n.service';
 import {TranslatePipe} from "../../translate.pipe";
 import { CartMergeService } from '../../core/services/cart-merge.service';
 import { PushManager } from '../../core/services/push-manager.service';
+import { SessionStore, type SessionBlob } from '../../core/services/session-store.service';
 
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
@@ -51,7 +52,7 @@ import { DIAL_CODES, DialCode, mapDialToIso } from '../shared/dial-codes';
  *              POST /auth/login -> success block.
  *
  * The "success block" is shared by both verify and the password flow:
- * transformV3LoginResponse -> Preferences.set('user') -> push register ->
+ * transformV3LoginResponse -> SessionStore.signIn -> push register ->
  * cart merge -> navigate /account. (Behaviour-preserving vs the old page.)
  *
  * Anti-enumeration: /auth/otp-login/send always returns a verification_id,
@@ -154,6 +155,7 @@ export class LoginPage implements OnInit, OnDestroy {
       private i18n: I18nService,
       private cartMerge: CartMergeService,
       private pushManager: PushManager,
+      private session: SessionStore,
     ) {
       this.net.setReachabilityCheck(true);
       this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -415,10 +417,7 @@ export class LoginPage implements OnInit, OnDestroy {
     // Transform v3 login response shape -> legacy single_user shape before
     // storage; fall back to data as-is for any unexpected payload.
     const userToStore = transformV3LoginResponse(data) ?? data;
-    Preferences.set({
-      key: 'user',
-      value: JSON.stringify(userToStore)
-    });
+    void this.session.signIn(userToStore as SessionBlob);
 
     // Phone-after-social gate: a freshly social-signed-in account has
     // is_phone_verified=false. Persist the session (above) but DON'T navigate
@@ -821,21 +820,13 @@ export class LoginPage implements OnInit, OnDestroy {
 
   /**
    * Mark the cached user's phone as verified and navigate to /account.
-   * Updates the Preferences blob so a relaunch doesn't re-trigger the gate,
+   * Updates the stored session blob so a relaunch doesn't re-trigger the gate,
    * then reuses the standard navigation tail.
    */
   private async finishSocialGate(): Promise<void> {
-    try {
-      const ret = await Preferences.get({ key: 'user' });
-      if (ret.value) {
-        const blob = JSON.parse(ret.value);
-        blob.is_phone_verified = true;
-        blob.phone = this.fullSocialPhone;
-        await Preferences.set({ key: 'user', value: JSON.stringify(blob) });
-      }
-    } catch {
-      /* non-fatal: navigation still proceeds */
-    }
+    // Atomic field update through the session store (the only writer of the
+    // 'user' blob), so the stored tokens are never touched. Never rejects.
+    await this.session.patchProfile({ is_phone_verified: true, phone: this.fullSocialPhone });
     this.clearOtpTimer();
     this.router.navigate(['/account'], { replaceUrl: true });
     this.blocker.block({ disableSwipe: true, disableHardwareBack: true });

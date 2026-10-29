@@ -1234,6 +1234,8 @@
   "sign_in_to_add_to_cart": "سجّل الدخول أو أنشئ حسابًا لتتمكن من الإضافة إلى السلة",
   "sign_in_to_add_to_wishlist": "سجّل الدخول أو أنشئ حسابًا لتتمكن من الإضافة إلى قائمة رغباتك",
   "session_expired_sign_in": "انتهت جلستك. يرجى تسجيل الدخول مجددًا.",
+  "session_ended_sign_in_again": "انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.",
+  "connection_problem_try_again": "مشكلة في الاتصال. يرجى المحاولة مرة أخرى.",
   "mgc_complete_payment": "إتمام الدفع",
   "mgc_completing_payment": "جارٍ إتمام الدفع…",
   "orders_filter_all": "الكل",

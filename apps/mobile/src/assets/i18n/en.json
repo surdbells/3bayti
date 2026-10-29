@@ -1234,6 +1234,8 @@
   "sign_in_to_add_to_cart": "Sign in or sign up to be able to add to cart",
   "sign_in_to_add_to_wishlist": "Sign in or sign up to be able to add to your wishlist",
   "session_expired_sign_in": "Your session expired. Please sign in again.",
+  "session_ended_sign_in_again": "Your session has ended. Please sign in again.",
+  "connection_problem_try_again": "Connection problem. Please try again.",
   "mgc_complete_payment": "Complete payment",
   "mgc_completing_payment": "Completing payment…",
   "orders_filter_all": "All",

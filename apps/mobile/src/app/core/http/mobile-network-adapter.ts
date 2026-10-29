@@ -3,15 +3,15 @@ import { Injectable, inject } from '@angular/core';
 import {
   Observable,
   catchError,
+  defer,
+  firstValueFrom,
   from,
-  finalize,
   map,
   of,
-  shareReplay,
   switchMap,
   throwError,
+  timeout,
 } from 'rxjs';
-import { Preferences } from '@capacitor/preferences';
 
 import {
   resolveConfig,
@@ -20,6 +20,8 @@ import {
 } from '@3bayti/api-client';
 
 import { GlobalComponent } from '../../global-component';
+import { I18nService } from '../../i18n.service';
+import { SessionStore, type SessionTokenPair } from '../services/session-store.service';
 import { CATALOG_RESPONSE_TRANSFORMS, type ResponseTransform } from './transforms/catalog-response.transforms';
 import { MUTATION_RESPONSE_TRANSFORMS } from './transforms/mutation-response.transforms';
 
@@ -31,6 +33,78 @@ import { MUTATION_RESPONSE_TRANSFORMS } from './transforms/mutation-response.tra
  * remaining consumer, so the type lives here.
  */
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+/**
+ * error_code the adapter returns (response_code 503) when a token 401 could
+ * not be recovered because the refresh itself failed transiently (offline,
+ * timeout, 5xx, 429, proxy 403). The session is KEPT; pages show the message
+ * ("Connection problem...") instead of a sign-in prompt.
+ */
+export const NETWORK_UNAVAILABLE = 'NETWORK_UNAVAILABLE';
+
+/** 401 codes that mean "this access token is missing/expired/invalid". */
+const TOKEN_ERROR_CODES: ReadonlySet<string> = new Set(['AUTH_INVALID_TOKEN', 'AUTH_MISSING_TOKEN']);
+
+/**
+ * Read the v3 error code from an error body ({"error":{"code":"..."}}).
+ * Tolerates a body that arrived as unparsed JSON text. Null when absent.
+ */
+export function apiErrorCode(body: unknown): string | null {
+  let b = body;
+  if (typeof b === 'string') {
+    try {
+      b = JSON.parse(b);
+    } catch {
+      return null;
+    }
+  }
+  if (b === null || typeof b !== 'object') return null;
+  const e = (b as Record<string, unknown>)['error'];
+  if (e === null || typeof e !== 'object') return null;
+  const code = (e as Record<string, unknown>)['code'];
+  return typeof code === 'string' && code.length > 0 ? code : null;
+}
+
+/**
+ * Should a failed authenticated request refresh-and-retry? Only a 401 whose
+ * code says the ACCESS TOKEN is the problem (or that carries no code). Any
+ * other 401 (AUTH_INVALID_CREDENTIALS for a wrong current password,
+ * OTP_VERIFICATION_FAILED for a wrong code, ...) is a business error the
+ * caller must see untouched.
+ */
+export function isTokenRejection(status: number, body: unknown): boolean {
+  if (status !== 401) return false;
+  const code = apiErrorCode(body);
+  return code === null || TOKEN_ERROR_CODES.has(code);
+}
+
+/**
+ * The ONE definitive "this session is over" signal: POST /auth/refresh
+ * answering 401 AUTH_REFRESH_TOKEN_INVALID. Every other refresh failure is
+ * transient and must never sign the customer out.
+ */
+export function isDefinitiveRefreshRejection(status: number, body: unknown): boolean {
+  return status === 401 && apiErrorCode(body) === 'AUTH_REFRESH_TOKEN_INVALID';
+}
+
+/** Transient refresh failures worth retrying: network/timeout, proxy 403, 429, 5xx. */
+export function isRetryableRefreshFailure(status: number): boolean {
+  return status === 0 || status === 403 || status === 429 || status >= 500;
+}
+
+/** HTTP status of a thrown request error; 0 for network errors and timeouts. */
+function httpStatusOf(err: unknown): number {
+  if (err instanceof HttpErrorResponse) return err.status;
+  const status = Number((err as { status?: unknown } | null)?.status ?? 0);
+  return Number.isFinite(status) ? status : 0;
+}
+
+/** Outcome of trying to recover from a token 401. */
+type RecoveryOutcome =
+  | { kind: 'retry'; token: string }   // retry once with this access token
+  | { kind: 'transient' }              // refresh failed transiently, session kept
+  | { kind: 'ended' }                  // the server ended the session
+  | { kind: 'none' };                  // no session to recover (signed out)
 
 /**
  * Extract auth credentials from a legacy request body.
@@ -173,12 +247,26 @@ export function toLegacyEnvelope(v3Response: unknown): {
  * (translateError) so call sites read them in their `next` handler;
  * only network-level errors (status 0) propagate via the rxjs error channel.
  *
- * Auth refresh
- * ============
- * A 401 with a stored refresh_token triggers a single-flight
- * POST /v3/auth/refresh (refreshInFlight$); the original request retries
- * once with the new access token. Refresh failure clears the stored user
- * and surfaces the 401 (call sites treat that as "session expired").
+ * Auth + refresh (session contract)
+ * =================================
+ * A call that passes { authToken } is authenticated: the adapter sends the
+ * CURRENT access token from SessionStore (the page's copy may be stale) and
+ * falls back to the caller's token only when no session is stored.
+ * Only a 401 whose code is AUTH_INVALID_TOKEN / AUTH_MISSING_TOKEN (or has no
+ * code) triggers a single-flight POST /v3/auth/refresh (refreshInFlight),
+ * then one retry with the new token. Business 401s (wrong password, wrong
+ * OTP) reach the caller untouched. Refresh outcomes:
+ *   - 200                                 -> tokens stored (compare-and-set)
+ *   - 401 AUTH_REFRESH_TOKEN_INVALID      -> SessionStore.endSession('rejected');
+ *                                            the caller sees its original 401
+ *   - anything else (offline, timeout, 403, 429, 5xx, ...) -> transient: the
+ *     session is KEPT, the refresh is retried (~1.5s, ~4s) and the caller
+ *     gets { response_code: 503, error_code: NETWORK_UNAVAILABLE } instead
+ *     of the 401, so pages never show a sign-in prompt for a blip. A stored
+ *     session that can't be read right now counts as transient too.
+ * Clean-up after a local sign-out uses the store-free paths instead:
+ * delete_v3 { detached: true } (send exactly the given token) and
+ * refreshDetached().
  *
  * History
  * =======
@@ -191,40 +279,38 @@ export function toLegacyEnvelope(v3Response: unknown): {
 @Injectable({ providedIn: 'root' })
 export class MobileNetworkAdapter {
   private http = inject(HttpClient);
+  private session = inject(SessionStore);
+  private i18n = inject(I18nService);
 
   /** v3 backend base URL. Hard-coded for now; M4 may move to env config. */
   private readonly v3BaseUrl = 'https://api-v3.3bayti.ae';
 
   /**
-   * Single-flight refresh observable.
+   * Back-off before each extra refresh attempt after a retryable transient
+   * failure (so up to 3 attempts in total). Instance field so specs can
+   * shorten it.
+   */
+  protected refreshRetryDelaysMs: readonly number[] = [1500, 4000];
+
+  /** One refresh attempt gives up (a transient, retryable failure) after this long. */
+  protected refreshTimeoutMs = 20_000;
+
+  /**
+   * Single-flight refresh.
    *
-   * When a 401 hits and there's a refresh_token in Preferences, we
-   * issue a POST /v3/auth/refresh and stash the resulting observable
-   * here. Concurrent 401s that arrive WHILE the refresh is in flight
-   * subscribe to the same observable rather than firing N refreshes
-   * in parallel. shareReplay(1) ensures every subscriber gets the
-   * same result (the new access_token or null for refresh failure).
-   *
-   * `finalize` clears the field after completion so the next 401
-   * (after the access token expires again) can start a fresh refresh.
-   *
-   * Failure semantics
-   * =================
-   * If /v3/auth/refresh returns an error (refresh token expired,
-   * revoked, malformed), we clear the cached user blob from
-   * Preferences and resolve the observable with null. The 401 caller
-   * sees the original 401 surfaced through translateError, which
-   * call sites should treat as "session expired, redirect to /login".
+   * Concurrent token 401s that arrive WHILE a refresh is in flight await
+   * the same promise rather than firing N refreshes. The field is cleared
+   * when the promise settles (it never rejects), so the next 401 starts a
+   * fresh refresh.
    *
    * Why this lives on the adapter and not a separate service
    * ========================================================
-   * Refresh is intrinsically coupled to the auth-aware HTTP path -
-   * it needs to mutate the same Preferences blob the adapter reads
-   * for auth and it needs to be triggerable from the adapter's
-   * 401 handling. Adding a separate service would force callers to
-   * coordinate; keeping it here makes refresh-on-401 transparent.
+   * Refresh is intrinsically coupled to the auth-aware HTTP path, it must
+   * be triggerable from the adapter's 401 handling. SessionStore owns the
+   * blob; the adapter only asks it to compare-and-set the new pair or to
+   * end the session on a definitive rejection.
    */
-  private refreshInFlight$: Observable<string | null> | null = null;
+  private refreshInFlight: Promise<RecoveryOutcome> | null = null;
 
   /**
    * Call a v3 endpoint directly by routeKey, without any legacy-URL
@@ -244,12 +330,14 @@ export class MobileNetworkAdapter {
    *   - Look up cfg by routeKey (instead of by legacy URL)
    *   - Build the URL with optional path params
    *   - Forward body unchanged (no shape translation)
-   *   - Attach Authorization header IFF opts.authToken provided
+   *   - Attach Authorization header IFF opts.authToken provided (the live
+   *     session token is sent, the caller's value marks the call as
+   *     authenticated and is only a fallback)
    *   - Same envelope wrap and error translation as the legacy path
    *
    * @param routeKey - routing table key (e.g. 'POST /auth/confirm')
    * @param body - v3-shaped request body (forwarded unchanged)
-   * @param opts.authToken - optional Bearer token for authenticated calls
+   * @param opts.authToken - pass (even '') for authenticated calls; omit for anonymous ones
    * @param opts.pathParams - optional path parameter substitutions
    */
   post_v3(
@@ -326,9 +414,64 @@ export class MobileNetworkAdapter {
        *  device-token deactivation (M3.2.Z.5) sends { token } so the
        *  server can identify which device to deactivate. */
       body?: unknown;
+      /** Clean-up for a session that ALREADY ENDED locally (logout push
+       *  deactivation): send authToken exactly as given, never swap in the
+       *  stored session's token (it may already be the next account's) and
+       *  never refresh-and-retry or end a session. */
+      detached?: boolean;
     },
   ): Observable<unknown> {
     return this.callV3Direct('DELETE', routeKey, opts?.body ?? null, opts);
+  }
+
+  /**
+   * Run a RAW (non-envelope) authenticated request with the same session
+   * handling as the *_v3 methods, for call sites that need HttpClient or
+   * fetch directly (multipart uploads, the chat service's raw JSON).
+   *
+   * `send` builds and issues the request with the given Authorization
+   * header value (null when there is no session). It must fail with an
+   * HttpErrorResponse for HTTP errors (HttpClient does; fetch callers wrap a
+   * 401 themselves). The current session token is used (callerToken only as
+   * a fallback when none is stored); a token 401 refreshes and retries
+   * once; a transient refresh failure fails with a 503 HttpErrorResponse
+   * carrying { error: { code: NETWORK_UNAVAILABLE, message } }; every other
+   * error passes through unchanged.
+   */
+  authedRequest<T>(send: (authHeader: string | null) => Observable<T>, callerToken?: string): Observable<T> {
+    return this.authedCall(callerToken ?? '', send);
+  }
+
+  /**
+   * POST /v3/auth/refresh for a session that is NO LONGER stored: the
+   * logout clean-up uses it to get an access token for the push
+   * deactivation when the captured one has expired. A single attempt
+   * (refreshTimeoutMs) that never reads or writes SessionStore; resolves
+   * the new pair, or null on any failure. Safe after rotation (contract
+   * C2), and the logout that follows ends the whole family, including the
+   * pair minted here (C3).
+   */
+  async refreshDetached(refreshToken: string): Promise<SessionTokenPair | null> {
+    if (refreshToken === '') {
+      return null;
+    }
+    try {
+      const response = await firstValueFrom(
+        this.executeHttpRequest('POST', this.refreshUrl(), { refresh_token: refreshToken }, null)
+          .pipe(timeout(this.refreshTimeoutMs)),
+      );
+      const accessToken = this.extractAccessToken(response);
+      if (accessToken === null) {
+        return null;
+      }
+      const next = (response as Record<string, unknown>)['refresh_token'];
+      return {
+        access_token: accessToken,
+        refresh_token: typeof next === 'string' && next.length > 0 ? next : undefined,
+      };
+    } catch {
+      return null;
+    }
   }
 
   /* ------ Internals ----------------------------------------------- */
@@ -375,7 +518,7 @@ export class MobileNetworkAdapter {
    * confirm, password reset, refresh-token, logout, etc.). See the
    * post_v3 docblock for design rationale.
    *
-   * 401 handling: same as callV3, see that method's docblock.
+   * 401 handling: only when opts.authToken is passed, see authedCall.
    */
   private callV3Direct(
     method: HttpMethod,
@@ -385,6 +528,7 @@ export class MobileNetworkAdapter {
       authToken?: string;
       pathParams?: Record<string, string>;
       queryParams?: Record<string, string | number | boolean>;
+      detached?: boolean;
     },
   ): Observable<unknown> {
     let cfg: EndpointConfig;
@@ -428,23 +572,26 @@ export class MobileNetworkAdapter {
           opts?.pathParams,
         );
 
-    const authHeader = opts?.authToken ? `Bearer ${opts.authToken}` : null;
-
     // The refresh endpoint itself MUST NOT trigger refresh-on-401
-    // recursion, a 401 from /auth/refresh means the refresh token
-    // is dead, period. Same for /auth/login and other anonymous
-    // endpoints: they have no Authorization header to refresh.
-    if (routeKey === 'POST /auth/refresh' || authHeader === null) {
+    // recursion. Same for /auth/login, /auth/logout and other anonymous
+    // calls (no authToken passed): there is no session token to refresh.
+    // Detached calls send their own token as-is and leave the store alone.
+    if (routeKey === 'POST /auth/refresh' || opts?.authToken === undefined || opts.detached === true) {
+      const authHeader = opts?.authToken ? `Bearer ${opts.authToken}` : null;
       return this.executeHttpRequest(method, url, body, authHeader).pipe(
         map((v3Response) => this.envelopeAndTransform(v3Response, routeKey)),
         catchError((err: HttpErrorResponse) => this.translateError(err)),
       );
     }
 
-    return this.withRefreshRetry(
-      authHeader,
-      (currentAuthHeader) => this.executeHttpRequest(method, url, body, currentAuthHeader),
-      routeKey,
+    // Authenticated (the caller passed a token, possibly '' from a page that
+    // thought it was a guest): send the live session token, refresh on a
+    // token 401, and surface every outcome through the legacy envelope.
+    return this.authedCall(opts.authToken, (authHeader) =>
+      this.executeHttpRequest(method, url, body, authHeader),
+    ).pipe(
+      map((v3Response) => this.envelopeAndTransform(v3Response, routeKey)),
+      catchError((err: HttpErrorResponse) => this.translateError(err)),
     );
   }
 
@@ -464,6 +611,8 @@ export class MobileNetworkAdapter {
     authHeader: string | null,
   ): Observable<unknown> {
     const headers = this.buildHeaders(authHeader);
+    // DELETE carries its body too: DELETE /me/device-tokens { token } and
+    // DELETE /me { current_password } are rejected by the API without it.
     return method === 'GET'
       ? this.http.get<unknown>(url, { headers, responseType: 'json' })
       : method === 'POST'
@@ -472,62 +621,61 @@ export class MobileNetworkAdapter {
           ? this.http.put<unknown>(url, body, { headers, responseType: 'json' })
           : method === 'PATCH'
             ? this.http.patch<unknown>(url, body, { headers, responseType: 'json' })
-            : this.http.delete<unknown>(url, { headers, responseType: 'json' });
+            : this.http.delete<unknown>(url, { headers, responseType: 'json', body });
   }
 
   /**
-   * Wrap a request executor with 401-refresh-retry behaviour.
+   * Run an authenticated request with the session contract applied.
    *
    * Behaviour:
-   *   1. Run execute(initialAuthHeader). If success: map to envelope, done.
-   *   2. If error and not 401: existing translateError path.
-   *   3. If error IS 401 and initialAuthHeader was set (i.e. we had a
-   *      token to refresh): trigger tryRefresh.
-   *      - If refresh succeeds with a new token: re-run execute with
-   *        Bearer <new-token>; wrap that result the same way; if THAT
-   *        also 401s, give up (don't refresh-loop).
-   *      - If refresh fails: surface the original 401 via translateError.
-   *   4. If 401 but no initialAuthHeader: was anonymous; nothing to
-   *      refresh; fall through to translateError.
+   *   1. Send with the CURRENT session access token (callerToken only when
+   *      no session is stored; no header at all when neither exists).
+   *   2. Success, or any error that is not a token 401: pass through.
+   *   3. Token 401 (isTokenRejection): recoverFromTokenRejection, then
+   *      - retry ONCE with the new token. A second token 401 while the
+   *        session is still stored is reported as transient (never a
+   *        sign-in prompt) and is not refreshed again, so there is no
+   *        refresh loop;
+   *      - transient refresh failure: fail with transientError() (503
+   *        NETWORK_UNAVAILABLE) instead of the 401, session kept;
+   *      - session ended / no session: the original 401 passes through.
    *
-   * The `execute` callback takes a fresh authHeader each time because
-   * after refresh succeeds, the original request must be retried with
-   * the new token, not the stale one that just failed.
-   *
-   * The optional `routeKey` enables response shape transformation.
-   * When provided AND CATALOG_RESPONSE_TRANSFORMS has an entry for it,
-   * the legacy envelope's `data` field is transformed v3-shape →
-   * legacy-shape before being surfaced to the caller. Without a
-   * routeKey, the v3 data passes through unchanged (current behaviour
-   * for auth endpoints which don't use the transform registry).
+   * `send` takes the Authorization header each time because the retry must
+   * carry the new token, not the one that just failed. Errors are thrown
+   * (HttpErrorResponse); callers decide how to surface them.
    */
-  private withRefreshRetry(
-    initialAuthHeader: string | null,
-    execute: (authHeader: string | null) => Observable<unknown>,
-    routeKey?: string,
-  ): Observable<unknown> {
-    return execute(initialAuthHeader).pipe(
-      map((v3Response) => this.envelopeAndTransform(v3Response, routeKey)),
-      catchError((err: HttpErrorResponse) => {
-        // Not a 401, or anonymous call with no refresh path: existing
-        // behaviour.
-        if (err.status !== 401 || !initialAuthHeader) {
-          return this.translateError(err);
+  private authedCall<T>(
+    callerToken: string,
+    send: (authHeader: string | null) => Observable<T>,
+  ): Observable<T> {
+    return defer(() => this.sessionToken$(callerToken)).pipe(
+      switchMap((token) => {
+        if (token === '') {
+          return send(null);
         }
-        // 401 + had auth: attempt refresh.
-        return this.tryRefresh().pipe(
-          switchMap((newToken) => {
-            if (newToken === null) {
-              // Refresh failed (or no refresh_token stored). Surface
-              // the original 401, call sites treat as session expired.
-              return this.translateError(err);
+        return send(`Bearer ${token}`).pipe(
+          catchError((err: unknown) => {
+            if (!this.isHttpTokenRejection(err)) {
+              return throwError(() => err);
             }
-            // Retry the original request with the new token. On a
-            // second failure, do NOT refresh again, that'd loop on
-            // a 401 the new token can't fix.
-            return execute(`Bearer ${newToken}`).pipe(
-              map((v3Response) => this.envelopeAndTransform(v3Response, routeKey)),
-              catchError((retryErr: HttpErrorResponse) => this.translateError(retryErr)),
+            return from(this.recoverFromTokenRejection(token)).pipe(
+              switchMap((outcome) => {
+                if (outcome.kind === 'retry') {
+                  return send(`Bearer ${outcome.token}`).pipe(
+                    catchError((retryErr: unknown) =>
+                      throwError(() =>
+                        this.isHttpTokenRejection(retryErr) && this.session.hasSession()
+                          ? this.transientError()
+                          : retryErr,
+                      ),
+                    ),
+                  );
+                }
+                if (outcome.kind === 'transient') {
+                  return throwError(() => this.transientError());
+                }
+                return throwError(() => err);
+              }),
             );
           }),
         );
@@ -535,84 +683,163 @@ export class MobileNetworkAdapter {
     );
   }
 
+  /** The token to send: the live session token, else the caller's copy. */
+  private sessionToken$(callerToken: string): Observable<string> {
+    const pick = (): string => this.session.currentAccessToken() || callerToken || '';
+    return this.session.isLoaded() ? of(pick()) : from(this.session.ready().then(pick));
+  }
+
+  private isHttpTokenRejection(err: unknown): boolean {
+    return err instanceof HttpErrorResponse && isTokenRejection(err.status, err.error);
+  }
+
   /**
-   * Single-flight refresh.
-   *
-   * Returns an Observable that resolves with the new access_token on
-   * success, or null on failure. Concurrent callers share one in-
-   * flight refresh (shareReplay(1) + the refreshInFlight$ field).
-   *
-   * Source of truth for the refresh_token: Preferences['user'].refresh_token.
-   * Sink for new tokens: same blob, mutated in place.
-   *
-   * On refresh failure (HTTP 4xx/5xx from /auth/refresh):
-   *   - Clear Preferences['user'] (forces /login on next read)
-   *   - Resolve with null so callers surface their original 401
+   * The error reported instead of a token 401 when the session could not be
+   * refreshed for a transient reason. translateError turns it into
+   * { response_code: 503, error_code: NETWORK_UNAVAILABLE, message }.
    */
-  private tryRefresh(): Observable<string | null> {
-    if (this.refreshInFlight$ !== null) {
-      return this.refreshInFlight$;
+  private transientError(): HttpErrorResponse {
+    return new HttpErrorResponse({
+      status: 503,
+      statusText: 'Service Unavailable',
+      error: {
+        error: {
+          code: NETWORK_UNAVAILABLE,
+          message: this.i18n.t('connection_problem_try_again'),
+        },
+      },
+    });
+  }
+
+  /**
+   * Decide how to recover from a token 401 on a request sent with
+   * `usedToken`. When the store already holds a different access token
+   * (another request refreshed, or a new sign-in happened while this one
+   * was in flight) just retry with it; otherwise refresh.
+   */
+  private async recoverFromTokenRejection(usedToken: string): Promise<RecoveryOutcome> {
+    await this.session.ready();
+    if (!this.session.isLoaded()) {
+      // The stored session couldn't be READ (storage glitch): unknown is
+      // not signed out, so report it like any other transient failure.
+      return { kind: 'transient' };
+    }
+    if (!this.session.hasSession()) {
+      return { kind: 'none' };
+    }
+    const current = this.session.currentAccessToken();
+    if (current !== '' && current !== usedToken) {
+      return { kind: 'retry', token: current };
+    }
+    return this.refreshOnce();
+  }
+
+  /** Single-flight wrapper around runRefresh (see refreshInFlight). */
+  private refreshOnce(): Promise<RecoveryOutcome> {
+    if (this.refreshInFlight === null) {
+      const run: Promise<RecoveryOutcome> = this.runRefresh()
+        .catch((): RecoveryOutcome => ({ kind: 'transient' }))
+        .finally(() => {
+          if (this.refreshInFlight === run) {
+            this.refreshInFlight = null;
+          }
+        });
+      this.refreshInFlight = run;
+    }
+    return this.refreshInFlight;
+  }
+
+  /**
+   * POST /v3/auth/refresh with the stored refresh_token and classify the
+   * result per the session contract:
+   *   - 200: SessionStore.replaceTokens (compare-and-set) -> retry
+   *   - 401 AUTH_REFRESH_TOKEN_INVALID: endSession('rejected', used) -> ended
+   *   - network/timeout (20s), 403, 429, 5xx: retried after each
+   *     refreshRetryDelaysMs entry, then transient
+   *   - anything else (422, non-JSON, 401 without that code): transient
+   * Transient NEVER touches the stored session.
+   */
+  private async runRefresh(): Promise<RecoveryOutcome> {
+    await this.session.ready();
+    if (!this.session.isLoaded()) {
+      return { kind: 'transient' };
+    }
+    if (!this.session.hasSession()) {
+      return { kind: 'none' };
+    }
+    const used = this.session.currentRefreshToken();
+    if (used === '') {
+      // The cached blob predates M3.1.3 (no refresh_token) or is corrupt:
+      // nothing can renew it, so the session is over.
+      await this.session.endSession('rejected', '');
+      return this.outcomeAfterSessionChange();
     }
 
-    this.refreshInFlight$ = from(Preferences.get({ key: 'user' })).pipe(
-      switchMap((stored) => {
-        if (!stored.value) {
-          // No cached user blob at all, nothing to refresh against.
-          return of<string | null>(null);
-        }
-        let parsed: Record<string, unknown>;
-        try {
-          parsed = JSON.parse(stored.value) as Record<string, unknown>;
-        } catch {
-          return of<string | null>(null);
-        }
-        const refreshToken = parsed['refresh_token'];
-        if (typeof refreshToken !== 'string' || refreshToken.length === 0) {
-          // The cached blob predates M3.1.3 (no refresh_token field)
-          // or has been corrupted. Treat as un-refreshable.
-          return of<string | null>(null);
-        }
+    const refreshUrl = this.refreshUrl();
 
-        const refreshUrl = resolveUrl(
-          'POST /auth/refresh',
-          { old: GlobalComponent.baseURL, new: this.v3BaseUrl },
-          undefined,
-        );
+    for (let attempt = 0; ; attempt++) {
+      // Logged out, or signed in again, while we were backing off.
+      if (this.session.currentRefreshToken() !== used) {
+        return this.outcomeAfterSessionChange();
+      }
 
-        return this.executeHttpRequest('POST', refreshUrl, { refresh_token: refreshToken }, null).pipe(
-          switchMap((response) => {
-            // v3 /auth/refresh returns the same shape as /auth/login.
-            // Persist the new tokens + user fields into Preferences,
-            // then resolve with the new access_token.
-            return from(this.updateStoredTokens(parsed, response)).pipe(
-              map(() => this.extractAccessToken(response)),
-            );
-          }),
-          catchError((err: any) => {
-            // Only DROP the session when the refresh token is genuinely
-            // rejected, a 401/403 from /auth/refresh (expired / revoked /
-            // invalid). A network blip, timeout or 5xx must NOT log the user
-            // out: the session should end only on manual logout or a real
-            // auth rejection, so we keep the stored user and let the caller's
-            // request fail transiently (it retries on the next call).
-            const status = Number(err?.status ?? 0);
-            const isAuthRejection = status === 401 || status === 403;
-            if (isAuthRejection) {
-              return from(Preferences.remove({ key: 'user' })).pipe(map(() => null));
-            }
-            return of<string | null>(null);
-          }),
+      let response: unknown;
+      let failure: unknown = null;
+      try {
+        response = await firstValueFrom(
+          this.executeHttpRequest('POST', refreshUrl, { refresh_token: used }, null)
+            .pipe(timeout(this.refreshTimeoutMs)),
         );
-      }),
-      finalize(() => {
-        // Clear the in-flight slot once this observable completes
-        // (success OR error). The next 401 starts a fresh refresh.
-        this.refreshInFlight$ = null;
-      }),
-      shareReplay(1),
+      } catch (err) {
+        failure = err ?? new Error('refresh failed');
+      }
+
+      if (failure === null) {
+        return this.applyRefreshResponse(used, response);
+      }
+
+      const status = httpStatusOf(failure);
+      const body = failure instanceof HttpErrorResponse ? failure.error : null;
+      if (isDefinitiveRefreshRejection(status, body)) {
+        await this.session.endSession('rejected', used);
+        return this.outcomeAfterSessionChange();
+      }
+      if (!isRetryableRefreshFailure(status) || attempt >= this.refreshRetryDelaysMs.length) {
+        return { kind: 'transient' };
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, this.refreshRetryDelaysMs[attempt]));
+    }
+  }
+
+  private refreshUrl(): string {
+    return resolveUrl('POST /auth/refresh', { old: GlobalComponent.baseURL, new: this.v3BaseUrl }, undefined);
+  }
+
+  /** Store a 200 refresh response; a malformed one counts as transient. */
+  private async applyRefreshResponse(used: string, response: unknown): Promise<RecoveryOutcome> {
+    const accessToken = this.extractAccessToken(response);
+    if (accessToken === null) {
+      return { kind: 'transient' };
+    }
+    const r = response as Record<string, unknown>;
+    const refreshToken = typeof r['refresh_token'] === 'string' ? (r['refresh_token'] as string) : undefined;
+    const applied = await this.session.replaceTokens(
+      used,
+      { access_token: accessToken, refresh_token: refreshToken },
+      r['user'],
     );
+    return applied ? { kind: 'retry', token: accessToken } : this.outcomeAfterSessionChange();
+  }
 
-    return this.refreshInFlight$;
+  /**
+   * After the stored session changed under a refresh: retry with the newer
+   * session's token when there is one, otherwise the session is over.
+   */
+  private outcomeAfterSessionChange(): RecoveryOutcome {
+    const current = this.session.currentAccessToken();
+    return this.session.hasSession() && current !== ''
+      ? { kind: 'retry', token: current }
+      : { kind: 'ended' };
   }
 
   /**
@@ -625,63 +852,6 @@ export class MobileNetworkAdapter {
     }
     const token = (response as Record<string, unknown>)['access_token'];
     return typeof token === 'string' && token.length > 0 ? token : null;
-  }
-
-  /**
-   * Merge a /auth/refresh response into the cached 'user' Preferences
-   * blob.
-   *
-   * Preserves all existing legacy fields (first_name, billing_*, etc.)
-   *, the refresh response only contains auth-related fields. Updates:
-   *   - token (from access_token)
-   *   - refresh_token
-   *   - id (in case it changed, unlikely but defensive)
-   *   - any user.* fields v3 returns (first_name, etc.)
-   *
-   * Why not just store response.user verbatim
-   * ==========================================
-   * Same reason transformV3LoginResponse exists: the cached blob has
-   * legacy-only fields (billing_*, location, etc.) that v3 doesn't
-   * return. A naive overwrite would erase them. We update fields v3
-   * provides and leave the rest untouched.
-   */
-  private async updateStoredTokens(
-    existingBlob: Record<string, unknown>,
-    refreshResponse: unknown,
-  ): Promise<void> {
-    if (refreshResponse === null || typeof refreshResponse !== 'object' || Array.isArray(refreshResponse)) {
-      return;
-    }
-    const r = refreshResponse as Record<string, unknown>;
-    const newBlob: Record<string, unknown> = { ...existingBlob };
-
-    const accessToken = r['access_token'];
-    if (typeof accessToken === 'string' && accessToken.length > 0) {
-      newBlob['token'] = accessToken;
-    }
-    const refreshToken = r['refresh_token'];
-    if (typeof refreshToken === 'string' && refreshToken.length > 0) {
-      newBlob['refresh_token'] = refreshToken;
-    }
-    // Merge v3 user fields where they overlap with the legacy shape.
-    const user = r['user'];
-    if (user !== null && typeof user === 'object' && !Array.isArray(user)) {
-      const u = user as Record<string, unknown>;
-      const overlay: Record<string, unknown> = {};
-      if (typeof u['id'] === 'number') overlay['id'] = u['id'];
-      if (typeof u['email'] === 'string') overlay['email'] = u['email'];
-      if (typeof u['phone'] === 'string') overlay['phone'] = u['phone'];
-      if (typeof u['first_name'] === 'string') overlay['first_name'] = u['first_name'];
-      if (typeof u['last_name'] === 'string') overlay['last_name'] = u['last_name'];
-      if (u['is_store_active'] !== undefined) overlay['is_store_active'] = u['is_store_active'] === true;
-      if (u['is_store_approved'] !== undefined) overlay['is_store_approved'] = u['is_store_approved'] === true;
-      if (Array.isArray(u['roles'])) {
-        overlay['is_vendor'] = (u['roles'] as unknown[]).some((x) => x === 'vendor');
-      }
-      Object.assign(newBlob, overlay);
-    }
-
-    await Preferences.set({ key: 'user', value: JSON.stringify(newBlob) });
   }
 
   /**
@@ -707,11 +877,10 @@ export class MobileNetworkAdapter {
    *      Defensive, a v3 response without a `data` field is anomalous
    *      and we'd rather surface that to the caller than synthesise.
    *
-   * Why a helper instead of inlining: there are four sites that wrap
-   * the v3 response in a legacy envelope (withRefreshRetry initial +
-   * retry, callV3Direct recursion-guard paths). Inlining would put the
-   * transform-lookup duplication in all four; one helper keeps the
-   * logic in one place.
+   * Why a helper instead of inlining: both callV3Direct paths (anonymous
+   * and authenticated, the latter covering the post-refresh retry) wrap
+   * the v3 response in a legacy envelope; one helper keeps the
+   * transform-lookup logic in one place.
    */
   private envelopeAndTransform(
     v3Response: unknown,

@@ -28,6 +28,7 @@ import {Router, RouterLink} from "@angular/router";
 import {ActionSheetController, InfiniteScrollCustomEvent, Platform, RefresherCustomEvent} from '@ionic/angular';
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { SessionStore } from '../../core/services/session-store.service';
 import { apiErrorMessage } from '../../core/http/api-error';
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import { ConnectionService } from '../../service/connection.service';
@@ -205,6 +206,7 @@ export class AccountPage implements OnInit, OnDestroy {
     public cartCount: CartCountService,
     public pendingOrders: PendingOrdersService,
     private chatService: ChatService,
+    private session: SessionStore,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
     });
@@ -501,7 +503,7 @@ export class AccountPage implements OnInit, OnDestroy {
           }
 
           if (changed) {
-            Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+            void this.session.saveProfile(this.single_user);
           }
         },
         error: () => { /* silent, fallback avatar applies, flags keep cached value */ },

@@ -6,6 +6,8 @@ import {
   IonButton, IonButtons, IonContent, IonHeader, IonTitle,
   IonToolbar, IonSpinner, NavController,
 } from '@ionic/angular/standalone';
+import { HttpErrorResponse } from '@angular/common/http';
+import { defer, firstValueFrom } from 'rxjs';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
 import { apiErrorMessage } from '../../core/http/api-error';
 import { Preferences } from '@capacitor/preferences';
@@ -503,19 +505,30 @@ export class GiftCardsPage implements OnInit {
     const file = input.files?.[0];
     if (!file) return;
 
-    const token = this.authToken;
     const form = new FormData();
     form.append('image', file, file.name);
+    const url = `${this.v3BaseUrl}/v3/gift-cards/photo`;
 
     // Simple fetch for the upload since we don't have HttpClient injected here.
-    // Authed endpoint, set Authorization: Bearer <token>.
+    // Routed through the adapter's session handling (live session token,
+    // refresh-and-retry on a token 401, transient error when the refresh
+    // can't run); a 401 is surfaced as HttpErrorResponse so it can do that.
     try {
-      const resp = await fetch(`${this.v3BaseUrl}/v3/gift-cards/photo`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-      });
-      const data = await resp.json();
+      const data: any = await firstValueFrom(this.network.authedRequest(
+        (authHeader) => defer(async () => {
+          const resp = await fetch(url, {
+            method: 'POST',
+            headers: authHeader ? { Authorization: authHeader } : {},
+            body: form,
+          });
+          if (resp.status === 401) {
+            const error = await resp.json().catch(() => null);
+            throw new HttpErrorResponse({ status: 401, error, url });
+          }
+          return resp.json();
+        }),
+        this.authToken,
+      ));
       if (data?.data?.url) {
         this.form.recipient_photo_url = data.data.url;
         this.notify.success(this.i18n.t('gc_photo_uploaded'));

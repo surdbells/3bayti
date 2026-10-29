@@ -751,12 +751,12 @@
           <span>{{ 'already_in_cart' | translate }}</span>
         </button>
       } @else if(single.stock_status === 'on_backorder'){
-        <button type="button" class="add-cart-btn backorder" (click)="addToCart()">
+        <button type="button" class="add-cart-btn backorder" [disabled]="ui_controls.is_adding_to_cart" (click)="addToCart()">
           <ax-icon name="clock"></ax-icon>
           <span>{{ 'back_order' | translate }}</span>
         </button>
       } @else {
-        <button type="button" class="add-cart-btn" (click)="addToCart()">
+        <button type="button" class="add-cart-btn" [disabled]="ui_controls.is_adding_to_cart" (click)="addToCart()">
           <ax-icon name="shopping-cart"></ax-icon>
           <span>{{ 'button_add_to_cart' | translate }}</span>
         </button>

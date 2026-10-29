@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import { Observable, BehaviorSubject, from, throwError } from 'rxjs';
-import { map, switchMap, catchError, tap } from 'rxjs/operators';
-import { Preferences } from '@capacitor/preferences';
+import { map, catchError, tap } from 'rxjs/operators';
 
 import { ChatMessage, ChatConversationSummary, PromptCategory } from '../models/chat.models';
+import { MobileNetworkAdapter } from '../core/http/mobile-network-adapter';
 
 const V3_BASE = 'https://api-v3.3bayti.ae';
 const CUSTOMER_BASE = '/v3/chat';
@@ -27,7 +27,7 @@ export class ChatService {
   private messages$ = new BehaviorSubject<ChatMessage[]>([]);
   private unreadCount$ = new BehaviorSubject<number>(0);
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private adapter: MobileNetworkAdapter) {}
 
   // ── Conversation list ───────────────────────────────────────
 
@@ -159,33 +159,29 @@ export class ChatService {
     return role === 'vendor' ? VENDOR_BASE : CUSTOMER_BASE;
   }
 
+  // Raw JSON requests (no legacy envelope) routed through the adapter's
+  // session handling: the live session token, refresh-and-retry on a token
+  // 401, and a transient 503 NETWORK_UNAVAILABLE error instead of a 401 when
+  // the refresh can't run. HTTP errors still arrive as HttpErrorResponse.
+
   private authedGet(path: string, query: Record<string, number>): Observable<unknown> {
     let params = new HttpParams();
     for (const [k, v] of Object.entries(query)) {
       params = params.set(k, String(v));
     }
-    return from(this.authHeaders()).pipe(
-      switchMap((headers) => this.http.get<unknown>(`${V3_BASE}${path}`, { headers, params })),
+    return this.adapter.authedRequest((authHeader) =>
+      this.http.get<unknown>(`${V3_BASE}${path}`, { headers: this.authHeaders(authHeader), params }),
     );
   }
 
   private authedPost(path: string, body: unknown): Observable<unknown> {
-    return from(this.authHeaders()).pipe(
-      switchMap((headers) => this.http.post<unknown>(`${V3_BASE}${path}`, body, { headers })),
+    return this.adapter.authedRequest((authHeader) =>
+      this.http.post<unknown>(`${V3_BASE}${path}`, body, { headers: this.authHeaders(authHeader) }),
     );
   }
 
-  private async authHeaders(): Promise<HttpHeaders> {
-    let token = '';
-    try {
-      const ret = await Preferences.get({ key: 'user' });
-      if (ret.value) {
-        token = JSON.parse(ret.value)?.token || '';
-      }
-    } catch {
-      token = '';
-    }
-    return new HttpHeaders(token ? { Authorization: `Bearer ${token}` } : {});
+  private authHeaders(authHeader: string | null): HttpHeaders {
+    return new HttpHeaders(authHeader ? { Authorization: authHeader } : {});
   }
 
   private mapConversation(c: any): ChatConversationSummary {

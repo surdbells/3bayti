@@ -27,7 +27,8 @@ import { Subscription, firstValueFrom } from "rxjs";
 import { Platform } from "@ionic/angular";
 import { ConnectionService } from "../../service/connection.service";
 import { NetworkService } from "../../service/network.service";
-import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import {MobileNetworkAdapter, NETWORK_UNAVAILABLE} from "../../core/http/mobile-network-adapter";
+import { SessionStore } from '../../core/services/session-store.service';
 import { apiErrorMessage } from '../../core/http/api-error';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { Preferences } from "@capacitor/preferences";
@@ -184,6 +185,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     private i18n: I18nService,
     private cartCount: CartCountService,
     private reviewService: ProductReviewService,
+    private session: SessionStore,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
     });
@@ -487,7 +489,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** Open the "Write a review" sheet, auth-gated (guests prompted to sign in). */
   openReviewSheet(): void {
-    if (this.isGuest || !this.single_user.token) {
+    if (!this.hasLiveSession()) {
       this.error_notification(this.i18n.t('review_sign_in_to_review'));
       this.router.navigate(['/', 'login']);
       return;
@@ -506,7 +508,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   /** Submit the review (upsert, lands PENDING moderation), then refresh. */
   async submitReview(): Promise<void> {
     if (this.reviewSubmitting) return;
-    if (this.isGuest || !this.single_user.token) {
+    if (!this.hasLiveSession()) {
       this.error_notification(this.i18n.t('review_sign_in_to_review'));
       this.router.navigate(['/', 'login']);
       return;
@@ -927,6 +929,18 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   // adding to cart (and wishlist) requires signing in or signing up.
   isGuest = false;
 
+  /**
+   * Auth gates read the LIVE session (SessionStore), never the ngOnInit
+   * copy: a page cached from before a sign-in, a sign-out or a token
+   * refresh must not show "Sign in" to a signed-in customer (or let a
+   * signed-out one through). The adapter sends the live token either way.
+   * False only when the store KNOWS there is no session: a stored session
+   * that can't be read right now is never treated as a guest.
+   */
+  private hasLiveSession(): boolean {
+    return !this.session.isSignedOut();
+  }
+
   async getObject() {
     const ret: any = await Preferences.get({ key: 'user' });
     if (ret.value == null) {
@@ -1233,7 +1247,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     if (this.isAddingLook || this.completeLook.length === 0) {
       return;
     }
-    if (this.isGuest || !this.single_user.token) {
+    if (!this.hasLiveSession()) {
       this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
       return;
     }
@@ -1295,7 +1309,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
    * navigates by SLUG (never legacy id). The form page resolves the product.
    */
   requestCustomization(): void {
-    if (this.isGuest || !this.single_user.token) {
+    if (!this.hasLiveSession()) {
       this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
       return;
     }
@@ -1314,7 +1328,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     if (!this.single?.try_on_active) {
       return;
     }
-    if (this.isGuest || !this.single_user.token) {
+    if (!this.hasLiveSession()) {
       this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
       return;
     }
@@ -1382,7 +1396,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     if (!this.canGenerateTryOn || !this.single?.product || !this.tryOnPhoto) {
       return;
     }
-    if (this.isGuest || !this.single_user.token) {
+    if (!this.hasLiveSession()) {
       this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
       return;
     }
@@ -1504,6 +1518,11 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   addToCart() {
+    // One add at a time: a double tap used to fire two POSTs (and two
+    // toasts) before the footer re-rendered into its loading state.
+    if (this.ui_controls.is_adding_to_cart) {
+      return;
+    }
     if (this.add_cart.quantity === 0) {
       this.error_notification(this.i18n.t('text_quantity_required'));
       return;
@@ -1557,11 +1576,11 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     this.ui_controls.is_adding_to_cart = true;
     this.cdr.markForCheck();
 
-    // Guest OR an invalid/empty session -> require login. Adding to cart needs
-    // an account; show a friendly prompt and add nothing. A stale 'user' blob
-    // with a dead token also lands here via the auth-failure branch in the
-    // authed POST below, which shows the SAME prompt.
-    if (this.isGuest || !this.single_user.token) {
+    // No live session -> require login. Adding to cart needs an account;
+    // show a friendly prompt and add nothing. A session the server ends
+    // during the POST below lands in its auth-failure branch, which shows
+    // the SAME prompt.
+    if (!this.hasLiveSession()) {
       this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
       this.ui_controls.is_adding_to_cart = false;
       this.cdr.markForCheck();
@@ -1634,15 +1653,16 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
               this.cartCount.bump(this.add_cart.quantity);
               void this.cartCount.refresh();
             }
-          } else if (
-            response.response_code === 401 ||
-            response.error_code === 'AUTH_INVALID_TOKEN' ||
-            (typeof response.error_code === 'string' && response.error_code.startsWith('AUTH_'))
-          ) {
-            // Stale/invalid session -> require login. Show the same friendly
-            // prompt as the guest gate and add nothing.
+          } else if (response.response_code === 401 && !this.hasLiveSession()) {
+            // The server ended the session (the adapter already signed this
+            // device out) -> require login, same prompt as the guest gate.
             this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
             this.ui_controls.is_adding_to_cart = false;
+          } else if (response.error_code === NETWORK_UNAVAILABLE) {
+            // Transient (offline / refresh couldn't run): the session is
+            // intact, so show the connection message, never a sign-in prompt.
+            this.ui_controls.is_adding_to_cart = false;
+            this.error_notification(response.message || this.i18n.t('connection_problem_try_again'));
           } else {
             this.ui_controls.is_empty = true;
             this.ui_controls.is_adding_to_cart = false;

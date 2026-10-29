@@ -130,30 +130,25 @@ export function transformV3LoginResponse(data: unknown): LegacyUserShape | null 
 
   // --- Path 1: v3 shape (has access_token + user) ----------------
   if (typeof d['access_token'] === 'string' && isPlainObject(d['user'])) {
-    const u = d['user'] as Record<string, unknown>;
-    const roles = Array.isArray(u['roles']) ? (u['roles'] as unknown[]) : [];
-    const isVendor = roles.some((r) => typeof r === 'string' && r === 'vendor');
+    const m = mapV3UserFields(d['user'] as Record<string, unknown>);
 
     return {
-      id: typeof u['id'] === 'number' ? u['id'] : 0,
+      id: m.id ?? 0,
       token: d['access_token'] as string,
       refresh_token: typeof d['refresh_token'] === 'string' ? (d['refresh_token'] as string) : undefined,
-      first_name: typeof u['first_name'] === 'string' ? (u['first_name'] as string) : '',
-      last_name: typeof u['last_name'] === 'string' ? (u['last_name'] as string) : '',
-      email: typeof u['email'] === 'string' ? (u['email'] as string) : '',
-      phone: typeof u['phone'] === 'string' ? (u['phone'] as string) : '',
-      is_vendor: isVendor,
-      is_store_active: u['is_store_active'] === true,
-      is_store_approved: u['is_store_approved'] === true,
-      is_phone_verified: u['is_phone_verified'] === true,
-      is_email_verified: u['is_email_verified'] === true,
-      needs_email_update: u['needs_email_update'] === true,
-      // Avatar: v3 emits `avatar_url` (UserSerializer::publicProfile); the
-      // mobile single_user shape + /account + /settings templates bind
-      // `avatar`. Persist it at login so the avatar shows from the cached
-      // 'user' blob without a follow-up profile fetch. Empty string when the
-      // user has no avatar so the <img> fallback (avatar-placeholder) applies.
-      avatar: typeof u['avatar_url'] === 'string' ? (u['avatar_url'] as string) : '',
+      first_name: m.first_name ?? '',
+      last_name: m.last_name ?? '',
+      email: m.email ?? '',
+      phone: m.phone ?? '',
+      is_vendor: m.is_vendor ?? false,
+      is_store_active: m.is_store_active ?? false,
+      is_store_approved: m.is_store_approved ?? false,
+      is_phone_verified: m.is_phone_verified ?? false,
+      is_email_verified: m.is_email_verified ?? false,
+      needs_email_update: m.needs_email_update ?? false,
+      // Empty string when the user has no avatar so the <img> fallback
+      // (avatar-placeholder) applies.
+      avatar: (m['avatar'] as string | undefined) ?? '',
     };
   }
 
@@ -171,6 +166,39 @@ export function transformV3LoginResponse(data: unknown): LegacyUserShape | null 
   // and let the caller decide (currently: store response.data
   // verbatim, preserving today's behaviour for unexpected payloads).
   return null;
+}
+
+/**
+ * Map the fields a v3 `user` object (UserSerializer::publicProfile) ACTUALLY
+ * carries onto the legacy single_user field names. Absent fields are left
+ * out, so the result can be overlaid on an existing blob without blanking
+ * anything (the session store does this after a refresh). The login
+ * transform above fills the gaps with defaults.
+ *
+ * Avatar: v3 emits `avatar_url`; the mobile single_user shape + /account +
+ * /settings templates bind `avatar`, so it is persisted under that name and
+ * the avatar shows from the cached 'user' blob without a profile fetch.
+ */
+export function mapV3UserFields(u: Record<string, unknown>): Partial<LegacyUserShape> {
+  const out: Partial<LegacyUserShape> = {};
+  if (typeof u['id'] === 'number') out.id = u['id'];
+  for (const key of ['first_name', 'last_name', 'email', 'phone'] as const) {
+    if (typeof u[key] === 'string') out[key] = u[key] as string;
+  }
+  if (Array.isArray(u['roles'])) {
+    out.is_vendor = (u['roles'] as unknown[]).some((r) => typeof r === 'string' && r === 'vendor');
+  }
+  for (const key of [
+    'is_store_active',
+    'is_store_approved',
+    'is_phone_verified',
+    'is_email_verified',
+    'needs_email_update',
+  ] as const) {
+    if (u[key] !== undefined) out[key] = u[key] === true;
+  }
+  if (typeof u['avatar_url'] === 'string') out['avatar'] = u['avatar_url'] as string;
+  return out;
 }
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
