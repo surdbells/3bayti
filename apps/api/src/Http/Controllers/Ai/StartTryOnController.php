@@ -6,6 +6,7 @@ namespace Bayti\Api\Http\Controllers\Ai;
 
 use Bayti\Api\Ai\TryOn\VirtualTryOnProviderInterface;
 use Bayti\Api\Domain\Catalog\Product;
+use Bayti\Api\Domain\TryOn\TryOnGarmentEligibility;
 use Bayti\Api\Domain\TryOn\TryOnJob;
 use Bayti\Api\Domain\TryOn\TryOnJobRepository;
 use Bayti\Api\Domain\TryOn\TryOnPhotoStorage;
@@ -35,9 +36,11 @@ use Psr\Log\LoggerInterface;
  *
  * Guards: TRYON_ENABLED (else 422 TRYON_DISABLED); explicit photo consent (else
  * 422 TRYON_CONSENT_REQUIRED — pass `consent: true` to grant it inline on first
- * use); the product must be try-on-enabled + orderable + in stock; per-user
- * rate limits. The raw photo is stored PRIVATELY and deleted as soon as
- * generation finishes.
+ * use); the product must be try-on-enabled with an eligible garment image
+ * (the shared {@see TryOnGarmentEligibility} rule the worker applies, checked
+ * BEFORE the rate limits so a job that cannot succeed never uses up the
+ * customer's quota) + orderable + in stock; per-user rate limits. The raw
+ * photo is stored PRIVATELY and deleted as soon as generation finishes.
  *
  * Body: { image (data URL or base64), mime_type?, product_id, consent? }.
  */
@@ -60,6 +63,7 @@ final class StartTryOnController
         private readonly EntityManagerInterface $em,
         private readonly KeyValueStore $cache,
         private readonly LoggerInterface $logger,
+        private readonly TryOnGarmentEligibility $eligibility,
     ) {
     }
 
@@ -125,7 +129,15 @@ final class StartTryOnController
         }
 
         $product = $this->em->find(Product::class, $id);
-        if (!$product instanceof Product || !$product->isTryOnEnabled()) {
+        /* A flagged product whose garment image the worker cannot use (none,
+           not in our storage, GIF / other format) is treated exactly like an
+           un-flagged one: the job could only fail, so refuse it here, before
+           enforceRateLimits() counts it against the customer's daily cap. */
+        if (
+            !$product instanceof Product
+            || !$product->isTryOnEnabled()
+            || $this->eligibility->reasonFor($product) !== null
+        ) {
             throw HttpException::notFound('This product is not available for try-on.');
         }
         if (!$product->isOrderable() || !$product->isInStock()) {

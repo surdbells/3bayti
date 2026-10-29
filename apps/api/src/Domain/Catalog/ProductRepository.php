@@ -216,6 +216,100 @@ class ProductRepository extends EntityRepository
     }
 
     /**
+     * Admin virtual try-on enablement list (GET /v3/admin/try-on/products):
+     * every vendor, draft + active (soft-deleted hidden, like the admin
+     * catalogue), optional case-insensitive name/slug substring `q` and
+     * try_on_enabled filter. Try-on-enabled products first, then newest.
+     *
+     * @param array{q?: string|null, enabled?: bool|null, limit?: int, offset?: int} $filters
+     * @return array{items: list<Product>, total: int}
+     */
+    public function findForTryOnAdmin(array $filters): array
+    {
+        $limit  = max(1, min(100, (int) ($filters['limit'] ?? 20)));
+        $offset = max(0, (int) ($filters['offset'] ?? 0));
+
+        $qb = $this->createQueryBuilder('p')
+            ->innerJoin('p.vendor', 'v')
+            ->addSelect('v')
+            ->where('p.status != :softDeleted')
+            ->setParameter('softDeleted', Product::STATUS_SOFT_DELETED);
+
+        $q = $filters['q'] ?? null;
+        if (is_string($q) && trim($q) !== '') {
+            // Wildcards backslash-escaped (PostgreSQL's default LIKE escape, no
+            // ESCAPE literal: see the HY093 note in findActivePaginated). One
+            // placeholder per column, so no named parameter is used twice in
+            // the cloned COUNT query either (house rule from that fix).
+            $needle = '%' . addcslashes(mb_strtolower(trim($q)), '%_\\') . '%';
+            $qb->andWhere('LOWER(p.name) LIKE :qName OR LOWER(p.slug) LIKE :qSlug')
+               ->setParameter('qName', $needle)
+               ->setParameter('qSlug', $needle);
+        }
+
+        $enabled = $filters['enabled'] ?? null;
+        if (is_bool($enabled)) {
+            $qb->andWhere('p.tryOnEnabled = :enabled')->setParameter('enabled', $enabled);
+        }
+
+        $countQb = clone $qb;
+        $countQb->select('COUNT(p.id)')->resetDQLPart('orderBy');
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
+
+        /** @var list<Product> $items */
+        $items = $qb->orderBy('p.tryOnEnabled', 'DESC')
+            ->addOrderBy('p.createdAt', 'DESC')
+            ->addOrderBy('p.id', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
+
+        return ['items' => $items, 'total' => $total];
+    }
+
+    /** Products (soft-deleted hidden) currently flagged for virtual try-on. */
+    public function countTryOnEnabled(): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->where('p.tryOnEnabled = TRUE')
+            ->andWhere('p.status != :softDeleted')
+            ->setParameter('softDeleted', Product::STATUS_SOFT_DELETED)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Products by v3 id (any status), in no particular order. Unknown ids are
+     * simply absent from the result.
+     *
+     * @param list<int> $ids
+     * @return list<Product>
+     */
+    public function findByIds(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        // Soft-deleted products are hidden from the try-on list and count, so
+        // the write paths treat them as not found too.
+        /** @var list<Product> $items */
+        $items = $this->createQueryBuilder('p')
+            ->innerJoin('p.vendor', 'v')
+            ->addSelect('v')
+            ->where('p.id IN (:ids)')
+            ->andWhere('p.status != :softDeleted')
+            ->setParameter('ids', $ids)
+            ->setParameter('softDeleted', Product::STATUS_SOFT_DELETED)
+            ->getQuery()
+            ->getResult();
+
+        return $items;
+    }
+
+    /**
      * Active-product count per label for a vendor's storefront, keyed by
      * label_id. Powers the "N" badge on the storefront collection chips.
      * Uses the same active gating as findActivePaginated (p.isActive = TRUE);

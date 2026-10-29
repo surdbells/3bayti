@@ -29,9 +29,9 @@ use Psr\Log\NullLogger;
  */
 final class TryOnJobProcessor
 {
-    private const ACCEPTED_GARMENT_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
-
     private LoggerInterface $logger;
+
+    private TryOnGarmentEligibility $eligibility;
 
     public function __construct(
         private readonly VirtualTryOnProviderInterface $provider,
@@ -39,8 +39,10 @@ final class TryOnJobProcessor
         private readonly ImageStorageService $imageStorage,
         private readonly EntityManagerInterface $em,
         ?LoggerInterface $logger = null,
+        ?TryOnGarmentEligibility $eligibility = null,
     ) {
         $this->logger = $logger ?? new NullLogger();
+        $this->eligibility = $eligibility ?? new TryOnGarmentEligibility();
     }
 
     public function process(TryOnJob $job): void
@@ -96,18 +98,24 @@ final class TryOnJobProcessor
             return;
         }
 
-        $garmentPath = ImageStorageService::storagePathFromUrl($product->getPrimaryImageUrl());
-        $garmentBytes = $garmentPath !== null ? $this->imageStorage->read($garmentPath) : null;
-        if ($garmentBytes === null || $garmentBytes === '') {
-            $job->failWith('The product image is unavailable for try-on.');
+        /* Same rule the admin try-on screens and the public "Try it on" CTA use
+           (TryOnGarmentEligibility), so the admin UI and this worker can never
+           disagree. Checked before any I/O: the image model only accepts
+           JPEG/PNG/WebP, so a GIF (or any other / missing extension) fails fast
+           instead of being sent upstream and failing opaquely. */
+        $reason = $this->eligibility->reasonFor($product);
+        if ($reason === TryOnGarmentEligibility::REASON_UNSUPPORTED_FORMAT) {
+            $job->failWith('This product image format is not supported for try-on.');
             return;
         }
 
-        $garmentMime = $this->mimeFromPath($garmentPath);
-        if (!in_array($garmentMime, self::ACCEPTED_GARMENT_MIMES, true)) {
-            /* The image model only accepts JPEG/PNG/WebP; a GIF (or other)
-               product image would 400 upstream and fail opaquely. */
-            $job->failWith('This product image format is not supported for try-on.');
+        /* No primary image, an image not in our storage, or a stored file that
+           is missing/empty: the garment cannot be read. */
+        $garmentPath = $reason === null ? $this->eligibility->garmentStoragePath($product) : null;
+        $garmentMime = $garmentPath !== null ? $this->eligibility->mimeForPath($garmentPath) : null;
+        $garmentBytes = $garmentPath !== null ? $this->imageStorage->read($garmentPath) : null;
+        if ($garmentPath === null || $garmentMime === null || $garmentBytes === null || $garmentBytes === '') {
+            $job->failWith('The product image is unavailable for try-on.');
             return;
         }
 
@@ -129,6 +137,7 @@ final class TryOnJobProcessor
         $job->succeed($stored->publicUrl(), $outPath);
     }
 
+    /** MIME of the customer's uploaded photo (StartTryOnController stores it as .jpg/.png/.webp). */
     private function mimeFromPath(string $path): string
     {
         return match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {

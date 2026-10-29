@@ -731,6 +731,32 @@ return [
         return new \Bayti\Api\Ai\TryOn\OpenAiVirtualTryOnProvider($client, $tryOnModel, $imageSize, $logger);
     },
 
+    // Fault-tolerant view of the try-on provider for READ-ONLY gating: the public
+    // product serializer (hides "Try it on" unless try-on can actually work) and
+    // the admin try-on status endpoint. The factory above deliberately throws on
+    // a misconfiguration (TRYON_ENABLED + AI_ENABLED without OPENAI_API_KEY);
+    // that must keep failing only the try-on endpoints, never every product
+    // page, so here such a failure degrades to the disabled provider (logged).
+    'tryon.provider.safe' => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Ai\TryOn\VirtualTryOnProviderInterface {
+        try {
+            return $c->get(\Bayti\Api\Ai\TryOn\VirtualTryOnProviderInterface::class);
+        } catch (\Throwable $e) {
+            try {
+                $c->get(\Psr\Log\LoggerInterface::class)->error('tryon.provider_unavailable', [
+                    'error' => $e->getMessage(),
+                    'class' => $e::class,
+                ]);
+            } catch (\Throwable) {
+                // Logging must never break product serialisation.
+            }
+            return new \Bayti\Api\Ai\TryOn\NullVirtualTryOnProvider();
+        }
+    },
+    \Bayti\Api\Http\Controllers\Admin\TryOn\GetAdminTryOnStatusController::class => \DI\autowire()
+        ->constructorParameter('provider', \DI\get('tryon.provider.safe')),
+
     // WhatsApp Commerce messaging channel (env-gated). Defaults to the
     // NullMessagingChannel so the container ALWAYS boots and the inbound webhook
     // is a no-op until WHATSAPP_ENABLED=true (+ Meta Cloud API creds). The real
@@ -1044,7 +1070,11 @@ return [
     \Bayti\Api\Http\Controllers\Catalog\GetCollectionController::class => \DI\autowire(),
 
     // M2.2, Product endpoints (Day 2 of 10-day rollout)
-    \Bayti\Api\Http\Serializers\ProductSerializer::class => \DI\autowire(),
+    // The try-on provider is an OPTIONAL constructor parameter (PHP-DI skips
+    // those when autowiring), so wire it explicitly: the public try_on_enabled
+    // is gated on it (see ProductSerializer::isTryOnActive).
+    \Bayti\Api\Http\Serializers\ProductSerializer::class => \DI\autowire()
+        ->constructorParameter('tryOnProvider', \DI\get('tryon.provider.safe')),
     \Bayti\Api\Http\Serializers\CartSerializer::class => \DI\autowire(),
     // M3.2.X.8-C, Cart-quote price breakdown shape (subtotal + delivery
     // + discount + total + optional applied_promo block).

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Serializers;
 
+use Bayti\Api\Ai\TryOn\VirtualTryOnProviderInterface;
 use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Currency\Currency;
 use Bayti\Api\Domain\Currency\CurrencyConversionService;
 use Bayti\Api\Domain\Catalog\ProductReview;
+use Bayti\Api\Domain\TryOn\TryOnGarmentEligibility;
 use DateTimeInterface;
 
 /**
@@ -60,9 +62,20 @@ final class ProductSerializer
      */
     private ?Currency $displayCurrency = null;
 
+    private TryOnGarmentEligibility $tryOnEligibility;
+
+    /**
+     * @param VirtualTryOnProviderInterface|null $tryOnProvider the live try-on
+     *        provider (wired in config/di.php through the fault-tolerant
+     *        'tryon.provider.safe' entry). Null (e.g. a bare `new` in tests)
+     *        means try-on is unavailable, so the public try_on_enabled is false.
+     */
     public function __construct(
         private readonly ?CurrencyConversionService $conversion = null,
+        private readonly ?VirtualTryOnProviderInterface $tryOnProvider = null,
+        ?TryOnGarmentEligibility $tryOnEligibility = null,
     ) {
+        $this->tryOnEligibility = $tryOnEligibility ?? new TryOnGarmentEligibility();
     }
 
     /**
@@ -168,6 +181,66 @@ final class ProductSerializer
             'requires_extra_msmt' => $p->requiresExtraMsmt(),
             'extra_msmt'          => $p->getExtraMsmt(),
         ]);
+    }
+
+    /**
+     * Admin product DETAIL shape (GET /v3/admin/products/{id}): the editor's
+     * vendorDetailShape plus the admin-only virtual try-on fields (see
+     * adminTryOnFields), so the portal product page can render the try-on
+     * toggle. Vendors keep the plain vendorDetailShape.
+     *
+     * @return array<string, mixed>
+     */
+    public function adminDetailShape(Product $p): array
+    {
+        return array_merge($this->vendorDetailShape($p), $this->adminTryOnFields($p));
+    }
+
+    /**
+     * Admin view of a product's virtual try-on state. Unlike the public
+     * detailShape (where try_on_enabled is gated on the live provider + image
+     * eligibility), admins see the RAW stored flag, so a product can be
+     * prepared while TRYON_ENABLED is still off:
+     *   - try_on_enabled     the stored products.try_on_enabled flag
+     *   - try_on_available   whether the deployment's try-on provider is live
+     *   - try_on_eligibility {eligible, reason} for the garment (primary) image
+     *                        (reason: no_image | external_image | unsupported_format)
+     *
+     * Merged into every ADMIN product response (detail, create, update).
+     *
+     * @return array{try_on_enabled: bool, try_on_available: bool, try_on_eligibility: array{eligible: bool, reason: string|null}}
+     */
+    public function adminTryOnFields(Product $p): array
+    {
+        return [
+            'try_on_enabled'     => $p->isTryOnEnabled(),
+            'try_on_available'   => $this->isTryOnAvailable(),
+            'try_on_eligibility' => $this->tryOnEligibility->describe($p),
+        ];
+    }
+
+    /**
+     * Whether customers can actually start a try-on for this product right
+     * now: the stored flag is on AND the product is orderable (active, store
+     * approved + active) AND in stock AND the deployment's provider is live
+     * (TRYON_ENABLED + AI_ENABLED + key) AND the garment image is one the
+     * worker accepts. These are exactly the gates StartTryOnController and
+     * TryOnJobProcessor apply, so the public try_on_enabled (the mobile/web
+     * "Try it on" CTA) only shows when a tap can succeed. Admin responses
+     * carry the RAW flag instead (adminTryOnFields).
+     */
+    public function isTryOnActive(Product $p): bool
+    {
+        return $p->isTryOnEnabled()
+            && $p->isOrderable()
+            && $p->isInStock()
+            && $this->isTryOnAvailable()
+            && $this->tryOnEligibility->isEligible($p);
+    }
+
+    private function isTryOnAvailable(): bool
+    {
+        return $this->tryOnProvider !== null && $this->tryOnProvider->isEnabled();
     }
 
     /**
@@ -387,10 +460,14 @@ final class ProductSerializer
             // and at checkout).
             'requires_measurement' => $p->requiresExtraMsmt(),
             'measurement_instructions' => $p->getExtraMsmt(),
-            // AI virtual try-on: when true (and the deployment has TRYON_ENABLED)
-            // the PDP shows a "Try it on" CTA (POST /v3/ai/try-on). The API
-            // still gates every start on the live flag + orderability.
-            'try_on_enabled' => $p->isTryOnEnabled(),
+            // AI virtual try-on: when true the PDP shows a "Try it on" CTA
+            // (POST /v3/ai/try-on). Gated (isTryOnActive): the stored flag AND
+            // orderable + in stock AND the live provider (TRYON_ENABLED) AND an
+            // eligible garment image, so the CTA never shows when the start
+            // would be refused or the job would fail. Admin responses add the
+            // RAW flag back via adminTryOnFields. The API still gates every
+            // start on the same conditions.
+            'try_on_enabled' => $this->isTryOnActive($p),
             'fabric' => null,
             'care_instructions' => null,
             'materials' => [],

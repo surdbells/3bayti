@@ -162,6 +162,13 @@ final class ErrorCodes
     /** The user must consent to virtual try-on photo processing first; HTTP 422. */
     public const TRYON_CONSENT_REQUIRED = 'TRYON_CONSENT_REQUIRED';
 
+    /**
+     * Admin tried to enable virtual try-on for a product whose garment
+     * (primary) image the try-on worker cannot use; HTTP 422. The reason
+     * (no_image | external_image | unsupported_format) is in details.reason.
+     */
+    public const TRYON_IMAGE_INELIGIBLE = 'TRYON_IMAGE_INELIGIBLE';
+
     // -------------------------------------------------------------------
     // PROMO, promotional code redemption (M3.2.X.8)
     //

@@ -85,6 +85,11 @@ final class CreateAdminProductController
         $pRepo = $this->em->getRepository(Product::class);
         $pRepo->save($product);
 
-        return $this->created(PaginatedEnvelope::single($this->serializer->detailShape($product)));
+        // Admin view: the RAW try-on flag + availability/eligibility replace the
+        // public (gated) try_on_enabled of the storefront detail shape.
+        return $this->created(PaginatedEnvelope::single(array_merge(
+            $this->serializer->detailShape($product),
+            $this->serializer->adminTryOnFields($product),
+        )));
     }
 }

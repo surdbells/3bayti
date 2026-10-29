@@ -25,7 +25,9 @@ use Psr\Http\Message\ServerRequestInterface;
  * GET /v3/products/{slug}, which 404s on drafts, leaving the form blank. Any
  * vendor's product is editable by admin, so there is no ownership scope
  * (unlike the vendor GetVendorOwnProductController). Returns the same
- * vendorDetailShape the product form already consumes.
+ * vendorDetailShape the product form already consumes, plus the admin-only
+ * virtual try-on fields (raw try_on_enabled, try_on_available,
+ * try_on_eligibility; see ProductSerializer::adminDetailShape).
  *
  * Authorization: admin-only (group middleware). products.view.
  */
@@ -70,6 +72,6 @@ final class GetAdminProductController
             throw HttpException::notFound('Product not found.');
         }
 
-        return $this->ok(['data' => $this->serializer->vendorDetailShape($product)]);
+        return $this->ok(['data' => $this->serializer->adminDetailShape($product)]);
     }
 }

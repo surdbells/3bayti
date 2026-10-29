@@ -75,6 +75,11 @@ final class UpdateAdminProductController
         );
 
         $repo->save($product);
-        return $this->ok(PaginatedEnvelope::single($this->serializer->detailShape($product)));
+        // Admin view: the RAW try-on flag + availability/eligibility replace the
+        // public (gated) try_on_enabled of the storefront detail shape.
+        return $this->ok(PaginatedEnvelope::single(array_merge(
+            $this->serializer->detailShape($product),
+            $this->serializer->adminTryOnFields($product),
+        )));
     }
 }

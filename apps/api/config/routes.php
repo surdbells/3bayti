@@ -1128,6 +1128,20 @@ return function (App $app): void {
         $group->delete('/products/{id:[0-9]+}',
             \Bayti\Api\Http\Controllers\Admin\Product\DeleteAdminProductController::class)->add($perm->for('products.delete'));
 
+        // Virtual try-on enablement: which products offer the customer "Try it
+        // on" (products.try_on_enabled). Status = provider readiness + enabled
+        // count; the list carries each garment image's eligibility (shared
+        // TryOnGarmentEligibility, the same rule the try-on worker applies).
+        // Per-product toggle keyed by v3 product id; bulk takes v3 ids.
+        $group->get('/try-on/status',
+            \Bayti\Api\Http\Controllers\Admin\TryOn\GetAdminTryOnStatusController::class)->add($perm->for('products.view'));
+        $group->get('/try-on/products',
+            \Bayti\Api\Http\Controllers\Admin\TryOn\ListAdminTryOnProductsController::class)->add($perm->for('products.view'));
+        $group->post('/try-on/products/bulk',
+            \Bayti\Api\Http\Controllers\Admin\TryOn\BulkSetAdminTryOnProductsController::class)->add($perm->for('products.edit'));
+        $group->put('/products/{id:[0-9]+}/try-on',
+            \Bayti\Api\Http\Controllers\Admin\TryOn\SetAdminProductTryOnController::class)->add($perm->for('products.edit'));
+
         // Admin-scoped vendor catalog listing (store-products manager). Keyed
         // by v3 vendor id; UNGATED, returns ALL of the vendor's products in
         // every state and works for inactive/pending stores, unlike the public
