@@ -14,7 +14,8 @@ import { CompleteTheLookService, type CompleteLookItem, type CompleteLookResult 
 import { AnalyticsService } from '../../core/monitoring/analytics.service';
 import { CartService } from '../../core/cart/cart.service';
 import { CartDrawerService } from '../../core/cart/cart-drawer.service';
-import { AuthService } from '../../core/auth/auth.service';
+import { AuthService, type SessionStatus } from '../../core/auth/auth.service';
+import { ToastService } from '../../shared/forms';
 import { MeasurementService } from '../account/measurement.service';
 import { provideI18n } from '../../core/i18n';
 import type { Product, ProductDetail } from './product.model';
@@ -150,6 +151,9 @@ interface SetupOpts {
   deferLooks?: boolean;
   /** Return right after the FIRST render (no promise flush / second pass). */
   skipSettle?: boolean;
+  /** Session state for a signed-out shopper (default 'anonymous'). 'unknown' = a
+   *  transient first-load failure the retry (whenSessionKnown) can't resolve. */
+  session?: Exclude<SessionStatus, 'authenticated'>;
 }
 
 async function setup(opts: SetupOpts = {}): Promise<Ctx> {
@@ -186,7 +190,14 @@ async function setup(opts: SetupOpts = {}): Promise<Ctx> {
       { provide: AnalyticsService, useValue: analytics },
       { provide: CartService, useValue: { addItem } },
       { provide: CartDrawerService, useValue: { open: openDrawer } },
-      { provide: AuthService, useValue: { isAuthenticated: signal(false).asReadonly() } },
+      {
+        provide: AuthService,
+        useValue: {
+          isAuthenticated: signal(false).asReadonly(),
+          sessionStatus: signal<SessionStatus>(opts.session ?? 'anonymous').asReadonly(),
+          whenSessionKnown: vi.fn(() => Promise.resolve<SessionStatus>(opts.session ?? 'anonymous')),
+        },
+      },
       { provide: MeasurementService, useValue: { getDefault: vi.fn(() => Promise.resolve(null)) } },
       { provide: PLATFORM_ID, useValue: 'browser' },
     ],
@@ -592,6 +603,16 @@ describe('ProductDetail — compact layout behaviour', () => {
       expect(heart.closest('a')).toBeNull(); // not nested inside the card link
       heart.click();
       expect(navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/product/abaya-01' } });
+    });
+
+    it('a complement heart shows a connection error, NOT sign-in, while the session is unresolved after a transient failure', async () => {
+      const { el } = await setup({ looks: { 100: look }, session: 'unknown' });
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const toastError = vi.spyOn(TestBed.inject(ToastService), 'error');
+      q<HTMLButtonElement>(el, '[data-testid="pdp-ctl-save-2001"]')!.click();
+      for (let i = 0; i < 5; i++) await Promise.resolve();
+      expect(navigate).not.toHaveBeenCalled();
+      expect(toastError).toHaveBeenCalledWith('common.errors.network');
     });
 
     it('is hidden when there are no complements', async () => {

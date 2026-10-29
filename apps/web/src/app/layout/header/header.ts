@@ -202,8 +202,15 @@ export class HeaderComponent {
   /** Authenticated state, for choosing which CTAs to render. */
   protected readonly isAuthenticated = this.auth.isAuthenticated;
 
-  /** True when the logged-out audience CTAs should be visible. */
-  protected readonly showLoggedOutCta = computed(() => !this.isAuthenticated());
+  /**
+   * True when the logged-out audience CTAs should be visible. Only once the
+   * session is known to be signed out: while it is still 'unknown' (first
+   * load, or the session check failed transiently) a signed-in customer must
+   * never be shown "Sign in".
+   */
+  protected readonly showLoggedOutCta = computed(
+    () => !this.isAuthenticated() && this.auth.sessionStatus() === 'anonymous',
+  );
 
   /**
    * True when a signed-in user still needs to verify their phone. Drives

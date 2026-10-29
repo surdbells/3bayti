@@ -7,9 +7,10 @@ import {
   inject,
   DestroyRef,
 } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { catchError, firstValueFrom, of } from 'rxjs';
-import { AccessTokenStore, AccessTokenSnapshot } from './access-token-store';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom, type Observable } from 'rxjs';
+import { AccessTokenStore, AccessTokenSnapshot, jwtLifetimeMs } from './access-token-store';
+import { isSessionEndedError } from './auth-errors';
 import { LocaleService } from '../i18n/locale.service';
 import {
   AUTH_PROXY_BASE,
@@ -53,6 +54,40 @@ export type SocialLoginResult =
   | { ok: false; reason: 'cancelled' | 'unavailable' | 'popup-blocked' | 'failed' };
 
 /**
+ * Whether the browser has a session.
+ *   - 'unknown'       , not resolved yet: before hydrate(), or hydrate()
+ *                       hit a transient failure and is retrying.
+ *   - 'authenticated' , a session is applied (currentUser is set).
+ *   - 'anonymous'     , definitively signed out (no / rejected cookie,
+ *                       or an explicit logout).
+ */
+export type SessionStatus = 'unknown' | 'authenticated' | 'anonymous';
+
+/**
+ * Result of refresh().
+ *   - 'refreshed'     , a new access token is in the store.
+ *   - 'session-ended' , the BFF definitively rejected the session
+ *                       (401 AUTH_REFRESH_TOKEN_INVALID), or the user
+ *                       logged out while the refresh was in flight.
+ *   - 'unavailable'   , transient failure; the session is KEPT and a
+ *                       background retry is scheduled.
+ */
+export type RefreshOutcome = 'refreshed' | 'session-ended' | 'unavailable';
+
+/** First background retry after a transient session failure. Doubles per attempt. */
+const RECOVERY_BASE_DELAY_MS = 2_000;
+/** Ceiling for the background retry backoff. */
+const RECOVERY_MAX_DELAY_MS = 60_000;
+
+/**
+ * Per-browser localStorage marker: "Log out was tapped here, but the BFF
+ * has not confirmed the refresh-cookie clear yet". While it is set, no
+ * /me or /refresh may revive the HttpOnly cookie (it lives 400 days);
+ * the clear is retried instead. Exported for tests.
+ */
+export const LOGOUT_PENDING_KEY = 'bayti.logoutPending';
+
+/**
  * AuthService, single source of truth for authentication state.
  *
  * Public surface
@@ -93,6 +128,25 @@ export type SocialLoginResult =
  * by an initializer creates an NG0200 circular dependency. Arming on
  * token-set is the correct trigger anyway, with no token there is
  * nothing to schedule.
+ *
+ * Session persistence (product rule)
+ * ----------------------------------
+ * A customer stays signed in until THEY tap "Log out". Only the BFF's
+ * definitive rejection (401 AUTH_REFRESH_TOKEN_INVALID, see
+ * auth-errors.ts) ends the local session. Any other refresh / hydrate
+ * failure (network, timeout, 5xx, 429, 403, non-JSON) keeps the session
+ * and schedules a background retry with exponential backoff, which also
+ * fires early when the browser comes back 'online' or the tab becomes
+ * visible again.
+ *
+ * Cookie ordering
+ * ---------------
+ * The browser applies every Set-Cookie in the order responses arrive,
+ * so calls that WRITE the refresh cookie (a sign-in, the logout clear)
+ * are serialised against the ones that rotate it (/me, /refresh): a
+ * write waits for the rotations already on the wire, and rotations
+ * started meanwhile wait for the write (see writeCookie). A response
+ * from an older session can therefore never overwrite a newer cookie.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -124,11 +178,13 @@ export class AuthService {
 
   /**
    * Adopt the fresh access token + user returned by a successful
-   * PATCH /me/password. The password-change endpoint revokes ALL of
-   * the user's refresh tokens (including the current session's) and
-   * issues a new pair, so the caller MUST adopt the new access token
-   * or the next request fails with a revoked token. Mirrors the
-   * token-first / user-second / reschedule sequence of applyAuthState.
+   * PATCH /me/password. The endpoint no longer revokes any session (this
+   * one and the HttpOnly refresh cookie stay valid), but it bumps the
+   * user's password-changed marker, so access tokens minted BEFORE the
+   * change get one 401 AUTH_INVALID_TOKEN. Adopting the returned token
+   * (valid on first use) avoids that extra refresh round-trip here.
+   * Mirrors the token-first / user-second / reschedule sequence of
+   * applyAuthState.
    *
    * No-op when signed out (defensive, a password change can only
    * happen for an authenticated user).
@@ -149,10 +205,19 @@ export class AuthService {
     this.scheduleRefresh();
   }
 
-  /** True when a user is signed in AND the access token is still valid. */
-  readonly isAuthenticated = computed(
-    () => this._currentUser() !== null && this.tokenStore.hasValidToken(),
-  );
+  /**
+   * True while a session exists (a user is applied). Deliberately NOT
+   * tied to the access token's expiry: an aged-out token or a skewed
+   * device clock must not make a signed-in customer look signed out.
+   * Staleness is handled by the pre-emptive refresh and by the
+   * interceptor's 401-driven refresh.
+   */
+  readonly isAuthenticated = computed(() => this._currentUser() !== null);
+
+  private readonly _sessionStatus = signal<SessionStatus>('unknown');
+
+  /** Session resolution state, see SessionStatus. */
+  readonly sessionStatus: Signal<SessionStatus> = this._sessionStatus.asReadonly();
 
   /** The raw access token signal, derived from the store. */
   readonly accessToken = computed(() => this.tokenStore.getToken());
@@ -167,7 +232,42 @@ export class AuthService {
    * the same promise rather than firing duplicate /refresh calls.
    * Cleared back to null in finally().
    */
-  private inflightRefresh: Promise<boolean> | null = null;
+  private inflightRefresh: Promise<RefreshOutcome> | null = null;
+
+  /** Single-flight /me request (initial hydrate + its retries). */
+  private inflightHydrate: Promise<void> | null = null;
+
+  /** Pending background retry after a transient failure (null = none). */
+  private recoveryTimerId: ReturnType<typeof setTimeout> | null = null;
+
+  /** Consecutive transient failures, drives the retry backoff. */
+  private recoveryAttempts = 0;
+
+  /**
+   * Bumped on every logout. A refresh that was in flight when the user
+   * logged out compares its captured value and drops its result, so a
+   * late response can never resurrect a signed-out session.
+   */
+  private logoutEpoch = 0;
+
+  /**
+   * Bumped when a sign-in call starts (mintSession). A /me or /refresh
+   * still carrying the previous cookie drops its result (treated as
+   * transient) instead of applying another account over the new one.
+   */
+  private sessionEpoch = 0;
+
+  /**
+   * Settles once the cookie write in progress (a sign-in or the logout
+   * clear) has landed; null when none. See writeCookie.
+   */
+  private cookieWriter: Promise<void> | null = null;
+
+  /** Single-flight POST /auth-proxy/logout (see clearServerSession). */
+  private inflightLogout: Promise<void> | null = null;
+
+  /** Callers of whenSessionKnown() waiting for 'unknown' to resolve. */
+  private sessionWaiters: Array<(status: SessionStatus) => void> = [];
 
   /**
    * Tracks the last locale value we pushed (or recognised as already
@@ -186,7 +286,28 @@ export class AuthService {
         clearTimeout(this.refreshTimerId);
         this.refreshTimerId = null;
       }
+      this.cancelRecovery();
     });
+
+    /* Retry a failed refresh / hydrate as soon as the browser is back
+       online or the tab is visible again, instead of waiting out the
+       backoff. Only acts while a retry is actually pending. Coming back
+       online also finishes a logout whose cookie clear never landed. */
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const onOnline = (): void => {
+        if (this.isLogoutPending()) void this.clearServerSession();
+        this.recoverNowIfPending();
+      };
+      const onVisibility = (): void => {
+        if (document.visibilityState === 'visible') this.recoverNowIfPending();
+      };
+      window.addEventListener('online', onOnline);
+      document.addEventListener('visibilitychange', onVisibility);
+      this.destroyRef.onDestroy(() => {
+        window.removeEventListener('online', onOnline);
+        document.removeEventListener('visibilitychange', onVisibility);
+      });
+    }
 
     /* Locale → server sync (Y.1-J).
 
@@ -235,31 +356,40 @@ export class AuthService {
    *
    * Cookies are attached automatically by fetch() (same-origin), so
    * the BFF reads the HttpOnly refresh cookie to resolve the session.
+   *
+   * Never rejects. Outcomes:
+   *   - 200                              → session applied ('authenticated')
+   *   - 401 AUTH_REFRESH_TOKEN_INVALID   → 'anonymous' (no / dead cookie)
+   *   - anything else (network, 503, …) → stays 'unknown' (rendered as
+   *     signed-out-for-now) and retries in the background with backoff;
+   *     the session appears as soon as a retry succeeds. The cookie is
+   *     untouched by the BFF in that case, so nothing is lost.
+   *   - a logout tapped earlier whose cookie clear never landed
+   *     → 'anonymous' without calling /me; the clear is retried.
    */
   async hydrate(): Promise<void> {
-    try {
-      const response = await firstValueFrom(
-        this.http.get<BffLoginResponse>(`${this.proxyBase}/me`, {
-          withCredentials: true,
-        }),
-      );
-      this.applyAuthState(response);
-    } catch (err) {
-      /* Most likely a 401 (no session), clear local state and
-         move on. Don't surface the error to the UI; this is the
-         initial check and the UI shouldn't show an error toast
-         for "you're not logged in". */
-      if (err instanceof HttpErrorResponse && err.status === 401) {
-        this.applyLogoutState();
-        return;
+    await this.attemptHydrate();
+  }
+
+  /**
+   * Resolve once the session state is known ('authenticated' or
+   * 'anonymous'). While it is 'unknown' (a hydrate retry is pending)
+   * this kicks an immediate attempt rather than waiting out the backoff.
+   *
+   * With `timeoutMs`, resolves with the then-current status (possibly
+   * still 'unknown') once the timeout elapses. Used by the route guards
+   * so a transient failure never bounces a signed-in customer to /login.
+   */
+  whenSessionKnown(timeoutMs?: number): Promise<SessionStatus> {
+    const status = this._sessionStatus();
+    if (status !== 'unknown') return Promise.resolve(status);
+    return new Promise<SessionStatus>(resolve => {
+      this.sessionWaiters.push(resolve);
+      if (timeoutMs !== undefined) {
+        setTimeout(() => resolve(this._sessionStatus()), timeoutMs);
       }
-      /* For other errors (network, 5xx, etc.) we also fall back
-         to logged-out, but logging it helps debugging. */
-      if (typeof console !== 'undefined') {
-        console.warn('[AuthService] hydrate failed', err);
-      }
-      this.applyLogoutState();
-    }
+      this.kickRecovery();
+    });
   }
 
   /**
@@ -275,12 +405,11 @@ export class AuthService {
    * component is responsible for mapping the error to inline UI.
    */
   async login(input: LoginInput): Promise<AuthUser> {
-    const response = await firstValueFrom(
+    const response = await this.mintSession(() =>
       this.http.post<BffLoginResponse>(`${this.proxyBase}/login`, input, {
         withCredentials: true,
       }),
     );
-    this.applyAuthState(response);
     return response.user;
   }
 
@@ -312,7 +441,7 @@ export class AuthService {
     }
 
     try {
-      const response = await firstValueFrom(
+      const response = await this.mintSession(() =>
         this.http.post<BffLoginResponse>(
           `${this.proxyBase}/social`,
           {
@@ -323,7 +452,6 @@ export class AuthService {
           { withCredentials: true },
         ),
       );
-      this.applyAuthState(response);
       return { ok: true, user: response.user };
     } catch {
       /* BFF / upstream / network failure, the popup itself succeeded, but
@@ -349,12 +477,11 @@ export class AuthService {
    * Confirm a registration OTP. On success, auto-logs in.
    */
   async confirmRegistration(input: ConfirmInput): Promise<AuthUser> {
-    const response = await firstValueFrom(
+    const response = await this.mintSession(() =>
       this.http.post<BffLoginResponse>(`${this.proxyBase}/confirm`, input, {
         withCredentials: true,
       }),
     );
-    this.applyAuthState(response);
     return response.user;
   }
 
@@ -368,14 +495,16 @@ export class AuthService {
    * (invalid OTP, CONFLICT/PHONE_LINK_AMBIGUOUS, …) propagate to the caller.
    */
   async completePhoneClaim(input: ConfirmInput): Promise<AuthUser> {
-    const token = this.tokenStore.getToken();
-    const response = await firstValueFrom(
-      this.http.post<BffLoginResponse>(`${this.proxyBase}/phone-claim-verify`, input, {
+    const response = await this.mintSession(() => {
+      /* Read the token when the request actually goes out: a refresh
+         that was in flight (and that mintSession waited for) may have
+         just replaced it. */
+      const token = this.tokenStore.getToken();
+      return this.http.post<BffLoginResponse>(`${this.proxyBase}/phone-claim-verify`, input, {
         withCredentials: true,
         headers: token ? { Authorization: `Bearer ${token}` } : {},
-      }),
-    );
-    this.applyAuthState(response);
+      });
+    });
     return response.user;
   }
 
@@ -414,12 +543,11 @@ export class AuthService {
    * auto-logs in (the API returns a token pair).
    */
   async confirmPasswordReset(input: ResetConfirmInput): Promise<AuthUser> {
-    const response = await firstValueFrom(
+    const response = await this.mintSession(() =>
       this.http.post<BffLoginResponse>(`${this.proxyBase}/reset-confirm`, input, {
         withCredentials: true,
       }),
     );
-    this.applyAuthState(response);
     return response.user;
   }
 
@@ -455,14 +583,13 @@ export class AuthService {
    * so we apply auth state and the user is signed in.
    */
   async verifyOtpLogin(input: OtpLoginVerifyInput): Promise<AuthUser> {
-    const response = await firstValueFrom(
+    const response = await this.mintSession(() =>
       this.http.post<BffLoginResponse>(
         `${this.proxyBase}/otp-login/verify`,
         input,
         { withCredentials: true },
       ),
     );
-    this.applyAuthState(response);
     return response.user;
   }
 
@@ -522,14 +649,13 @@ export class AuthService {
   async registerConfirmEmail(
     input: RegisterConfirmEmailInput,
   ): Promise<AuthUser> {
-    const response = await firstValueFrom(
+    const response = await this.mintSession(() =>
       this.http.post<BffLoginResponse>(
         `${this.proxyBase}/register/confirm-email`,
         input,
         { withCredentials: true },
       ),
     );
-    this.applyAuthState(response);
     return response.user;
   }
 
@@ -568,22 +694,27 @@ export class AuthService {
    * Refresh the access token using the HttpOnly refresh cookie.
    *
    * Single-flight: concurrent callers share one inflight promise.
-   * Returns `true` if the refresh succeeded, `false` if it failed
-   * (which means the session is dead and the user should be logged
-   * out, callers should call `applyLogoutState()` on false).
+   * Resolves (never rejects) with a RefreshOutcome:
+   *   - 'refreshed'     , new access token adopted.
+   *   - 'session-ended' , definitive rejection; local state already
+   *                       cleared.
+   *   - 'unavailable'   , transient failure; the session is KEPT and a
+   *                       background retry is scheduled. Callers fail
+   *                       their own request with a normal (connection)
+   *                       error, never a logout.
    *
-   * Why return boolean rather than throw
-   * ------------------------------------
+   * Why return an outcome rather than throw
+   * ---------------------------------------
    * The refresh interceptor calls this from inside an HTTP error
    * handler chain where mixing observables and async/await with
-   * thrown errors becomes hard to reason about. Returning a bool
+   * thrown errors becomes hard to reason about. Returning a value
    * keeps the interceptor's logic linear.
    */
-  refresh(): Promise<boolean> {
+  refresh(): Promise<RefreshOutcome> {
     if (this.inflightRefresh !== null) {
       return this.inflightRefresh;
     }
-    this.inflightRefresh = this.performRefresh().finally(() => {
+    this.inflightRefresh = this.afterCookieWrite(() => this.performRefresh()).finally(() => {
       this.inflightRefresh = null;
     });
     return this.inflightRefresh;
@@ -592,24 +723,156 @@ export class AuthService {
   /**
    * Log out, clear server-side refresh-token row + local state.
    *
-   * We call the BFF's logout endpoint (which calls API /logout) so
-   * the refresh token's DB row is invalidated. Then we drop local
-   * state regardless of whether the API call succeeded, local
-   * logout should always work even if the network is broken.
+   * Local state goes FIRST (contract C3): the UI flips to signed-out at
+   * once, and the logout epoch + cancelled timers mean no scheduled
+   * refresh, background retry or late response can bring the session
+   * back. Then the BFF's logout endpoint clears the HttpOnly cookie and
+   * asks the API to end THIS browser's session family (never other
+   * devices); it is queued behind any refresh already on the wire, so
+   * that refresh's Set-Cookie can't land after the clear.
+   *
+   * If the clear can't reach the BFF (offline, 5xx, timeout) a
+   * pending-logout marker survives the reload, so the next page load
+   * (or coming back online) finishes it instead of /me silently signing
+   * the user back in. This is the ONLY user-initiated path that ends a
+   * session. Never rejects.
    */
   async logout(): Promise<void> {
-    try {
-      await firstValueFrom(
-        this.http
-          .post<void>(`${this.proxyBase}/logout`, {}, { withCredentials: true })
-          .pipe(catchError(() => of(undefined))),
-      );
-    } finally {
-      this.applyLogoutState();
-    }
+    this.markLogoutPending();
+    this.applyLogoutState();
+    await this.clearServerSession();
   }
 
   /* ---------- Internals ---------- */
+
+  /**
+   * Run a call that MINTS a new refresh cookie (login, OTP verify,
+   * register confirm, reset-confirm, social, phone-claim) and adopt the
+   * session it returns.
+   *
+   * A background /me or /refresh can still be holding the PREVIOUS
+   * cookie (e.g. a hydrate retry for another account while the session
+   * is 'unknown'). Had its response landed after this one, the browser
+   * would apply that older Set-Cookie on top of the new session and the
+   * next refresh would silently swap accounts. So the call goes through
+   * writeCookie (waits for those, holds new ones back), and bumping
+   * sessionEpoch makes any older result be dropped rather than applied.
+   */
+  private mintSession(
+    request: () => Observable<BffLoginResponse>,
+  ): Promise<BffLoginResponse> {
+    this.sessionEpoch += 1;
+    const logoutEpoch = this.logoutEpoch;
+    return this.writeCookie(async landed => {
+      let response: BffLoginResponse;
+      try {
+        response = await firstValueFrom(request());
+      } finally {
+        landed();
+      }
+      /* Log out was tapped while this was in flight: the logout wins (its
+         cookie clear is queued right behind this call). */
+      if (logoutEpoch === this.logoutEpoch) {
+        /* The new cookie replaced any old one, so an unfinished logout
+           has nothing left to clear. */
+        this.clearLogoutPending();
+        this.applyAuthState(response);
+      }
+      return response;
+    });
+  }
+
+  /**
+   * Serialise a call that WRITES the refresh cookie (a sign-in or the
+   * logout clear): it starts only once every cookie call already on the
+   * wire has settled, and /me + /refresh calls started meanwhile wait
+   * for it (afterCookieWrite). Starts `work` synchronously when nothing
+   * is pending.
+   *
+   * `work` calls `landed()` as soon as its response has arrived (the
+   * moment the browser applied its Set-Cookie), which releases waiting
+   * readers in that same tick. A work that fails before getting there is
+   * released when it settles.
+   */
+  private writeCookie<T>(work: (landed: () => void) => Promise<T>): Promise<T> {
+    const pending: Array<Promise<unknown>> = [];
+    for (const p of [this.cookieWriter, this.inflightRefresh, this.inflightHydrate]) {
+      if (p !== null) pending.push(p);
+    }
+    let release: () => void = () => undefined;
+    const writer = new Promise<void>(resolve => {
+      release = () => {
+        if (this.cookieWriter === writer) this.cookieWriter = null;
+        resolve();
+      };
+    });
+    this.cookieWriter = writer;
+    const start = (): Promise<T> => work(release);
+    const run = pending.length === 0 ? start() : Promise.allSettled(pending).then(start);
+    run.then(release, release);
+    return run;
+  }
+
+  /** Start a /me or /refresh call once any cookie write in progress has landed. */
+  private afterCookieWrite<T>(work: () => Promise<T>): Promise<T> {
+    const writer = this.cookieWriter;
+    return writer === null ? work() : writer.then(work);
+  }
+
+  /**
+   * POST /auth-proxy/logout: the BFF clears the HttpOnly cookie and asks
+   * the API to end this browser's session family. Clears the
+   * pending-logout marker on success; on any failure the marker stays
+   * and the clear is retried on 'online' and on the next page load.
+   * Single-flight, never rejects.
+   */
+  private clearServerSession(): Promise<void> {
+    if (this.inflightLogout !== null) return this.inflightLogout;
+    const done = this.writeCookie(async landed => {
+      try {
+        await firstValueFrom(
+          this.http.post<void>(`${this.proxyBase}/logout`, {}, { withCredentials: true }),
+        );
+        this.clearLogoutPending();
+      } catch (err) {
+        if (typeof console !== 'undefined') {
+          console.warn('[AuthService] logout could not reach the server, will retry', err);
+        }
+      } finally {
+        landed();
+      }
+    }).finally(() => {
+      this.inflightLogout = null;
+    });
+    this.inflightLogout = done;
+    return done;
+  }
+
+  /** True while a tapped logout still has to clear the refresh cookie. */
+  private isLogoutPending(): boolean {
+    try {
+      return localStorage.getItem(LOGOUT_PENDING_KEY) !== null;
+    } catch {
+      return false;
+    }
+  }
+
+  private markLogoutPending(): void {
+    try {
+      localStorage.setItem(LOGOUT_PENDING_KEY, '1');
+    } catch {
+      /* Storage unavailable: the logout still runs, just without the
+         reload safety net. */
+    }
+  }
+
+  private clearLogoutPending(): void {
+    try {
+      localStorage.removeItem(LOGOUT_PENDING_KEY);
+    } catch {
+      /* storage unavailable */
+    }
+  }
 
   /**
    * Apply a successful auth response to local state.
@@ -634,6 +897,8 @@ export class AuthService {
     };
     this.tokenStore.set(snapshot);
     this._currentUser.set(user);
+    this.cancelRecovery();
+    this.setSessionStatus('authenticated');
     this.scheduleRefresh();
     /* Locale sync is a NON-CRITICAL side effect. It must never be able
        to throw out of applyAuthState, otherwise a failure here
@@ -652,11 +917,27 @@ export class AuthService {
 
   /**
    * Reset to logged-out state. Idempotent.
+   *
+   * Reached ONLY from an explicit logout() (in this tab, or a pending
+   * one from another tab / an earlier page load) or the BFF's definitive
+   * session-ended rejection, never from a transient failure.
    */
   private applyLogoutState(): void {
+    this.logoutEpoch += 1;
     this.tokenStore.clear();
     this._currentUser.set(null);
     this.cancelScheduledRefresh();
+    this.cancelRecovery();
+    this.setSessionStatus('anonymous');
+  }
+
+  /** Update the session status and release whenSessionKnown() waiters. */
+  private setSessionStatus(status: SessionStatus): void {
+    this._sessionStatus.set(status);
+    if (status === 'unknown') return;
+    const waiters = this.sessionWaiters;
+    this.sessionWaiters = [];
+    for (const resolve of waiters) resolve(status);
   }
 
   /**
@@ -700,8 +981,8 @@ export class AuthService {
    * this is a Bearer-bound call, not a cookie-bound one.
    *
    * Returns nothing; failures are logged as a warning and otherwise
-   * swallowed. A 401 even after refresh means the session is dead;
-   * AuthService will clean up via the interceptor's failure path.
+   * swallowed. The interceptor handles a stale token (refresh + retry);
+   * only a definitive session-ended rejection clears the session.
    */
   private async pushLocaleToServer(locale: 'en' | 'ar'): Promise<void> {
     /* Build the v3 base URL inline rather than injecting
@@ -732,11 +1013,27 @@ export class AuthService {
   /**
    * Actually perform a refresh request.
    *
-   * Returns true on success (and applies the new state); false on
-   * failure (and clears local state so subsequent isAuthenticated
-   * reads return false).
+   * Only the definitive 401 AUTH_REFRESH_TOKEN_INVALID clears local
+   * state. A transient failure keeps currentUser + the (possibly stale)
+   * token and schedules a background retry.
+   *
+   * Also used, via the interceptor, to resolve a still-'unknown' session
+   * (the BFF /refresh returns the user too): success signs in, the
+   * definitive rejection settles it as 'anonymous'.
    */
-  private async performRefresh(): Promise<boolean> {
+  private async performRefresh(): Promise<RefreshOutcome> {
+    /* Signed out (logout or a definitive rejection): nothing to refresh,
+       and a /refresh now could re-set a cookie that a logout clears. */
+    if (this._sessionStatus() === 'anonymous') return 'session-ended';
+    /* Log out was tapped in another tab and its cookie clear hasn't
+       landed yet: honour it here too. */
+    if (this.isLogoutPending()) {
+      this.applyLogoutState();
+      void this.clearServerSession();
+      return 'session-ended';
+    }
+    const logoutEpoch = this.logoutEpoch;
+    const sessionEpoch = this.sessionEpoch;
     try {
       const response = await firstValueFrom(
         this.http.post<BffRefreshResponse>(
@@ -745,12 +1042,157 @@ export class AuthService {
           { withCredentials: true },
         ),
       );
+      /* Signed out while this was in flight: never resurrect. */
+      if (logoutEpoch !== this.logoutEpoch) return 'session-ended';
+      /* A sign-in started meanwhile: this rotated the OLD cookie, so its
+         user must not be applied. Treat it like a transient failure. */
+      if (sessionEpoch !== this.sessionEpoch) return this.keepSessionAndRetry();
       this.applyAuthState(response);
-      return true;
-    } catch {
-      this.applyLogoutState();
-      return false;
+      return 'refreshed';
+    } catch (err) {
+      if (logoutEpoch !== this.logoutEpoch) return 'session-ended';
+      if (sessionEpoch === this.sessionEpoch && isSessionEndedError(err)) {
+        this.applyLogoutState();
+        return 'session-ended';
+      }
+      if (typeof console !== 'undefined') {
+        console.warn('[AuthService] refresh failed (transient), keeping the session', err);
+      }
+      return this.keepSessionAndRetry();
     }
+  }
+
+  /**
+   * Transient refresh outcome: keep whatever session exists and arm the
+   * background retry (a refresh for a signed-in user, a hydrate for a
+   * still-'unknown' one).
+   */
+  private keepSessionAndRetry(): RefreshOutcome {
+    if (this._currentUser() !== null || this._sessionStatus() === 'unknown') {
+      this.scheduleRecovery();
+    }
+    return 'unavailable';
+  }
+
+  /** Single-flight wrapper around performHydrate(). */
+  private attemptHydrate(): Promise<void> {
+    if (this.inflightHydrate !== null) {
+      return this.inflightHydrate;
+    }
+    this.inflightHydrate = this.afterCookieWrite(() => this.performHydrate()).finally(() => {
+      this.inflightHydrate = null;
+    });
+    return this.inflightHydrate;
+  }
+
+  /**
+   * One GET /auth-proxy/me. Applies its result only while the session
+   * is still 'unknown', so a slow retry can't override a login or logout
+   * that happened meanwhile.
+   */
+  private async performHydrate(): Promise<void> {
+    /* Settled while this waited behind a sign-in / logout. */
+    if (this._sessionStatus() !== 'unknown') return;
+    /* Log out was tapped but the cookie clear never reached the BFF:
+       finish it rather than let /me sign the user back in. */
+    if (this.isLogoutPending()) {
+      this.applyLogoutState();
+      void this.clearServerSession();
+      return;
+    }
+    const sessionEpoch = this.sessionEpoch;
+    try {
+      const response = await firstValueFrom(
+        this.http.get<BffLoginResponse>(`${this.proxyBase}/me`, {
+          withCredentials: true,
+        }),
+      );
+      if (this._sessionStatus() !== 'unknown') return;
+      /* A sign-in started meanwhile: this read the OLD cookie. Drop it;
+         the sign-in settles the session (the retry covers a failed one). */
+      if (sessionEpoch !== this.sessionEpoch) {
+        this.scheduleRecovery();
+        return;
+      }
+      this.applyAuthState(response);
+    } catch (err) {
+      if (this._sessionStatus() !== 'unknown') return;
+      /* No cookie, or the API definitively rejected it: signed out.
+         Don't surface the error to the UI; this is the initial check
+         and "you're not logged in" isn't an error. (Not when a sign-in
+         started meanwhile: the dead cookie was the old one.) */
+      if (sessionEpoch === this.sessionEpoch && isSessionEndedError(err)) {
+        this.applyLogoutState();
+        return;
+      }
+      /* Transient (network, 503, 5xx, non-JSON): stay 'unknown' and
+         retry. The BFF left the cookie alone, so the session comes back
+         as soon as a retry gets through. */
+      if (typeof console !== 'undefined') {
+        console.warn('[AuthService] hydrate failed (transient), retrying', err);
+      }
+      this.scheduleRecovery();
+    }
+  }
+
+  /**
+   * Arm one background retry with exponential backoff
+   * (2s, 4s, 8s, … capped at 60s). No-op if one is already pending.
+   */
+  private scheduleRecovery(): void {
+    if (this.recoveryTimerId !== null) return;
+    const delayMs = Math.min(
+      RECOVERY_BASE_DELAY_MS * 2 ** this.recoveryAttempts,
+      RECOVERY_MAX_DELAY_MS,
+    );
+    this.recoveryAttempts += 1;
+    this.recoveryTimerId = setTimeout(() => {
+      this.recoveryTimerId = null;
+      void this.recover();
+    }, delayMs);
+  }
+
+  /** Drop any pending retry and reset the backoff. */
+  private cancelRecovery(): void {
+    if (this.recoveryTimerId !== null) {
+      clearTimeout(this.recoveryTimerId);
+      this.recoveryTimerId = null;
+    }
+    this.recoveryAttempts = 0;
+  }
+
+  /**
+   * One recovery attempt: refresh an existing session, or re-run the
+   * hydrate for a still-unknown one. Each path re-arms the backoff on
+   * another transient failure.
+   */
+  private async recover(): Promise<void> {
+    if (this._currentUser() !== null) {
+      await this.refresh();
+    } else if (this._sessionStatus() === 'unknown') {
+      await this.attemptHydrate();
+    }
+  }
+
+  /** 'online' / tab-visible: retry now instead of waiting out the backoff. */
+  private recoverNowIfPending(): void {
+    if (this.recoveryTimerId !== null) {
+      this.kickRecovery();
+    }
+  }
+
+  /**
+   * Start a recovery attempt immediately (skipping the remaining
+   * backoff) unless one is already in flight. Keeps the backoff counter
+   * so a still-failing network doesn't get hammered.
+   */
+  private kickRecovery(): void {
+    if (this.inflightHydrate !== null || this.inflightRefresh !== null) return;
+    if (this.recoveryTimerId !== null) {
+      clearTimeout(this.recoveryTimerId);
+      this.recoveryTimerId = null;
+    }
+    void this.recover();
   }
 
   /**
@@ -765,21 +1207,28 @@ export class AuthService {
     const snap = this.tokenStore.current();
     if (snap === null) return;
 
-    const expiresAtMs = new Date(snap.expiresAt).getTime();
-    const fireAtMs = expiresAtMs - this.refreshLeadTimeMs;
-    const delayMs = fireAtMs - Date.now();
+    /* Prefer the token's own iat→exp lifetime, measured from now (this
+       runs right after a token is adopted). Both claims are server-clock,
+       so a device clock that is minutes off can't make every fresh token
+       look expired and spin the refresh in a tight loop. The floor at
+       half the lifetime keeps a lead time >= the lifetime from looping
+       too. Non-JWT tokens fall back to the expires_at comparison. */
+    const lifetimeMs = jwtLifetimeMs(snap.token);
+    const delayMs =
+      lifetimeMs !== null
+        ? Math.max(lifetimeMs - this.refreshLeadTimeMs, lifetimeMs / 2)
+        : new Date(snap.expiresAt).getTime() - this.refreshLeadTimeMs - Date.now();
 
     /* If the token is already inside the refresh window (e.g. user
        hydrates a tab with a near-expired token), fire immediately.
        If it's already EXPIRED, also fire, the refresh will either
-       extend the session or fail cleanly and log out. */
+       extend the session or keep it and retry on a transient error. */
     const clampedDelay = Math.max(delayMs, 0);
 
     this.refreshTimerId = setTimeout(() => {
       this.refreshTimerId = null;
-      /* Fire-and-forget: the timer doesn't await; if the refresh
-         fails, applyLogoutState() inside performRefresh() drops
-         the session. No need to handle the boolean here. */
+      /* Fire-and-forget: performRefresh() handles every outcome
+         (adopt, definitive logout, or keep + background retry). */
       void this.refresh();
     }, clampedDelay);
   }

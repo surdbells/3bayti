@@ -8,6 +8,18 @@ import {
 import { AuthService } from './auth.service';
 
 /**
+ * How long guestActivateGuard waits for a still-'unknown' session (a
+ * hydrate retry after a transient failure) before rendering the guest
+ * page anyway. The protected-route guards wait without a cap: bouncing
+ * a signed-in customer to /login over a network blip would break the
+ * "signed in until you log out" rule, and a new navigation supersedes a
+ * pending one, so the user is never stuck. While they wait, the shell's
+ * SessionBannerComponent shows a "can't reach 3bayti" notice with a
+ * retry, so the held navigation never looks like a silent blank page.
+ */
+export const GUEST_GUARD_SESSION_WAIT_MS = 5_000;
+
+/**
  * CanMatch guard, defers lazy-chunk loading for unauthenticated users.
  *
  * What this is for
@@ -36,9 +48,16 @@ import { AuthService } from './auth.service';
  * ---------
  * CanMatch CANNOT return a UrlTree, only a boolean. Use
  * authActivateGuard if you need to redirect with returnUrl semantics.
+ *
+ * While the session is still 'unknown' (transient hydrate failure being
+ * retried) the guard waits for it to resolve instead of answering
+ * "anonymous" too early.
  */
-export const authMatchGuard: CanMatchFn = () => {
+export const authMatchGuard: CanMatchFn = (): boolean | Promise<boolean> => {
   const auth = inject(AuthService);
+  if (auth.sessionStatus() === 'unknown') {
+    return auth.whenSessionKnown().then(() => auth.isAuthenticated());
+  }
   return auth.isAuthenticated();
 };
 
@@ -67,20 +86,37 @@ export const authMatchGuard: CanMatchFn = () => {
  * CanMatch can't return a UrlTree, so it can't perform the redirect.
  * CanActivate can. Splitting the responsibility lets each guard do
  * what it does best.
+ *
+ * Unknown session
+ * ---------------
+ * If the first-load hydrate hit a transient failure the session is
+ * 'unknown' (the cookie may well be valid). The guard then waits for a
+ * retry to resolve it rather than redirecting a signed-in customer to
+ * /login over a network blip; the session banner tells the user what is
+ * happening meanwhile. /login is only ever the answer for 'anonymous'.
  */
-export const authActivateGuard: CanActivateFn = (_route, state): boolean | UrlTree => {
+export const authActivateGuard: CanActivateFn = (
+  _route,
+  state,
+): boolean | UrlTree | Promise<boolean | UrlTree> => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (auth.isAuthenticated()) {
-    return true;
-  }
+  const decide = (): boolean | UrlTree => {
+    if (auth.isAuthenticated()) {
+      return true;
+    }
+    /* Preserve the in-flight URL so the login page can return after
+       successful auth. `state.url` includes the query string + fragment. */
+    return router.createUrlTree(['/login'], {
+      queryParams: { returnUrl: state.url },
+    });
+  };
 
-  /* Preserve the in-flight URL so the login page can return after
-     successful auth. `state.url` includes the query string + fragment. */
-  return router.createUrlTree(['/login'], {
-    queryParams: { returnUrl: state.url },
-  });
+  if (auth.sessionStatus() === 'unknown') {
+    return auth.whenSessionKnown().then(decide);
+  }
+  return decide();
 };
 
 /**
@@ -89,20 +125,33 @@ export const authActivateGuard: CanActivateFn = (_route, state): boolean | UrlTr
  * Used by /login, /register, /forgot-password, /reset-password so
  * authenticated users don't see those pages. Honours `returnUrl` if
  * present (e.g. user clicked "back" to a login they no longer need).
+ *
+ * While the session is 'unknown' it waits up to
+ * GUEST_GUARD_SESSION_WAIT_MS for a retry, so a signed-in customer isn't
+ * shown a sign-in form just because the first hydrate hit a blip; after
+ * that the guest page renders anyway.
  */
-export const guestActivateGuard: CanActivateFn = (route): boolean | UrlTree => {
+export const guestActivateGuard: CanActivateFn = (
+  route,
+): boolean | UrlTree | Promise<boolean | UrlTree> => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (!auth.isAuthenticated()) {
-    return true;
-  }
+  const decide = (): boolean | UrlTree => {
+    if (!auth.isAuthenticated()) {
+      return true;
+    }
+    const returnUrl = route.queryParamMap.get('returnUrl');
+    if (isSafeInAppPath(returnUrl)) {
+      return router.parseUrl(returnUrl);
+    }
+    return router.createUrlTree(['/']);
+  };
 
-  const returnUrl = route.queryParamMap.get('returnUrl');
-  if (isSafeInAppPath(returnUrl)) {
-    return router.parseUrl(returnUrl);
+  if (auth.sessionStatus() === 'unknown') {
+    return auth.whenSessionKnown(GUEST_GUARD_SESSION_WAIT_MS).then(decide);
   }
-  return router.createUrlTree(['/']);
+  return decide();
 };
 
 /**

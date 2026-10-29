@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { HeaderComponent } from './layout/header/header';
 import { FooterComponent } from './layout/footer/footer';
 import { CartDrawerComponent } from './layout/cart-drawer/cart-drawer';
+import { SessionBannerComponent } from './layout/session-banner/session-banner';
 import { ToastContainerComponent } from './shared/forms';
 
 /**
@@ -15,6 +16,9 @@ import { ToastContainerComponent } from './shared/forms';
  *
  * Y.2-A added the cart drawer so any descendant can call
  * CartDrawerService.open() / openWithHighlight() and have it appear.
+ *
+ * The session banner explains a session that is still unresolved after a
+ * transient failure (see SessionBannerComponent).
  */
 @Component({
   selector: 'app-root',
@@ -24,6 +28,7 @@ import { ToastContainerComponent } from './shared/forms';
     HeaderComponent,
     FooterComponent,
     CartDrawerComponent,
+    SessionBannerComponent,
     ToastContainerComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

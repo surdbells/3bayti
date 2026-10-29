@@ -548,6 +548,11 @@
         "popupBlocked": "The sign-in window was blocked. Please allow pop-ups and try again.",
         "unavailable": "Social sign-in isn't available right now. Please try another way."
       }
+    },
+    "session": {
+      "unreachable": "We can't reach 3bayti right now. We'll keep trying in the background.",
+      "retry": "Try again",
+      "retrying": "Reconnecting…"
     }
   },
   "addresses": {

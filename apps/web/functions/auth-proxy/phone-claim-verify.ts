@@ -23,7 +23,9 @@
 const UPSTREAM_BASE = 'https://api-v3.3bayti.ae';
 const REFRESH_COOKIE = 'bayti_refresh';
 const COOKIE_PATH = '/auth-proxy';
-const COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
+/* 400 days (browser cap); must match [[path]].ts, which re-sets it on
+   every rotation. */
+const COOKIE_MAX_AGE = 34_560_000;
 
 function setRefreshCookie(token: string, headers: Headers): void {
   headers.append(

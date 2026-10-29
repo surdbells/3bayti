@@ -52,8 +52,8 @@ export interface ProfileUpdate {
 }
 
 /**
- * Response from PATCH /me/password. The endpoint revokes all sessions
- * and issues a fresh token pair (see ProfileService.changePassword).
+ * Response from PATCH /me/password. The endpoint issues a fresh token
+ * pair and revokes NO session (see ProfileService.changePassword).
  * Mirrors apps/api ChangePasswordController's ok([...]) body.
  */
 export interface ChangePasswordResponse {
@@ -125,11 +125,16 @@ export class ProfileService {
   /**
    * Change the account password.
    *
-   * The endpoint re-authenticates via current_password, revokes ALL of
-   * the user's refresh tokens (including this session's), and returns a
-   * FRESH token pair. We adopt it via AuthService.applyPasswordChange
-   * so the current session survives the revocation, otherwise the
-   * very next request would fail with a revoked token.
+   * The endpoint re-authenticates via current_password and returns a
+   * FRESH token pair. It no longer revokes any session: this browser's
+   * HttpOnly refresh cookie and every other device stay signed in (their
+   * pre-change access tokens get one 401 AUTH_INVALID_TOKEN and recover
+   * via refresh). We adopt the returned access token via
+   * AuthService.applyPasswordChange so this tab skips that round-trip.
+   * The returned refresh_token is ignored: the cookie's token stays valid.
+   *
+   * A wrong current password is 401 AUTH_INVALID_CREDENTIALS, which the
+   * refresh interceptor passes straight through (no refresh, no logout).
    */
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     this._isSaving.set(true);

@@ -17,9 +17,9 @@ import { ProfileService } from './profile.service';
  * → 401 AUTH_INVALID_CREDENTIALS on mismatch). new_password min 8
  * (API), confirm_password is a client-side match check only.
  *
- * On success the endpoint revokes all sessions + returns a fresh token
- * pair, which ProfileService.changePassword adopts so this session
- * survives. We then toast + route back to /account.
+ * On success the endpoint returns a fresh token pair (it revokes no
+ * session, here or on other devices), which ProfileService.changePassword
+ * adopts. We then toast + route back to /account.
  */
 const PASSWORD_ERROR_MAP: Record<string, ApiErrorMapping> = {
   AUTH_INVALID_CREDENTIALS: { field: 'current_password', key: 'wrongCurrent' },

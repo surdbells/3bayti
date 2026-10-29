@@ -3,8 +3,13 @@ import { TestBed } from '@angular/core/testing';
 import { signal, runInInjectionContext, EnvironmentInjector, Provider } from '@angular/core';
 import { Router, UrlTree, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { provideRouter } from '@angular/router';
-import { AuthService } from './auth.service';
-import { authMatchGuard, authActivateGuard, guestActivateGuard } from './auth.guards';
+import { AuthService, type SessionStatus } from './auth.service';
+import {
+  authMatchGuard,
+  authActivateGuard,
+  guestActivateGuard,
+  GUEST_GUARD_SESSION_WAIT_MS,
+} from './auth.guards';
 
 /**
  * Tests for the three auth guards.
@@ -30,14 +35,44 @@ import { authMatchGuard, authActivateGuard, guestActivateGuard } from './auth.gu
  *     - rejects external returnUrl (open-redirect defense, both
  *       'https://evil/' and '//evil/' must NOT redirect)
  *     - falls back to '/' when returnUrl is missing
+ *   Unknown session (first-load hydrate hit a transient failure):
+ *     - authActivateGuard waits (no cap) instead of bouncing to /login,
+ *       then activates once a retry restores the session
+ *     - guestActivateGuard waits up to GUEST_GUARD_SESSION_WAIT_MS
+ *     - authMatchGuard waits too
  */
 
 class StubAuthService {
   private _isAuth = signal(false);
   readonly isAuthenticated = this._isAuth.asReadonly();
+  private _status = signal<SessionStatus>('anonymous');
+  readonly sessionStatus = this._status.asReadonly();
+  /** whenSessionKnown() calls, with the timeout each passed. */
+  readonly waitCalls: Array<number | undefined> = [];
+  private resolveWait: ((s: SessionStatus) => void) | null = null;
 
   setAuthenticated(v: boolean): void {
     this._isAuth.set(v);
+    this._status.set(v ? 'authenticated' : 'anonymous');
+  }
+
+  /** Simulate a first-load hydrate that hit a transient failure. */
+  setUnknown(): void {
+    this._isAuth.set(false);
+    this._status.set('unknown');
+  }
+
+  whenSessionKnown(timeoutMs?: number): Promise<SessionStatus> {
+    this.waitCalls.push(timeoutMs);
+    return new Promise(resolve => {
+      this.resolveWait = resolve;
+    });
+  }
+
+  /** Resolve a pending whenSessionKnown() the way a retry would. */
+  settle(status: SessionStatus): void {
+    if (status !== 'unknown') this.setAuthenticated(status === 'authenticated');
+    this.resolveWait?.(status);
   }
 }
 
@@ -249,5 +284,70 @@ describe('guestActivateGuard (CanActivate, inverse)', () => {
       const serialised = router.serializeUrl(result as UrlTree);
       expect(serialised).toBe('/category/lighting?sort=price#top');
     });
+  });
+});
+
+describe('guards while the session is unknown (transient hydrate failure)', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('authActivateGuard waits (uncapped) and activates when a retry restores the session', async () => {
+    const { auth, injector } = setup();
+    auth.setUnknown();
+
+    const result = runInInjectionContext(injector, () =>
+      authActivateGuard({} as ActivatedRouteSnapshot, fakeStateSnapshot('/account/orders')),
+    );
+    /* No synchronous /login bounce for a signed-in customer on a blip. */
+    expect(result).toBeInstanceOf(Promise);
+    expect(auth.waitCalls).toEqual([undefined]);
+
+    auth.settle('authenticated');
+    await expect(result).resolves.toBe(true);
+  });
+
+  it('authActivateGuard redirects to /login only once the session is definitively anonymous', async () => {
+    const { auth, injector, router } = setup();
+    auth.setUnknown();
+
+    const result = runInInjectionContext(injector, () =>
+      authActivateGuard({} as ActivatedRouteSnapshot, fakeStateSnapshot('/account/orders')),
+    ) as Promise<UrlTree>;
+
+    auth.settle('anonymous');
+    const tree = await result;
+    expect(router.serializeUrl(tree)).toBe('/login?returnUrl=%2Faccount%2Forders');
+  });
+
+  it('guestActivateGuard waits a bounded time, then redirects a restored session away from /login', async () => {
+    const { auth, injector, router } = setup();
+    auth.setUnknown();
+
+    const result = runInInjectionContext(injector, () =>
+      guestActivateGuard(fakeRouteSnapshot(), fakeStateSnapshot('/login')),
+    ) as Promise<UrlTree>;
+    expect(auth.waitCalls).toEqual([GUEST_GUARD_SESSION_WAIT_MS]);
+
+    auth.settle('authenticated');
+    expect(router.serializeUrl(await result)).toBe('/');
+  });
+
+  it('guestActivateGuard renders the guest page if the session is still unknown after the wait', async () => {
+    const { auth, injector } = setup();
+    auth.setUnknown();
+
+    const result = runInInjectionContext(injector, () =>
+      guestActivateGuard(fakeRouteSnapshot(), fakeStateSnapshot('/login')),
+    );
+    auth.settle('unknown');
+    await expect(result).resolves.toBe(true);
+  });
+
+  it('authMatchGuard waits for the session to resolve', async () => {
+    const { auth, injector } = setup();
+    auth.setUnknown();
+
+    const result = runInInjectionContext(injector, () => authMatchGuard({} as never, []));
+    auth.settle('authenticated');
+    await expect(result).resolves.toBe(true);
   });
 });

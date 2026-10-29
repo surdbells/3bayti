@@ -34,12 +34,30 @@
  *   POST /auth-proxy/register/submit     → /v3/auth/register/submit     (passthrough → {verification_id})
  *   POST /auth-proxy/register/confirm-email → /v3/auth/register/confirm-email (authSuccessMap → cookie)
  *   POST /auth-proxy/validate-phone      → /v3/auth/validate-phone      (passthrough → {available})
+ *
+ * Session persistence (product rule: signed in until the user taps "Log
+ * out"). The refresh cookie is cleared ONLY when /v3/auth/refresh answers
+ * 401 with code AUTH_REFRESH_TOKEN_INVALID (or on /logout). Any other
+ * refresh failure (network, timeout, 5xx, 429, 403, non-JSON) leaves the
+ * cookie untouched and returns 503 AUTH_REFRESH_UNAVAILABLE, so the SPA
+ * keeps the session and retries. The definitive case reaches the SPA as
+ * 401 with that same code, which is how it tells the two apart.
  */
 
 const UPSTREAM_BASE = 'https://api-v3.3bayti.ae';
 const REFRESH_COOKIE = 'bayti_refresh';
 const COOKIE_PATH = '/auth-proxy';
-const COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
+/* 400 days, the browser cap on cookie lifetime. The API refresh token
+   lives 5 years and slides on every rotation; the cookie is re-set on
+   every rotation too, so an active customer never ages out. Kept in sync
+   by hand with social.ts / phone-claim-verify.ts (Pages Functions can't
+   safely share a module here: files under functions/ become routes). */
+const COOKIE_MAX_AGE = 34_560_000;
+/* Upper bound for the refresh / me upstream calls, so a hung API surfaces
+   as a transient 503 instead of a stalled page load. */
+const UPSTREAM_TIMEOUT_MS = 15_000;
+const SESSION_ENDED_CODE = 'AUTH_REFRESH_TOKEN_INVALID';
+const REFRESH_UNAVAILABLE_CODE = 'AUTH_REFRESH_UNAVAILABLE';
 
 function getRefreshToken(cookieHeader: string | null): string | null {
   if (!cookieHeader) return null;
@@ -67,6 +85,7 @@ async function upstreamFetch(
   body: unknown,
   accessToken?: string,
   req?: Request,
+  timeoutMs?: number,
 ): Promise<Response> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
@@ -80,18 +99,85 @@ async function upstreamFetch(
     method,
     headers,
     body: body != null ? JSON.stringify(body) : undefined,
+    signal: timeoutMs !== undefined ? AbortSignal.timeout(timeoutMs) : undefined,
   });
 }
 
-function isAuthSuccess(
-  d: unknown,
-): d is {
+/** API-native error envelope (contract: { error: { code, message } }). */
+function errorJson(code: string, message: string): string {
+  return JSON.stringify({ error: { code, message } });
+}
+
+/**
+ * True only for the API's definitive refresh rejection: 401 with code
+ * AUTH_REFRESH_TOKEN_INVALID (nested, or the legacy flat error_code).
+ */
+function isSessionEnded(status: number, body: unknown): boolean {
+  if (status !== 401 || typeof body !== 'object' || body === null) return false;
+  const record = body as Record<string, unknown>;
+  const nested = record['error'];
+  const code =
+    typeof nested === 'object' && nested !== null
+      ? (nested as Record<string, unknown>)['code']
+      : record['error_code'];
+  return code === SESSION_ENDED_CODE;
+}
+
+type AuthSuccess = {
   access_token: string;
   access_token_expires_at: string;
   refresh_token: string;
   refresh_token_expires_at: string;
   user: unknown;
-} {
+};
+
+type RefreshResult =
+  | { kind: 'ok'; data: AuthSuccess }
+  | { kind: 'ended' }
+  | { kind: 'unavailable' };
+
+/**
+ * Rotate the refresh token upstream and classify the result. Never
+ * throws: a network error or timeout is 'unavailable', like a 5xx.
+ */
+async function refreshUpstream(rt: string, req: Request): Promise<RefreshResult> {
+  let ur: Response;
+  try {
+    ur = await upstreamFetch(
+      '/v3/auth/refresh',
+      'POST',
+      { refresh_token: rt },
+      undefined,
+      req,
+      UPSTREAM_TIMEOUT_MS,
+    );
+  } catch {
+    return { kind: 'unavailable' };
+  }
+  const ud = await ur.json().catch(() => null);
+  if (ur.status === 200 && isAuthSuccess(ud)) return { kind: 'ok', data: ud };
+  if (isSessionEnded(ur.status, ud)) return { kind: 'ended' };
+  /* Status only (no token / body) so `wrangler pages deployment tail`
+     can tell an API outage from a proxy block. */
+  console.warn('[auth-proxy] refresh upstream unavailable', ur.status);
+  return { kind: 'unavailable' };
+}
+
+function sessionEndedResponse(rh: Headers): Response {
+  return new Response(errorJson(SESSION_ENDED_CODE, 'The session has ended. Please sign in again.'), {
+    status: 401,
+    headers: rh,
+  });
+}
+
+function refreshUnavailableResponse(rh: Headers): Response {
+  return new Response(
+    errorJson(REFRESH_UNAVAILABLE_CODE, 'Could not refresh the session right now. Please try again.'),
+    { status: 503, headers: rh },
+  );
+}
+
+function isAuthSuccess(d: unknown): d is AuthSuccess {
   return (
     typeof d === 'object' &&
     d !== null &&
@@ -106,7 +192,10 @@ function stripped(d: Record<string, unknown>): Record<string, unknown> {
   return rest;
 }
 
-async function handleAuthProxy(req: Request): Promise<Response> {
+/** Pages Functions' EventContext.waitUntil: keeps work alive after the response. */
+type WaitUntil = (promise: Promise<unknown>) => void;
+
+async function handleAuthProxy(req: Request, waitUntil?: WaitUntil): Promise<Response> {
   const url = new URL(req.url);
   const seg = url.pathname.slice('/auth-proxy/'.length);
   const cookie = req.headers.get('Cookie');
@@ -115,22 +204,34 @@ async function handleAuthProxy(req: Request): Promise<Response> {
   if (seg === 'me' && req.method === 'GET') {
     const rt = getRefreshToken(cookie);
     if (!rt)
-      return new Response(
-        JSON.stringify({ error_code: 'AUTH_REFRESH_TOKEN_INVALID', message: 'No active session.' }),
-        { status: 401, headers: rh },
-      );
-    const rr = await upstreamFetch('/v3/auth/refresh', 'POST', { refresh_token: rt }, undefined, req);
-    const rd = await rr.json().catch(() => null);
-    if (rr.status !== 200 || !isAuthSuccess(rd)) {
+      return new Response(errorJson(SESSION_ENDED_CODE, 'No active session.'), {
+        status: 401,
+        headers: rh,
+      });
+    const rr = await refreshUpstream(rt, req);
+    if (rr.kind === 'ended') {
       clearRefreshCookie(rh);
-      return new Response(JSON.stringify(rd), { status: rr.status, headers: rh });
+      return sessionEndedResponse(rh);
     }
+    if (rr.kind === 'unavailable') {
+      /* Transient: keep the cookie exactly as it is. */
+      return refreshUnavailableResponse(rh);
+    }
+    const rd = rr.data;
+    /* The rotation succeeded, so the old token is spent: ALWAYS persist
+       the new one, whatever happens with /v3/auth/me below. */
     setRefreshCookie(rd.refresh_token, rh);
-    const mr = await upstreamFetch('/v3/auth/me', 'GET', null, rd.access_token, req);
+    let mr: Response;
+    try {
+      mr = await upstreamFetch('/v3/auth/me', 'GET', null, rd.access_token, req, UPSTREAM_TIMEOUT_MS);
+    } catch {
+      return refreshUnavailableResponse(rh);
+    }
     const md = await mr.json().catch(() => null);
-    if (mr.status !== 200) {
-      clearRefreshCookie(rh);
-      return new Response(JSON.stringify(md), { status: mr.status, headers: rh });
+    if (mr.status !== 200 || md === null) {
+      /* The session is fine (it just rotated); the profile read wasn't.
+         503 carries the new cookie, never a clear. */
+      return refreshUnavailableResponse(rh);
     }
     return new Response(
       JSON.stringify({
@@ -152,27 +253,47 @@ async function handleAuthProxy(req: Request): Promise<Response> {
   if (seg === 'refresh' && req.method === 'POST') {
     const rt = getRefreshToken(cookie);
     if (!rt)
-      return new Response(
-        JSON.stringify({ error_code: 'AUTH_REFRESH_TOKEN_INVALID', message: 'No refresh token.' }),
-        { status: 401, headers: rh },
-      );
-    const ur = await upstreamFetch('/v3/auth/refresh', 'POST', { refresh_token: rt }, undefined, req);
-    const ud = await ur.json().catch(() => null);
-    if (ur.status === 200 && isAuthSuccess(ud)) {
-      setRefreshCookie(ud.refresh_token, rh);
-      return new Response(JSON.stringify(stripped(ud as Record<string, unknown>)), { status: 200, headers: rh });
+      return new Response(errorJson(SESSION_ENDED_CODE, 'No refresh token.'), {
+        status: 401,
+        headers: rh,
+      });
+    const rr = await refreshUpstream(rt, req);
+    if (rr.kind === 'ok') {
+      setRefreshCookie(rr.data.refresh_token, rh);
+      return new Response(JSON.stringify(stripped(rr.data as Record<string, unknown>)), {
+        status: 200,
+        headers: rh,
+      });
     }
-    clearRefreshCookie(rh);
-    return new Response(JSON.stringify(ud), { status: ur.status, headers: rh });
+    if (rr.kind === 'ended') {
+      clearRefreshCookie(rh);
+      return sessionEndedResponse(rh);
+    }
+    /* Transient: cookie untouched, the SPA keeps the session and retries. */
+    return refreshUnavailableResponse(rh);
   }
 
   if (seg === 'logout' && req.method === 'POST') {
+    /* The user's explicit logout: always clear the cookie. The API ends
+       this browser's session family from the refresh token alone (no
+       bearer needed) and never touches other devices. Best-effort, and
+       finished in the background (waitUntil) so the cookie clear reaches
+       the browser at once instead of after a slow upstream (up to
+       UPSTREAM_TIMEOUT_MS). */
     const rt = getRefreshToken(cookie);
     clearRefreshCookie(rh);
-    if (rt)
-      await upstreamFetch('/v3/auth/logout', 'POST', { refresh_token: rt }, undefined, req).catch(
-        () => null,
-      );
+    if (rt) {
+      const revoke = upstreamFetch(
+        '/v3/auth/logout',
+        'POST',
+        { refresh_token: rt },
+        undefined,
+        req,
+        UPSTREAM_TIMEOUT_MS,
+      ).catch(() => null);
+      if (waitUntil) waitUntil(revoke);
+      else await revoke;
+    }
     return new Response(null, { status: 204, headers: rh });
   }
 
@@ -227,9 +348,12 @@ async function handleAuthProxy(req: Request): Promise<Response> {
 
 /**
  * Cloudflare Pages Functions entry. `onRequest` receives an event context;
- * we only need the Request. Catch-all route `/auth-proxy/*` via the
- * `[[path]]` filename.
+ * we need the Request and, for /logout, waitUntil. Catch-all route
+ * `/auth-proxy/*` via the `[[path]]` filename.
  */
-export const onRequest = async (context: { request: Request }): Promise<Response> => {
-  return handleAuthProxy(context.request);
+export const onRequest = async (context: {
+  request: Request;
+  waitUntil?: WaitUntil;
+}): Promise<Response> => {
+  return handleAuthProxy(context.request, context.waitUntil?.bind(context));
 };

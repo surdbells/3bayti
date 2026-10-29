@@ -15,6 +15,7 @@ import type { Product } from '../catalog/product.model';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { ShareButtonsComponent } from '../../shared/ui';
 import { AuthService } from '../../core/auth/auth.service';
+import { gateSignedInAction } from '../../core/auth/session-gate';
 import { HotlinkService } from '../../core/hotlinks/hotlink.service';
 import { ToastService } from '../../shared/forms';
 import { environment } from '../../../environments/environment';
@@ -312,17 +313,28 @@ export class StoreDetailPageComponent implements OnInit {
 
   /**
    * Follow / unfollow this store. Guests are routed to sign-in (following is
-   * an authenticated action). Optimistic flip, reverted on failure.
+   * an authenticated action); a still-unresolved session (transient failure)
+   * gets a connection error instead, never a sign-in prompt. Optimistic
+   * flip, reverted on failure.
    */
   protected async toggleFollow(): Promise<void> {
     const store = this._store();
     if (!store || this.togglingFollow()) {
       return;
     }
-    if (!this.auth.isAuthenticated()) {
-      void this.router.navigate(['/login'], {
-        queryParams: { returnUrl: `/stores/${store.slug}` },
-      });
+    await gateSignedInAction(this.auth, {
+      signedIn: () => this.applyFollowToggle(store),
+      signedOut: () =>
+        void this.router.navigate(['/login'], {
+          queryParams: { returnUrl: `/stores/${store.slug}` },
+        }),
+      unavailable: () => this.toast.error('common.errors.network'),
+    });
+  }
+
+  private async applyFollowToggle(store: Store): Promise<void> {
+    /* Re-checked: a second tap may have landed while the gate waited. */
+    if (this.togglingFollow()) {
       return;
     }
     this.togglingFollow.set(true);

@@ -243,7 +243,7 @@ import { PriceChangeNoteComponent } from '../../shared/ui/price-change-note';
                 </ng-container>
 
                 <ng-template #guestPromo>
-                  <p class="cart-page__guest-promo" data-testid="cart-guest-promo">
+                  <p *ngIf="isSignedOut()" class="cart-page__guest-promo" data-testid="cart-guest-promo">
                     <a routerLink="/login" [queryParams]="{ returnUrl: '/cart' }" class="cart-page__guest-promo-link">
                       {{ 'cart.page.guestPromoSignInLink' | translate }}
                     </a>
@@ -337,6 +337,8 @@ export class CartPageComponent implements OnInit {
   protected readonly subtotal = this.cart.subtotal;
   protected readonly isLoading = this.cart.isLoading;
   protected readonly isAuthenticated = this.auth.isAuthenticated;
+  /** Known signed out (not merely 'unknown' after a transient session check). */
+  protected readonly isSignedOut = computed(() => this.auth.sessionStatus() === 'anonymous');
 
   /** Latest quote response, drives the breakdown when present. */
   private readonly _quote = signal<CartQuoteResponse | null>(null);
@@ -477,14 +479,12 @@ export class CartPageComponent implements OnInit {
      ----------------------------------------------------------------- */
 
   protected async onCheckout(): Promise<void> {
-    if (!this.isAuthenticated()) {
-      /* Guests must sign in before checkout (Q-CheckoutAuth=A). Carry
-         the returnUrl so they land back on /checkout/address. */
-      await this.router.navigate(['/login'], {
-        queryParams: { returnUrl: '/checkout/address' },
-      });
-      return;
-    }
+    /* Guests must sign in before checkout (Q-CheckoutAuth=A), but that
+       decision belongs to authActivateGuard on /checkout/address: it
+       sends a definitively signed-out visitor to
+       /login?returnUrl=/checkout/address, and while the session is still
+       unresolved after a transient failure it waits for a retry instead
+       of showing a signed-in customer the sign-in form. */
     await this.router.navigateByUrl('/checkout/address');
   }
 }

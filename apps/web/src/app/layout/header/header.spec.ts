@@ -5,7 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { HeaderComponent } from './header';
-import { AuthService } from '../../core/auth/auth.service';
+import { AuthService, type SessionStatus } from '../../core/auth/auth.service';
 import { ToastService } from '../../shared/forms';
 import { provideI18n } from '../../core/i18n';
 import type { AuthUser } from '../../core/auth/auth.types';
@@ -23,6 +23,7 @@ class StubAuthService {
   private _user = signal<AuthUser | null>(null);
   currentUser = this._user.asReadonly();
   isAuthenticated = signal(false).asReadonly();
+  sessionStatus = signal<SessionStatus>('anonymous').asReadonly();
 
   /* Manual setter for tests; recreates the signals each call so
      readonly derivations recompute correctly. */
@@ -32,12 +33,19 @@ class StubAuthService {
       (this as any).currentUser = signal<AuthUser | null>(null).asReadonly();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (this as any).isAuthenticated = signal(false).asReadonly();
+      this.setStatus('anonymous');
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (this as any).currentUser = signal<AuthUser | null>(user).asReadonly();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (this as any).isAuthenticated = signal(true).asReadonly();
+      this.setStatus('authenticated');
     }
+  }
+
+  setStatus(status: SessionStatus): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this as any).sessionStatus = signal<SessionStatus>(status).asReadonly();
   }
 
   logoutCalls = 0;
@@ -80,13 +88,16 @@ function makeUser(overrides: Partial<AuthUser> = {}): AuthUser {
   };
 }
 
-function setup(opts: { user?: AuthUser | null } = {}): {
+function setup(opts: { user?: AuthUser | null; status?: SessionStatus } = {}): {
   fixture: ComponentFixture<HeaderComponent>;
   auth: StubAuthService;
 } {
   const auth = new StubAuthService();
   if (opts.user !== undefined) {
     auth.setUser(opts.user);
+  }
+  if (opts.status !== undefined) {
+    auth.setStatus(opts.status);
   }
 
   TestBed.configureTestingModule({
@@ -134,6 +145,13 @@ describe('HeaderComponent (auth-aware)', () => {
       const link = fixture.nativeElement.querySelector('[data-testid="header-vendor"]') as HTMLAnchorElement;
       expect(link.getAttribute('href')).toContain('/sell');
       expect(link.getAttribute('target')).toBeNull();
+    });
+
+    it("shows NO Sign in CTA while the session is still 'unknown' (transient session check)", () => {
+      const { fixture } = setup({ user: null, status: 'unknown' });
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-testid="header-customer"]')).toBeNull();
+      expect(root.querySelector('[data-testid="header-user-menu"]')).toBeNull();
     });
   });
 

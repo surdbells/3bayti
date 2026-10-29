@@ -57,6 +57,8 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { cfImage, CF_PRESETS, type CfImageOptions } from '../../shared/util/image-transform';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
+import { gateSignedInAction } from '../../core/auth/session-gate';
+import { ToastService } from '../../shared/forms';
 import { MeasurementService, MEASUREMENT_FIELDS } from '../account/measurement.service';
 import { ConciergeService } from '../ai-concierge/concierge.service';
 import { WishlistService } from '../wishlist/wishlist.service';
@@ -204,6 +206,7 @@ export class ProductDetailComponent implements OnDestroy {
   private concierge = inject(ConciergeService);
   private wishlist = inject(WishlistService);
   private router = inject(Router);
+  private toast = inject(ToastService);
   /** Signed-in state, gates the custom-size measurement form. */
   protected readonly isAuthenticated = this.auth.isAuthenticated;
 
@@ -2236,14 +2239,16 @@ export class ProductDetailComponent implements OnDestroy {
   /**
    * Wishlist heart on a complement card (same behaviour as ProductCard's):
    * toggles for signed-in shoppers; guests are sent to sign in, returning
-   * to this product afterwards.
+   * to this product afterwards. A still-unresolved session (transient
+   * failure) gets a connection error, never a sign-in prompt.
    */
   toggleComplementSaved(item: CompleteLookItem): void {
-    if (!this.isAuthenticated()) {
-      void this.router.navigate(['/login'], { queryParams: { returnUrl: this.loginReturnUrl() } });
-      return;
-    }
-    void this.wishlist.toggle(item).catch(() => undefined);
+    void gateSignedInAction(this.auth, {
+      signedIn: () => void this.wishlist.toggle(item).catch(() => undefined),
+      signedOut: () =>
+        void this.router.navigate(['/login'], { queryParams: { returnUrl: this.loginReturnUrl() } }),
+      unavailable: () => this.toast.error('common.errors.network'),
+    });
   }
 
   /** Effective price of a complement (sale price when lower). */

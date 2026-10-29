@@ -108,9 +108,15 @@ class StubCartService {
 
 class StubAuthService {
   isAuthenticated = signal(false).asReadonly();
+  sessionStatus = signal<'unknown' | 'authenticated' | 'anonymous'>('anonymous').asReadonly();
   setAuth(v: boolean): void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (this as any).isAuthenticated = signal(v).asReadonly();
+    this.setStatus(v ? 'authenticated' : 'anonymous');
+  }
+  setStatus(status: 'unknown' | 'authenticated' | 'anonymous'): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this as any).sessionStatus = signal(status).asReadonly();
   }
 }
 
@@ -127,7 +133,12 @@ class StubToastService {
   hasToasts = signal(false).asReadonly();
 }
 
-function setup(opts: { items?: CartItem[]; authed?: boolean; quote?: CartQuoteResponse } = {}): {
+function setup(opts: {
+  items?: CartItem[];
+  authed?: boolean;
+  quote?: CartQuoteResponse;
+  status?: 'unknown' | 'authenticated' | 'anonymous';
+} = {}): {
   fixture: ComponentFixture<CartPageComponent>;
   component: CartPageComponent;
   cart: StubCartService;
@@ -142,6 +153,7 @@ function setup(opts: { items?: CartItem[]; authed?: boolean; quote?: CartQuoteRe
 
   const auth = new StubAuthService();
   if (opts.authed === true) auth.setAuth(true);
+  if (opts.status !== undefined) auth.setStatus(opts.status);
 
   TestBed.configureTestingModule({
     imports: [CartPageComponent],
@@ -214,6 +226,12 @@ describe('CartPageComponent', () => {
     it('shows the guest promo nudge when not authenticated', () => {
       const { fixture } = setup({ items: [makeItem()], authed: false });
       expect(fixture.nativeElement.querySelector('[data-testid="cart-guest-promo"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="cart-promo-form"]')).toBeNull();
+    });
+
+    it("shows NO sign-in nudge while the session is still 'unknown' (transient session check)", () => {
+      const { fixture } = setup({ items: [makeItem()], authed: false, status: 'unknown' });
+      expect(fixture.nativeElement.querySelector('[data-testid="cart-guest-promo"]')).toBeNull();
       expect(fixture.nativeElement.querySelector('[data-testid="cart-promo-form"]')).toBeNull();
     });
 
@@ -366,14 +384,18 @@ describe('CartPageComponent', () => {
      Checkout CTA
      ----------------------------------------------------------------- */
   describe('checkout CTA', () => {
-    it('routes guests to /login with returnUrl=/checkout/address', async () => {
-      const { fixture, navigateSpy } = setup({ items: [makeItem()], authed: false });
+    it('sends guests to /checkout/address too and leaves the sign-in decision to the route guard', async () => {
+      /* authActivateGuard redirects a definitively signed-out visitor to
+         /login?returnUrl=/checkout/address, and waits (never /login) while
+         the session is unresolved after a transient failure. Deciding here
+         from isAuthenticated() would show a signed-in customer the sign-in
+         form during an API blip. */
+      const { fixture, navigateSpy, navigateByUrlSpy } = setup({ items: [makeItem()], authed: false });
       const btn = fixture.nativeElement.querySelector('[data-testid="cart-checkout-cta"]') as HTMLButtonElement;
       btn.click();
       await Promise.resolve();
-      expect(navigateSpy).toHaveBeenCalledWith(['/login'], {
-        queryParams: { returnUrl: '/checkout/address' },
-      });
+      expect(navigateByUrlSpy).toHaveBeenCalledWith('/checkout/address');
+      expect(navigateSpy).not.toHaveBeenCalledWith(['/login'], expect.anything());
     });
 
     it('routes authenticated users directly to /checkout/address', async () => {

@@ -1,13 +1,13 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { StoreDetailPageComponent } from './store-detail-page';
 import { StoreService } from '../catalog/store.service';
 import type { StoreProductsPage } from '../catalog/store.service';
-import { AuthService } from '../../core/auth/auth.service';
+import { AuthService, type SessionStatus } from '../../core/auth/auth.service';
 import { ToastService } from '../../shared/forms';
 import { provideI18n } from '../../core/i18n';
 import type { Store, VendorLabel } from '../catalog/store.model';
@@ -70,6 +70,28 @@ class StubStoreService {
     this.listLabelsCalls.push(slug);
     return this.labelResult;
   }
+  followCalls: number[] = [];
+  async followVendor(id: number): Promise<void> {
+    this.followCalls.push(id);
+  }
+  async unfollowVendor(): Promise<void> { /* no-op */ }
+}
+
+/** AuthService stub: session state + a retry (whenSessionKnown) the test settles. */
+class StubAuthService {
+  readonly status = signal<SessionStatus>('anonymous');
+  readonly sessionStatus = this.status.asReadonly();
+  isAuthenticated = (): boolean => this.status() === 'authenticated';
+  private resolveWait: ((s: SessionStatus) => void) | null = null;
+  whenSessionKnown(): Promise<SessionStatus> {
+    return new Promise(resolve => {
+      this.resolveWait = resolve;
+    });
+  }
+  settle(s: SessionStatus): void {
+    this.status.set(s);
+    this.resolveWait?.(s);
+  }
 }
 
 function setup(opts: {
@@ -79,10 +101,16 @@ function setup(opts: {
   labels?: VendorLabel[];
   getThrows?: boolean;
   listThrows?: boolean;
+  session?: SessionStatus;
 } = {}): {
   fixture: ComponentFixture<StoreDetailPageComponent>;
   service: StubStoreService;
+  auth: StubAuthService;
+  toastErrors: string[];
 } {
+  const auth = new StubAuthService();
+  auth.status.set(opts.session ?? 'anonymous');
+  const toastErrors: string[] = [];
   const service = new StubStoreService();
   if (opts.store !== undefined) service.storeResult = opts.store;
   if (opts.productPages !== undefined) service.productPages = opts.productPages;
@@ -111,13 +139,16 @@ function setup(opts: {
       { provide: ActivatedRoute, useValue: activatedRouteStub },
       // Stub AuthService (its real deps — AUTH_PROXY_BASE etc. — aren't wired
       // here) and ToastService so the follow button's injections resolve.
-      { provide: AuthService, useValue: { isAuthenticated: signal(false) } },
-      { provide: ToastService, useValue: { success: () => {}, error: () => {}, info: () => {} } },
+      { provide: AuthService, useValue: auth },
+      {
+        provide: ToastService,
+        useValue: { success: () => {}, error: (k: string) => toastErrors.push(k), info: () => {} },
+      },
     ],
   });
   const fixture = TestBed.createComponent(StoreDetailPageComponent);
   fixture.detectChanges();
-  return { fixture, service };
+  return { fixture, service, auth, toastErrors };
 }
 
 async function flush(): Promise<void> {
@@ -318,6 +349,46 @@ describe('StoreDetailPageComponent', () => {
       fixture.detectChanges();
       const cta = fixture.nativeElement.querySelector('[data-testid="store-not-found"] a') as HTMLAnchorElement;
       expect(cta.getAttribute('href')).toBe('/stores');
+    });
+  });
+  /* Following needs a session. Only a DEFINITIVELY signed-out visitor is
+     sent to /login; while the session is unresolved after a transient
+     failure the customer may well be signed in, so they get a connection
+     error instead of a sign-in prompt. */
+  describe('follow button session gate', () => {
+    async function clickFollow(fixture: ComponentFixture<StoreDetailPageComponent>): Promise<void> {
+      await flush();
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('[data-testid="store-follow"]') as HTMLButtonElement).click();
+    }
+
+    it('sends a signed-out visitor to /login with a returnUrl', async () => {
+      const { fixture, service } = setup({ session: 'anonymous' });
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      await clickFollow(fixture);
+      expect(navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/stores/acme' } });
+      expect(service.followCalls).toEqual([]);
+    });
+
+    it("shows a connection error, NOT /login, while the session stays 'unknown'", async () => {
+      const { fixture, auth, service, toastErrors } = setup({ session: 'unknown' });
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      await clickFollow(fixture);
+      auth.settle('unknown');
+      await flush();
+      expect(navigate).not.toHaveBeenCalled();
+      expect(toastErrors).toEqual(['common.errors.network']);
+      expect(service.followCalls).toEqual([]);
+    });
+
+    it('follows once the background retry restores the session', async () => {
+      const { fixture, auth, service } = setup({ session: 'unknown' });
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      await clickFollow(fixture);
+      auth.settle('authenticated');
+      await flush();
+      expect(service.followCalls).toEqual([1]);
+      expect(navigate).not.toHaveBeenCalled();
     });
   });
 });

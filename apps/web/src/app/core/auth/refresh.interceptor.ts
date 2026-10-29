@@ -11,6 +11,7 @@ import { catchError, switchMap } from 'rxjs';
 import { AccessTokenStore } from './access-token-store';
 import { AuthService } from './auth.service';
 import { AUTH_PROXY_BASE } from './auth.tokens';
+import { AUTH_REFRESH_UNAVAILABLE, isStaleAccessToken401 } from './auth-errors';
 
 /**
  * refreshInterceptor, auth's HTTP interceptor.
@@ -22,10 +23,23 @@ import { AUTH_PROXY_BASE } from './auth.tokens';
  *      the auth-proxy itself (the proxy routes use HttpOnly cookies,
  *      not Bearer headers).
  *
- *   2. On 401 from a non-auth-proxy request, attempt a single-flight
- *      refresh; if the refresh succeeds, retry the original request
- *      with the new token. If the refresh fails, propagate the 401
- *      so the calling page can route to /login.
+ *   2. On a STALE-TOKEN 401 from a non-auth-proxy request (code
+ *      AUTH_INVALID_TOKEN / AUTH_MISSING_TOKEN, or no code), attempt a
+ *      single-flight refresh; if the refresh succeeds, retry the
+ *      original request with the new token. Then:
+ *        - session definitively ended → propagate the original 401 so
+ *          the calling page can route to /login;
+ *        - refresh merely unavailable (network, 5xx, ...) → fail the
+ *          request with a status-0 connection error. The session is
+ *          kept and AuthService retries in the background, so a
+ *          transient problem never looks like "please sign in".
+ *      A 401 with any other code (AUTH_INVALID_CREDENTIALS for a wrong
+ *      current password, OTP_VERIFICATION_FAILED, ...) is a business
+ *      error and passes through untouched, with no refresh.
+ *      A request sent WITHOUT a token takes the same refresh path only
+ *      while the session is still 'unknown' (transient first-load
+ *      failure; the cookie may be valid), so it can't be mistaken for a
+ *      signed-out visitor.
  *
  * Why single-flight
  * -----------------
@@ -46,8 +60,8 @@ import { AUTH_PROXY_BASE } from './auth.tokens';
  * (circular dependency).
  *
  * We break the cycle by injecting Injector at request-time but
- * resolving AuthService only when the 401-retry path actually
- * needs it. By then AuthService is fully constructed.
+ * resolving AuthService only when a 401 actually comes back. By then
+ * AuthService is fully constructed.
  *
  * What this interceptor explicitly does NOT do
  * --------------------------------------------
@@ -73,48 +87,94 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(initialRequest).pipe(
     catchError((error: unknown) => {
-      /* Only attempt refresh on 401 from non-auth-proxy requests.
-         Other errors (network, 4xx other than 401, 5xx) propagate. */
+      /* Only attempt refresh on a stale-token 401 from non-auth-proxy
+         requests. Other errors (network, 4xx other than 401, 5xx) and
+         business 401s (wrong password / OTP) propagate untouched. */
       if (
         !(error instanceof HttpErrorResponse) ||
-        error.status !== 401 ||
+        !isStaleAccessToken401(error) ||
         requestIsAuthProxy
       ) {
         return throwError(() => error);
       }
 
-      /* Defensive: don't try to refresh if the original request
-         already lacked an Authorization header, there's no point
-         refreshing a token we never tried in the first place; the
-         endpoint just doesn't accept anonymous access. */
+      /* injector.get(AuthService) here (not inject() at the top)
+         breaks the APP_INITIALIZER cycle, see the file header. */
+      const auth = injector.get(AuthService);
+
+      /* No Authorization header means there was no token to refresh:
+         for a signed-out visitor the endpoint simply needs a session,
+         so the 401 goes to the page (which routes to /login).
+
+         Except while the session is still 'unknown' (the first-load
+         hydrate hit a transient failure, so the store is empty but the
+         HttpOnly cookie may be perfectly valid): a 401 then must not
+         read as "please sign in". Resolve the session through the
+         cookie first; the outcomes below handle it exactly like a
+         stale token. */
       const hadAuthHeader = initialRequest.headers.has('Authorization');
-      if (!hadAuthHeader) {
+      if (!hadAuthHeader && auth.sessionStatus() !== 'unknown') {
         return throwError(() => error);
       }
 
       /* Trigger a single-flight refresh. AuthService deduplicates
          concurrent calls behind one inflight promise; the second,
-         third, ... caller awaits the same result.
-
-         injector.get(AuthService) here (not inject() at the top)
-         breaks the APP_INITIALIZER cycle, see the file header. */
-      const auth = injector.get(AuthService);
+         third, ... caller awaits the same result. */
       return from(auth.refresh()).pipe(
-        switchMap(success => {
-          if (!success) {
-            /* Refresh failed, session is dead. Propagate the
-               original 401 so the page can route to /login. */
+        switchMap(outcome => {
+          if (outcome === 'session-ended') {
+            /* Session definitively over. Propagate the original 401
+               so the page can route to /login. */
             return throwError(() => error);
           }
+          if (outcome === 'unavailable') {
+            /* Couldn't refresh right now; the session is intact and
+               AuthService retries in the background. Fail THIS request
+               as a connection error, never as a 401 (pages route 401s
+               to /login). */
+            return throwError(() => refreshUnavailableError(req));
+          }
           /* Refresh succeeded, retry the original request with
-             the new token. */
+             the new token. A stale-token 401 on the retry (a password
+             change on another device landing in between, a proxy 401)
+             is not a reason to sign the customer out: the session was
+             just renewed, so fail as a connection error instead of a
+             401 that pages route to /login. */
           const retried = attachAuthHeader(req, tokenStore.getToken());
-          return next(retried);
+          return next(retried).pipe(
+            catchError((retryError: unknown) =>
+              throwError(() =>
+                retryError instanceof HttpErrorResponse && isStaleAccessToken401(retryError)
+                  ? refreshUnavailableError(req)
+                  : retryError,
+              ),
+            ),
+          );
         }),
       );
     }),
   );
 };
+
+/**
+ * The error a request fails with when its token refresh was merely
+ * unavailable. Status 0 is what HttpClient reports for a network
+ * failure, so pages (and mapApiErrors) show their usual connection
+ * error rather than anything auth-shaped.
+ */
+function refreshUnavailableError(req: HttpRequest<unknown>): HttpErrorResponse {
+  return new HttpErrorResponse({
+    status: 0,
+    statusText: 'Unknown Error',
+    url: req.urlWithParams,
+    error: {
+      error: {
+        code: AUTH_REFRESH_UNAVAILABLE,
+        message: 'Could not reach the server. Please check your connection and try again.',
+      },
+    },
+  });
+}
 
 /**
  * Add or replace the Authorization header on a request.

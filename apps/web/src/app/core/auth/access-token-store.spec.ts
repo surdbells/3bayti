@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { AccessTokenStore, AccessTokenSnapshot } from './access-token-store';
+import { AccessTokenStore, AccessTokenSnapshot, jwtLifetimeMs } from './access-token-store';
 
 /**
  * Tests for AccessTokenStore, the in-memory access-token cache.
@@ -128,5 +128,28 @@ describe('AccessTokenStore', () => {
       store.clear();
       expect(store.getToken()).toBeNull();
     });
+  });
+});
+
+describe('jwtLifetimeMs', () => {
+  const b64url = (o: object): string =>
+    btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const jwt = (claims: object): string => `${b64url({ alg: 'HS256' })}.${b64url(claims)}.sig`;
+
+  it('returns exp - iat in ms (server-clock lifetime, immune to device skew)', () => {
+    expect(jwtLifetimeMs(jwt({ iat: 1_000, exp: 1_900 }))).toBe(900_000);
+  });
+
+  it('decodes base64url payloads that need padding / use - and _', () => {
+    /* A sub with characters that encode to '-' / '_' in base64url. */
+    expect(jwtLifetimeMs(jwt({ sub: '>>>???', iat: 10, exp: 70 }))).toBe(60_000);
+  });
+
+  it('returns null for non-JWT strings and missing / invalid claims', () => {
+    expect(jwtLifetimeMs('access.jwt.v1')).toBeNull();
+    expect(jwtLifetimeMs('not-a-jwt')).toBeNull();
+    expect(jwtLifetimeMs(jwt({ exp: 100 }))).toBeNull();
+    expect(jwtLifetimeMs(jwt({ iat: 100, exp: 100 }))).toBeNull();
+    expect(jwtLifetimeMs(jwt({ iat: '1', exp: '2' }))).toBeNull();
   });
 });

@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { Money, Product } from './product.model';
 import { WishlistService } from '../wishlist/wishlist.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { gateSignedInAction } from '../../core/auth/session-gate';
+import { ToastService } from '../../shared/forms';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
@@ -174,6 +176,7 @@ export class ProductCardComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly i18n = inject(TranslateService);
+  private readonly toast = inject(ToastService);
 
   /** Whether this product is currently on the user's wishlist. */
   isSaved(): boolean {
@@ -227,21 +230,23 @@ export class ProductCardComponent {
   /**
    * Like button click. Toggles wishlist membership for signed-in
    * users; routes guests to sign-in (preserving intent is a later
-   * refinement). Intercepts the click so it doesn't trigger the
-   * parent anchor's navigation.
+   * refinement). While the session is still unresolved after a
+   * transient failure it waits briefly, then shows a connection error
+   * rather than a sign-in prompt. Intercepts the click so it doesn't
+   * trigger the parent anchor's navigation.
    */
   onLikeClick(event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
     const product = this.product;
     if (product === null) return;
-    if (!this.auth.isAuthenticated()) {
-      void this.router.navigateByUrl('/login');
-      return;
-    }
-    /* Fire-and-forget; the service updates the saved-set signal which
-       re-renders the heart. Errors are swallowed here, a failed
-       toggle simply leaves the prior state. */
-    void this.wishlist.toggle(product).catch(() => undefined);
+    void gateSignedInAction(this.auth, {
+      /* Fire-and-forget; the service updates the saved-set signal which
+         re-renders the heart. Errors are swallowed here, a failed
+         toggle simply leaves the prior state. */
+      signedIn: () => void this.wishlist.toggle(product).catch(() => undefined),
+      signedOut: () => void this.router.navigateByUrl('/login'),
+      unavailable: () => this.toast.error('common.errors.network'),
+    });
   }
 }

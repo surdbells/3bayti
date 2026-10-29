@@ -15,6 +15,9 @@ import { currencyInterceptor } from '../currency/currency.interceptor';
  * discovering the cookie session and swapping to the user's name.
  * Returning the hydrate() promise from the initializer delays bootstrap
  * until /auth-proxy/me has resolved (either to a user payload or a 401).
+ * A transient failure doesn't block bootstrap: hydrate() resolves with
+ * the session 'unknown' and keeps retrying in the background (see
+ * AuthService.whenSessionKnown, which the route guards wait on).
  *
  * Cost
  * ----
