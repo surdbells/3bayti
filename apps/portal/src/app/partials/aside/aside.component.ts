@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { PermissionService } from '../../services/permission.service';
+import { PortalAuthService } from '../../services/portal-auth.service';
 import { AxCanDirective } from '../../shared/security/ax-can.directive';
 import { NavBadgeService } from './nav-badge.service';
 
@@ -29,6 +30,7 @@ export class AsideComponent implements OnInit {
   constructor(
     private router: Router,
     private toast: HotToastService,
+    private auth: PortalAuthService,
   ) {}
 
   ui_controls = {
@@ -120,8 +122,7 @@ export class AsideComponent implements OnInit {
   }
 
   sign_out(): void {
-    localStorage.clear();
-    sessionStorage.clear();
+    this.auth.signOut();
     this.success_notification('User logged out successfully.');
     this.router.navigate(['/']).then(r => console.log(r));
   }

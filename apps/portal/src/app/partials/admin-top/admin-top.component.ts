@@ -6,6 +6,7 @@ import { Subject, Observable, of, forkJoin } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, map, catchError, takeUntil } from 'rxjs/operators';
 import { Notifications } from '../../class/notifications';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
+import { PortalAuthService } from '../../services/portal-auth.service';
 import { PermissionService } from '../../services/permission.service';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
@@ -47,6 +48,7 @@ export class AdminTopComponent implements OnInit, OnDestroy {
     private adapter: PortalCrudAdapter,
     private perms: PermissionService,
     private toast: HotToastService,
+    private auth: PortalAuthService,
   ) {}
 
   ui_controls = {
@@ -327,8 +329,7 @@ export class AdminTopComponent implements OnInit, OnDestroy {
   }
 
   sign_out(): void {
-    localStorage.clear();
-    sessionStorage.clear();
+    this.auth.signOut();
     this.success_notification('User logged out successfully.');
     this.router.navigate(['/']).then(r => console.log(r));
   }

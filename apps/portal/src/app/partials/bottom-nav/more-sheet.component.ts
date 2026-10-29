@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AxDrawerRef } from '../../shared/overlays/ax-drawer.service';
 import { TranslatePipe } from '../../translate.pipe';
+import { PortalAuthService } from '../../services/portal-auth.service';
 
 import { IconComponent } from '../../shared/icon/icon.component';
 interface MoreSheetLink {
@@ -74,6 +75,7 @@ interface MoreSheetSection {
 export class MoreSheetComponent {
   private readonly drawerRef = inject<AxDrawerRef<MoreSheetComponent>>(AxDrawerRef);
   private readonly router = inject(Router);
+  private readonly auth = inject(PortalAuthService);
 
   readonly sections: MoreSheetSection[] = [
     {
@@ -112,8 +114,7 @@ export class MoreSheetComponent {
 
   signOut(): void {
     this.close();
-    localStorage.clear();
-    sessionStorage.clear();
+    this.auth.signOut();
     this.router.navigate(['/']).then(r => console.log(r));
   }
 }

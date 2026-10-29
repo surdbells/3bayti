@@ -116,6 +116,8 @@ export class LoginComponent implements OnInit {
           }
           // Fallback, role not recognised for portal access
           this.error_notification('Your account does not have portal access.');
+          // Discard the session just minted, server-side too (fire-and-forget).
+          void this.authService.revokeCurrentSession();
           sessionStorage.clear();
           return;
         }

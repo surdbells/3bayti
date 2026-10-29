@@ -143,6 +143,89 @@ export class PortalAuthService {
     };
   }
 
+  // ── Sign-out ───────────────────────────────────────────────────────
+  /** Longest a caller about to hard-navigate waits for the logout call. */
+  static readonly REVOKE_WAIT_MS = 1500;
+
+  /**
+   * End this tab's session server-side: POST /auth/logout with the stored
+   * refresh token. The API revokes only that session's token family, never
+   * the user's other devices, and answers 204 even for an already-dead token.
+   *
+   * Fire-and-forget: it never throws or rejects, bypasses refresh-and-retry
+   * (auth routes are exempt), and a failure changes nothing locally. The
+   * token is read synchronously, so callers clear storage right after.
+   * Resolves once the call settles, or after REVOKE_WAIT_MS, for a caller
+   * that is about to reload the page. See `revoke` for why no bearer is sent.
+   */
+  revokeCurrentSession(): Promise<void> {
+    return this.revoke(this.currentSession()?.refresh_token);
+  }
+
+  /**
+   * Mid-impersonation the admin's own session sits stashed in localStorage.
+   * An explicit sign-out ends it too: revoke it server-side (fire-and-forget,
+   * like `revokeCurrentSession`) and drop the stash, so signing out never
+   * leaves a live admin credential behind in the browser.
+   */
+  discardStashedAdminSession(): void {
+    const raw = localStorage.getItem(PortalAuthService.ADMIN_BACKUP_KEY);
+    if (!raw) {
+      return;
+    }
+    localStorage.removeItem(PortalAuthService.ADMIN_BACKUP_KEY);
+    const refreshToken = this.decodeSession(raw)?.refresh_token;
+    if (refreshToken && refreshToken !== this.currentSession()?.refresh_token) {
+      void this.revoke(refreshToken);
+    }
+  }
+
+  /**
+   * Explicit "Sign out": end this session server-side, and the stashed admin
+   * session when impersonating (fire-and-forget, see `revokeCurrentSession`),
+   * then clear local state exactly as the sign-out buttons always have.
+   */
+  signOut(): void {
+    void this.revokeCurrentSession();
+    this.discardStashedAdminSession();
+    localStorage.clear();
+    sessionStorage.clear();
+  }
+
+  /**
+   * POST /auth/logout for one refresh token, never rejecting (see
+   * `revokeCurrentSession`).
+   *
+   * Deliberately sent WITHOUT a bearer (`authToken: ''` stops the adapter
+   * falling back to the stored one): the refresh token alone identifies the
+   * session, so the token of whichever session is current can never trip the
+   * API's cross-user guard. It also keeps this safe against an API that has
+   * not been redeployed yet: that one requires a bearer, so it answers 401
+   * and revokes nothing, exactly as before the portal called logout at all,
+   * instead of revoking just the presented token, whose later re-presentation
+   * (a duplicated tab, an in-flight refresh) the old API would treat as reuse
+   * and answer by signing the user out on every device.
+   */
+  private revoke(refreshToken: string | undefined): Promise<void> {
+    if (!refreshToken) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, PortalAuthService.REVOKE_WAIT_MS);
+      const settle = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      try {
+        this.adapter
+          .post_v3('POST /auth/logout', { refresh_token: refreshToken }, { authToken: '' })
+          .subscribe({ complete: settle, error: settle });
+      } catch {
+        settle();
+      }
+    });
+  }
+
   // ── Impersonation ──────────────────────────────────────────────────
   private static readonly ADMIN_BACKUP_KEY = 'ADMIN_SESSION_BACKUP';
 
@@ -188,7 +271,10 @@ export class PortalAuthService {
   }
 
   private currentSession(): PortalSession | null {
-    const raw = sessionStorage.getItem('SESSION');
+    return this.decodeSession(sessionStorage.getItem('SESSION'));
+  }
+
+  private decodeSession(raw: string | null): PortalSession | null {
     if (!raw) {
       return null;
     }

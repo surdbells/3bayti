@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
+import { PortalAuthService } from '../../services/portal-auth.service';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { readSession, homeRouteFor, patchSession, clearSession } from '../../core/auth/session.util';
 
@@ -26,6 +27,7 @@ import { readSession, homeRouteFor, patchSession, clearSession } from '../../cor
 export class ChangePasswordComponent {
   private readonly router = inject(Router);
   private readonly adapter = inject(PortalCrudAdapter);
+  private readonly auth = inject(PortalAuthService);
   private readonly toast = inject(HotToastService);
 
   readonly email = readSession()?.email ?? '';
@@ -35,8 +37,12 @@ export class ChangePasswordComponent {
   show = false;
   saving = false;
 
-  /** Escape hatch so a user who can't proceed isn't trapped on this screen. */
+  /** Escape hatch so a user who can't proceed isn't trapped on this screen.
+   *  Ends the session server-side too (fire-and-forget), and the stashed
+   *  admin session when an admin reached here impersonating such a vendor. */
   signOut(): void {
+    void this.auth.revokeCurrentSession();
+    this.auth.discardStashedAdminSession();
     clearSession();
     this.router.navigate(['/login']);
   }

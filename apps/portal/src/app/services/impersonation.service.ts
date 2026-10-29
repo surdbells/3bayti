@@ -9,7 +9,8 @@ import { HotToastService } from '../shared/toast/toast.service';
  * start() mints a session for the vendor's owner server-side (tagged with the
  * admin's id via the token's imp_by claim), swaps the stored session, and does
  * a hard navigation so every component re-reads the new session as the vendor.
- * exit() restores the stashed admin session. A persistent banner
+ * exit() ends the impersonation session server-side and restores the stashed
+ * admin session. A persistent banner
  * (ImpersonationBannerComponent) surfaces the state and the exit control.
  */
 @Injectable({ providedIn: 'root' })
@@ -19,6 +20,8 @@ export class ImpersonationService {
   private readonly toast = inject(HotToastService);
 
   starting = false;
+  /** Guards a double-tap on Exit while the logout call settles. */
+  private exiting = false;
 
   /** Begin impersonating a vendor by store id. */
   start(vendorId: number, storeName?: string): void {
@@ -49,15 +52,31 @@ export class ImpersonationService {
     return this.auth.impersonatedName();
   }
 
-  /** End impersonation and return to the admin session. */
+  /**
+   * End impersonation and return to the admin session. The impersonation
+   * session is ended server-side first (fire-and-forget, only that session,
+   * never the vendor's own), read before the swap so it can't hit the admin's.
+   * A refresh of the impersonation session still in flight can't touch the
+   * restored admin session either (the adapter compare-and-swaps on the
+   * refresh token it sent). The hard navigation waits briefly for the logout
+   * call, since a page reload would otherwise abort it in flight.
+   */
   exit(): void {
-    if (this.auth.stopImpersonation()) {
-      window.location.assign('/backend');
-    } else {
+    if (this.exiting) return;
+    this.exiting = true;
+    const revoked = this.auth.revokeCurrentSession();
+    let target = '/backend';
+    if (!this.auth.stopImpersonation()) {
       // Admin backup missing (e.g. cleared), sign out to a clean state.
       sessionStorage.clear();
-      window.location.assign('/');
+      target = '/';
     }
+    void revoked.then(() => this.hardNavigate(target));
+  }
+
+  /** Full page load, so every component re-reads the restored session. */
+  private hardNavigate(url: string): void {
+    window.location.assign(url);
   }
 
   private apiError(err: any, fallback: string): string {

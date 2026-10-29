@@ -2,6 +2,7 @@ import { Component, EventEmitter, HostListener, OnInit, Output } from '@angular/
 import { GlobalComponent } from '../../global-component';
 import { Router, RouterLink } from '@angular/router';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
+import { PortalAuthService } from '../../services/portal-auth.service';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { CommonModule } from '@angular/common';
 import { Notifications } from '../../class/notifications';
@@ -25,6 +26,7 @@ export class TopComponent implements OnInit {
     private router: Router,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
+    private auth: PortalAuthService,
   ) {}
 
   ui_controls = {
@@ -125,8 +127,7 @@ export class TopComponent implements OnInit {
   }
 
   sign_out(): void {
-    localStorage.clear();
-    sessionStorage.clear();
+    this.auth.signOut();
     this.success_notification('User logged out successfully.');
     this.router.navigate(['/']).then(r => console.log(r));
   }

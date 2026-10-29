@@ -597,7 +597,7 @@
   "vendor_reset_password.password_too_long": "Password must be at most {{max}} characters.",
   "vendor_reset_password.reason": "Reason (optional)",
   "vendor_reset_password.reason_placeholder": "e.g. Vendor locked out, requested via support",
-  "vendor_reset_password.effect_signout": "The vendor will be signed out on all devices.",
+  "vendor_reset_password.effect_sessions_kept": "Devices the vendor is already signed in on stay signed in.",
   "vendor_reset_password.effect_must_change": "They must choose a new password the next time they sign in.",
   "vendor_reset_password.effect_email_generate": "The temporary password is sent to their email address.",
   "vendor_reset_password.effect_email_manual": "They'll get an email saying their password was reset (without the password).",

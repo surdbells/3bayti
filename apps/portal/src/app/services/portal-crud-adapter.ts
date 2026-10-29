@@ -5,13 +5,14 @@ import {
   HttpParams,
   HttpErrorResponse,
 } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, finalize, map, shareReplay, switchMap } from 'rxjs/operators';
+import { Observable, TimeoutError, throwError } from 'rxjs';
+import { catchError, finalize, map, shareReplay, switchMap, timeout } from 'rxjs/operators';
 import { Router } from '@angular/router';
 
 import { resolveUrl } from '@3bayti/api-client';
 import { GlobalComponent } from '../global-component';
 import type { V3RouteKey } from './v3-route-keys.generated';
+import { NO_REFRESH_TOKEN, SESSION_CHANGED, isSessionOver, needsTokenRefresh } from './session-errors';
 
 /**
  * PortalCrudAdapter, the portal's counterpart to MobileNetworkAdapter.
@@ -59,6 +60,9 @@ const BASES = {
   new: 'https://api-v3.3bayti.ae',
 } as const;
 
+/** Give up on a hung POST /auth/refresh after this long (treated as offline). */
+const REFRESH_TIMEOUT_MS = 30 * 1000;
+
 export interface V3RequestOptions {
   /** Path parameter substitutions for colon tokens in the route. */
   params?: Record<string, string | number>;
@@ -74,12 +78,14 @@ export class PortalCrudAdapter {
 
   /**
    * Single in-flight refresh, shared across all requests that 401 at the
-   * same time. Critical: the API rotates refresh tokens single-use and
-   * treats a re-presented (already-rotated) token as theft, revoking the
-   * whole family. Deduping to one refresh keeps concurrent 401s from
-   * tripping that and logging the user out everywhere.
+   * same time. The API accepts an already-rotated refresh token while it is
+   * unexpired, so a duplicate refresh is safe; deduping just avoids minting a
+   * fresh pair per concurrent 401. Keyed by the refresh token it carries
+   * (`refreshSent`): a caller on another session (impersonation exit,
+   * re-login) never joins it and so never receives that session's token.
    */
   private refresh$: Observable<string> | null = null;
+  private refreshSent = '';
 
   // ── Read ────────────────────────────────────────────────────────────
 
@@ -186,11 +192,14 @@ export class PortalCrudAdapter {
   }
 
   /**
-   * Issue a request and, on a 401 (expired/invalid access token),
-   * transparently refresh the token and retry once before giving up.
-   * Auth endpoints (login/refresh/confirm/reset) are exempt so their own
-   * 401s (e.g. bad credentials) surface to the caller instead of
-   * triggering a refresh or logout redirect.
+   * Issue a request and, on a 401 that says the access token is stale or
+   * missing, transparently refresh the token and retry once before giving up.
+   * Any other 401 (wrong current password, wrong OTP, ...) is a business error
+   * and goes straight to the caller. Auth endpoints (login/refresh/logout/
+   * reset) are exempt so their own 401s never trigger a refresh or a sign-out.
+   * So is a request whose session has since been replaced by another user's
+   * (impersonation exit, re-login): retrying it with the new session's token
+   * would run the old user's action as someone else.
    *
    * @param makeReq builds the HTTP call for a given bearer token, so the
    *                retry can re-issue it with the freshly-minted token.
@@ -202,23 +211,28 @@ export class PortalCrudAdapter {
   ): Observable<any> {
     const isAuthRoute = routeKey.includes('/auth/');
     const firstToken = authToken ?? this.getToken();
+    const owner = this.sessionUserId();
 
     return makeReq(firstToken).pipe(
       catchError((err: HttpErrorResponse) => {
-        if (err.status !== 401 || isAuthRoute) {
+        if (isAuthRoute || !needsTokenRefresh(err) || this.sessionUserId() !== owner) {
           return this.logAndRethrow(err);
         }
         // Access token rejected, try the refresh token, then retry once.
         return this.refreshAccessToken().pipe(
           catchError((refreshErr) => {
-            // Only log out when the refresh token is genuinely invalid/expired
-            // (or absent). A transient failure (network, 5xx) must NOT sign the
-            // user out mid-session, surface the original error and keep the
-            // session so a later request (or the proactive refresh) can recover.
-            if (this.isRefreshAuthFailure(refreshErr)) {
+            // Sign out only on the API's definitive "session is over" answer.
+            // Anything else (offline, timeout, 403, 429, 5xx) is transient:
+            // keep the session so a later request (or the proactive refresh)
+            // recovers, and hand the caller the connection/server error rather
+            // than the stale-token 401 so it never reads as "signed out". A
+            // SESSION_CHANGED (the tab moved to another session meanwhile)
+            // fails this old-session request with its 401, never retried.
+            if (isSessionOver(refreshErr)) {
               this.terminate();
+              return throwError(() => err);
             }
-            return throwError(() => err);
+            return throwError(() => (refreshErr instanceof HttpErrorResponse ? refreshErr : err));
           }),
           switchMap((newToken) => makeReq(newToken)),
         );
@@ -229,42 +243,49 @@ export class PortalCrudAdapter {
   /**
    * Proactively refresh the session, used by SessionManager's silent
    * pre-expiry refresh and the idle "stay signed in" action. Resolves to the
-   * new access token; errors (without logging out) when there's no valid
-   * refresh token so the caller can decide what to do.
+   * new access token; errors without logging out, so the caller classifies
+   * the failure (`isSessionOver`) and decides what to do.
    */
   refreshSession(): Observable<string> {
     return this.refreshAccessToken();
   }
 
-  /** True when a refresh failure means the session is unrecoverable (invalid/
-   *  absent refresh token), i.e. a real logout, vs a transient blip. */
-  private isRefreshAuthFailure(e: unknown): boolean {
-    if (e instanceof HttpErrorResponse) {
-      return e.status === 401 || e.status === 403;
-    }
-    const msg = (e as { message?: string })?.message ?? '';
-    return msg === 'no_refresh_token' || msg === 'refresh_failed';
-  }
-
   /**
    * Exchange the stored refresh token for a fresh access+refresh pair,
    * persisting both back to the session. Shares one in-flight call across
-   * concurrent callers (see `refresh$`).
+   * concurrent callers of the same session (see `refresh$`). A refresh that
+   * hangs is cut off after REFRESH_TIMEOUT_MS and reported like a network
+   * failure (status 0), so a stuck call can't wedge every later refresh.
+   *
+   * Compare-and-swap on the refresh token sent: the outcome belongs to the
+   * session that sent it. If the tab holds a different session by the time
+   * the answer lands (impersonation exit, sign-out + re-login), it fails with
+   * the transient SESSION_CHANGED instead, so the new session's tokens are
+   * never overwritten with the old one's, and a definitive "session is over"
+   * for the old session can never sign the new one out.
    */
   private refreshAccessToken(): Observable<string> {
-    if (this.refresh$) {
+    const sent = this.getRefreshToken();
+    if (this.refresh$ && this.refreshSent === sent) {
       return this.refresh$;
     }
-    const refreshToken = this.getRefreshToken();
-    if (!refreshToken) {
-      return throwError(() => new Error('no_refresh_token'));
+    if (!sent) {
+      return throwError(() => new Error(NO_REFRESH_TOKEN));
     }
 
     const url = this.url('POST /auth/refresh');
-    this.refresh$ = this.http
-      .post<any>(url, { refresh_token: refreshToken }, { headers: this.headersFor('') })
+    const sessionChanged = () => this.getRefreshToken() !== sent;
+    const call$: Observable<string> = this.http
+      .post<any>(url, { refresh_token: sent }, { headers: this.headersFor('') })
       .pipe(
+        timeout(REFRESH_TIMEOUT_MS),
+        catchError((e) => throwError(() => (e instanceof TimeoutError
+          ? new HttpErrorResponse({ status: 0, statusText: 'Refresh timed out', url })
+          : e))),
         map((res: any) => {
+          if (sessionChanged()) {
+            throw new Error(SESSION_CHANGED);
+          }
           const body = res?.data ?? res;
           const access = body?.access_token;
           if (!access) {
@@ -278,12 +299,19 @@ export class PortalCrudAdapter {
           );
           return access as string;
         }),
+        catchError((e) => throwError(() => (sessionChanged() ? new Error(SESSION_CHANGED) : e))),
         shareReplay(1),
         finalize(() => {
-          this.refresh$ = null;
+          // Only clear our own slot; a newer session's refresh may hold it.
+          if (this.refresh$ === call$) {
+            this.refresh$ = null;
+            this.refreshSent = '';
+          }
         }),
       );
-    return this.refresh$;
+    this.refresh$ = call$;
+    this.refreshSent = sent;
+    return call$;
   }
 
   private getRefreshToken(): string {
@@ -294,6 +322,11 @@ export class PortalCrudAdapter {
     } catch {
       return '';
     }
+  }
+
+  /** Whose session the tab holds right now (null when signed out). */
+  private sessionUserId(): unknown {
+    return this.getSession()?.id ?? null;
   }
 
   /** Patch the access token (and rotated refresh token + expiries) into the
@@ -324,7 +357,9 @@ export class PortalCrudAdapter {
     }
   }
 
-  private terminate(): void {
+  /** End the tab's session locally and go to login. Only for a session the
+   *  API has definitively ended (see `isSessionOver`), never a transient blip. */
+  terminate(): void {
     sessionStorage.removeItem('SESSION');
     this.router.navigate(['/login']).catch(() => {});
   }

@@ -42,9 +42,10 @@ export const VENDOR_PASSWORD_MAX = 200;
  *  - manual: the admin types the password and hands it over themselves; the
  *    vendor only gets a security notice email.
  *
- * Either way the vendor is signed out everywhere and must choose a new
- * password on next sign-in, which the dialog spells out before the admin
- * commits. The dialog performs the request itself so validation / guard
+ * Either way the vendor must choose a new password on next sign-in, while
+ * devices already signed in stay signed in (a reset never ends sessions),
+ * which the dialog spells out before the admin commits. The dialog performs
+ * the request itself so validation / guard
  * errors render inline, and closes with the API result on success (or
  * `undefined` when dismissed).
  */
@@ -149,7 +150,7 @@ export const VENDOR_PASSWORD_MAX = 200;
         <div class="rvp-notice" role="note">
           <app-icon name="info" aria-hidden="true"></app-icon>
           <ul>
-            <li>{{ 'vendor_reset_password.effect_signout' | translate }}</li>
+            <li>{{ 'vendor_reset_password.effect_sessions_kept' | translate }}</li>
             <li>{{ 'vendor_reset_password.effect_must_change' | translate }}</li>
             <li *ngIf="mode === 'generate'">{{ 'vendor_reset_password.effect_email_generate' | translate }}</li>
             <li *ngIf="mode === 'manual'">{{ 'vendor_reset_password.effect_email_manual' | translate }}</li>
