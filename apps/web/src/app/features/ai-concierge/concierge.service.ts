@@ -10,9 +10,47 @@ import type { Product } from '../catalog/product.model';
 /** A concierge recommendation: the v3 listShape product + Ain's one-line reason. */
 export type ConciergeCard = Product & { reason?: string };
 
+/** One prior turn sent as conversation context (text only, never product payloads). */
+export interface ConciergeHistoryEntry {
+  role: 'user' | 'ain';
+  text: string;
+}
+
 export interface ConciergeResult {
   interactionId: number | null;
   cards: ConciergeCard[];
+  /** Ain's short conversational reply ('' when the API predates replies). */
+  reply: string;
+  /** 0-3 tappable suggestions, phrased as the customer would type them. */
+  followUps: string[];
+  /** True when the reply is a clarifying question (cards may be empty). */
+  needsClarification: boolean;
+}
+
+/** The server keeps only the last 8 history entries, each <= 500 chars. */
+export const CONCIERGE_HISTORY_LIMIT = 8;
+export const CONCIERGE_TEXT_LIMIT = 500;
+const FOLLOW_UP_LIMIT = 3;
+const FOLLOW_UP_MAX_CHARS = 40;
+
+/**
+ * Normalise conversation history to the wire contract: well-formed entries
+ * only, trimmed, each text capped at 500 chars, the LAST 8 kept (oldest first).
+ */
+export function sanitizeHistory(history: readonly unknown[] | null | undefined): ConciergeHistoryEntry[] {
+  if (!Array.isArray(history)) {
+    return [];
+  }
+  const out: ConciergeHistoryEntry[] = [];
+  for (const raw of history) {
+    if (!raw || typeof raw !== 'object') continue;
+    const { role, text } = raw as { role?: unknown; text?: unknown };
+    if ((role !== 'user' && role !== 'ain') || typeof text !== 'string') continue;
+    const t = text.trim().slice(0, CONCIERGE_TEXT_LIMIT);
+    if (!t) continue;
+    out.push({ role, text: t });
+  }
+  return out.slice(-CONCIERGE_HISTORY_LIMIT);
 }
 
 /** The guided gift-brief inputs. */
@@ -98,6 +136,9 @@ interface ConciergeResponse {
   interaction_id: number | null;
   intent?: unknown;
   products: ConciergeCard[];
+  reply?: unknown;
+  follow_ups?: unknown;
+  needs_clarification?: unknown;
 }
 
 interface GiftResponse extends ConciergeResponse {
@@ -120,25 +161,41 @@ export class ConciergeService {
 
   private static readonly SESSION_KEY = 'ain_session';
 
-  async ask(query: string): Promise<ConciergeResult> {
-    this.analytics.event('ai_concierge_query', { query_length: query.length });
+  /**
+   * One conversational turn. `history` is the conversation BEFORE this query
+   * (oldest first); only the last 8 text entries are sent, and the field is
+   * omitted entirely for a fresh conversation (backward compatible).
+   */
+  async ask(query: string, history: readonly ConciergeHistoryEntry[] = []): Promise<ConciergeResult> {
+    const context = sanitizeHistory(history);
+    this.analytics.event('ai_concierge_query', { query_length: query.length, history_turns: context.length });
 
-    const env = await firstValueFrom(
-      this.http.post<ConciergeResponse>('POST /ai/concierge/style', {
-        body: {
-          query,
-          locale: this.locale.current(),
-          session_id: this.sessionId(),
-          channel: 'WEB',
-        },
-      }),
-    );
+    const body: Record<string, unknown> = {
+      query,
+      locale: this.locale.current(),
+      session_id: this.sessionId(),
+      channel: 'WEB',
+    };
+    if (context.length > 0) {
+      body['history'] = context;
+    }
+
+    const env = await firstValueFrom(this.http.post<ConciergeResponse>('POST /ai/concierge/style', { body }));
 
     const data = (env.data ?? {}) as ConciergeResponse;
     const cards = Array.isArray(data.products) ? data.products : [];
-    this.analytics.event('ai_concierge_results', { count: cards.length });
+    const reply = typeof data.reply === 'string' ? data.reply.trim() : '';
+    const followUps = Array.isArray(data.follow_ups)
+      ? data.follow_ups
+          .filter((f): f is string => typeof f === 'string')
+          .map((f) => f.trim().slice(0, FOLLOW_UP_MAX_CHARS))
+          .filter((f) => f.length > 0)
+          .slice(0, FOLLOW_UP_LIMIT)
+      : [];
+    const needsClarification = data.needs_clarification === true;
+    this.analytics.event('ai_concierge_results', { count: cards.length, clarification: needsClarification });
 
-    return { interactionId: data.interaction_id ?? null, cards };
+    return { interactionId: data.interaction_id ?? null, cards, reply, followUps, needsClarification };
   }
 
   /** Guided gift flow: a structured brief → real gift ideas + optional gift-card nudge. */

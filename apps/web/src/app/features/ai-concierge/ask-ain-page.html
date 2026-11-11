@@ -1,4 +1,4 @@
-<section class="ask-ain">
+<section class="ask-ain" [class.ask-ain--chatting]="!thread.isFresh()">
   <header class="ask-ain__head">
     <span class="ask-ain__orb" aria-hidden="true">
       <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -10,68 +10,160 @@
     <p class="ask-ain__subtitle">{{ 'askAin.subtitle' | translate }}</p>
   </header>
 
-  <form class="ask-ain__form" (ngSubmit)="submit()">
+  @if (!thread.isFresh()) {
+    <div class="ask-ain__toolbar">
+      <button type="button" class="ask-ain__new" (click)="newChat()" data-testid="ask-ain-new-chat">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        {{ 'askAin.newChat' | translate }}
+      </button>
+    </div>
+  }
+
+  <!--
+    The thread keeps role=log for structure, but its implicit live region is
+    switched off: a whole turn (with every product card) would otherwise be
+    read out. Only the short line below is announced (Ain's reply / typing).
+  -->
+  <p class="ask-ain__sr" aria-live="polite" aria-atomic="true" data-testid="ask-ain-announcer">
+    @switch (announcement().kind) {
+      @case ('text') { {{ announcement().text }} }
+      @case ('key') { {{ announcement().text | translate }} }
+    }
+  </p>
+
+  <div
+    #threadLog
+    class="ask-ain__thread"
+    role="log"
+    aria-live="off"
+    [attr.aria-label]="'askAin.threadLabel' | translate"
+    data-testid="ask-ain-thread">
+    @for (turn of thread.turns(); track turn.id; let last = $last) {
+      @if (turn.role === 'user') {
+        <div class="ask-ain__msg ask-ain__msg--user" data-testid="ask-ain-user-turn">
+          <p class="ask-ain__bubble ask-ain__bubble--user">
+            <span class="ask-ain__sr">{{ 'askAin.you' | translate }}: </span>{{ turn.text }}
+          </p>
+        </div>
+      }
+      @if (turn.role === 'ain') {
+        <div class="ask-ain__msg ask-ain__msg--ain" data-testid="ask-ain-ain-turn">
+          <span class="ask-ain__avatar" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3l1.9 4.8L18.7 9.7 13.9 11.6 12 16.4 10.1 11.6 5.3 9.7 10.1 7.8z" />
+            </svg>
+          </span>
+          <div class="ask-ain__ain-body">
+            @if (turn.status === 'error') {
+              <p class="ask-ain__bubble ask-ain__bubble--ain ask-ain__bubble--error" data-testid="ask-ain-error">
+                <span class="ask-ain__sr">{{ 'askAin.ain' | translate }}: </span>{{ 'askAin.error' | translate }}
+              </p>
+              @if (last && !thread.pending()) {
+                <button type="button" class="ask-ain__retry" (click)="retry()" data-testid="ask-ain-retry">
+                  {{ 'askAin.retry' | translate }}
+                </button>
+              }
+            } @else {
+              <p class="ask-ain__bubble ask-ain__bubble--ain" data-testid="ask-ain-reply">
+                <span class="ask-ain__sr">{{ 'askAin.ain' | translate }}: </span>{{
+                  turn.reply || ((turn.cards.length ? 'askAin.resultsIntro' : (turn.needsClarification ? 'askAin.clarifyFallback' : 'askAin.noResults')) | translate)
+                }}
+              </p>
+
+              @if (turn.cards.length) {
+                <ul class="ask-ain__grid" role="list">
+                  @for (card of turn.cards; track card.id) {
+                    <li class="ask-ain__cell" (click)="onCardClick(turn, card)">
+                      <ui-product-card [product]="card" />
+                      @if (card.reason) {
+                        <p class="ask-ain__reason">{{ card.reason }}</p>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+
+              @if (last && turn.followUps.length && !thread.pending()) {
+                <div class="ask-ain__followups" role="group" [attr.aria-label]="'askAin.followUpsLabel' | translate">
+                  @for (f of turn.followUps; track $index) {
+                    <button type="button" class="ask-ain__chip ask-ain__chip--followup" (click)="useFollowUp(f)" data-testid="ask-ain-follow-up">
+                      {{ f }}
+                    </button>
+                  }
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+    }
+
+    @if (thread.pending()) {
+      <div class="ask-ain__msg ask-ain__msg--ain ask-ain__typing" data-testid="ask-ain-typing">
+        <span class="ask-ain__avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3l1.9 4.8L18.7 9.7 13.9 11.6 12 16.4 10.1 11.6 5.3 9.7 10.1 7.8z" />
+          </svg>
+        </span>
+        <p class="ask-ain__bubble ask-ain__bubble--ain ask-ain__dots">
+          <span class="ask-ain__dot" aria-hidden="true"></span>
+          <span class="ask-ain__dot" aria-hidden="true"></span>
+          <span class="ask-ain__dot" aria-hidden="true"></span>
+          <span class="ask-ain__sr">{{ 'askAin.typing' | translate }}</span>
+        </p>
+      </div>
+    }
+  </div>
+
+  <form class="ask-ain__form" (ngSubmit)="submit()" data-testid="ask-ain-composer">
+    <label class="ask-ain__sr" for="ask-ain-input">{{ 'askAin.composerLabel' | translate }}</label>
     <input
+      #composer
+      id="ask-ain-input"
       class="ask-ain__input"
       type="text"
       name="q"
       autocomplete="off"
+      maxlength="500"
       [ngModel]="query()"
       (ngModelChange)="query.set($event)"
-      [placeholder]="'askAin.placeholder' | translate"
-      [disabled]="loading()" />
-    <button class="ask-ain__send" type="submit" [disabled]="!query().trim() || loading()" aria-label="Send">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      [placeholder]="(thread.isFresh() ? 'askAin.placeholder' : 'askAin.replyPlaceholder') | translate" />
+    <button
+      class="ask-ain__send"
+      type="submit"
+      [disabled]="!query().trim() || thread.pending()"
+      [attr.aria-label]="'askAin.send' | translate">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
       </svg>
     </button>
   </form>
 
-  <a class="ask-ain__photo" routerLink="/visual-search">
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" />
-    </svg>
-    {{ 'askAin.searchByPhoto' | translate }}
-  </a>
-
-  @if (ainWhatsappEnabled) {
-    <a class="ask-ain__whatsapp" [href]="ainWhatsappHref()" target="_blank" rel="noopener" data-testid="ask-ain-whatsapp">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
-        <path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.9.9-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8 1-.1.1-.3.2-.5.1a6.6 6.6 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1 4.9 4.9 0 0 0 1 2.6 11 11 0 0 0 4.2 3.7c1.5.6 2 .7 2.7.6.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1s-.2-.2-.4-.3z" />
-      </svg>
-      {{ 'askAin.whatsapp' | translate }}
-    </a>
-  }
-
-  @if (!hasSearched()) {
+  @if (thread.isFresh()) {
     <div class="ask-ain__chips">
       @for (s of suggestions; track s) {
-        <button type="button" class="ask-ain__chip" (click)="useSuggestion(s)">{{ s | translate }}</button>
-      }
-    </div>
-  } @else {
-    <div class="ask-ain__thread">
-      @if (lastQuery()) {
-        <p class="ask-ain__you"><span>{{ lastQuery() }}</span></p>
-      }
-
-      @if (loading()) {
-        <p class="ask-ain__status">{{ 'askAin.thinking' | translate }}</p>
-      } @else if (isEmpty()) {
-        <p class="ask-ain__status">{{ 'askAin.noResults' | translate }}</p>
-      } @else {
-        <p class="ask-ain__intro">{{ 'askAin.resultsIntro' | translate }}</p>
-        <ul class="ask-ain__grid" role="list">
-          @for (card of cards(); track card.id) {
-            <li class="ask-ain__cell" (click)="onCardClick(card)">
-              <ui-product-card [product]="card" />
-              @if (card.reason) {
-                <p class="ask-ain__reason">{{ card.reason }}</p>
-              }
-            </li>
-          }
-        </ul>
+        <button type="button" class="ask-ain__chip" (click)="useSuggestion(s)" data-testid="ask-ain-suggestion">{{ s | translate }}</button>
       }
     </div>
   }
+
+  <div class="ask-ain__links">
+    <a class="ask-ain__photo" routerLink="/visual-search">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" />
+      </svg>
+      {{ 'askAin.searchByPhoto' | translate }}
+    </a>
+
+    @if (ainWhatsappEnabled) {
+      <a class="ask-ain__whatsapp" [href]="ainWhatsappHref()" target="_blank" rel="noopener" data-testid="ask-ain-whatsapp">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.9.9-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8 1-.1.1-.3.2-.5.1a6.6 6.6 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1 4.9 4.9 0 0 0 1 2.6 11 11 0 0 0 4.2 3.7c1.5.6 2 .7 2.7.6.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1s-.2-.2-.4-.3z" />
+        </svg>
+        {{ 'askAin.whatsapp' | translate }}
+      </a>
+    }
+  </div>
 </section>
