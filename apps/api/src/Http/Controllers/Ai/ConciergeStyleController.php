@@ -6,6 +6,7 @@ namespace Bayti\Api\Http\Controllers\Ai;
 
 use Bayti\Api\Ai\Analytics\AiEventLogger;
 use Bayti\Api\Ai\Concierge\ConciergeService;
+use Bayti\Api\Ai\Concierge\ConversationHistory;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
@@ -23,7 +24,15 @@ use Psr\Http\Message\ServerRequestInterface;
  * degrades to keyword/filter results when AI is off. Records the interaction +
  * analytics so revenue can be attributed to Ain later.
  *
- * Body: { query, locale?, session_id?, channel? }.
+ * Body: { query, locale?, session_id?, channel?, history? }. history is the
+ * conversation BEFORE this query, oldest first: [{ role: 'user'|'ain', text }];
+ * only the last 8 entries are kept, each text capped at 500 chars, malformed
+ * entries dropped silently (never a 422 — fully backward compatible).
+ *
+ * Response: { interaction_id, intent, products, reply, follow_ups,
+ * needs_clarification } — reply is Ain's short message in the locale,
+ * follow_ups 0-3 tappable suggestions; a clarifying question may carry no
+ * products.
  */
 final class ConciergeStyleController
 {
@@ -63,9 +72,15 @@ final class ConciergeStyleController
             ? mb_substr((string) $body['session_id'], 0, 64) : null;
         $channel = $this->resolveChannel($body['channel'] ?? null);
 
-        $this->events->recordEvent('ai_query_started', null, $userId, $sessionId, null, null, ['feature' => self::FEATURE]);
+        $history = ConversationHistory::fromMixed($body['history'] ?? null);
+        $historyLength = $history->count();
 
-        $result = $this->concierge->ask($query, $locale);
+        $this->events->recordEvent('ai_query_started', null, $userId, $sessionId, null, null, [
+            'feature' => self::FEATURE,
+            'history_length' => $historyLength,
+        ]);
+
+        $result = $this->concierge->ask($query, $locale, ConciergeService::DEFAULT_LIMIT, $history);
         $productIds = $result->productIds();
 
         $interactionId = $this->events->recordInteraction(
@@ -85,7 +100,11 @@ final class ConciergeStyleController
             $sessionId,
             null,
             null,
-            ['count' => count($result->items)],
+            [
+                'count' => count($result->items),
+                'history_length' => $historyLength,
+                'needs_clarification' => $result->needsClarification,
+            ],
         );
 
         $serializer = $this->productSerializer->configureFromRequest($request);
@@ -110,6 +129,9 @@ final class ConciergeStyleController
             'interaction_id' => $interactionId,
             'intent' => $result->intent->toArray(),
             'products' => $products,
+            'reply' => $result->reply,
+            'follow_ups' => $result->followUps,
+            'needs_clarification' => $result->needsClarification,
         ]);
     }
 

@@ -36,6 +36,17 @@ final class ProductRetrievalService
     /** Cap on the enriched candidate pool the semantic pass ranks in PHP. */
     private const SEMANTIC_POOL = 200;
 
+    /** Max individual search terms tried when the combined search matches nothing. */
+    private const MAX_TERMS = 4;
+
+    /**
+     * True when the LAST retrieve() matched nothing on the intent's search
+     * terms and filled the shortlist from in-budget best-sellers only (Pass 3).
+     * Callers that describe the results (the conversational reply) must then
+     * not claim a match.
+     */
+    private bool $lastUsedFallback = false;
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly AiProviderInterface $ai,
@@ -48,6 +59,8 @@ final class ProductRetrievalService
      */
     public function retrieve(ConciergeIntent $intent, int $limit = self::SHORTLIST): array
     {
+        $this->lastUsedFallback = false;
+
         /** @var ProductRepository $products */
         $products = $this->em->getRepository(Product::class);
 
@@ -81,9 +94,31 @@ final class ProductRetrievalService
             $this->collect($products->findActivePaginated($f2)['items'], $collected);
         }
 
+        // Pass 2b — the search is ONE substring (LIKE '%term%'), so a multi-term
+        // search ("abaya black wedding", or an AI-off follow-up carrying
+        // "cheaper" + "black abaya") rarely matches as a whole. Before giving up,
+        // try each term on its own (product type first, then keywords in order),
+        // keeping the budget, until the shortlist is no longer thin.
+        if ($collected === [] && $search !== '') {
+            foreach ($intent->searchTerms(self::MAX_TERMS) as $term) {
+                if (count($collected) >= self::THIN) {
+                    break;
+                }
+                if (mb_strtolower($term) === mb_strtolower($search)) {
+                    continue;
+                }
+                $ft = $this->baseFilters($intent, $limit);
+                $ft['searchQuery'] = $term;
+                $ft['sort'] = 'relevance';
+                $this->collect($products->findActivePaginated($ft)['items'], $collected);
+            }
+        }
+
         // Pass 3 — last resort so a valid catalogue never returns nothing:
-        // in-budget best-sellers.
+        // in-budget best-sellers. Flagged so a reply never claims a match
+        // (an empty search is a plain browse, not a fallback).
         if ($collected === []) {
+            $this->lastUsedFallback = $search !== '';
             $f3 = $this->baseFilters($intent, $limit);
             $f3['sort'] = 'best_seller';
             $this->collect($products->findActivePaginated($f3)['items'], $collected);
@@ -98,6 +133,16 @@ final class ProductRetrievalService
         }
 
         return array_slice(array_values($collected), 0, $limit);
+    }
+
+    /**
+     * Whether the most recent {@see retrieve()} could not match the intent's
+     * search at all (not even one term) and served in-budget best-sellers
+     * instead (Pass 3, possibly semantically re-ordered).
+     */
+    public function lastUsedFallback(): bool
+    {
+        return $this->lastUsedFallback;
     }
 
     /**

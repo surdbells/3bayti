@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Bayti\Api\Messaging\WhatsApp;
 
 use Bayti\Api\Ai\Analytics\AiEventLogger;
+use Bayti\Api\Ai\Concierge\ConciergeCopy;
 use Bayti\Api\Ai\Concierge\ConciergeItem;
 use Bayti\Api\Ai\Concierge\ConciergeService;
+use Bayti\Api\Ai\Concierge\ConversationHistory;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Infrastructure\Cache\KeyValueStore;
@@ -29,6 +31,15 @@ use Psr\Log\LoggerInterface;
  * ({APP_URL}/product/{slug}) that drops the shopper into their authenticated
  * web/app session to add-to-cart and check out. The reply is free-form text sent
  * inside the customer-initiated 24-hour window, so no message template is needed.
+ *
+ * Conversation memory: the last 8 turns (shopper text + Ain's reply text, never
+ * product payloads) per number live in the KeyValueStore (Redis) under a hashed
+ * key with a 30-minute idle TTL, and are passed to the concierge as history so
+ * "cheaper" / "in black" refine the previous request. "new" / "reset" /
+ * "start over" (en/ar) clears it. Memory fails OPEN: no Redis = no memory, Ain
+ * still answers. Follow-ups are offered as plain-text suggestions — the channel
+ * only sends text (no interactive quick-reply buttons, and the webhook only
+ * reads `text` messages).
  */
 final class WhatsAppConversationService
 {
@@ -44,6 +55,15 @@ final class WhatsAppConversationService
     /** WhatsApp rejects a text body over 4096 chars; stay safely under it. */
     private const MAX_BODY_CHARS = 3800;
     private const MAX_REASON_CHARS = 160;
+
+    /** Conversation memory: last 8 turns per number, forgotten after 30 idle minutes. */
+    private const HISTORY_TTL_SECONDS = 1800;
+
+    /** Whole-message commands that clear the memory (normalised, en + ar). */
+    private const RESET_COMMANDS = [
+        'new', 'reset', 'start over', 'restart', 'new chat', 'clear', 'start again',
+        'جديد', 'محادثة جديدة', 'ابدأ من جديد', 'ابدئي من جديد', 'من جديد', 'إعادة', 'اعادة', 'مسح',
+    ];
 
     public function __construct(
         private readonly MessagingChannelInterface $channel,
@@ -63,7 +83,7 @@ final class WhatsAppConversationService
         }
 
         $user = $this->resolveUser($from);
-        $locale = $this->resolveLocale($user);
+        $locale = $this->resolveLocale($user, $text);
 
         /* Cost control on a public inbound channel: cap concierge calls per
            number per hour. Send the "slow down" notice only on the crossing,
@@ -77,13 +97,32 @@ final class WhatsAppConversationService
             return;
         }
 
+        if (mb_strlen($text) > ConversationHistory::MAX_TEXT_CHARS) {
+            $text = mb_substr($text, 0, ConversationHistory::MAX_TEXT_CHARS);
+        }
+
+        // "new" / "reset" / "start over" wipes the conversation memory.
+        if (self::isResetCommand($text)) {
+            $this->forgetHistory($from);
+            $this->safeSend($from, $this->withSuggestions(
+                $this->message($locale, 'reset'),
+                ConciergeCopy::followUps(ConciergeCopy::KIND_GREETING, $locale),
+                $locale,
+            ));
+            return;
+        }
+
+        $history = $this->loadHistory($from);
+
         try {
-            $result = $this->concierge->ask($text, $locale, self::REPLY_LIMIT);
+            $result = $this->concierge->ask($text, $locale, self::REPLY_LIMIT, $history);
         } catch (\Throwable $e) {
             $this->logger->warning('whatsapp.concierge_failed', ['error' => $e->getMessage()]);
             $this->safeSend($from, $this->message($locale, 'fallback'));
             return;
         }
+
+        $this->saveHistory($from, $history->withTurn($text, $result->reply));
 
         $items = $result->items;
         $this->events->recordInteraction(
@@ -98,11 +137,87 @@ final class WhatsAppConversationService
         );
 
         if ($items === []) {
-            $this->safeSend($from, $this->message($locale, 'empty'));
+            // A clarifying question, small talk or no match: Ain's reply text
+            // (always set by the service) plus the follow-up suggestions.
+            $reply = $result->reply !== '' ? $result->reply : $this->message($locale, 'empty');
+            $this->safeSend($from, $this->withSuggestions($reply, $result->followUps, $locale));
             return;
         }
 
-        $this->safeSend($from, $this->buildReply($items, $locale));
+        $this->safeSend($from, $this->buildReply($items, $locale, $result->reply, $result->followUps));
+    }
+
+    /** True when the whole message asks to start the conversation over (en/ar). */
+    public static function isResetCommand(string $text): bool
+    {
+        $norm = mb_strtolower(trim($text));
+        $norm = (string) preg_replace('/[^\p{L}\p{M}\p{N}\s]+/u', '', $norm);
+        $norm = trim((string) preg_replace('/\s+/u', ' ', $norm));
+        return in_array($norm, self::RESET_COMMANDS, true);
+    }
+
+    /**
+     * The last {@see ConversationHistory::MAX_TURNS} turns for this number.
+     * Fails OPEN: no Redis / a corrupt value = no memory, Ain still answers.
+     */
+    private function loadHistory(string $from): ConversationHistory
+    {
+        try {
+            $raw = $this->cache->get($this->historyKey($from));
+        } catch (KeyValueStoreException $e) {
+            $this->logger->warning('whatsapp.history_cache_failure — no memory', ['error' => $e->getMessage()]);
+            return ConversationHistory::empty();
+        }
+        if ($raw === null || $raw === '') {
+            return ConversationHistory::empty();
+        }
+        return ConversationHistory::fromMixed(json_decode($raw, true));
+    }
+
+    /** Persist with a sliding idle TTL (each turn re-arms it). Fails open. */
+    private function saveHistory(string $from, ConversationHistory $history): void
+    {
+        $json = json_encode($history->entries(), JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            return;
+        }
+        try {
+            $this->cache->set($this->historyKey($from), $json, self::HISTORY_TTL_SECONDS);
+        } catch (KeyValueStoreException $e) {
+            $this->logger->warning('whatsapp.history_cache_failure — not saved', ['error' => $e->getMessage()]);
+        }
+    }
+
+    private function forgetHistory(string $from): void
+    {
+        try {
+            $this->cache->delete($this->historyKey($from));
+        } catch (KeyValueStoreException $e) {
+            $this->logger->warning('whatsapp.history_cache_failure — not cleared', ['error' => $e->getMessage()]);
+        }
+    }
+
+    private function historyKey(string $from): string
+    {
+        return 'wa:conv:' . hash('sha256', ltrim(trim($from), '+'));
+    }
+
+    /**
+     * Append follow-up suggestions as plain text the shopper can copy/type back
+     * (the channel only sends text — no interactive quick-reply buttons yet).
+     *
+     * @param list<string> $followUps
+     */
+    private function withSuggestions(string $text, array $followUps, string $locale): string
+    {
+        if ($followUps === []) {
+            return $text;
+        }
+        $lines = [];
+        foreach ($followUps as $f) {
+            $lines[] = '• ' . $f;
+        }
+        return rtrim($text) . "\n\n" . $this->message($locale, 'suggestions') . "\n" . implode("\n", $lines);
     }
 
     private function resolveUser(string $from): ?User
@@ -115,22 +230,34 @@ final class WhatsAppConversationService
         return $repo->findByWhatsAppPhone($normalised);
     }
 
-    private function resolveLocale(?User $user): string
+    /**
+     * A linked account's Arabic locale wins; otherwise (unlinked number, or an
+     * account without 'ar') answer in the script the shopper wrote in, so an
+     * Arabic message gets Arabic copy, reply and suggestions.
+     */
+    private function resolveLocale(?User $user, string $text = ''): string
     {
         if ($user !== null && str_starts_with(strtolower($user->getLocale()), 'ar')) {
+            return 'ar';
+        }
+        if (preg_match('/\p{Arabic}/u', $text) === 1) {
             return 'ar';
         }
         return 'en';
     }
 
     /**
+     * Ain's reply text first, then the product cards, then the outro + the
+     * follow-up suggestions — one message, so ordering can never interleave.
+     *
      * @param list<ConciergeItem> $items
+     * @param list<string> $followUps
      */
-    private function buildReply(array $items, string $locale): string
+    private function buildReply(array $items, string $locale, string $reply = '', array $followUps = []): string
     {
         $appUrl = rtrim((string) ($_ENV['APP_URL'] ?? ''), '/');
-        $outro = $this->message($locale, 'outro');
-        $body = $this->message($locale, 'intro') . "\n\n";
+        $outro = $this->withSuggestions($this->message($locale, 'outro'), $followUps, $locale);
+        $body = ($reply !== '' ? $reply : $this->message($locale, 'intro')) . "\n\n";
         $added = 0;
 
         foreach ($items as $item) {
@@ -209,6 +336,8 @@ final class WhatsAppConversationService
             'empty' => "Ain couldn't find a match for that — try describing the occasion, colour or budget.",
             'fallback' => 'Ain is having a moment. Please try again shortly.',
             'rate_limited' => "You're going a little fast — please try again in a bit.",
+            'reset' => "Fresh start! What are you looking for today?",
+            'suggestions' => 'You can reply with:',
         ];
         $ar = [
             'intro' => 'إليكِ بعض القطع التي اختارتها عين لكِ:',
@@ -216,6 +345,8 @@ final class WhatsAppConversationService
             'empty' => 'لم تجد عين قطعة مطابقة — جرّبي وصف المناسبة أو اللون أو الميزانية.',
             'fallback' => 'واجهت عين مشكلة مؤقتة. يُرجى المحاولة بعد قليل.',
             'rate_limited' => 'أنتِ سريعة قليلاً — يُرجى المحاولة بعد قليل.',
+            'reset' => 'بداية جديدة! عمّ تبحثين اليوم؟',
+            'suggestions' => 'يمكنكِ الرد بـ:',
         ];
         $table = $locale === 'ar' ? $ar : $en;
         return $table[$key] ?? '';

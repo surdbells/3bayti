@@ -1,0 +1,305 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Bayti\Api\Tests\Messaging\WhatsApp;
+
+use Bayti\Api\Ai\Analytics\AiEventLogger;
+use Bayti\Api\Ai\Concierge\ConciergeCopy;
+use Bayti\Api\Ai\Concierge\ConciergeRanker;
+use Bayti\Api\Ai\Concierge\ConciergeService;
+use Bayti\Api\Ai\Concierge\IntentParser;
+use Bayti\Api\Ai\Concierge\ProductRetrievalService;
+use Bayti\Api\Ai\Enrichment\ProductAiAttributesStore;
+use Bayti\Api\Ai\NullAiProvider;
+use Bayti\Api\Domain\Catalog\Product;
+use Bayti\Api\Domain\Catalog\ProductRepository;
+use Bayti\Api\Domain\Catalog\Vendor;
+use Bayti\Api\Infrastructure\Cache\InMemoryKeyValueStore;
+use Bayti\Api\Infrastructure\Cache\KeyValueStore;
+use Bayti\Api\Infrastructure\Cache\KeyValueStoreException;
+use Bayti\Api\Messaging\MessageResult;
+use Bayti\Api\Messaging\MessagingChannelInterface;
+use Bayti\Api\Messaging\WhatsApp\WhatsAppConversationService;
+use Doctrine\DBAL\Connection;
+use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
+
+/** Records every outbound text. */
+final class SpyMessagingChannel implements MessagingChannelInterface
+{
+    /** @var list<array{to: string, text: string}> */
+    public array $sent = [];
+
+    public function isEnabled(): bool
+    {
+        return true;
+    }
+
+    public function sendText(string $to, string $text): MessageResult
+    {
+        $this->sent[] = ['to' => $to, 'text' => $text];
+        return new MessageResult(true, 'wamid.' . count($this->sent));
+    }
+
+    public function last(): string
+    {
+        return $this->sent[count($this->sent) - 1]['text'] ?? '';
+    }
+}
+
+/** In-memory store that records the TTL of every set(), and can fail like a dead Redis. */
+final class SpyKeyValueStore implements KeyValueStore
+{
+    public InMemoryKeyValueStore $inner;
+    public bool $down = false;
+    /** @var array<string, int> */
+    public array $ttls = [];
+
+    public function __construct()
+    {
+        $this->inner = new InMemoryKeyValueStore();
+    }
+
+    public function get(string $key): ?string
+    {
+        $this->guard();
+        return $this->inner->get($key);
+    }
+
+    public function set(string $key, string $value, int $ttlSeconds = 0): void
+    {
+        $this->guard();
+        $this->ttls[$key] = $ttlSeconds;
+        $this->inner->set($key, $value, $ttlSeconds);
+    }
+
+    public function incr(string $key): int
+    {
+        $this->guard();
+        return $this->inner->incr($key);
+    }
+
+    public function setIfAbsent(string $key, string $value, int $ttlSeconds): bool
+    {
+        $this->guard();
+        return $this->inner->setIfAbsent($key, $value, $ttlSeconds);
+    }
+
+    public function expire(string $key, int $ttlSeconds): void
+    {
+        $this->guard();
+        $this->inner->expire($key, $ttlSeconds);
+    }
+
+    public function delete(string $key): void
+    {
+        $this->guard();
+        $this->inner->delete($key);
+    }
+
+    public function ping(): bool
+    {
+        return !$this->down;
+    }
+
+    private function guard(): void
+    {
+        if ($this->down) {
+            throw new KeyValueStoreException('redis down');
+        }
+    }
+}
+
+#[CoversClass(WhatsAppConversationService::class)]
+final class WhatsAppConversationMemoryTest extends TestCase
+{
+    private const FROM = '+971501234567';
+
+    private SpyMessagingChannel $channel;
+    private SpyKeyValueStore $store;
+
+    protected function setUp(): void
+    {
+        $this->channel = new SpyMessagingChannel();
+        $this->store = new SpyKeyValueStore();
+    }
+
+    #[Test]
+    public function remembersTheConversationAndRefinesTheNextMessage(): void
+    {
+        $svc = $this->service();
+
+        $svc->handleInbound(self::FROM, 'black abaya');
+        self::assertStringStartsWith('Here are some pieces for “black abaya”.', $this->channel->last());
+        self::assertStringContainsString('/product/p-1', $this->channel->last());
+        // Follow-ups offered as text suggestions.
+        self::assertStringContainsString('You can reply with:', $this->channel->last());
+        self::assertStringContainsString('• Show me cheaper ones', $this->channel->last());
+
+        $svc->handleInbound(self::FROM, 'in navy');
+        // AI off: the short follow-up is combined with the previous message.
+        self::assertStringStartsWith('Here are some pieces for “black abaya in navy”.', $this->channel->last());
+
+        $stored = $this->storedHistory();
+        self::assertCount(4, $stored);
+        self::assertSame(['role' => 'user', 'text' => 'black abaya'], $stored[0]);
+        self::assertSame('ain', $stored[1]['role']);
+        self::assertSame('in navy', $stored[2]['text']);
+        // Product payloads are never stored — only the reply text.
+        self::assertStringNotContainsString('/product/', (string) json_encode($stored));
+        // 30-minute idle TTL, re-armed every turn.
+        self::assertSame([1800], array_values(array_unique(array_values(array_filter(
+            $this->store->ttls,
+            static fn (string $k): bool => str_starts_with($k, 'wa:conv:'),
+            ARRAY_FILTER_USE_KEY,
+        )))));
+    }
+
+    #[Test]
+    public function memoryIsCappedAtTheLastEightEntries(): void
+    {
+        $svc = $this->service();
+        for ($i = 0; $i < 6; $i++) {
+            $svc->handleInbound(self::FROM, 'abaya number ' . $i . ' please now');
+        }
+
+        $stored = $this->storedHistory();
+        self::assertCount(8, $stored);
+        self::assertSame('abaya number 2 please now', $stored[0]['text']);
+    }
+
+    #[Test]
+    public function resetCommandsClearTheMemory(): void
+    {
+        $svc = $this->service();
+        $svc->handleInbound(self::FROM, 'black abaya');
+        self::assertNotSame([], $this->storedHistory());
+
+        $svc->handleInbound(self::FROM, 'Start over!');
+        self::assertSame([], $this->storedHistory());
+        self::assertStringStartsWith('Fresh start!', $this->channel->last());
+
+        $svc->handleInbound(self::FROM, 'in navy');
+        self::assertStringStartsWith('Here are some pieces for “in navy”.', $this->channel->last());
+
+        self::assertTrue(WhatsAppConversationService::isResetCommand('new'));
+        self::assertTrue(WhatsAppConversationService::isResetCommand('ابدأ من جديد'));
+        self::assertTrue(WhatsAppConversationService::isResetCommand('محادثة جديدة'));
+        self::assertFalse(WhatsAppConversationService::isResetCommand('new black abaya'));
+    }
+
+    #[Test]
+    public function anExpiredMemoryStartsAFreshConversation(): void
+    {
+        $svc = $this->service();
+        $svc->handleInbound(self::FROM, 'black abaya');
+        // Simulate the 30-minute idle TTL lapsing.
+        $this->store->inner->flushAll();
+
+        $svc->handleInbound(self::FROM, 'in navy');
+        self::assertStringStartsWith('Here are some pieces for “in navy”.', $this->channel->last());
+    }
+
+    #[Test]
+    public function failsOpenWhenRedisIsDown(): void
+    {
+        $this->store->down = true;
+        $svc = $this->service();
+
+        $svc->handleInbound(self::FROM, 'black abaya');
+        $svc->handleInbound(self::FROM, 'start over');
+        $svc->handleInbound(self::FROM, 'in navy');
+
+        self::assertCount(3, $this->channel->sent);
+        self::assertStringContainsString('/product/p-1', $this->channel->sent[0]['text']);
+        self::assertStringStartsWith('Here are some pieces for “in navy”.', $this->channel->last());
+    }
+
+    #[Test]
+    public function aGreetingGetsAReplyWithSuggestionsAndNoProducts(): void
+    {
+        $this->service()->handleInbound(self::FROM, 'hello');
+
+        self::assertStringStartsWith("Hi, I'm Ain!", $this->channel->last());
+        self::assertStringNotContainsString('/product/', $this->channel->last());
+        self::assertStringContainsString('• An abaya for Eid', $this->channel->last());
+    }
+
+    #[Test]
+    public function anArabicMessageFromAnUnlinkedNumberGetsArabicCopy(): void
+    {
+        $svc = $this->service();
+
+        $svc->handleInbound(self::FROM, 'أبحث عن عباية سوداء');
+        self::assertStringStartsWith('إليكِ بعض القطع لـ «أبحث عن عباية سوداء».', $this->channel->last());
+        self::assertStringContainsString('يمكنكِ الرد بـ:', $this->channel->last());
+        self::assertStringContainsString('• أريد خيارات أرخص', $this->channel->last());
+
+        $svc->handleInbound(self::FROM, 'مرحبا');
+        self::assertStringStartsWith(ConciergeCopy::reply(ConciergeCopy::KIND_GREETING, 'ar'), $this->channel->last());
+
+        $svc->handleInbound(self::FROM, 'ابدأ من جديد');
+        self::assertStringStartsWith('بداية جديدة!', $this->channel->last());
+
+        // A Latin-script message stays English.
+        $svc->handleInbound(self::FROM, 'black abaya');
+        self::assertStringStartsWith('Here are some pieces for “black abaya”.', $this->channel->last());
+    }
+    // ===== fixtures =====
+
+    /** @return list<array{role: string, text: string}> */
+    private function storedHistory(): array
+    {
+        $raw = $this->store->inner->get('wa:conv:' . hash('sha256', ltrim(self::FROM, '+')));
+        if ($raw === null) {
+            return [];
+        }
+        $decoded = json_decode($raw, true);
+        self::assertIsArray($decoded);
+        /** @var list<array{role: string, text: string}> $decoded */
+        return $decoded;
+    }
+
+    private function service(): WhatsAppConversationService
+    {
+        $vendor = new Vendor('v-1', 'Store 1', 'v1@example.test');
+        $vendor->approve();
+        $product = new Product(vendor: $vendor, slug: 'p-1', name: 'Black Abaya');
+        $product->setStatus('active');
+        $product->setPrice('250.00');
+        $ref = new \ReflectionProperty(Product::class, 'id');
+        $ref->setAccessible(true);
+        $ref->setValue($product, 1);
+
+        $repo = $this->createMock(ProductRepository::class);
+        $repo->method('findActivePaginated')->willReturn(['items' => [$product], 'total' => 1]);
+        $catalogEm = $this->createMock(EntityManagerInterface::class);
+        $catalogEm->method('getRepository')->willReturnCallback(
+            static fn (string $class) => $class === Product::class ? $repo : null,
+        );
+
+        $ai = new NullAiProvider();
+        $concierge = new ConciergeService(
+            new IntentParser($ai),
+            new ProductRetrievalService($catalogEm, $ai, new ProductAiAttributesStore($this->createMock(Connection::class))),
+            new ConciergeRanker($ai),
+        );
+
+        // No linked user (repository is not a UserRepository) => locale en.
+        $userEm = $this->createMock(EntityManagerInterface::class);
+        $userEm->method('getRepository')->willReturn($repo);
+
+        return new WhatsAppConversationService(
+            $this->channel,
+            $concierge,
+            $userEm,
+            new AiEventLogger($this->createMock(Connection::class)),
+            $this->store,
+            new NullLogger(),
+        );
+    }
+}

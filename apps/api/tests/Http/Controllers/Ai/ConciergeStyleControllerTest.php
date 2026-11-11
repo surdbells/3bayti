@@ -79,6 +79,119 @@ final class ConciergeStyleControllerTest extends HttpTestCase
     }
 
     #[Test]
+    public function withoutHistoryTheResponseStaysCompatibleAndAddsConversationalFields(): void
+    {
+        $this->bindDisabledAi();
+        $this->bindProducts([$this->makeProduct(1, 'Black Abaya')]);
+
+        $res = $this->handle($this->jsonRequest('POST', '/v3/ai/concierge/style', ['query' => 'black abaya']));
+
+        self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
+        $data = $this->dataOf($res);
+        // Existing contract untouched.
+        self::assertArrayHasKey('interaction_id', $data);
+        self::assertArrayHasKey('intent', $data);
+        self::assertCount(1, $data['products']);
+        // New conversational fields (AI off => localized template + fixed follow-ups).
+        self::assertSame('Here are some pieces for “black abaya”.', $data['reply']);
+        self::assertIsArray($data['follow_ups']);
+        self::assertNotEmpty($data['follow_ups']);
+        self::assertLessThanOrEqual(3, count($data['follow_ups']));
+        self::assertFalse($data['needs_clarification']);
+    }
+
+    #[Test]
+    public function historyIsParsedLenientlyAndRecordedInEventMetadata(): void
+    {
+        $this->bindDisabledAi();
+        $this->bindProducts([$this->makeProduct(1, 'Navy Abaya')]);
+
+        /** @var list<array<string, mixed>> $events */
+        $events = [];
+        $conn = $this->createMock(\Doctrine\DBAL\Connection::class);
+        $conn->method('insert')->willReturnCallback(static function (string $table, array $data) use (&$events): int {
+            if ($table === 'ai_events') {
+                $events[] = $data;
+            }
+            return 1;
+        });
+        $this->bind(\Bayti\Api\Ai\Analytics\AiEventLogger::class, new \Bayti\Api\Ai\Analytics\AiEventLogger($conn));
+
+        $history = [
+            'garbage',
+            ['role' => 'robot', 'text' => 'nope'],
+            ['role' => 'user', 'text' => 'black abaya'],
+            ['role' => 'ain', 'text' => 'Here are some pieces for “black abaya”.'],
+        ];
+        for ($i = 0; $i < 10; $i++) {
+            $history[] = ['role' => 'user', 'text' => 'abaya ' . $i];
+        }
+
+        $res = $this->handle($this->jsonRequest('POST', '/v3/ai/concierge/style', [
+            'query' => 'in navy',
+            'locale' => 'en',
+            'history' => $history,
+        ]));
+
+        self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
+        $data = $this->dataOf($res);
+        // Short follow-up carried WITH the earlier shopper messages it refines
+        // (AI-off rule), as separate keywords so retrieval can match each alone.
+        self::assertSame(['in navy', 'abaya 9', 'abaya 8'], $data['intent']['keywords']);
+        self::assertSame('Here are some pieces for “abaya 8 in navy”.', $data['reply']);
+
+        $started = null;
+        foreach ($events as $e) {
+            if ($e['event'] === 'ai_query_started') {
+                $started = json_decode((string) $e['metadata'], true);
+            }
+        }
+        self::assertIsArray($started);
+        self::assertSame(8, $started['history_length']);
+    }
+
+    #[Test]
+    public function aNonArrayHistoryIsIgnoredNotRejected(): void
+    {
+        $this->bindDisabledAi();
+        $this->bindProducts([$this->makeProduct(1, 'Black Abaya')]);
+
+        $res = $this->handle($this->jsonRequest('POST', '/v3/ai/concierge/style', [
+            'query' => 'black abaya',
+            'history' => 'not-a-list',
+        ]));
+
+        self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
+        self::assertSame(['black abaya'], $this->dataOf($res)['intent']['keywords']);
+    }
+
+    #[Test]
+    public function aGreetingGetsAFriendlyArabicReplyAndNoProducts(): void
+    {
+        $this->bindDisabledAi();
+        $this->bindProducts([$this->makeProduct(1, 'Black Abaya')]);
+
+        $res = $this->handle($this->jsonRequest('POST', '/v3/ai/concierge/style', [
+            'query' => 'مرحبا',
+            'locale' => 'ar',
+        ]));
+
+        self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
+        $data = $this->dataOf($res);
+        self::assertSame([], $data['products']);
+        self::assertStringContainsString('عين', $data['reply']);
+        self::assertNotEmpty($data['follow_ups']);
+        self::assertFalse($data['needs_clarification']);
+    }
+
+    /** @return array<string, mixed> */
+    private function dataOf(\Psr\Http\Message\ResponseInterface $res): array
+    {
+        $decoded = json_decode((string) $res->getBody(), true);
+        return $decoded['data'] ?? $decoded;
+    }
+
+    #[Test]
     public function rejectsAnEmptyQuery(): void
     {
         $this->bindDisabledAi();

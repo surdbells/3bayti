@@ -5,16 +5,24 @@ declare(strict_types=1);
 namespace Bayti\Api\Ai\Concierge;
 
 /**
- * The outcome of one concierge query: the parsed intent (for analytics /
- * echo-back) plus the ordered, validated recommendations. Serialization to card
- * shapes happens in the controller, which holds the request (currency context).
+ * The outcome of one concierge turn: the parsed (history-merged) intent (for
+ * analytics / echo-back), the ordered, validated recommendations, and Ain's
+ * conversational fields (reply, follow-ups, whether she is asking a clarifying
+ * question). Serialization to card shapes happens in the controller, which
+ * holds the request (currency context).
  */
 final class ConciergeResult
 {
-    /** @param list<ConciergeItem> $items */
+    /**
+     * @param list<ConciergeItem> $items
+     * @param list<string> $followUps 0-3 short tappable suggestions in the locale
+     */
     public function __construct(
         public readonly ConciergeIntent $intent,
         public readonly array $items,
+        public readonly string $reply = '',
+        public readonly array $followUps = [],
+        public readonly bool $needsClarification = false,
     ) {
     }
 

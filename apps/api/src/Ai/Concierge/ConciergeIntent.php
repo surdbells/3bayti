@@ -118,6 +118,33 @@ final class ConciergeIntent
         return trim(implode(' ', array_unique($parts)));
     }
 
+    /**
+     * The individual search terms (product type first, then keywords), deduped
+     * case-insensitively, >= 2 chars, capped — for retrieval to try one at a
+     * time when the combined {@see searchText()} substring matches nothing.
+     *
+     * @return list<string>
+     */
+    public function searchTerms(int $max = 4): array
+    {
+        $out = [];
+        $seen = [];
+        $candidates = $this->productType !== null ? [$this->productType, ...$this->keywords] : $this->keywords;
+        foreach ($candidates as $t) {
+            $t = trim($t);
+            $key = mb_strtolower($t);
+            if (mb_strlen($t) < 2 || isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $out[] = $t;
+            if (count($out) >= $max) {
+                break;
+            }
+        }
+        return $out;
+    }
+
     private static function nullableString(mixed $v): ?string
     {
         if (!is_string($v)) {
