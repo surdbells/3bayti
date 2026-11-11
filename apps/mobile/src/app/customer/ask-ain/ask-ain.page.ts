@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonContent,
@@ -14,10 +14,12 @@ import {
   IonCol,
   NavController,
 } from '@ionic/angular/standalone';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Preferences } from '@capacitor/preferences';
+import { Subscription } from 'rxjs';
 
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { SessionStore } from '../../core/services/session-store.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { TranslatePipe } from '../../translate.pipe';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -27,49 +29,26 @@ import { I18nService } from '../../i18n.service';
 import { Labels } from '../../class/labels';
 import { cfImage } from '../../shared/cf-image';
 import { AIN_WHATSAPP, ainWhatsappLink } from '../../core/constants/support.constants';
-
-/** Money block from ProductSerializer (AED amounts). */
-interface AinPrice {
-  amount: number;
-  currency: string;
-}
-
-/** Vendor embed on a concierge card. */
-interface AinVendor {
-  slug: string;
-  name: string;
-  legacy_id: number | null;
-  id: number;
-}
+import {
+  AinAskContext,
+  AinCard,
+  AinErrorTurn,
+  AinReplyTurn,
+  AinTurn,
+  AskAinThreadService,
+} from './ask-ain-thread.service';
 
 /**
- * One product Ain recommends: the v3 ProductSerializer::listShape card plus the
- * concierge's one-line `reason`. This endpoint is NOT run through the mobile
- * legacy response transform, so the fields are the raw v3 shape.
- */
-interface AinCard {
-  id: number;
-  name: string;
-  price: AinPrice | null;
-  sale_price: AinPrice | null;
-  primary_image: { url: string } | null;
-  vendor: AinVendor | null;
-  in_stock: boolean;
-  reason?: string;
-}
-
-/** The stored `user` blob (only the bits we read). */
-interface StoredUser {
-  id: number;
-  token: string;
-}
-
-/**
- * "Ask Ain" — 3bayti's AI style & gifting concierge. A conversational input
- * resolves a natural-language style/gift request to REAL, in-stock, ranked
- * product cards (each with a one-line reason), by POSTing to the concierge
- * endpoint. Works logged-out (personalises + enables "add to closet" when
- * signed in). Copy is LTR for both en/ar per the app-wide pin.
+ * "Ask Ain" — 3bayti's AI style & gifting concierge, as a chat thread. Each
+ * customer message is POSTed to the concierge with the recent conversation
+ * (text only) as `history`, so follow-ups like "cheaper" or "in black" refine
+ * the previous request. Ain answers with a short reply, real in-stock product
+ * cards (each with a one-line reason) and tappable follow-up suggestions.
+ *
+ * The thread lives in AskAinThreadService (a root service), so it survives
+ * opening a product and coming back. Works logged-out (personalises + enables
+ * "add to closet" when signed in). Copy is LTR for both en/ar per the app-wide
+ * pin. A `?q=` query param starts the conversation with that message.
  */
 @Component({
   selector: 'app-ask-ain',
@@ -94,22 +73,126 @@ interface StoredUser {
     AxWishlistSheetComponent,
   ],
 })
-export class AskAinPage implements OnInit {
+export class AskAinPage implements OnInit, OnDestroy {
   /** Expose cfImage for the template. */
   readonly cfImage = cfImage;
 
   /** Prompt chips shown on the empty state (i18n keys). */
   readonly suggestions = ['ask_ain_chip_wedding', 'ask_ain_chip_eid_gift', 'ask_ain_chip_casual_beige'];
 
+  readonly thread = inject(AskAinThreadService);
+
   messageText = '';
-  lastQuery = '';
-  cards: AinCard[] = [];
-  isSending = false;
-  hasSearched = false;
-  isEmpty = false;
 
   /** Whether the "Chat with Ain on WhatsApp" entry point is configured. */
   readonly ainWhatsappEnabled = AIN_WHATSAPP !== '';
+
+  @ViewChild(IonContent) private content?: IonContent;
+  @ViewChild('composer') private composer?: ElementRef<HTMLTextAreaElement>;
+
+  /** Persisted anonymous session id for concierge analytics. */
+  private sessionId = '';
+  private sessionReady: Promise<void> = Promise.resolve();
+  private querySub: Subscription | null = null;
+  private destroyed = false;
+
+  imageLoaded: { [key: number]: boolean } = {};
+
+  // Wishlist ("add to closet") state — only offered when signed in.
+  categories: Labels[] = [];
+  isWishOpen = false;
+  isLoadingCategory = false;
+  isCreatingLabel = false;
+  addCloset = { product_id: 0, product_name: '' };
+
+  private nav = inject(NavController);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private networkAdapter = inject(MobileNetworkAdapter);
+  private wishlistService = inject(WishlistService);
+  private i18n = inject(I18nService);
+  private toast = inject(AxNotificationService);
+  private session = inject(SessionStore);
+
+  /** Opening greeting/empty state when the thread has no turns yet. */
+  get isFresh(): boolean {
+    return this.thread.isEmpty;
+  }
+
+  get turns(): AinTurn[] {
+    return this.thread.turns();
+  }
+
+  get isSending(): boolean {
+    return this.thread.pending();
+  }
+
+  /**
+   * The one line screen readers hear for the newest turn: "typing" while Ain
+   * answers, then Ain's reply text (or the error copy). Empty on a fresh thread.
+   */
+  get announcement(): string {
+    if (this.isSending) {
+      return this.i18n.t('ask_ain_thinking');
+    }
+    const last = this.turns[this.turns.length - 1];
+    if (!last || last.role === 'user') {
+      return '';
+    }
+    return last.role === 'ain' ? last.text : this.i18n.t('ask_ain_error');
+  }
+
+  /** Id of the newest Ain reply: only its follow-up chips are offered. */
+  get lastReplyId(): number | null {
+    const turns = this.turns;
+    const last = turns[turns.length - 1];
+    return last && last.role === 'ain' ? last.id : null;
+  }
+
+  get isSignedIn(): boolean {
+    return !!this.session.currentAccessToken();
+  }
+
+  ngOnInit(): void {
+    this.sessionReady = this.initSession();
+    // A different account signed in since this thread started: start fresh.
+    this.thread.ensureOwner();
+    this.querySub = this.route.queryParamMap.subscribe((params) => {
+      const q = (params.get('q') ?? '').trim();
+      // Keyed on the navigation too: a page re-created on the same history
+      // entry does not resend, but a fresh navigation with the same q does.
+      const key = `${this.navigationKey()}|${q}`;
+      if (q && key !== this.thread.consumedDeepLink) {
+        this.thread.consumedDeepLink = key;
+        // A deep link starts a fresh conversation about that request.
+        this.thread.reset();
+        void this.ask(q);
+      }
+    });
+    // Re-created page with an existing thread: show the newest message.
+    if (!this.thread.isEmpty) {
+      this.scrollToEnd(0);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    this.querySub?.unsubscribe();
+  }
+
+  private async initSession(): Promise<void> {
+    try {
+      await this.session.ready();
+    } catch {
+      // Unreadable session: Ain still works signed-out.
+    }
+    try {
+      this.sessionId = await this.ensureSession();
+    } catch {
+      this.sessionId = '';
+    }
+    this.recordEvent('ai_opened');
+  }
 
   /** Open WhatsApp to chat with Ain, with a localized pre-filled greeting. */
   openAinWhatsapp(): void {
@@ -119,57 +202,29 @@ export class AskAinPage implements OnInit {
     }
   }
 
-  /** Interaction id of the latest concierge reply (threads the analytics events). */
-  private interactionId: number | null = null;
-  /** Persisted anonymous session id for concierge analytics. */
-  private sessionId = '';
-
-  imageLoaded: { [key: number]: boolean } = {};
-
-  // Wishlist ("add to closet") state — only offered when signed in.
-  private user: StoredUser | null = null;
-  categories: Labels[] = [];
-  isWishOpen = false;
-  isLoadingCategory = false;
-  isCreatingLabel = false;
-  addCloset = { product_id: 0, product_name: '' };
-
-  constructor(
-    private nav: NavController,
-    private router: Router,
-    private networkAdapter: MobileNetworkAdapter,
-    private wishlistService: WishlistService,
-    private i18n: I18nService,
-    private toast: AxNotificationService,
-  ) {}
-
-  async ngOnInit(): Promise<void> {
-    const ret = await Preferences.get({ key: 'user' });
-    if (ret.value) {
-      try {
-        this.user = JSON.parse(ret.value) as StoredUser;
-      } catch {
-        this.user = null;
-      }
-    }
-    this.sessionId = await this.ensureSession();
-    this.recordEvent('ai_opened');
-  }
-
-  get isSignedIn(): boolean {
-    return !!this.user?.token;
-  }
-
   goBack(): void {
     this.nav.back();
   }
 
+  /** "New chat": clear the thread back to the greeting state. */
+  newChat(): void {
+    this.thread.reset();
+    this.messageText = '';
+    this.imageLoaded = {};
+    this.focusComposer();
+  }
+
   useSuggestion(key: string): void {
-    this.ask(this.i18n.t(key));
+    void this.ask(this.i18n.t(key));
+  }
+
+  /** Tap on a follow-up chip: send it as the customer's next message. */
+  useFollowUp(text: string): void {
+    void this.ask(text);
   }
 
   submit(): void {
-    this.ask(this.messageText);
+    void this.ask(this.messageText);
   }
 
   onKeyDown(event: KeyboardEvent): void {
@@ -180,45 +235,73 @@ export class AskAinPage implements OnInit {
     }
   }
 
-  ask(text: string): void {
+  async ask(text: string): Promise<void> {
     const query = (text ?? '').trim();
+    // Keep focus (and the keyboard) in the composer whatever was tapped.
+    this.focusComposer();
     if (!query || this.isSending) {
       return;
     }
+    const typed = this.messageText;
     this.messageText = '';
-    this.lastQuery = query;
-    this.isSending = true;
-    this.hasSearched = true;
-    this.isEmpty = false;
-    this.cards = [];
-    this.imageLoaded = {};
+    // The user bubble + typing indicator appear synchronously inside send();
+    // the context (session id, token) resolves while Ain is "typing".
+    const done = this.thread.send(query, this.context());
+    this.scrollToEnd();
+    if (!(await done)) {
+      // Refused (another message in flight): give the typed text back.
+      if (!this.messageText) {
+        this.messageText = typed;
+      }
+      return;
+    }
+    this.scrollToEnd();
+  }
 
-    const body: Record<string, unknown> = {
-      query,
-      locale: this.i18n.lang,
-      session_id: this.sessionId,
-      channel: 'MOBILE',
-    };
-    const opts = this.user?.token ? { authToken: this.user.token } : {};
+  /** Retry a failed turn (the thread is kept). Only the newest turn offers it. */
+  async retry(turn: AinErrorTurn): Promise<void> {
+    this.focusComposer();
+    const done = this.thread.retry(turn.id, this.context());
+    this.scrollToEnd();
+    await done;
+    this.scrollToEnd();
+  }
 
-    this.networkAdapter.post_v3('POST /ai/concierge/style', body, opts).subscribe({
-      next: (res: any) => {
-        this.isSending = false;
-        if (res?.response_code === 200 && res?.status === 'success' && res?.data) {
-          this.interactionId = res.data.interaction_id ?? null;
-          this.cards = Array.isArray(res.data.products) ? (res.data.products as AinCard[]) : [];
-          this.isEmpty = this.cards.length === 0;
-        } else {
-          this.isEmpty = true;
-          this.error_notification(this.i18n.t('ask_ain_error'));
-        }
-      },
-      error: () => {
-        this.isSending = false;
-        this.isEmpty = true;
-        this.error_notification(this.i18n.t('ask_ain_error'));
-      },
-    });
+  /** Whether this error turn is the newest one (only it offers Retry). */
+  canRetry(turn: AinTurn): boolean {
+    return this.thread.isLast(turn.id);
+  }
+
+  /** Keep the composer focused when a button is pressed (keyboard stays open). */
+  keepComposerFocus(event: Event): void {
+    event.preventDefault();
+  }
+
+  /**
+   * Identifies the current navigation (Angular stores `navigationId` in the
+   * history entry's state; a back navigation restores the same id).
+   */
+  protected navigationKey(): string {
+    try {
+      const id = (window.history.state as { navigationId?: unknown } | null)?.navigationId;
+      return id === undefined || id === null ? '' : String(id);
+    } catch {
+      return '';
+    }
+  }
+
+  private async context(): Promise<AinAskContext> {
+    await this.sessionReady;
+    const token = this.session.currentAccessToken();
+    return { locale: this.i18n.lang, sessionId: this.sessionId, ...(token ? { authToken: token } : {}) };
+  }
+
+  asReply(turn: AinTurn): AinReplyTurn {
+    return turn as AinReplyTurn;
+  }
+
+  asError(turn: AinTurn): AinErrorTurn {
+    return turn as AinErrorTurn;
   }
 
   onImageLoad(id: number): void {
@@ -228,17 +311,17 @@ export class AskAinPage implements OnInit {
     this.imageLoaded[id] = true;
   }
 
-  open_product(card: AinCard): void {
-    this.recordEvent('ai_product_clicked', { product_id: card.id });
+  open_product(card: AinCard, turn?: AinReplyTurn): void {
+    this.recordEvent('ai_product_clicked', { product_id: card.id }, turn?.interactionId ?? null);
     // PDP resolves by v3 id (GET /v3/products/by-id/:id).
     this.router.navigate(['/', 'product'], { queryParams: { id: card.id, name: card.name } });
   }
 
-  open_vendor(card: AinCard): void {
+  open_vendor(card: AinCard, turn?: AinReplyTurn): void {
     if (!card.vendor?.slug) {
       return;
     }
-    this.recordEvent('ai_vendor_clicked', { vendor_id: card.vendor.id });
+    this.recordEvent('ai_vendor_clicked', { vendor_id: card.vendor.id }, turn?.interactionId ?? null);
     this.router.navigate(['/', 'vendors'], { queryParams: { slug: card.vendor.slug, name: card.vendor.name } });
   }
 
@@ -256,12 +339,13 @@ export class AskAinPage implements OnInit {
   }
 
   private get_label(): void {
-    if (!this.user?.token) {
+    const token = this.session.currentAccessToken();
+    if (!token) {
       return;
     }
     this.isLoadingCategory = true;
     this.wishlistService
-      .listLabels(this.user.token)
+      .listLabels(token)
       .then((labels) => {
         this.categories = labels.map((l) => ({ id: l.id, name: l.name, count: l.count })) as any;
         this.isLoadingCategory = false;
@@ -272,13 +356,14 @@ export class AskAinPage implements OnInit {
   }
 
   addToCloset(label: number): void {
-    if (!this.user?.token) {
+    const token = this.session.currentAccessToken();
+    if (!token) {
       return;
     }
     this.isWishOpen = false;
     this.isLoadingCategory = true;
     this.wishlistService
-      .add(this.user.token, this.addCloset.product_id, label)
+      .add(token, this.addCloset.product_id, label)
       .then((ok) => {
         if (ok) {
           this.success_notification(this.i18n.t('text_added_to_wishlist'));
@@ -291,12 +376,13 @@ export class AskAinPage implements OnInit {
   }
 
   async onCreateLabel(name: string): Promise<void> {
-    if (this.isCreatingLabel || !this.user?.token) {
+    const token = this.session.currentAccessToken();
+    if (this.isCreatingLabel || !token) {
       return;
     }
     this.isCreatingLabel = true;
     try {
-      const label = await this.wishlistService.createLabel(this.user.token, name);
+      const label = await this.wishlistService.createLabel(token, name);
       if (label) {
         this.addToCloset(label.id);
       } else {
@@ -313,15 +399,40 @@ export class AskAinPage implements OnInit {
     this.isWishOpen = false;
   }
 
+  // ── Scroll + focus ─────────────────────────────────────────────────────
+
+  private scrollToEnd(duration = 250): void {
+    // After the new turn renders.
+    setTimeout(() => {
+      if (this.destroyed) {
+        return;
+      }
+      try {
+        void this.content?.scrollToBottom(duration);
+      } catch {
+        // Scrolling is cosmetic.
+      }
+    }, 50);
+  }
+
+  private focusComposer(): void {
+    setTimeout(() => {
+      if (!this.destroyed) {
+        this.composer?.nativeElement.focus();
+      }
+    }, 0);
+  }
+
   // ── Analytics + session ────────────────────────────────────────────────
 
-  private recordEvent(event: string, extra: Record<string, unknown> = {}): void {
+  private recordEvent(event: string, extra: Record<string, unknown> = {}, interactionId: number | null = null): void {
     try {
       const body: Record<string, unknown> = { event, session_id: this.sessionId, ...extra };
-      if (this.interactionId) {
-        body['interaction_id'] = this.interactionId;
+      if (interactionId) {
+        body['interaction_id'] = interactionId;
       }
-      const opts = this.user?.token ? { authToken: this.user.token } : {};
+      const token = this.session.currentAccessToken();
+      const opts = token ? { authToken: token } : {};
       this.networkAdapter.post_v3('POST /ai/events', body, opts).subscribe({ next: () => {}, error: () => {} });
     } catch {
       // Analytics must never break the page.
