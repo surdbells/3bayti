@@ -18,9 +18,58 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { ProductCardComponent } from '../catalog/product-card';
-import { ConciergeService, type ConciergeCard } from './concierge.service';
+import { CONCIERGE_MAX_QUESTIONS, ConciergeService, isShowNowChip, type ConciergeCard } from './concierge.service';
 import { AskAinThreadService, type AinTurn } from './ask-ain-thread.service';
 import { AIN_WHATSAPP_NUMBER, ainWhatsappUrl } from '../../core/config/support.constants';
+
+/** A tappable chip under Ain's newest turn. `skip` = "Show me what you have". */
+export interface AinChip {
+  text: string;
+  skip: boolean;
+}
+
+/** A titled group of empty-state starter prompts (i18n keys). */
+export interface StarterGroup {
+  id: string;
+  title: string;
+  chips: string[];
+}
+
+/** Empty-state starter prompts, grouped. Tapping one sends its localized text. */
+export const STARTER_GROUPS: readonly StarterGroup[] = [
+  {
+    id: 'occasions',
+    title: 'askAin.starters.occasions.title',
+    chips: [
+      'askAin.starters.occasions.wedding',
+      'askAin.starters.occasions.eid',
+      'askAin.starters.occasions.ramadan',
+      'askAin.starters.occasions.work',
+      'askAin.starters.occasions.evening',
+    ],
+  },
+  {
+    id: 'gifts',
+    title: 'askAin.starters.gifts.title',
+    chips: [
+      'askAin.starters.gifts.sister',
+      'askAin.starters.gifts.mother',
+      'askAin.starters.gifts.friend',
+      'askAin.starters.gifts.bride',
+    ],
+  },
+  {
+    id: 'styles',
+    title: 'askAin.starters.styles.title',
+    chips: [
+      'askAin.starters.styles.casualBeige',
+      'askAin.starters.styles.classicBlack',
+      'askAin.starters.styles.pastel',
+      'askAin.starters.styles.embellished',
+      'askAin.starters.styles.minimal',
+    ],
+  },
+];
 
 /**
  * "Ask Ain" — 3bayti's AI style & gifting concierge (web), as a chat thread.
@@ -31,6 +80,10 @@ import { AIN_WHATSAPP_NUMBER, ainWhatsappUrl } from '../../core/config/support.c
  * only) go back to the API as history so refinements like "cheaper" or "in
  * black" keep the earlier constraints. The thread lives in a root service
  * (+ sessionStorage), so it survives opening a product and coming back.
+ * Guided discovery: the server may answer with ONE question at a time (a
+ * question_slot + answer chips, no products) before showing results; the
+ * page echoes the last response's asked_slots on every send and sends
+ * show_now when the customer taps "Show me what you have".
  * Works for guests; personalises when signed in. Navigation is slug-based via
  * the card's own anchor — no legacy ids. `?q=` starts a new conversation.
  */
@@ -56,8 +109,11 @@ export class AskAinPageComponent implements OnInit {
 
   readonly query = signal('');
 
-  /** Prompt chips (i18n keys) shown on the empty state. */
-  readonly suggestions = ['askAin.chips.wedding', 'askAin.chips.eidGift', 'askAin.chips.casualBeige'];
+  /** Grouped starter prompts (i18n keys) shown on the empty state. */
+  readonly starterGroups = STARTER_GROUPS;
+
+  /** Upper bound shown in the "Question n of up to 4" hint. */
+  readonly maxQuestions = CONCIERGE_MAX_QUESTIONS;
 
   /**
    * Id of the newest turn when the page opened: a restored thread is not
@@ -85,14 +141,7 @@ export class AskAinPageComponent implements OnInit {
     if (last.reply.trim()) {
       return { kind: 'text', text: last.reply };
     }
-    return {
-      kind: 'key',
-      text: last.cards.length
-        ? 'askAin.resultsIntro'
-        : last.needsClarification
-          ? 'askAin.clarifyFallback'
-          : 'askAin.noResults',
-    };
+    return { kind: 'key', text: this.fallbackKey(last) };
   });
 
   /** Whether the "Chat with Ain on WhatsApp" entry point is configured. */
@@ -145,9 +194,50 @@ export class AskAinPageComponent implements OnInit {
     this.sendText(this.translate.instant(key));
   }
 
-  /** A follow-up chip sends its text as the customer's next message. */
-  useFollowUp(text: string): void {
-    this.sendText(text);
+  /**
+   * i18n key for Ain's bubble when the reply text is empty: the slot's own
+   * question on a guided turn, otherwise the results / clarify / no-results line.
+   */
+  fallbackKey(turn: AinTurn): string {
+    if (turn.questionSlot) {
+      return 'askAin.questions.' + turn.questionSlot;
+    }
+    return turn.cards.length
+      ? 'askAin.resultsIntro'
+      : turn.needsClarification
+        ? 'askAin.clarifyFallback'
+        : 'askAin.noResults';
+  }
+
+  /** A guided-question turn (answer chips + progress hint, no products). */
+  isQuestion(turn: AinTurn): boolean {
+    return turn.questionSlot !== null && turn.cards.length === 0;
+  }
+
+  /** "Question n" for the progress hint (n = slots asked so far, this one included). */
+  questionNumber(turn: AinTurn): number {
+    return Math.min(Math.max(turn.askedSlots.length, 1), this.maxQuestions);
+  }
+
+  /**
+   * The chips under Ain's turn. On a guided question the skip chip ("Show me
+   * what you have") is moved last and styled apart; if the server didn't send
+   * one, the page adds its own so the customer can always skip ahead.
+   */
+  chipsFor(turn: AinTurn): AinChip[] {
+    const label = this.translate.instant('askAin.showNow') as string;
+    const chips: AinChip[] = turn.followUps.map((text) => ({ text, skip: isShowNowChip(text, label) }));
+    if (!this.isQuestion(turn)) {
+      return chips;
+    }
+    const answers = chips.filter((c) => !c.skip);
+    const skip = chips.find((c) => c.skip) ?? (label && label !== 'askAin.showNow' ? { text: label, skip: true } : null);
+    return skip ? [...answers, skip] : answers;
+  }
+
+  /** An answer / refine chip sends its text; the skip chip also sends show_now. */
+  useChip(chip: AinChip): void {
+    this.sendText(chip.text, chip.skip);
   }
 
   retry(): void {
@@ -169,9 +259,9 @@ export class AskAinPageComponent implements OnInit {
     });
   }
 
-  private sendText(text: string): void {
+  private sendText(text: string, showNow = false): void {
     if (this.thread.pending()) return;
-    void this.thread.send(text);
+    void this.thread.send(text, showNow ? { showNow: true } : {});
     this.focusComposer();
   }
 

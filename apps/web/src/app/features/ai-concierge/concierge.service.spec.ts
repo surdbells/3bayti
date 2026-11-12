@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { PLATFORM_ID } from '@angular/core';
 
-import { ConciergeService, sanitizeHistory, type ConciergeHistoryEntry } from './concierge.service';
+import { ConciergeService, isShowNowChip, sanitizeHistory, type ConciergeHistoryEntry } from './concierge.service';
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import { ApiConfigService } from '../../core/api/api-config.service';
 import { LocaleService } from '../../core/i18n/locale.service';
@@ -71,21 +71,77 @@ describe('ConciergeService.ask (conversational)', () => {
     await p;
   });
 
-  it('parses reply, follow-ups (max 3, trimmed) and the clarification flag', async () => {
+  it('parses reply, follow-ups (trimmed, de-duplicated) and the clarification flag', async () => {
     const { service, controller } = setup();
     const p = service.ask('a gift');
     controller.expectOne(isStyle).flush({
       interaction_id: 3,
       products: [],
       reply: ' Who is the gift for? ',
-      follow_ups: [' For my sister ', 42, '', 'For my mum', 'For a friend', 'For my wife'],
+      follow_ups: [' For my sister ', 42, '', 'For my mum', 'For a friend', 'For my wife', 'For my mum'],
       needs_clarification: true,
     });
     const res = await p;
     expect(res.reply).toBe('Who is the gift for?');
-    expect(res.followUps).toEqual(['For my sister', 'For my mum', 'For a friend']);
+    expect(res.followUps).toEqual(['For my sister', 'For my mum', 'For a friend', 'For my wife']);
     expect(res.needsClarification).toBe(true);
     expect(res.cards).toEqual([]);
+    // An API without guided discovery: no slots, no question.
+    expect(res.askedSlots).toEqual([]);
+    expect(res.questionSlot).toBeNull();
+  });
+
+  it('always sends asked_slots (even [], absent = legacy client), omits show_now unless set', async () => {
+    const { service, controller } = setup();
+    const p1 = service.ask('abaya', [], { askedSlots: [], showNow: false });
+    const r1 = controller.expectOne(isStyle);
+    expect(r1.request.body.asked_slots).toEqual([]);
+    expect('show_now' in r1.request.body).toBe(false);
+    r1.flush({ interaction_id: 1, products: [] });
+    await p1;
+
+    const p2 = service.ask('Show me what you have', [], {
+      askedSlots: ['recipient', 'bogus', 'occasion', 'recipient'],
+      showNow: true,
+    });
+    const r2 = controller.expectOne(isStyle);
+    expect(r2.request.body.asked_slots).toEqual(['recipient', 'occasion']);
+    expect(r2.request.body.show_now).toBe(true);
+    r2.flush({ interaction_id: 2, products: [] });
+    await p2;
+  });
+
+  it('parses a guided question turn: question_slot, asked_slots and up to 8 answer chips', async () => {
+    const { service, controller } = setup();
+    const p = service.ask('an abaya');
+    controller.expectOne(isStyle).flush({
+      interaction_id: 4,
+      products: [],
+      reply: 'What\'s the occasion?',
+      needs_clarification: true,
+      asked_slots: ['recipient', 'occasion', 'nope'],
+      question_slot: 'occasion',
+      follow_ups: ['Eid', 'Wedding', 'Everyday', 'Work', 'Ramadan', 'Party/evening', 'No preference', 'Show me what you have', 'Extra'],
+    });
+    const res = await p;
+    expect(res.questionSlot).toBe('occasion');
+    expect(res.askedSlots).toEqual(['recipient', 'occasion']);
+    expect(res.followUps).toHaveLength(8);
+    expect(res.followUps.at(-1)).toBe('Show me what you have');
+  });
+
+  it('caps refine chips on a results turn at 6 and ignores an unknown question_slot', async () => {
+    const { service, controller } = setup();
+    const p = service.ask('abaya');
+    controller.expectOne(isStyle).flush({
+      interaction_id: 5,
+      products: [],
+      question_slot: 'weird',
+      follow_ups: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'],
+    });
+    const res = await p;
+    expect(res.questionSlot).toBeNull();
+    expect(res.followUps).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
   });
 
   it('propagates HTTP errors so the thread can show Retry', async () => {
@@ -93,6 +149,17 @@ describe('ConciergeService.ask (conversational)', () => {
     const p = service.ask('x');
     controller.expectOne(isStyle).flush('boom', { status: 500, statusText: 'Server Error' });
     await expect(p).rejects.toBeTruthy();
+  });
+});
+
+describe('isShowNowChip', () => {
+  it('recognises the skip phrase in English and Arabic (punctuation / diacritics ignored)', () => {
+    expect(isShowNowChip('Show me what you have')).toBe(true);
+    expect(isShowNowChip('  show me what you have! ')).toBe(true);
+    expect(isShowNowChip('أريني ما لديكِ')).toBe(true);
+    expect(isShowNowChip('Eid')).toBe(false);
+    expect(isShowNowChip('No preference')).toBe(false);
+    expect(isShowNowChip('Montrez-moi', 'Montrez-moi')).toBe(true);
   });
 });
 

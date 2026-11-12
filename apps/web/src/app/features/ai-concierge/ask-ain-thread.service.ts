@@ -6,8 +6,11 @@ import {
   CONCIERGE_HISTORY_LIMIT,
   CONCIERGE_TEXT_LIMIT,
   ConciergeService,
+  isConciergeSlot,
+  sanitizeSlots,
   type ConciergeCard,
   type ConciergeHistoryEntry,
+  type ConciergeSlot,
 } from './concierge.service';
 
 /** A customer message in the Ask Ain thread. */
@@ -15,6 +18,14 @@ export interface UserTurn {
   id: string;
   role: 'user';
   text: string;
+  /** Sent via the "Show me what you have" skip chip (kept so Retry re-sends it the same way). */
+  showNow?: boolean;
+}
+
+/** Options for a customer message. */
+export interface SendOptions {
+  /** The customer tapped "Show me what you have": skip the remaining questions. */
+  showNow?: boolean;
 }
 
 /** Ain's answer to the preceding user turn (or an error bubble with Retry). */
@@ -27,9 +38,27 @@ export interface AinTurn {
   followUps: string[];
   needsClarification: boolean;
   interactionId: number | null;
+  /** asked_slots from this response (echoed on the next request). */
+  askedSlots: ConciergeSlot[];
+  /** The guided-discovery slot this turn asks about; null on a results turn. */
+  questionSlot: ConciergeSlot | null;
 }
 
 export type ChatTurn = UserTurn | AinTurn;
+
+/**
+ * The asked_slots to echo on the next request: those of the newest answered
+ * Ain turn (error bubbles carry none and are skipped). [] for a new chat.
+ */
+export function lastAskedSlots(turns: readonly ChatTurn[]): ConciergeSlot[] {
+  for (let i = turns.length - 1; i >= 0; i--) {
+    const t = turns[i];
+    if (t.role === 'ain' && t.status === 'ok') {
+      return [...t.askedSlots];
+    }
+  }
+  return [];
+}
 
 /**
  * Build the wire history from the thread: user text + Ain's reply text only
@@ -98,16 +127,18 @@ export class AskAinThreadService {
     });
   }
 
-  /** Send a customer message (typed, a suggestion chip, or a follow-up chip). */
-  async send(text: string): Promise<void> {
+  /** Send a customer message (typed, a suggestion chip, or a follow-up / answer chip). */
+  async send(text: string, options: SendOptions = {}): Promise<void> {
     const q = (text ?? '').trim().slice(0, CONCIERGE_TEXT_LIMIT);
     if (!q || this._pending()) {
       return;
     }
     const before = this._turns();
     const history = buildHistory(before);
-    this.commit([...before, { id: this.newId(), role: 'user', text: q }]);
-    await this.run(q, history);
+    const showNow = options.showNow === true;
+    const turn: UserTurn = { id: this.newId(), role: 'user', text: q, ...(showNow ? { showNow: true } : {}) };
+    this.commit([...before, turn]);
+    await this.run(q, history, lastAskedSlots(before), showNow);
   }
 
   /** Re-send the message whose answer failed (only when the last turn is an error). */
@@ -119,22 +150,28 @@ export class AskAinThreadService {
       return;
     }
     const withoutError = turns.slice(0, -1);
+    const context = withoutError.slice(0, -1);
     this.commit(withoutError);
-    await this.run(prev.text, buildHistory(withoutError.slice(0, -1)));
+    await this.run(prev.text, buildHistory(context), lastAskedSlots(context), prev.showNow === true);
   }
 
-  /** Start over: clears the thread (and any in-flight answer). */
+  /** Start over: clears the thread (and any in-flight answer); asked slots reset with it. */
   newChat(): void {
     this.generation++;
     this._pending.set(false);
     this.commit([]);
   }
 
-  private async run(query: string, history: ConciergeHistoryEntry[]): Promise<void> {
+  private async run(
+    query: string,
+    history: ConciergeHistoryEntry[],
+    askedSlots: ConciergeSlot[],
+    showNow: boolean,
+  ): Promise<void> {
     const gen = this.generation;
     this._pending.set(true);
     try {
-      const res = await this.concierge.ask(query, history);
+      const res = await this.concierge.ask(query, history, { askedSlots, showNow });
       if (gen !== this.generation) return;
       this.commit([
         ...this._turns(),
@@ -147,6 +184,8 @@ export class AskAinThreadService {
           followUps: res.followUps,
           needsClarification: res.needsClarification,
           interactionId: res.interactionId,
+          askedSlots: res.askedSlots ?? [],
+          questionSlot: res.questionSlot ?? null,
         },
       ]);
     } catch {
@@ -169,6 +208,8 @@ export class AskAinThreadService {
       followUps: [],
       needsClarification: false,
       interactionId: null,
+      askedSlots: [],
+      questionSlot: null,
     };
   }
 
@@ -220,7 +261,8 @@ export class AskAinThreadService {
     const id = typeof r['id'] === 'string' && r['id'] ? r['id'] : this.newId();
     if (r['role'] === 'user') {
       const text = typeof r['text'] === 'string' ? r['text'].trim() : '';
-      return text ? { id, role: 'user', text } : null;
+      if (!text) return null;
+      return r['showNow'] === true ? { id, role: 'user', text, showNow: true } : { id, role: 'user', text };
     }
     if (r['role'] === 'ain') {
       const cards = Array.isArray(r['cards'])
@@ -240,6 +282,9 @@ export class AskAinThreadService {
         followUps,
         needsClarification: r['needsClarification'] === true,
         interactionId: typeof r['interactionId'] === 'number' ? r['interactionId'] : null,
+        // Persisted with the turn so a reload keeps the guided-question progress.
+        askedSlots: sanitizeSlots(r['askedSlots']),
+        questionSlot: isConciergeSlot(r['questionSlot']) ? r['questionSlot'] : null,
       };
     }
     return null;

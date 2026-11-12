@@ -5,8 +5,11 @@ import { PLATFORM_ID, signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import type { AuthUser } from '../../core/auth/auth.types';
 
-import { AskAinThreadService, buildHistory, type ChatTurn } from './ask-ain-thread.service';
+import { AskAinThreadService, buildHistory, lastAskedSlots, type ChatTurn } from './ask-ain-thread.service';
 import { ConciergeService, type ConciergeCard, type ConciergeResult } from './concierge.service';
+
+/** The guided-discovery options of a send with no prior questions. */
+const NO_SLOTS = { askedSlots: [], showNow: false };
 
 function card(id: number): ConciergeCard {
   return {
@@ -21,7 +24,7 @@ function card(id: number): ConciergeCard {
 }
 
 function result(o: Partial<ConciergeResult> = {}): ConciergeResult {
-  return { interactionId: 1, cards: [], reply: '', followUps: [], needsClarification: false, ...o };
+  return { interactionId: 1, cards: [], reply: '', followUps: [], needsClarification: false, askedSlots: [], questionSlot: null, ...o };
 }
 
 interface Deferred<T> {
@@ -78,7 +81,7 @@ describe('AskAinThreadService', () => {
     expect(thread.isFresh()).toBe(false);
     expect(thread.turns()).toHaveLength(1);
     expect(thread.turns()[0]).toMatchObject({ role: 'user', text: 'an abaya for a wedding' });
-    expect(ask).toHaveBeenCalledWith('an abaya for a wedding', []);
+    expect(ask).toHaveBeenCalledWith('an abaya for a wedding', [], NO_SLOTS);
 
     d.resolve(result({ reply: 'Here are elegant pieces.', cards: [card(1), card(2)], followUps: ['In black'] }));
     await p;
@@ -96,7 +99,7 @@ describe('AskAinThreadService', () => {
     expect(ask).toHaveBeenLastCalledWith('Show me cheaper ones', [
       { role: 'user', text: 'black abaya' },
       { role: 'ain', text: 'Here are some pieces.' },
-    ]);
+    ], NO_SLOTS);
   });
 
   it('ignores a send while a turn is in flight and empty messages', async () => {
@@ -128,7 +131,7 @@ describe('AskAinThreadService', () => {
     expect(ask).toHaveBeenLastCalledWith('For my sister', [
       { role: 'user', text: 'a gift' },
       { role: 'ain', text: 'Who is the gift for?' },
-    ]);
+    ], NO_SLOTS);
   });
 
   it('turns a network failure into an error turn, keeps the thread, and Retry re-sends', async () => {
@@ -151,7 +154,7 @@ describe('AskAinThreadService', () => {
     expect(ask).toHaveBeenLastCalledWith('cheaper', [
       { role: 'user', text: 'abaya' },
       { role: 'ain', text: 'Found these.' },
-    ]);
+    ], NO_SLOTS);
     const after = thread.turns();
     expect(after).toHaveLength(4);
     expect(after.filter((t) => t.role === 'user')).toHaveLength(2);
@@ -238,7 +241,7 @@ describe('AskAinThreadService', () => {
     expect(ask).toHaveBeenLastCalledWith('cheaper', [
       { role: 'user', text: 'an abaya' },
       { role: 'ain', text: 'Here are abayas.' },
-    ]);
+    ], NO_SLOTS);
     // The error bubble stays visible in the thread (no silent rewrite).
     expect(thread.turns().map((t) => (t.role === 'user' ? t.text : t.status))).toEqual([
       'an abaya',
@@ -294,6 +297,8 @@ describe('buildHistory', () => {
         followUps: [],
         needsClarification: false,
         interactionId: i,
+        askedSlots: [],
+        questionSlot: null,
       });
     }
     const h = buildHistory(turns);
@@ -305,5 +310,115 @@ describe('buildHistory', () => {
     for (const e of h) {
       expect(Object.keys(e).sort()).toEqual(['role', 'text']);
     }
+  });
+});
+
+describe('lastAskedSlots', () => {
+  it('returns the newest answered Ain turn\'s slots, skipping error bubbles', () => {
+    const ain = (id: string, status: 'ok' | 'error', askedSlots: string[]): ChatTurn =>
+      ({
+        id,
+        role: 'ain',
+        status,
+        reply: 'q',
+        cards: [],
+        followUps: [],
+        needsClarification: true,
+        interactionId: null,
+        askedSlots,
+        questionSlot: null,
+      }) as ChatTurn;
+    expect(lastAskedSlots([])).toEqual([]);
+    expect(
+      lastAskedSlots([
+        { id: 'u1', role: 'user', text: 'a gift' },
+        ain('a1', 'ok', ['recipient', 'occasion']),
+        { id: 'u2', role: 'user', text: 'Eid' },
+        ain('a2', 'error', []),
+      ]),
+    ).toEqual(['recipient', 'occasion']);
+  });
+});
+
+describe('AskAinThreadService (guided discovery)', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    currentUser = signal<AuthUser | null>(null);
+  });
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    sessionStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it('echoes the previous response\'s asked_slots on every send', async () => {
+    const ask = vi
+      .fn()
+      .mockResolvedValueOnce(
+        result({ reply: 'For you or a gift?', needsClarification: true, askedSlots: ['recipient'], questionSlot: 'recipient' }),
+      )
+      .mockResolvedValueOnce(
+        result({ reply: 'What\'s the occasion?', needsClarification: true, askedSlots: ['recipient', 'occasion'], questionSlot: 'occasion' }),
+      )
+      .mockResolvedValueOnce(result({ reply: 'Here you go.', cards: [card(1)], askedSlots: ['recipient', 'occasion'] }));
+    const thread = setup(ask);
+
+    await thread.send('an abaya');
+    expect(ask).toHaveBeenLastCalledWith('an abaya', [], { askedSlots: [], showNow: false });
+
+    await thread.send('A gift');
+    expect(ask.mock.calls[1][2]).toEqual({ askedSlots: ['recipient'], showNow: false });
+
+    await thread.send('Eid');
+    expect(ask.mock.calls[2][2]).toEqual({ askedSlots: ['recipient', 'occasion'], showNow: false });
+    expect(thread.turns()[1]).toMatchObject({ questionSlot: 'recipient', askedSlots: ['recipient'] });
+  });
+
+  it('sends show_now for the skip chip and Retry re-sends it the same way', async () => {
+    const ask = vi
+      .fn()
+      .mockResolvedValueOnce(result({ reply: 'Occasion?', needsClarification: true, askedSlots: ['occasion'], questionSlot: 'occasion' }))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(result({ reply: 'Here you go.', cards: [card(1)], askedSlots: ['occasion'] }));
+    const thread = setup(ask);
+    await thread.send('abaya');
+    await thread.send('Show me what you have', { showNow: true });
+    expect(ask.mock.calls[1][2]).toEqual({ askedSlots: ['occasion'], showNow: true });
+    expect(thread.turns().at(-1)).toMatchObject({ role: 'ain', status: 'error' });
+
+    await thread.retry();
+    expect(ask.mock.calls[2][0]).toBe('Show me what you have');
+    expect(ask.mock.calls[2][2]).toEqual({ askedSlots: ['occasion'], showNow: true });
+  });
+
+  it('persists asked_slots with the thread and New chat resets them', async () => {
+    const ask = vi.fn(() =>
+      Promise.resolve(result({ reply: 'Occasion?', needsClarification: true, askedSlots: ['recipient', 'occasion'], questionSlot: 'occasion' })),
+    );
+    setup(ask);
+    await TestBed.inject(AskAinThreadService).send('a gift');
+    TestBed.resetTestingModule();
+
+    const ask2 = vi.fn((..._args: unknown[]) => Promise.resolve(result({ reply: 'Budget?' })));
+    const restored = setup(ask2);
+    expect(restored.turns()[1]).toMatchObject({ askedSlots: ['recipient', 'occasion'], questionSlot: 'occasion' });
+    await restored.send('Wedding');
+    expect(ask2.mock.calls[0][2]).toEqual({ askedSlots: ['recipient', 'occasion'], showNow: false });
+
+    restored.newChat();
+    await restored.send('hello');
+    expect(ask2.mock.calls[1][2]).toEqual({ askedSlots: [], showNow: false });
+  });
+
+  it('drops unknown persisted slot names on restore', () => {
+    sessionStorage.setItem(
+      AskAinThreadService.STORAGE_KEY,
+      JSON.stringify([
+        { id: 'u', role: 'user', text: 'abaya' },
+        { id: 'a', role: 'ain', status: 'ok', reply: 'Q?', cards: [], followUps: [], askedSlots: ['occasion', 'bogus', 7], questionSlot: 'bogus' },
+      ]),
+    );
+    const thread = setup(vi.fn());
+    expect(thread.turns()[1]).toMatchObject({ askedSlots: ['occasion'], questionSlot: null });
   });
 });

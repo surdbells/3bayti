@@ -206,12 +206,42 @@
     "send": "Send",
     "composerLabel": "Message Ain",
     "replyPlaceholder": "Reply to Ain, e.g. cheaper or in black",
-    "followUpsLabel": "Suggested replies",
     "clarifyFallback": "Could you tell me a little more: the occasion, colour or budget?",
-    "chips": {
-      "wedding": "An elegant black abaya for a wedding",
-      "eidGift": "An Eid gift for my sister under 300",
-      "casualBeige": "Something casual in beige"
+    "answersLabel": "Choose an answer",
+    "refineLabel": "Refine your results",
+    "showNow": "Show me what you have",
+    "progress": "Question {{current}} of up to {{total}}",
+    "questions": {
+      "recipient": "Lovely! Is this for you, or a gift for someone special?",
+      "occasion": "What's the occasion?",
+      "type": "What kind of piece do you have in mind?",
+      "style_or_colour": "Any style or colour you love?",
+      "budget": "And what budget feels right?"
+    },
+    "starters": {
+      "occasions": {
+        "title": "Occasions",
+        "wedding": "An elegant abaya for a wedding",
+        "eid": "Something special for Eid",
+        "ramadan": "A graceful jalabiya for Ramadan",
+        "work": "Modest pieces for work",
+        "evening": "A statement look for an evening out"
+      },
+      "gifts": {
+        "title": "Gifts",
+        "sister": "An Eid gift for my sister under 300 AED",
+        "mother": "A thoughtful gift for my mum",
+        "friend": "A birthday gift for a friend",
+        "bride": "A gift for a bride-to-be"
+      },
+      "styles": {
+        "title": "Styles",
+        "casualBeige": "Something casual in beige",
+        "classicBlack": "A classic black abaya",
+        "pastel": "Soft pastel kaftans",
+        "embellished": "Embellished pieces that shine",
+        "minimal": "Clean, minimal everyday wear"
+      }
     }
   },
   "visualSearch": {

@@ -12,11 +12,16 @@
 
   @if (!thread.isFresh()) {
     <div class="ask-ain__toolbar">
-      <button type="button" class="ask-ain__new" (click)="newChat()" data-testid="ask-ain-new-chat">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <button
+        type="button"
+        class="ask-ain__new"
+        (click)="newChat()"
+        [attr.aria-label]="'askAin.newChat' | translate"
+        data-testid="ask-ain-new-chat">
+        <svg class="ask-ain__new-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
           <path d="M12 5v14M5 12h14" />
         </svg>
-        {{ 'askAin.newChat' | translate }}
+        <span class="ask-ain__new-label" data-testid="ask-ain-new-chat-label">{{ 'askAin.newChat' | translate }}</span>
       </button>
     </div>
   }
@@ -66,9 +71,17 @@
                 </button>
               }
             } @else {
-              <p class="ask-ain__bubble ask-ain__bubble--ain" data-testid="ask-ain-reply">
+              @if (last && isQuestion(turn)) {
+                <p class="ask-ain__progress" data-testid="ask-ain-progress">
+                  {{ 'askAin.progress' | translate: { current: questionNumber(turn), total: maxQuestions } }}
+                </p>
+              }
+              <p
+                class="ask-ain__bubble ask-ain__bubble--ain"
+                [class.ask-ain__bubble--question]="isQuestion(turn)"
+                data-testid="ask-ain-reply">
                 <span class="ask-ain__sr">{{ 'askAin.ain' | translate }}: </span>{{
-                  turn.reply || ((turn.cards.length ? 'askAin.resultsIntro' : (turn.needsClarification ? 'askAin.clarifyFallback' : 'askAin.noResults')) | translate)
+                  turn.reply || (fallbackKey(turn) | translate)
                 }}
               </p>
 
@@ -85,14 +98,28 @@
                 </ul>
               }
 
-              @if (last && turn.followUps.length && !thread.pending()) {
-                <div class="ask-ain__followups" role="group" [attr.aria-label]="'askAin.followUpsLabel' | translate">
-                  @for (f of turn.followUps; track $index) {
-                    <button type="button" class="ask-ain__chip ask-ain__chip--followup" (click)="useFollowUp(f)" data-testid="ask-ain-follow-up">
-                      {{ f }}
-                    </button>
-                  }
-                </div>
+              @if (last && !thread.pending()) {
+                @let chips = chipsFor(turn);
+                @if (chips.length) {
+                  <div
+                    class="ask-ain__followups"
+                    [class.ask-ain__followups--answers]="isQuestion(turn)"
+                    role="group"
+                    [attr.aria-label]="(isQuestion(turn) ? 'askAin.answersLabel' : 'askAin.refineLabel') | translate"
+                    data-testid="ask-ain-chips">
+                    @for (c of chips; track $index) {
+                      @if (c.skip) {
+                        <button type="button" class="ask-ain__chip ask-ain__chip--followup ask-ain__chip--skip" (click)="useChip(c)" data-testid="ask-ain-show-now">
+                          {{ c.text }}
+                        </button>
+                      } @else {
+                        <button type="button" class="ask-ain__chip ask-ain__chip--followup" (click)="useChip(c)" data-testid="ask-ain-follow-up">
+                          {{ c.text }}
+                        </button>
+                      }
+                    }
+                  </div>
+                }
               }
             }
           </div>
@@ -142,9 +169,16 @@
   </form>
 
   @if (thread.isFresh()) {
-    <div class="ask-ain__chips">
-      @for (s of suggestions; track s) {
-        <button type="button" class="ask-ain__chip" (click)="useSuggestion(s)" data-testid="ask-ain-suggestion">{{ s | translate }}</button>
+    <div class="ask-ain__starters" data-testid="ask-ain-starters">
+      @for (g of starterGroups; track g.id) {
+        <div class="ask-ain__starter-group" role="group" [attr.aria-labelledby]="'ask-ain-starters-' + g.id" data-testid="ask-ain-starter-group">
+          <h2 class="ask-ain__starter-title" [id]="'ask-ain-starters-' + g.id">{{ g.title | translate }}</h2>
+          <div class="ask-ain__chips">
+            @for (s of g.chips; track s) {
+              <button type="button" class="ask-ain__chip" (click)="useSuggestion(s)" data-testid="ask-ain-suggestion">{{ s | translate }}</button>
+            }
+          </div>
+        </div>
       }
     </div>
   }
