@@ -10,6 +10,7 @@ use Bayti\Api\Ai\Concierge\ConciergeCopy;
 use Bayti\Api\Ai\Concierge\ConciergeRanker;
 use Bayti\Api\Ai\Concierge\ConciergeService;
 use Bayti\Api\Ai\Concierge\ConversationHistory;
+use Bayti\Api\Ai\Concierge\DiscoveryPlanner;
 use Bayti\Api\Ai\Concierge\IntentParser;
 use Bayti\Api\Ai\Concierge\ProductRetrievalService;
 use Bayti\Api\Domain\Catalog\Product;
@@ -236,7 +237,7 @@ final class ConversationalConciergeTest extends TestCase
     // ===== ConciergeService (K2/K4) =====
 
     #[Test]
-    public function clarificationSkipsRetrievalAndReturnsTheQuestion(): void
+    public function aVagueFirstMessageGetsTheGuidedQuestionWithoutRetrieval(): void
     {
         $ai = new RecordingAiProvider();
         $ai->queue = [[
@@ -251,11 +252,38 @@ final class ConversationalConciergeTest extends TestCase
 
         $result = $this->service($ai, $repo)->ask('help me', 'en');
 
+        // The deterministic planner (not the model) picks the question.
         self::assertTrue($result->needsClarification);
         self::assertSame([], $result->items);
-        self::assertSame('Happy to help! What is the occasion?', $result->reply);
-        self::assertSame(['A wedding', 'Eid', 'Everyday wear'], $result->followUps);
+        self::assertSame('recipient', $result->questionSlot);
+        self::assertSame(['recipient'], $result->askedSlots);
+        self::assertSame(ConciergeCopy::question('recipient', 'en'), $result->reply);
+        // A legacy call (no asked_slots) gets the compact 3-chip set with the
+        // skip chip inside the 3 its client shows.
+        self::assertSame(ConciergeCopy::questionChips('recipient', 'en', true), $result->followUps);
+        self::assertSame(['For me', 'A gift', 'Show me what you have'], $result->followUps);
         self::assertCount(1, $ai->calls);
+    }
+
+    #[Test]
+    public function afterResultsTheModelsClarifyingQuestionIsStillHonoured(): void
+    {
+        $ai = new RecordingAiProvider();
+        $ai->queue = [[
+            'keywords' => [], 'is_gift' => false,
+            'reply' => 'Of course! What would you like to change?',
+            'follow_ups' => ['Cheaper', 'In navy'],
+            'needs_clarification' => true, 'small_talk' => false,
+        ]];
+        $repo = $this->createMock(ProductRepository::class);
+        $repo->expects(self::never())->method('findActivePaginated');
+
+        $result = $this->service($ai, $repo)->ask('hmm not sure', 'en', 12, [], DiscoveryPlanner::SLOTS);
+
+        self::assertTrue($result->needsClarification);
+        self::assertNull($result->questionSlot);
+        self::assertSame('Of course! What would you like to change?', $result->reply);
+        self::assertSame(DiscoveryPlanner::SLOTS, $result->askedSlots);
     }
 
     #[Test]
@@ -281,12 +309,15 @@ final class ConversationalConciergeTest extends TestCase
         $ai->enabled = false;
         $repo = $this->repoReturning([$this->product(1, 'Black Abaya')]);
 
-        $result = $this->service($ai, $repo)->ask('black abaya', 'en');
+        // Specific enough (type + colour + occasion) => straight to results.
+        $result = $this->service($ai, $repo)->ask('black abaya for eid', 'en');
 
         self::assertSame([1], $result->productIds());
-        self::assertSame('Here are some pieces for “black abaya”.', $result->reply);
-        self::assertSame(['Show me cheaper ones', 'In black', 'Something for a wedding'], $result->followUps);
+        self::assertSame('Here are some pieces for “black abaya for eid”.', $result->reply);
+        self::assertSame(['Something more colourful', 'Under 300 AED', 'More embellished', 'For a wedding instead', 'Show more like these', 'A gift idea instead'], $result->followUps);
         self::assertFalse($result->needsClarification);
+        self::assertNull($result->questionSlot);
+        self::assertSame(DiscoveryPlanner::SLOTS, $result->askedSlots);
     }
 
     #[Test]
@@ -299,11 +330,14 @@ final class ConversationalConciergeTest extends TestCase
             'needs_clarification' => false, 'small_talk' => false,
         ]];
 
-        $result = $this->service($ai, $this->repoReturning([]))->ask('abaya', 'en');
+        // The shopper skipped the questions.
+        $result = $this->service($ai, $this->repoReturning([]))->ask('abaya', 'en', 12, [], [], true);
 
         self::assertSame([], $result->items);
-        self::assertStringContainsString("couldn't find", $result->reply);
-        self::assertSame(['In black'], $result->followUps);
+        self::assertStringContainsString("couldn't find a match for “abaya”", $result->reply);
+        // The model's ideas lead, refine chips fill up to 6.
+        self::assertSame('In black', $result->followUps[0]);
+        self::assertLessThanOrEqual(6, count($result->followUps));
     }
 
     #[Test]
@@ -324,7 +358,8 @@ final class ConversationalConciergeTest extends TestCase
 
         self::assertSame([2, 1], $result->productIds());
         self::assertSame('Same style, now in navy.', $result->reply);
-        self::assertSame(['Cheaper'], $result->followUps);
+        // Refine chips for what is still open, with the model's idea merged in.
+        self::assertSame(['Something more colourful', 'Under 300 AED', 'More embellished', 'Cheaper', 'For a wedding instead', 'Show more like these'], $result->followUps);
         self::assertCount(2, $ai->calls, 'one intent+conversation call, one ranking call — as before');
         self::assertStringContainsString('black abaya for eid', $ai->calls[1]['user']);
         self::assertStringContainsString('in navy', $ai->calls[1]['user']);
@@ -354,20 +389,24 @@ final class ConversationalConciergeTest extends TestCase
         self::assertSame([7], $result->productIds());
         self::assertStringStartsWith("I couldn't find an exact match for “black wedding abaya under 300”", $result->reply);
         self::assertStringContainsString('popular pieces instead', $result->reply);
-        self::assertSame(ConciergeCopy::followUps(ConciergeCopy::KIND_NO_RESULTS, 'en'), $result->followUps);
+        self::assertSame(ConciergeCopy::followUps(ConciergeCopy::KIND_NO_RESULTS, 'en'), array_slice($result->followUps, 0, 3));
+        self::assertNotContains('In navy', $result->followUps, 'the model wrote its chips before seeing results');
     }
 
     #[Test]
-    public function aiOffFollowUpSearchesEachMessageAloneSoTheSubjectSurvives(): void
+    public function aiOffFollowUpKeepsTheConversationsSubjectAsStructuredFilters(): void
     {
         $ai = new RecordingAiProvider();
         $ai->enabled = false;
         /** @var list<string|null> $searches */
         $searches = [];
+        /** @var list<array<string, mixed>> $filters */
+        $filters = [];
         $repo = $this->createMock(ProductRepository::class);
-        $repo->method('findActivePaginated')->willReturnCallback(function (array $f) use (&$searches): array {
+        $repo->method('findActivePaginated')->willReturnCallback(function (array $f) use (&$searches, &$filters): array {
             $searches[] = $f['searchQuery'] ?? null;
-            $items = ($f['searchQuery'] ?? null) === 'black abaya' ? [$this->product(3, 'Black Abaya')] : [];
+            $filters[] = $f;
+            $items = ($f['searchQuery'] ?? null) === 'abaya' ? [$this->product(3, 'Black Abaya')] : [];
             return ['items' => $items, 'total' => count($items)];
         });
 
@@ -378,9 +417,12 @@ final class ConversationalConciergeTest extends TestCase
             ['role' => 'ain', 'text' => 'Here are some pieces.'],
         ]);
 
-        // Combined phrase first (one substring), then each message on its own,
-        // newest first — and never the best-seller browse (null search).
-        self::assertSame(['in navy cheaper black abaya', 'in navy cheaper black abaya', 'in navy', 'cheaper', 'black abaya'], $searches);
+        // The subject (abaya) survives as the product type and the latest
+        // colour (navy) replaces the earlier black; chip-like words are never
+        // substring searches — and never the best-seller browse (null search).
+        self::assertSame('abaya', $searches[0]);
+        self::assertNotContains(null, $searches);
+        self::assertSame(['navy'], $filters[0]['colors']);
         self::assertSame([3], $result->productIds());
         self::assertSame('Here are some pieces for “black abaya in navy”.', $result->reply);
     }
@@ -401,7 +443,10 @@ final class ConversationalConciergeTest extends TestCase
         ]);
 
         self::assertSame('Here are some pieces for “abaya”.', $result->reply);
-        self::assertSame(['In black'], $result->followUps);
+        self::assertContains('In black', $result->followUps);
+        foreach ($result->followUps as $chip) {
+            self::assertDoesNotMatchRegularExpression('/%|050|free/i', $chip);
+        }
     }
 
     #[Test]

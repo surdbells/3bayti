@@ -9,6 +9,7 @@ use Bayti\Api\Ai\Concierge\ConciergeCopy;
 use Bayti\Api\Ai\Concierge\ConciergeItem;
 use Bayti\Api\Ai\Concierge\ConciergeService;
 use Bayti\Api\Ai\Concierge\ConversationHistory;
+use Bayti\Api\Ai\Concierge\DiscoveryPlanner;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Infrastructure\Cache\KeyValueStore;
@@ -36,7 +37,9 @@ use Psr\Log\LoggerInterface;
  * product payloads) per number live in the KeyValueStore (Redis) under a hashed
  * key with a 30-minute idle TTL, and are passed to the concierge as history so
  * "cheaper" / "in black" refine the previous request. "new" / "reset" /
- * "start over" (en/ar) clears it. Memory fails OPEN: no Redis = no memory, Ain
+ * "start over" (en/ar) clears it. Guided discovery's asked_slots are stored
+ * alongside the history, so Ain asks at most 4 short questions before showing
+ * pieces; "show me what you have" / "أريني ما لديكِ" skips them. Memory fails OPEN: no Redis = no memory, Ain
  * still answers. Follow-ups are offered as plain-text suggestions — the channel
  * only sends text (no interactive quick-reply buttons, and the webhook only
  * reads `text` messages).
@@ -112,17 +115,18 @@ final class WhatsAppConversationService
             return;
         }
 
-        $history = $this->loadHistory($from);
+        [$history, $askedSlots] = $this->loadConversation($from);
 
         try {
-            $result = $this->concierge->ask($text, $locale, self::REPLY_LIMIT, $history);
+            // "show me what you have" (en/ar) is recognised by the planner itself.
+            $result = $this->concierge->ask($text, $locale, self::REPLY_LIMIT, $history, $askedSlots);
         } catch (\Throwable $e) {
             $this->logger->warning('whatsapp.concierge_failed', ['error' => $e->getMessage()]);
             $this->safeSend($from, $this->message($locale, 'fallback'));
             return;
         }
 
-        $this->saveHistory($from, $history->withTurn($text, $result->reply));
+        $this->saveConversation($from, $history->withTurn($text, $result->reply), $result->askedSlots);
 
         $items = $result->items;
         $this->events->recordInteraction(
@@ -157,27 +161,46 @@ final class WhatsAppConversationService
     }
 
     /**
-     * The last {@see ConversationHistory::MAX_TURNS} turns for this number.
-     * Fails OPEN: no Redis / a corrupt value = no memory, Ain still answers.
+     * The last {@see ConversationHistory::MAX_TURNS} turns for this number plus
+     * the guided-discovery asked_slots. Stored as {history, asked_slots}; a
+     * pre-guided-discovery value (a bare history list) loads with asked_slots
+     * null (the planner then infers from the history). No memory at all = a
+     * fresh conversation ([] asked). Fails OPEN: no Redis = no memory and no
+     * guided questions (straight to results), Ain still answers.
+     *
+     * @return array{0: ConversationHistory, 1: list<string>|null}
      */
-    private function loadHistory(string $from): ConversationHistory
+    private function loadConversation(string $from): array
     {
         try {
             $raw = $this->cache->get($this->historyKey($from));
         } catch (KeyValueStoreException $e) {
             $this->logger->warning('whatsapp.history_cache_failure — no memory', ['error' => $e->getMessage()]);
-            return ConversationHistory::empty();
+            // Without memory the answers could never accumulate (Ain would
+            // re-ask forever), so skip guided discovery: straight to results.
+            return [ConversationHistory::empty(), DiscoveryPlanner::SLOTS];
         }
         if ($raw === null || $raw === '') {
-            return ConversationHistory::empty();
+            return [ConversationHistory::empty(), []];
         }
-        return ConversationHistory::fromMixed(json_decode($raw, true));
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded) && array_key_exists('history', $decoded)) {
+            return [
+                ConversationHistory::fromMixed($decoded['history']),
+                DiscoveryPlanner::sanitizeAskedSlots($decoded['asked_slots'] ?? []) ?? [],
+            ];
+        }
+        return [ConversationHistory::fromMixed($decoded), null];
     }
 
-    /** Persist with a sliding idle TTL (each turn re-arms it). Fails open. */
-    private function saveHistory(string $from, ConversationHistory $history): void
+    /**
+     * Persist with a sliding idle TTL (each turn re-arms it). Fails open.
+     *
+     * @param list<string> $askedSlots
+     */
+    private function saveConversation(string $from, ConversationHistory $history, array $askedSlots): void
     {
-        $json = json_encode($history->entries(), JSON_UNESCAPED_UNICODE);
+        $json = json_encode(['history' => $history->entries(), 'asked_slots' => $askedSlots], JSON_UNESCAPED_UNICODE);
         if ($json === false) {
             return;
         }

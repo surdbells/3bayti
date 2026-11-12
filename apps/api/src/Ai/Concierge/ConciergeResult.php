@@ -15,7 +15,11 @@ final class ConciergeResult
 {
     /**
      * @param list<ConciergeItem> $items
-     * @param list<string> $followUps 0-3 short tappable suggestions in the locale
+     * @param list<string> $followUps short tappable suggestions in the locale (question
+     *        turns: up to 8 answer chips; results: up to 6 refine chips)
+     * @param ?string $questionSlot the guided-discovery slot this turn asks (null = not a guided question)
+     * @param list<string> $askedSlots every slot asked so far incl. this turn's; all slots once
+     *        products were shown (the client echoes it back next turn)
      */
     public function __construct(
         public readonly ConciergeIntent $intent,
@@ -23,6 +27,8 @@ final class ConciergeResult
         public readonly string $reply = '',
         public readonly array $followUps = [],
         public readonly bool $needsClarification = false,
+        public readonly ?string $questionSlot = null,
+        public readonly array $askedSlots = [],
     ) {
     }
 

@@ -133,20 +133,21 @@ final class WhatsAppConversationMemoryTest extends TestCase
     {
         $svc = $this->service();
 
-        $svc->handleInbound(self::FROM, 'black abaya');
-        self::assertStringStartsWith('Here are some pieces for “black abaya”.', $this->channel->last());
+        // Specific enough (type + colour + occasion) => straight to products.
+        $svc->handleInbound(self::FROM, 'black abaya for eid');
+        self::assertStringStartsWith('Here are some pieces for “black abaya for eid”.', $this->channel->last());
         self::assertStringContainsString('/product/p-1', $this->channel->last());
-        // Follow-ups offered as text suggestions.
+        // Refine chips offered as text suggestions.
         self::assertStringContainsString('You can reply with:', $this->channel->last());
-        self::assertStringContainsString('• Show me cheaper ones', $this->channel->last());
+        self::assertStringContainsString('• Show more like these', $this->channel->last());
 
         $svc->handleInbound(self::FROM, 'in navy');
         // AI off: the short follow-up is combined with the previous message.
-        self::assertStringStartsWith('Here are some pieces for “black abaya in navy”.', $this->channel->last());
+        self::assertStringStartsWith('Here are some pieces for “black abaya for eid in navy”.', $this->channel->last());
 
         $stored = $this->storedHistory();
         self::assertCount(4, $stored);
-        self::assertSame(['role' => 'user', 'text' => 'black abaya'], $stored[0]);
+        self::assertSame(['role' => 'user', 'text' => 'black abaya for eid'], $stored[0]);
         self::assertSame('ain', $stored[1]['role']);
         self::assertSame('in navy', $stored[2]['text']);
         // Product payloads are never stored — only the reply text.
@@ -183,8 +184,11 @@ final class WhatsAppConversationMemoryTest extends TestCase
         self::assertSame([], $this->storedHistory());
         self::assertStringStartsWith('Fresh start!', $this->channel->last());
 
+        self::assertSame([], $this->storedAskedSlots());
+
+        // The guided flow starts over from the first question.
         $svc->handleInbound(self::FROM, 'in navy');
-        self::assertStringStartsWith('Here are some pieces for “in navy”.', $this->channel->last());
+        self::assertStringStartsWith(ConciergeCopy::question('recipient', 'en'), $this->channel->last());
 
         self::assertTrue(WhatsAppConversationService::isResetCommand('new'));
         self::assertTrue(WhatsAppConversationService::isResetCommand('ابدأ من جديد'));
@@ -200,8 +204,10 @@ final class WhatsAppConversationMemoryTest extends TestCase
         // Simulate the 30-minute idle TTL lapsing.
         $this->store->inner->flushAll();
 
+        // A fresh conversation: guided discovery from the first question.
         $svc->handleInbound(self::FROM, 'in navy');
-        self::assertStringStartsWith('Here are some pieces for “in navy”.', $this->channel->last());
+        self::assertStringStartsWith(ConciergeCopy::question('recipient', 'en'), $this->channel->last());
+        self::assertSame(['recipient'], $this->storedAskedSlots());
     }
 
     #[Test]
@@ -234,10 +240,10 @@ final class WhatsAppConversationMemoryTest extends TestCase
     {
         $svc = $this->service();
 
-        $svc->handleInbound(self::FROM, 'أبحث عن عباية سوداء');
-        self::assertStringStartsWith('إليكِ بعض القطع لـ «أبحث عن عباية سوداء».', $this->channel->last());
+        $svc->handleInbound(self::FROM, 'أبحث عن عباية سوداء للعيد');
+        self::assertStringStartsWith('إليكِ بعض القطع لـ «أبحث عن عباية سوداء للعيد».', $this->channel->last());
         self::assertStringContainsString('يمكنكِ الرد بـ:', $this->channel->last());
-        self::assertStringContainsString('• أريد خيارات أرخص', $this->channel->last());
+        self::assertStringContainsString('• أقل من 300 درهم', $this->channel->last());
 
         $svc->handleInbound(self::FROM, 'مرحبا');
         self::assertStringStartsWith(ConciergeCopy::reply(ConciergeCopy::KIND_GREETING, 'ar'), $this->channel->last());
@@ -246,13 +252,83 @@ final class WhatsAppConversationMemoryTest extends TestCase
         self::assertStringStartsWith('بداية جديدة!', $this->channel->last());
 
         // A Latin-script message stays English.
-        $svc->handleInbound(self::FROM, 'black abaya');
-        self::assertStringStartsWith('Here are some pieces for “black abaya”.', $this->channel->last());
+        $svc->handleInbound(self::FROM, 'black abaya for a wedding');
+        self::assertStringStartsWith('Here are some pieces for “black abaya for a wedding”.', $this->channel->last());
+    }
+
+    #[Test]
+    public function guidedQuestionsPersistAskedSlotsUntilTheShopperSkips(): void
+    {
+        $svc = $this->service();
+
+        $svc->handleInbound(self::FROM, 'abaya');
+        self::assertStringStartsWith(ConciergeCopy::question('recipient', 'en'), $this->channel->last());
+        self::assertStringContainsString('• For me', $this->channel->last());
+        self::assertStringContainsString('• Show me what you have', $this->channel->last());
+        self::assertStringNotContainsString('/product/', $this->channel->last());
+        self::assertSame(['recipient'], $this->storedAskedSlots());
+
+        $svc->handleInbound(self::FROM, 'For me');
+        self::assertStringStartsWith(ConciergeCopy::question('occasion', 'en'), $this->channel->last());
+        self::assertStringContainsString('• Party / evening', $this->channel->last());
+        self::assertSame(['recipient', 'occasion'], $this->storedAskedSlots());
+
+        // The skip phrase, typed as plain text, shows products.
+        $svc->handleInbound(self::FROM, 'show me what you have');
+        self::assertStringContainsString('/product/p-1', $this->channel->last());
+        self::assertSame(['recipient', 'occasion', 'type', 'style_or_colour', 'budget'], $this->storedAskedSlots());
+
+        // Refinements now go straight to results.
+        $svc->handleInbound(self::FROM, 'in navy');
+        self::assertStringContainsString('/product/p-1', $this->channel->last());
+    }
+
+    #[Test]
+    public function theArabicSkipPhraseIsUnderstood(): void
+    {
+        $svc = $this->service();
+        $svc->handleInbound(self::FROM, 'عباية');
+        self::assertStringStartsWith(ConciergeCopy::question('recipient', 'ar'), $this->channel->last());
+
+        $svc->handleInbound(self::FROM, 'أريني ما لديكِ');
+        self::assertStringContainsString('/product/p-1', $this->channel->last());
+    }
+
+    #[Test]
+    public function aMemoryStoredBeforeGuidedDiscoveryStillLoads(): void
+    {
+        // Legacy value: a bare history list that already showed results.
+        $this->store->inner->set('wa:conv:' . hash('sha256', ltrim(self::FROM, '+')), (string) json_encode([
+            ['role' => 'user', 'text' => 'black abaya'],
+            ['role' => 'ain', 'text' => 'Here are some pieces for “black abaya”.'],
+        ]), 1800);
+
+        $this->service()->handleInbound(self::FROM, 'in navy');
+
+        self::assertStringStartsWith('Here are some pieces for “black abaya in navy”.', $this->channel->last());
+        self::assertCount(4, $this->storedHistory());
     }
     // ===== fixtures =====
 
     /** @return list<array{role: string, text: string}> */
     private function storedHistory(): array
+    {
+        $decoded = $this->storedConversation();
+        /** @var list<array{role: string, text: string}> $history */
+        $history = $decoded['history'] ?? [];
+        return $history;
+    }
+
+    /** @return list<string> */
+    private function storedAskedSlots(): array
+    {
+        /** @var list<string> $asked */
+        $asked = $this->storedConversation()['asked_slots'] ?? [];
+        return $asked;
+    }
+
+    /** @return array<string, mixed> */
+    private function storedConversation(): array
     {
         $raw = $this->store->inner->get('wa:conv:' . hash('sha256', ltrim(self::FROM, '+')));
         if ($raw === null) {
@@ -260,7 +336,8 @@ final class WhatsAppConversationMemoryTest extends TestCase
         }
         $decoded = json_decode($raw, true);
         self::assertIsArray($decoded);
-        /** @var list<array{role: string, text: string}> $decoded */
+        self::assertArrayHasKey('history', $decoded);
+        self::assertArrayHasKey('asked_slots', $decoded);
         return $decoded;
     }
 

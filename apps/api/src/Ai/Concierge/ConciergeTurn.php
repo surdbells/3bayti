@@ -15,6 +15,7 @@ final class ConciergeTurn
     /**
      * @param list<string> $followUps sanitised, <= 3, each <= 40 chars
      * @param string $subject what the shopper is asking for, for template replies
+     * @param bool $modelParsed true when the model extracted the intent (false = AI-off/failure keyword path)
      */
     public function __construct(
         public readonly ConciergeIntent $intent,
@@ -23,6 +24,7 @@ final class ConciergeTurn
         public readonly bool $needsClarification,
         public readonly bool $smallTalk,
         public readonly string $subject,
+        public readonly bool $modelParsed = false,
     ) {
     }
 }
