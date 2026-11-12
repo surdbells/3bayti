@@ -7,10 +7,12 @@
     </ion-buttons>
     <ion-title class="m7-title">{{ 'ask_ain_title' | translate }}</ion-title>
     @if (!isFresh) {
-      <ion-buttons slot="end">
+      <ion-buttons slot="end" class="aa-new-chat-slot">
         <ion-button (click)="newChat()" class="aa-new-chat" [attr.aria-label]="'ask_ain_new_chat' | translate">
-          <ax-icon name="message-square-more" />
-          <span class="aa-new-chat__label">{{ 'ask_ain_new_chat' | translate }}</span>
+          <span class="aa-new-chat__content">
+            <ax-icon name="plus" class="aa-new-chat__icon" aria-hidden="true" />
+            <span class="aa-new-chat__label" aria-hidden="true">{{ 'ask_ain_new_chat' | translate }}</span>
+          </span>
         </ion-button>
       </ion-buttons>
     }
@@ -24,9 +26,19 @@
       <div class="aa-orb"><ax-icon name="sparkles" /></div>
       <h1 class="aa-greet">{{ 'ask_ain_greeting' | translate }}</h1>
       <p class="aa-sub">{{ 'ask_ain_subtitle' | translate }}</p>
-      <div class="aa-chips">
-        @for (s of suggestions; track s) {
-          <button type="button" class="aa-chip" (mousedown)="keepComposerFocus($event)" (click)="useSuggestion(s)">{{ s | translate }}</button>
+      <div class="aa-starters">
+        @for (group of starterGroups; track group.title) {
+          <section class="aa-starter-group" role="group" [attr.aria-labelledby]="'aa-group-' + $index">
+            <h2 class="aa-starter-group__title" [id]="'aa-group-' + $index">
+              <ax-icon [name]="group.icon" aria-hidden="true" />
+              {{ group.title | translate }}
+            </h2>
+            <div class="aa-chips">
+              @for (s of group.prompts; track s) {
+                <button type="button" class="aa-chip" (mousedown)="keepComposerFocus($event)" (click)="useSuggestion(s)">{{ s | translate }}</button>
+              }
+            </div>
+          </section>
         }
       </div>
       @if (ainWhatsappEnabled) {
@@ -66,9 +78,14 @@
           <div class="aa-ain">
             <div class="aa-ain-head">
               <span class="aa-ain-avatar" aria-hidden="true"><ax-icon name="sparkles" /></span>
-              <p class="aa-ain-bubble" [class.aa-ain-bubble--ask]="reply.needsClarification">
-                <span class="aa-sr">{{ 'ask_ain_ain_said' | translate }}</span>{{ reply.text }}
-              </p>
+              <div class="aa-ain-body">
+                @if (questionProgress(reply); as progress) {
+                  <p class="aa-progress">{{ progress }}</p>
+                }
+                <p class="aa-ain-bubble" [class.aa-ain-bubble--ask]="reply.needsClarification">
+                  <span class="aa-sr">{{ 'ask_ain_ain_said' | translate }}</span>{{ reply.text }}
+                </p>
+              </div>
             </div>
 
             @if (reply.products.length) {
@@ -119,9 +136,23 @@
             }
 
             @if (reply.id === lastReplyId && reply.followUps.length && !isSending) {
-              <div class="aa-followups" role="group" [attr.aria-label]="'ask_ain_follow_ups_label' | translate">
+              <div
+                class="aa-followups"
+                [class.aa-followups--answers]="reply.questionSlot"
+                role="group"
+                [attr.aria-label]="(reply.questionSlot ? 'ask_ain_answers_label' : 'ask_ain_follow_ups_label') | translate">
                 @for (f of reply.followUps; track $index) {
-                  <button type="button" class="aa-followup" (mousedown)="keepComposerFocus($event)" (click)="useFollowUp(f)">{{ f }}</button>
+                  <button
+                    type="button"
+                    class="aa-followup"
+                    [class.aa-followup--skip]="isSkipChip(f)"
+                    (mousedown)="keepComposerFocus($event)"
+                    (click)="useFollowUp(f)">
+                    @if (isSkipChip(f)) {
+                      <ax-icon name="arrow-right" aria-hidden="true" />
+                    }
+                    {{ f }}
+                  </button>
                 }
               </div>
             }

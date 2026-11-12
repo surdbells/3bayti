@@ -35,15 +35,39 @@
   max-width: 20rem;
   line-height: 1.5;
 }
-.aa-chips { display: flex; flex-direction: column; gap: 0.625rem; width: 100%; max-width: 22rem; }
+/* Grouped starter prompts (Occasions / Gifts / Styles) */
+.aa-starters {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: 100%;
+  max-width: 26rem;
+  text-align: start;
+}
+.aa-starter-group__title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ax-ain-ink-subtle);
+}
+.aa-starter-group__title ax-icon { --ax-icon-size: 0.9rem; width: 0.9rem; height: 0.9rem; color: var(--ax-ain-accent); }
+.aa-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .aa-chip {
   border: 1px solid var(--ax-ain-border);
   background: var(--ax-ain-surface);
   color: var(--ax-color-text-primary, #1a1a1a);
   border-radius: 999px;
-  padding: 0.8rem 1.1rem;
-  font-size: 0.9rem;
-  text-align: left;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.86rem;
+  line-height: 1.3;
+  text-align: start;
+  max-width: 100%;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
@@ -92,6 +116,15 @@
 }
 .aa-ain-avatar ax-icon { --ax-icon-size: 0.95rem; width: 0.95rem; height: 0.95rem; }
 .aa-ain-avatar--muted { opacity: 0.6; }
+.aa-ain-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  min-width: 0;
+  max-width: 82%;
+}
+.aa-ain-head > .aa-ain-bubble { max-width: 82%; }
 .aa-ain-bubble {
   margin: 0;
   background: var(--ax-ain-surface);
@@ -101,8 +134,16 @@
   border-radius: 1.1rem 1.1rem 1.1rem 0.25rem;
   font-size: 0.92rem;
   line-height: 1.45;
-  max-width: 82%;
+  max-width: 100%;
   white-space: pre-line;
+}
+/* Subtle "Question 2 of up to 4" hint above a guided question */
+.aa-progress {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ax-ain-ink-subtle);
 }
 .aa-ain-bubble--ask { border-color: var(--ax-ain-border-sand); background: var(--ax-ain-cream-1); }
 .aa-ain-bubble--error p { margin: 0 0 0.5rem; }
@@ -122,24 +163,40 @@
 .aa-retry:disabled { opacity: 0.5; }
 
 /* Follow-up suggestion chips (tap = send) */
+/* Follow-up / answer chips (tap = send): a wrapping group, never one long row */
 .aa-followups {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
-  margin: 0.25rem 0 0 2.4rem;
+  gap: 0.5rem;
+  margin-block: 0.35rem 0;
+  margin-inline: 2.4rem 0;
 }
 .aa-followup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2.25rem;
+  max-width: 100%;
   border: 1px solid var(--ax-ain-border-sand);
   background: var(--ax-ain-surface);
   color: var(--ax-ain-accent);
   border-radius: 999px;
-  padding: 0.45rem 0.85rem;
-  font-size: 0.82rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.84rem;
   font-weight: 600;
   line-height: 1.2;
+  text-align: start;
   cursor: pointer;
 }
 .aa-followup:active { background: var(--ax-ain-cream-pressed); }
+/* "Show me what you have": the way out of the guided questions, set apart */
+.aa-followup--skip {
+  background: var(--aa-brand);
+  border-color: var(--aa-brand);
+  color: #fff;
+}
+.aa-followup--skip:active { background: var(--aa-brand); opacity: 0.85; }
+.aa-followup--skip ax-icon { --ax-icon-size: 0.9rem; width: 0.9rem; height: 0.9rem; flex: none; }
 
 /* Typing indicator */
 .aa-thinking {
@@ -176,10 +233,66 @@
   .aa-typing i { animation: none; opacity: 0.7; }
 }
 
-/* New chat (header) */
-.aa-new-chat { --color: var(--ax-ain-accent); font-size: 0.85rem; text-transform: none; }
-.aa-new-chat ax-icon { --ax-icon-size: 1.15rem; width: 1.15rem; height: 1.15rem; }
-.aa-new-chat__label { margin-left: 0.3rem; font-weight: 600; }
+/*
+ * New chat (header). A compact pill that never wraps or squashes: the slot
+ * does not shrink in the toolbar flex row, the label stays on one line, and
+ * the height is fixed. On very narrow screens it collapses to the icon only
+ * (the aria-label on the button keeps its accessible name).
+ */
+.aa-new-chat-slot {
+  flex: 0 0 auto;
+  margin-inline-end: 0.35rem;
+}
+.aa-new-chat {
+  --color: var(--ax-ain-accent);
+  --color-activated: var(--ax-ain-accent);
+  --background: transparent;
+  --background-activated: var(--ax-ain-cream-pressed);
+  --background-hover: var(--ax-ain-cream-1);
+  --border-radius: 999px;
+  --padding-start: 0.75rem;
+  --padding-end: 0.85rem;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  --box-shadow: none;
+  flex: 0 0 auto;
+  /* global.scss fixes every toolbar ion-button at 40px wide (icon buttons);
+     this pill must size to its label instead or the label is clipped. */
+  width: auto;
+  min-width: max-content;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+.aa-new-chat::part(native) {
+  width: auto;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  border: 1px solid var(--ax-ain-border-sand);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.aa-new-chat__content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  line-height: 1;
+}
+.aa-new-chat__icon { --ax-icon-size: 1rem; width: 1rem; height: 1rem; flex: none; }
+.aa-new-chat__label { white-space: nowrap; line-height: 1; }
+
+@media (max-width: 360px) {
+  .aa-new-chat { --padding-start: 0; --padding-end: 0; width: 2.25rem; min-width: 2.25rem; }
+  .aa-new-chat::part(native) { width: 2.25rem; }
+  .aa-new-chat__content { justify-content: center; width: 100%; }
+  .aa-new-chat__label { display: none; }
+}
 
 .aa-grid { padding: 0; }
 

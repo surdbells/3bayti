@@ -9,6 +9,7 @@ import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
 import { SESSION_PERSISTENCE, SessionStore, type SessionPersistence } from '../../core/services/session-store.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { WishlistService } from '../../core/services/wishlist.service';
+import { I18nService } from '../../i18n.service';
 
 class MemoryPersistence implements SessionPersistence {
   constructor(public value: string | null) {}
@@ -85,7 +86,14 @@ describe('AskAinPage conversation', () => {
     await setup();
     const { el, page } = create();
     expect(page.isFresh).toBeTrue();
-    expect(el.querySelectorAll('.aa-chip').length).toBe(3);
+    // Grouped starter prompts: Occasions / Gifts / Styles, 4 chips each.
+    expect(el.querySelectorAll('.aa-starter-group').length).toBe(3);
+    expect(Array.from(el.querySelectorAll('.aa-starter-group__title')).map((h) => h.textContent?.trim())).toEqual([
+      'ask_ain_group_occasions',
+      'ask_ain_group_gifts',
+      'ask_ain_group_styles',
+    ]);
+    expect(el.querySelectorAll('.aa-chip').length).toBe(12);
     // The thread's own live region is off (a whole turn with every card would
     // be read out); a separate polite line announces Ain's reply only.
     expect(el.querySelector('[role="log"][aria-live="off"]')).not.toBeNull();
@@ -190,15 +198,103 @@ describe('AskAinPage conversation', () => {
     expect(second.el.querySelector('.aa-ain-bubble')?.textContent).toContain('Found these.');
   });
 
-  it('New chat resets to the greeting state', async () => {
+  it('New chat resets to the greeting state and forgets the guided questions', async () => {
     const { concierge } = await setup();
-    concierge.and.returnValue(ok({ interaction_id: 3, products: [], reply: 'Hi there!', follow_ups: [] }));
+    concierge.and.returnValue(
+      ok({ interaction_id: 3, products: [], reply: 'Who is it for?', follow_ups: ['For me'], needs_clarification: true, question_slot: 'recipient', asked_slots: ['recipient'] }),
+    );
     const { fixture, page, el } = create();
     await page.ask('hi');
+    fixture.detectChanges();
+    expect(el.querySelector('.aa-new-chat')).not.toBeNull();
     page.newChat();
     fixture.detectChanges();
     expect(page.isFresh).toBeTrue();
-    expect(el.querySelectorAll('.aa-chip').length).toBe(3);
+    expect(el.querySelectorAll('.aa-chip').length).toBe(12);
+    expect(el.querySelector('.aa-new-chat')).toBeNull();
+
+    await page.ask('abaya');
+    expect(concierge.calls.mostRecent().args[0].asked_slots).toEqual([]);
+    expect(concierge.calls.mostRecent().args[0].history).toBeUndefined();
+  });
+
+  it('a grouped starter prompt sends its text as the first message', async () => {
+    const { concierge } = await setup();
+    concierge.and.returnValue(ok({ interaction_id: 3, products: [], reply: 'Lovely!', follow_ups: [] }));
+    const { fixture, el } = create();
+    const gifts = el.querySelectorAll('.aa-starter-group')[1];
+    (gifts.querySelectorAll('.aa-chip')[1] as HTMLButtonElement).click();
+    await fixture.whenStable();
+    await settle();
+    expect(concierge.calls.mostRecent().args[0].query).toBe('ask_ain_starter_gift_mum');
+  });
+
+  it('renders a guided question with progress, wrapping answer chips and a distinct skip chip', async () => {
+    const { concierge } = await setup();
+    concierge.and.returnValue(
+      ok({
+        interaction_id: 8,
+        products: [],
+        reply: 'What is the occasion?',
+        follow_ups: ['Eid', 'Wedding', 'Everyday', 'No preference', 'Show me what you have'],
+        needs_clarification: true,
+        question_slot: 'occasion',
+        asked_slots: ['recipient', 'occasion'],
+      }),
+    );
+    const { fixture, page, el } = create();
+    const i18n = TestBed.inject(I18nService);
+    spyOn(i18n, 't').and.callThrough();
+    await page.ask('a gift');
+    fixture.detectChanges();
+
+    expect(el.querySelector('.aa-ain-bubble--ask')?.textContent).toContain('What is the occasion?');
+    expect(el.querySelector('.aa-progress')).not.toBeNull();
+    expect(i18n.t).toHaveBeenCalledWith('ask_ain_question_progress', { current: 2, total: 4 });
+    expect(el.querySelector('.aa-followups--answers')).not.toBeNull();
+    expect(el.querySelectorAll('.aa-followup').length).toBe(5);
+    const skip = el.querySelectorAll('.aa-followup--skip');
+    expect(skip.length).toBe(1);
+    expect(skip[0].textContent?.trim()).toBe('Show me what you have');
+    expect(el.querySelectorAll('.m6d-product-card').length).toBe(0);
+  });
+
+  it('answer chips echo asked_slots; the skip chip also sends show_now', async () => {
+    const { concierge } = await setup();
+    concierge.and.returnValue(
+      ok({ interaction_id: 8, products: [], reply: 'What is the occasion?', follow_ups: ['Eid', 'Show me what you have'], needs_clarification: true, question_slot: 'occasion', asked_slots: ['recipient', 'occasion'] }),
+    );
+    const { fixture, page, el } = create();
+    await page.ask('a gift');
+    fixture.detectChanges();
+
+    concierge.and.returnValue(
+      ok({ interaction_id: 9, products: [], reply: 'Any style or colour?', follow_ups: ['Pastels', 'Show me what you have'], needs_clarification: true, question_slot: 'style_or_colour', asked_slots: ['recipient', 'occasion', 'style_or_colour'] }),
+    );
+    (el.querySelector('.aa-followup:not(.aa-followup--skip)') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    await settle();
+    let body = concierge.calls.mostRecent().args[0];
+    expect(body.query).toBe('Eid');
+    expect(body.asked_slots).toEqual(['recipient', 'occasion']);
+    expect(body.show_now).toBeUndefined();
+    fixture.detectChanges();
+
+    concierge.and.returnValue(ok({ interaction_id: 10, products: [CARD], reply: 'Here you go.', follow_ups: ['In black', 'Under 300 AED'] }));
+    (el.querySelector('.aa-followup--skip') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    await settle();
+    body = concierge.calls.mostRecent().args[0];
+    expect(body.query).toBe('Show me what you have');
+    expect(body.show_now).toBeTrue();
+    expect(body.asked_slots).toEqual(['recipient', 'occasion', 'style_or_colour']);
+
+    fixture.detectChanges();
+    // Results turn: products + refine chips, no progress hint, only the newest turn's chips.
+    expect(el.querySelectorAll('.m6d-product-card').length).toBe(1);
+    expect(Array.from(el.querySelectorAll('.aa-followup')).map((b) => b.textContent?.trim())).toEqual(['In black', 'Under 300 AED']);
+    expect(el.querySelectorAll('.aa-progress').length).toBe(0); // only the newest question shows its hint (matches web)
+    expect(el.querySelector('.aa-followups--answers')).toBeNull();
   });
 
   it('opening a product records the click with that turn\'s interaction id', async () => {

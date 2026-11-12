@@ -52,6 +52,13 @@ export interface AinReplyTurn {
   needsClarification: boolean;
   /** Interaction id of this reply (threads the analytics events per turn). */
   interactionId: number | null;
+  /**
+   * The discovery slot this turn asks about (guided question), or null when
+   * Ain showed products / answered small talk. Older APIs never send it.
+   */
+  questionSlot?: AinSlot | null;
+  /** Every slot Ain has asked so far (echoed back on the next request). */
+  askedSlots?: AinSlot[];
 }
 
 /** A failed request: rendered as an Ain-style error bubble with Retry. */
@@ -60,6 +67,8 @@ export interface AinErrorTurn {
   role: 'error';
   /** The query to resend on Retry. */
   query: string;
+  /** Whether that query was the "show me what you have" skip. */
+  showNow?: boolean;
 }
 
 export type AinTurn = AinUserTurn | AinReplyTurn | AinErrorTurn;
@@ -77,11 +86,69 @@ export interface AinAskContext {
   authToken?: string;
 }
 
+/** The guided-discovery slots the concierge may ask about, in priority order. */
+export const AIN_SLOTS = ['recipient', 'occasion', 'type', 'style_or_colour', 'budget'] as const;
+export type AinSlot = (typeof AIN_SLOTS)[number];
+/** Ain asks at most this many guided questions before showing products. */
+export const AIN_MAX_QUESTIONS = 4;
+
+/** Options for one send. */
+export interface AinSendOptions {
+  /** The customer tapped "Show me what you have": skip the remaining questions. */
+  showNow?: boolean;
+}
+
+/**
+ * The "Show me what you have" skip chip in both locales, plus close variants
+ * the server may phrase, so tapping the server's chip maps to `show_now`
+ * whatever the app language is.
+ */
+const SKIP_PHRASES = [
+  'show me what you have',
+  'show me what you’ve got',
+  'show me what you have got',
+  'just show me',
+  'أرني ما لديك',
+  'أريني ما لديك',
+  'أرني ما عندك',
+  'أريني ما عندك',
+  'اعرضي لي ما لديك',
+  'اعرض لي ما لديك',
+];
+
+function normalisePhrase(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[ً-ْـ]/g, '') // Arabic diacritics + tatweel
+    .replace(/[.!?؟،,…'"“”]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const SKIP_SET = new Set(SKIP_PHRASES.map(normalisePhrase));
+
+/** Keep only known slots, de-duplicated, at most 5. */
+export function sanitiseSlots(value: unknown): AinSlot[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const out: AinSlot[] = [];
+  for (const v of value) {
+    if (typeof v === 'string' && (AIN_SLOTS as readonly string[]).includes(v) && !out.includes(v as AinSlot)) {
+      out.push(v as AinSlot);
+    }
+  }
+  return out.slice(0, AIN_SLOTS.length);
+}
+
 /** The server keeps (and we send) only the last 8 conversation entries. */
 export const AIN_HISTORY_LIMIT = 8;
 /** Per-entry cap, matching the server's truncation. */
 export const AIN_TEXT_LIMIT = 500;
-const FOLLOW_UP_LIMIT = 3;
+/** Guided-question turns carry answer chips + "No preference" + the skip chip. */
+const QUESTION_FOLLOW_UP_LIMIT = 8;
+/** Results turns carry up to 6 refine chips. */
+const RESULTS_FOLLOW_UP_LIMIT = 6;
 const FOLLOW_UP_CHARS = 40;
 const REPLY_CHARS = 600;
 
@@ -202,16 +269,42 @@ export class AskAinThreadService {
    * promise. Resolves true once Ain's reply (or the error bubble) is in the
    * thread, false when the message was refused.
    */
-  async send(text: string, ctx: AinAskContext | Promise<AinAskContext>): Promise<boolean> {
+  async send(
+    text: string,
+    ctx: AinAskContext | Promise<AinAskContext>,
+    options: AinSendOptions = {},
+  ): Promise<boolean> {
     const query = (text ?? '').trim().slice(0, AIN_TEXT_LIMIT);
     if (!query || this.pending()) {
       return false;
     }
     this.ensureOwner();
     const history = this.history();
+    const askedSlots = this.askedSlots();
     this.append({ id: this.nextId++, role: 'user', text: query });
-    await this.request(query, history, ctx);
+    await this.request(query, history, askedSlots, options.showNow === true, ctx);
     return true;
+  }
+
+  /**
+   * Slots Ain has asked so far in this thread: the `asked_slots` of the newest
+   * Ain reply (the server returns the full running list each turn). Empty on a
+   * fresh thread, so "New chat" resets the guided questions too.
+   */
+  askedSlots(turns: readonly AinTurn[] = this.turns()): AinSlot[] {
+    for (let i = turns.length - 1; i >= 0; i--) {
+      const turn = turns[i];
+      if (turn.role === 'ain') {
+        return [...(turn.askedSlots ?? [])];
+      }
+    }
+    return [];
+  }
+
+  /** Whether a chip is the "Show me what you have" skip (maps to `show_now`). */
+  isSkipChip(text: string): boolean {
+    const n = normalisePhrase(text ?? '');
+    return n !== '' && (SKIP_SET.has(n) || n === normalisePhrase(this.i18n.t('ask_ain_show_now')));
   }
 
   /**
@@ -235,8 +328,9 @@ export class AskAinThreadService {
     this.turns.set(remaining);
     // History is everything before the customer's (still shown) message.
     const last = remaining[remaining.length - 1];
-    const history = this.history(last?.role === 'user' ? remaining.slice(0, -1) : remaining);
-    await this.request(failed.query, history, ctx);
+    const before = last?.role === 'user' ? remaining.slice(0, -1) : remaining;
+    const history = this.history(before);
+    await this.request(failed.query, history, this.askedSlots(before), failed.showNow === true, ctx);
     return true;
   }
 
@@ -249,6 +343,8 @@ export class AskAinThreadService {
   private async request(
     query: string,
     history: AinHistoryEntry[],
+    askedSlots: AinSlot[],
+    showNow: boolean,
     ctxOrPromise: AinAskContext | Promise<AinAskContext>,
   ): Promise<void> {
     this.pending.set(true);
@@ -270,6 +366,13 @@ export class AskAinThreadService {
       if (history.length) {
         body['history'] = history;
       }
+      // Stateless guided discovery: echo what Ain already asked.
+      // Always sent (even []): a missing field means a legacy client to the
+      // server, which then offers only the compact chip set.
+      body['asked_slots'] = askedSlots;
+      if (showNow) {
+        body['show_now'] = true;
+      }
       const opts = ctx.authToken ? { authToken: ctx.authToken } : {};
       res = await firstValueFrom(this.network.post_v3('POST /ai/concierge/style', body, opts));
     } catch {
@@ -284,18 +387,37 @@ export class AskAinThreadService {
     if (res?.response_code === 200 && res?.status === 'success' && res?.data) {
       this.append(this.toReply(res.data));
     } else {
-      this.append({ id: this.nextId++, role: 'error', query });
+      this.append({ id: this.nextId++, role: 'error', query, ...(showNow ? { showNow: true } : {}) });
     }
   }
 
   private toReply(data: any): AinReplyTurn {
     const products: AinCard[] = Array.isArray(data.products) ? (data.products as AinCard[]) : [];
-    const followUps: string[] = Array.isArray(data.follow_ups)
-      ? data.follow_ups
-          .map((f: unknown) => cleanText(f, FOLLOW_UP_CHARS))
-          .filter((f: string) => f !== '')
-          .slice(0, FOLLOW_UP_LIMIT)
-      : [];
+    const rawSlot = sanitiseSlots([data.question_slot]);
+    // A guided question never comes with products.
+    const questionSlot: AinSlot | null = rawSlot.length && !products.length ? rawSlot[0] : null;
+    const askedSlots = sanitiseSlots(data.asked_slots);
+    if (questionSlot && !askedSlots.includes(questionSlot) && askedSlots.length < AIN_SLOTS.length) {
+      askedSlots.push(questionSlot);
+    }
+    const limit = questionSlot ? QUESTION_FOLLOW_UP_LIMIT : RESULTS_FOLLOW_UP_LIMIT;
+    const followUps: string[] = [];
+    if (Array.isArray(data.follow_ups)) {
+      for (const f of data.follow_ups) {
+        const chip = cleanText(f, FOLLOW_UP_CHARS);
+        if (chip && !followUps.includes(chip)) {
+          followUps.push(chip);
+        }
+      }
+    }
+    followUps.splice(limit);
+    // A guided question always offers the way out ("Show me what you have").
+    if (questionSlot && !followUps.some((f) => this.isSkipChip(f))) {
+      if (followUps.length >= limit) {
+        followUps.pop();
+      }
+      followUps.push(this.i18n.t('ask_ain_show_now'));
+    }
     let text = cleanText(data.reply, REPLY_CHARS);
     if (!text) {
       // Older API without `reply`: a localized line describing the result.
@@ -307,8 +429,10 @@ export class AskAinThreadService {
       text,
       products,
       followUps,
-      needsClarification: data.needs_clarification === true,
+      needsClarification: data.needs_clarification === true || questionSlot !== null,
       interactionId: typeof data.interaction_id === 'number' ? data.interaction_id : null,
+      questionSlot,
+      askedSlots,
     };
   }
 

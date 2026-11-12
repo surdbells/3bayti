@@ -44,7 +44,7 @@ describe('AskAinThreadService', () => {
 
     const [route, body, opts] = adapter.post_v3.calls.mostRecent().args;
     expect(route).toBe('POST /ai/concierge/style');
-    expect(body).toEqual({ query: 'black abaya', locale: 'en', session_id: 's-1', channel: 'MOBILE' });
+    expect(body).toEqual({ query: 'black abaya', locale: 'en', session_id: 's-1', channel: 'MOBILE', asked_slots: [] });
     expect(opts).toEqual({ authToken: 'tok' });
     const turns = thread.turns();
     expect(turns.map((t) => t.role)).toEqual(['user', 'ain']);
@@ -110,8 +110,135 @@ describe('AskAinThreadService', () => {
     await thread.send('hi', CTX);
     const ain = thread.turns()[1] as AinReplyTurn;
     expect(ain.text).toBe('Hi see now');
-    expect(ain.followUps.length).toBe(3);
+    expect(ain.followUps).toEqual(['a', 'y'.repeat(40), 'c', 'd']);
     expect(ain.followUps[1].length).toBe(40);
+  });
+
+  it('keeps up to 6 refine chips on a results turn', async () => {
+    const { thread, adapter } = setup();
+    adapter.post_v3.and.returnValue(
+      of(reply('Found these.', { products: [{ id: 1, name: 'Abaya' }], follow_ups: ['1', '2', '3', '4', '5', '6', '7', '8'] })),
+    );
+    await thread.send('abaya', CTX);
+    const ain = thread.turns()[1] as AinReplyTurn;
+    expect(ain.followUps).toEqual(['1', '2', '3', '4', '5', '6']);
+    expect(ain.questionSlot).toBeNull();
+    expect(ain.needsClarification).toBeFalse();
+  });
+
+  describe('guided discovery', () => {
+    const ANSWERS = ['Eid', 'Wedding', 'Everyday', 'Work', 'Ramadan', 'Party/evening', 'No preference', 'Show me what you have', 'Extra'];
+
+    function question(slot: string, asked: unknown, extra: Record<string, unknown> = {}) {
+      return reply('What is the occasion?', {
+        question_slot: slot,
+        asked_slots: asked,
+        needs_clarification: true,
+        follow_ups: ANSWERS,
+        ...extra,
+      });
+    }
+
+    it('reads a question turn: slot, running asked_slots and up to 8 answer chips incl. the skip chip', async () => {
+      const { thread, adapter } = setup();
+      adapter.post_v3.and.returnValue(of(question('occasion', ['recipient', 'occasion', 'bogus', 'occasion'])));
+      await thread.send('a gift', CTX);
+      const ain = thread.turns()[1] as AinReplyTurn;
+      expect(ain.questionSlot).toBe('occasion');
+      expect(ain.askedSlots).toEqual(['recipient', 'occasion']);
+      expect(ain.needsClarification).toBeTrue();
+      expect(ain.products).toEqual([]);
+      expect(ain.followUps.length).toBe(8);
+      expect(ain.followUps).toContain('No preference');
+      expect(ain.followUps).toContain('Show me what you have');
+    });
+
+    it('echoes the previous response asked_slots on the next message (unknown values dropped)', async () => {
+      const { thread, adapter } = setup();
+      adapter.post_v3.and.returnValue(of(question('recipient', ['recipient'])));
+      await thread.send('something nice', CTX);
+      // First request: nothing asked yet, but always sent (absent = legacy client).
+      expect(adapter.post_v3.calls.mostRecent().args[1].asked_slots).toEqual([]);
+
+      adapter.post_v3.and.returnValue(of(question('occasion', ['recipient', 'occasion', 'nope'])));
+      await thread.send('A gift', CTX);
+      expect(adapter.post_v3.calls.mostRecent().args[1].asked_slots).toEqual(['recipient']);
+
+      adapter.post_v3.and.returnValue(of(reply('Here you go.', { products: [{ id: 1, name: 'A' }], asked_slots: ['recipient', 'occasion'] })));
+      await thread.send('Eid', CTX);
+      const body = adapter.post_v3.calls.mostRecent().args[1];
+      expect(body.asked_slots).toEqual(['recipient', 'occasion']);
+      expect(body.show_now).toBeUndefined();
+    });
+
+    it('sends show_now only when asked (the skip chip)', async () => {
+      const { thread, adapter } = setup();
+      adapter.post_v3.and.returnValue(of(question('recipient', ['recipient'])));
+      await thread.send('abaya', CTX);
+      adapter.post_v3.and.returnValue(of(reply('Here you go.', { products: [{ id: 1, name: 'A' }], asked_slots: ['recipient'] })));
+      await thread.send('Show me what you have', CTX, { showNow: true });
+      const body = adapter.post_v3.calls.mostRecent().args[1];
+      expect(body.show_now).toBeTrue();
+      expect(body.asked_slots).toEqual(['recipient']);
+    });
+
+    it('adds the skip chip to a question turn when the server left it out', async () => {
+      const { thread, adapter } = setup();
+      adapter.post_v3.and.returnValue(of(question('budget', ['budget'], { follow_ups: ['Under 300 AED', 'No preference'] })));
+      await thread.send('abaya', CTX);
+      const ain = thread.turns()[1] as AinReplyTurn;
+      expect(ain.followUps).toEqual(['Under 300 AED', 'No preference', 'ask_ain_show_now']);
+      expect(thread.isSkipChip(ain.followUps[2])).toBeTrue();
+    });
+
+    it('works with an older API (no question_slot / asked_slots): no slots echoed, chips as sent', async () => {
+      const { thread, adapter } = setup();
+      adapter.post_v3.and.returnValue(of(reply('Who is it for?', { needs_clarification: true, follow_ups: ['My sister'] })));
+      await thread.send('a gift', CTX);
+      const ain = thread.turns()[1] as AinReplyTurn;
+      expect(ain.questionSlot).toBeNull();
+      expect(ain.askedSlots).toEqual([]);
+      expect(ain.followUps).toEqual(['My sister']);
+      await thread.send('My sister', CTX);
+      expect(adapter.post_v3.calls.mostRecent().args[1].asked_slots).toEqual([]);
+    });
+
+    it('recognises the skip chip in English and Arabic', () => {
+      const { thread } = setup();
+      expect(thread.isSkipChip('Show me what you have')).toBeTrue();
+      expect(thread.isSkipChip('show me what you have!')).toBeTrue();
+      expect(thread.isSkipChip('أريني ما لديكِ')).toBeTrue();
+      expect(thread.isSkipChip('أرني ما لديك')).toBeTrue();
+      expect(thread.isSkipChip('Show me cheaper ones')).toBeFalse();
+      expect(thread.isSkipChip('No preference')).toBeFalse();
+    });
+
+    it('reset (New chat) forgets the asked slots', async () => {
+      const { thread, adapter } = setup();
+      adapter.post_v3.and.returnValue(of(question('occasion', ['recipient', 'occasion'])));
+      await thread.send('a gift', CTX);
+      expect(thread.askedSlots()).toEqual(['recipient', 'occasion']);
+      thread.reset();
+      expect(thread.askedSlots()).toEqual([]);
+      await thread.send('abaya', CTX);
+      expect(adapter.post_v3.calls.mostRecent().args[1].asked_slots).toEqual([]);
+    });
+
+    it('a retry resends show_now and the asked slots of the failed turn', async () => {
+      const { thread, adapter } = setup();
+      adapter.post_v3.and.returnValue(of(question('occasion', ['recipient', 'occasion'])));
+      await thread.send('a gift', CTX);
+      adapter.post_v3.and.returnValue(throwError(() => new Error('offline')));
+      await thread.send('Show me what you have', CTX, { showNow: true });
+      const errorId = thread.turns()[3].id;
+
+      adapter.post_v3.and.returnValue(of(reply('Here you go.', { products: [{ id: 1, name: 'A' }] })));
+      await thread.retry(errorId, CTX);
+      const body = adapter.post_v3.calls.mostRecent().args[1];
+      expect(body.query).toBe('Show me what you have');
+      expect(body.show_now).toBeTrue();
+      expect(body.asked_slots).toEqual(['recipient', 'occasion']);
+    });
   });
 
   it('falls back to a localized line when the API sends no reply', async () => {

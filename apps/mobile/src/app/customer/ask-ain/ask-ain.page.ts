@@ -30,6 +30,7 @@ import { Labels } from '../../class/labels';
 import { cfImage } from '../../shared/cf-image';
 import { AIN_WHATSAPP, ainWhatsappLink } from '../../core/constants/support.constants';
 import {
+  AIN_MAX_QUESTIONS,
   AinAskContext,
   AinCard,
   AinErrorTurn,
@@ -77,8 +78,45 @@ export class AskAinPage implements OnInit, OnDestroy {
   /** Expose cfImage for the template. */
   readonly cfImage = cfImage;
 
-  /** Prompt chips shown on the empty state (i18n keys). */
-  readonly suggestions = ['ask_ain_chip_wedding', 'ask_ain_chip_eid_gift', 'ask_ain_chip_casual_beige'];
+  /**
+   * Grouped starter prompts shown on the empty state (i18n keys). Tapping one
+   * sends its text as the customer's first message.
+   */
+  readonly starterGroups: ReadonlyArray<{ title: string; icon: string; prompts: readonly string[] }> = [
+    {
+      title: 'ask_ain_group_occasions',
+      icon: 'sparkles',
+      prompts: [
+        'ask_ain_chip_wedding',
+        'ask_ain_starter_eid_outfit',
+        'ask_ain_starter_ramadan_evening',
+        'ask_ain_starter_work_everyday',
+      ],
+    },
+    {
+      title: 'ask_ain_group_gifts',
+      icon: 'gift',
+      prompts: [
+        'ask_ain_chip_eid_gift',
+        'ask_ain_starter_gift_mum',
+        'ask_ain_starter_gift_bride',
+        'ask_ain_starter_gift_friend',
+      ],
+    },
+    {
+      title: 'ask_ain_group_styles',
+      icon: 'shirt',
+      prompts: [
+        'ask_ain_chip_casual_beige',
+        'ask_ain_starter_embellished_kaftan',
+        'ask_ain_starter_minimal_set',
+        'ask_ain_starter_pastel_dress',
+      ],
+    },
+  ];
+
+  /** Upper bound of guided questions (shown in the progress hint). */
+  readonly maxQuestions = AIN_MAX_QUESTIONS;
 
   readonly thread = inject(AskAinThreadService);
 
@@ -218,9 +256,32 @@ export class AskAinPage implements OnInit, OnDestroy {
     void this.ask(this.i18n.t(key));
   }
 
-  /** Tap on a follow-up chip: send it as the customer's next message. */
+  /**
+   * Tap on a follow-up / answer chip: send it as the customer's next message.
+   * The "Show me what you have" chip also tells Ain to skip the remaining
+   * guided questions (`show_now`).
+   */
   useFollowUp(text: string): void {
-    void this.ask(text);
+    void this.ask(text, this.isSkipChip(text));
+  }
+
+  /** Whether a chip is the "Show me what you have" skip chip (styled apart). */
+  isSkipChip(text: string): boolean {
+    return this.thread.isSkipChip(text);
+  }
+
+  /**
+   * "Question 2 of up to 4" for a guided-question turn, or '' for any other
+   * turn (results, small talk, or an older API without `question_slot`).
+   */
+  questionProgress(turn: AinReplyTurn): string {
+    // Only the newest question shows the hint (matches web).
+    if (!turn.questionSlot || turn.id !== this.lastReplyId) {
+      return '';
+    }
+    const asked = turn.askedSlots?.length ?? 0;
+    const current = Math.min(Math.max(asked, 1), AIN_MAX_QUESTIONS);
+    return this.i18n.t('ask_ain_question_progress', { current, total: AIN_MAX_QUESTIONS });
   }
 
   submit(): void {
@@ -235,7 +296,7 @@ export class AskAinPage implements OnInit, OnDestroy {
     }
   }
 
-  async ask(text: string): Promise<void> {
+  async ask(text: string, showNow = false): Promise<void> {
     const query = (text ?? '').trim();
     // Keep focus (and the keyboard) in the composer whatever was tapped.
     this.focusComposer();
@@ -246,7 +307,7 @@ export class AskAinPage implements OnInit, OnDestroy {
     this.messageText = '';
     // The user bubble + typing indicator appear synchronously inside send();
     // the context (session id, token) resolves while Ain is "typing".
-    const done = this.thread.send(query, this.context());
+    const done = this.thread.send(query, this.context(), showNow ? { showNow: true } : {});
     this.scrollToEnd();
     if (!(await done)) {
       // Refused (another message in flight): give the typed text back.
