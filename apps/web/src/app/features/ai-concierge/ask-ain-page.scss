@@ -74,20 +74,36 @@
   box-shadow: 0 0 0 3px rgba(177, 143, 31, 0.15);
 }
 
+/* A true circle centred on the input: fixed square size (the form's stretch
+   alignment used to make it as tall as the input, i.e. an oval). */
 .ask-ain__send {
   flex: 0 0 auto;
-  width: 3.1rem;
-  border: none;
+  align-self: center;
+  width: 3rem;
+  height: 3rem;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid transparent;
   border-radius: 50%;
   display: grid;
   place-items: center;
   color: #fff;
   background: var(--color-brand-700, #5a3a2c);
   cursor: pointer;
-  transition: background 0.15s ease, opacity 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 .ask-ain__send:hover:not(:disabled) { background: var(--color-brand-500, #b18f1f); }
-.ask-ain__send:disabled { opacity: 0.45; cursor: default; }
+.ask-ain__send:focus-visible {
+  outline: 2px solid var(--color-brand-500, #b18f1f);
+  outline-offset: 2px;
+}
+/* Disabled (empty message): a quiet outlined circle, not a washed-out fill. */
+.ask-ain__send:disabled {
+  cursor: default;
+  color: var(--color-text-secondary, #8a7a6c);
+  background: var(--color-bg-surface, #fff);
+  border-color: var(--color-border, #e7ded2);
+}
 
 /* ── Starter prompts (grouped) ──────────────────────────────────────── */
 .ask-ain__starters {
