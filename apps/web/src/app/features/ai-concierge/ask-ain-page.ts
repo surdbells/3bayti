@@ -28,60 +28,24 @@ export interface AinChip {
   skip: boolean;
 }
 
-/** A titled group of empty-state starter prompts (i18n keys). */
-export interface StarterGroup {
-  id: string;
-  title: string;
-  chips: string[];
-}
-
-/** Empty-state starter prompts, grouped. Tapping one sends its localized text. */
-export const STARTER_GROUPS: readonly StarterGroup[] = [
-  {
-    id: 'occasions',
-    title: 'askAin.starters.occasions.title',
-    chips: [
-      'askAin.starters.occasions.wedding',
-      'askAin.starters.occasions.eid',
-      'askAin.starters.occasions.ramadan',
-      'askAin.starters.occasions.work',
-      'askAin.starters.occasions.evening',
-    ],
-  },
-  {
-    id: 'gifts',
-    title: 'askAin.starters.gifts.title',
-    chips: [
-      'askAin.starters.gifts.sister',
-      'askAin.starters.gifts.mother',
-      'askAin.starters.gifts.friend',
-      'askAin.starters.gifts.bride',
-    ],
-  },
-  {
-    id: 'styles',
-    title: 'askAin.starters.styles.title',
-    chips: [
-      'askAin.starters.styles.casualBeige',
-      'askAin.starters.styles.classicBlack',
-      'askAin.starters.styles.pastel',
-      'askAin.starters.styles.embellished',
-      'askAin.starters.styles.minimal',
-    ],
-  },
-];
-
 /**
  * "Ask Ain" — 3bayti's AI style & gifting concierge (web), as a chat thread.
  *
+ * The conversation starts with Ain: a local opening bubble (no API call, never
+ * stored or sent as history, no preselected chips) is always the first thing
+ * in the thread. Everything else (questions, answer chips, replies, product
+ * cards, refine chips, no-results, errors with Retry, the typing indicator)
+ * also renders inside the thread; only the page header and the composer sit
+ * outside it.
+ *
  * Each customer message is answered by Ain with a short reply, REAL in-stock
  * ranked products (each with Ain's one-line reason, rendered with the shared
- * ui-product-card) and tappable follow-up suggestions. The last 8 turns (text
+ * ui-product-card) and tappable follow-up suggestions. The last 12 turns (text
  * only) go back to the API as history so refinements like "cheaper" or "in
  * black" keep the earlier constraints. The thread lives in a root service
  * (+ sessionStorage), so it survives opening a product and coming back.
- * Guided discovery: the server may answer with ONE question at a time (a
- * question_slot + answer chips, no products) before showing results; the
+ * Guided discovery: the server asks ONE question per turn (a question_slot +
+ * answer chips, no products; up to 6) before showing results; the
  * page echoes the last response's asked_slots on every send and sends
  * show_now when the customer taps "Show me what you have".
  * Works for guests; personalises when signed in. Navigation is slug-based via
@@ -109,10 +73,7 @@ export class AskAinPageComponent implements OnInit {
 
   readonly query = signal('');
 
-  /** Grouped starter prompts (i18n keys) shown on the empty state. */
-  readonly starterGroups = STARTER_GROUPS;
-
-  /** Upper bound shown in the "Question n of up to 4" hint. */
+  /** Upper bound shown in the "Question n of up to 6" hint. */
   readonly maxQuestions = CONCIERGE_MAX_QUESTIONS;
 
   /**
@@ -190,10 +151,6 @@ export class AskAinPageComponent implements OnInit {
     this.focusComposer();
   }
 
-  useSuggestion(key: string): void {
-    this.sendText(this.translate.instant(key));
-  }
-
   /**
    * i18n key for Ain's bubble when the reply text is empty: the slot's own
    * question on a guided turn, otherwise the results / clarify / no-results line.
@@ -216,7 +173,10 @@ export class AskAinPageComponent implements OnInit {
 
   /** "Question n" for the progress hint (n = slots asked so far, this one included). */
   questionNumber(turn: AinTurn): number {
-    return Math.min(Math.max(turn.askedSlots.length, 1), this.maxQuestions);
+    // questionCount counts a legacy 'style_or_colour' once (askedSlots holds
+    // it expanded to colour + style); fall back to the slot count.
+    const asked = turn.questionCount ?? turn.askedSlots.length;
+    return Math.min(Math.max(asked, 1), this.maxQuestions);
   }
 
   /**

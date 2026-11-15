@@ -189,11 +189,10 @@
   },
   "askAin": {
     "title": "Ask Ain",
-    "subtitle": "Tell Ain the occasion, style or gift you have in mind and it will pull real pieces from our stores.",
+    "opening": "Hi, I'm Ain, your personal stylist at 3bayti. Tell me what you're looking for and I'll ask a few quick questions to find the perfect pieces.",
     "placeholder": "e.g. an elegant black abaya for a wedding",
     "resultsIntro": "Here's what Ain found for you",
     "noResults": "Ain couldn't find a match. Try describing the colour, occasion or budget.",
-    "searchByPhoto": "Search by a photo",
     "whatsapp": "Chat with Ain on WhatsApp",
     "whatsappGreeting": "Hi Ain! I'm looking for…",
     "newChat": "New chat",
@@ -215,33 +214,9 @@
       "recipient": "Lovely! Is this for you, or a gift for someone special?",
       "occasion": "What's the occasion?",
       "type": "What kind of piece do you have in mind?",
-      "style_or_colour": "Any style or colour you love?",
+      "colour": "Any colours you love?",
+      "style": "What style speaks to you?",
       "budget": "And what budget feels right?"
-    },
-    "starters": {
-      "occasions": {
-        "title": "Occasions",
-        "wedding": "An elegant abaya for a wedding",
-        "eid": "Something special for Eid",
-        "ramadan": "A graceful jalabiya for Ramadan",
-        "work": "Modest pieces for work",
-        "evening": "A statement look for an evening out"
-      },
-      "gifts": {
-        "title": "Gifts",
-        "sister": "An Eid gift for my sister under 300 AED",
-        "mother": "A thoughtful gift for my mum",
-        "friend": "A birthday gift for a friend",
-        "bride": "A gift for a bride-to-be"
-      },
-      "styles": {
-        "title": "Styles",
-        "casualBeige": "Something casual in beige",
-        "classicBlack": "A classic black abaya",
-        "pastel": "Soft pastel kaftans",
-        "embellished": "Embellished pieces that shine",
-        "minimal": "Clean, minimal everyday wear"
-      }
     }
   },
   "visualSearch": {

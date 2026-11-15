@@ -4,7 +4,17 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { PLATFORM_ID } from '@angular/core';
 
-import { ConciergeService, isShowNowChip, sanitizeHistory, type ConciergeHistoryEntry } from './concierge.service';
+import {
+  CONCIERGE_MAX_QUESTIONS,
+  CONCIERGE_SLOTS,
+  ConciergeService,
+  countAskedQuestions,
+  isShowNowChip,
+  sanitizeHistory,
+  sanitizeSlots,
+  toQuestionSlot,
+  type ConciergeHistoryEntry,
+} from './concierge.service';
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import { ApiConfigService } from '../../core/api/api-config.service';
 import { LocaleService } from '../../core/i18n/locale.service';
@@ -50,20 +60,20 @@ describe('ConciergeService.ask (conversational)', () => {
     expect(res.needsClarification).toBe(false);
   });
 
-  it('sends only the last 8 history entries, text only, capped at 500 chars', async () => {
+  it('sends only the last 12 history entries, text only, capped at 500 chars', async () => {
     const { service, controller } = setup();
     const history: ConciergeHistoryEntry[] = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 14; i++) {
       history.push({ role: i % 2 === 0 ? 'user' : 'ain', text: `turn ${i}` });
     }
-    history[9] = { role: 'ain', text: 'x'.repeat(700) };
+    history[13] = { role: 'ain', text: 'x'.repeat(700) };
     const withJunk = [...history, { role: 'ain', text: '   ' }] as ConciergeHistoryEntry[];
     const p = service.ask('cheaper', withJunk);
     const req = controller.expectOne(isStyle);
     const sent = req.request.body.history as ConciergeHistoryEntry[];
-    expect(sent).toHaveLength(8);
+    expect(sent).toHaveLength(12);
     expect(sent[0]).toEqual({ role: 'user', text: 'turn 2' });
-    expect(sent[7].text).toHaveLength(500);
+    expect(sent[11].text).toHaveLength(500);
     for (const e of sent) {
       expect(Object.keys(e).sort()).toEqual(['role', 'text']);
     }
@@ -182,5 +192,49 @@ describe('sanitizeHistory', () => {
   it('returns [] for non-arrays', () => {
     expect(sanitizeHistory(undefined)).toEqual([]);
     expect(sanitizeHistory(null)).toEqual([]);
+  });
+});
+
+describe('guided-discovery slots', () => {
+  it('has six slots in the server order and asks up to 6 questions', () => {
+    expect([...CONCIERGE_SLOTS]).toEqual(['recipient', 'occasion', 'type', 'colour', 'style', 'budget']);
+    expect(CONCIERGE_MAX_QUESTIONS).toBe(6);
+  });
+
+  it('sanitizeSlots keeps known slots once, in order, max 6', () => {
+    expect(sanitizeSlots(['budget', 'nope', 'colour', 'budget', 5])).toEqual(['budget', 'colour']);
+    expect(sanitizeSlots([...CONCIERGE_SLOTS, ...CONCIERGE_SLOTS])).toEqual([...CONCIERGE_SLOTS]);
+    expect(sanitizeSlots('recipient')).toEqual([]);
+  });
+
+  it('reads the legacy style_or_colour slot as both colour and style asked', () => {
+    expect(sanitizeSlots(['recipient', 'style_or_colour'])).toEqual(['recipient', 'colour', 'style']);
+    expect(sanitizeSlots(['style', 'style_or_colour'])).toEqual(['style', 'colour']);
+    expect(toQuestionSlot('style_or_colour')).toBe('colour');
+    expect(toQuestionSlot('style')).toBe('style');
+    expect(toQuestionSlot('weird')).toBeNull();
+  });
+
+  it('parses a colour question with the legacy slot from an older API', async () => {
+    const { service, controller } = setup();
+    const p = service.ask('an abaya', [], { askedSlots: ['recipient'] });
+    const req = controller.expectOne(isStyle);
+    expect(req.request.body.asked_slots).toEqual(['recipient']);
+    req.flush({ interaction_id: 9, products: [], asked_slots: ['recipient', 'style_or_colour'], question_slot: 'style_or_colour', follow_ups: ['Black'] });
+    const res = await p;
+    expect(res.questionSlot).toBe('colour');
+    expect(res.askedSlots).toEqual(['recipient', 'colour', 'style']);
+    // Two questions asked (the legacy combined one counts once).
+    expect(res.questionCount).toBe(2);
+    TestBed.resetTestingModule();
+  });
+
+  it('countAskedQuestions counts the legacy combined slot once, ignores junk, caps at 6', () => {
+    expect(countAskedQuestions(['recipient', 'style_or_colour'])).toBe(2);
+    expect(countAskedQuestions(['recipient', 'colour', 'style'])).toBe(3);
+    expect(countAskedQuestions(['style', 'style_or_colour'])).toBe(1);
+    expect(countAskedQuestions(['recipient', 'bogus', 7, 'recipient'])).toBe(1);
+    expect(countAskedQuestions([...CONCIERGE_SLOTS, 'style_or_colour'])).toBe(6);
+    expect(countAskedQuestions('recipient')).toBe(0);
   });
 });

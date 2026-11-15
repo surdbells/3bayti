@@ -10,7 +10,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 
 import { TranslateService } from '@ngx-translate/core';
 
-import { AskAinPageComponent, STARTER_GROUPS } from './ask-ain-page';
+import { AskAinPageComponent } from './ask-ain-page';
 import { AskAinThreadService } from './ask-ain-thread.service';
 import { ConciergeService, type ConciergeCard, type ConciergeResult } from './concierge.service';
 import { WishlistService } from '../wishlist/wishlist.service';
@@ -19,7 +19,6 @@ import { provideI18n } from '../../core/i18n';
 
 /** The guided-discovery options of a send with no prior questions. */
 const NO_SLOTS = { askedSlots: [], showNow: false };
-const STARTER_COUNT = STARTER_GROUPS.reduce((n, g) => n + g.chips.length, 0);
 
 function card(id: number): ConciergeCard {
   return {
@@ -77,6 +76,20 @@ async function settle(h: RouterTestingHarness): Promise<void> {
 const q = <T extends Element = HTMLElement>(el: HTMLElement, id: string) => el.querySelector<T>(`[data-testid="${id}"]`);
 const qa = (el: HTMLElement, id: string) => Array.from(el.querySelectorAll<HTMLElement>(`[data-testid="${id}"]`));
 
+/** Type into the composer and submit it. */
+function typeAndSend(h: RouterTestingHarness, el: HTMLElement, text: string): void {
+  const input = el.querySelector<HTMLInputElement>('#ask-ain-input')!;
+  input.value = text;
+  input.dispatchEvent(new Event('input'));
+  h.detectChanges();
+  q<HTMLFormElement>(el, 'ask-ain-composer')!.dispatchEvent(new Event('submit'));
+  h.detectChanges();
+}
+
+/** The data-testids of the thread's direct children, in order. */
+const threadOrder = (el: HTMLElement): string[] =>
+  Array.from(q(el, 'ask-ain-thread')!.children).map((c) => c.getAttribute('data-testid') ?? '');
+
 describe('AskAinPageComponent (chat thread)', () => {
   beforeEach(() => {
     sessionStorage.clear();
@@ -87,10 +100,19 @@ describe('AskAinPageComponent (chat thread)', () => {
     vi.restoreAllMocks();
   });
 
-  it('shows the greeting suggestion chips on a fresh thread, a quiet log and one polite announcer', async () => {
-    const { el, recordEvent } = await setup(vi.fn());
-    expect(qa(el, 'ask-ain-suggestion')).toHaveLength(STARTER_COUNT);
+  it('a fresh thread starts with Ain\'s opening bubble in the log: no chips, no API call, a quiet log and one polite announcer', async () => {
+    const ask = vi.fn();
+    const { el, recordEvent } = await setup(ask);
     const log = q(el, 'ask-ain-thread')!;
+    // The conversation itself starts with Ain, inside the thread.
+    expect(threadOrder(el)).toEqual(['ask-ain-opening']);
+    expect(log.contains(q(el, 'ask-ain-opening-text'))).toBe(true);
+    // No preselects: no starter prompts, no chips of any kind, nothing sent.
+    expect(q(el, 'ask-ain-starters')).toBeNull();
+    expect(qa(el, 'ask-ain-suggestion')).toHaveLength(0);
+    expect(qa(el, 'ask-ain-chips')).toHaveLength(0);
+    expect(el.querySelectorAll('button.ask-ain__chip')).toHaveLength(0);
+    expect(ask).not.toHaveBeenCalled();
     expect(log.getAttribute('role')).toBe('log');
     // The log itself is not live: a whole turn (with every product card) must not be read out.
     expect(log.getAttribute('aria-live')).toBe('off');
@@ -102,16 +124,18 @@ describe('AskAinPageComponent (chat thread)', () => {
     expect(recordEvent).toHaveBeenCalledWith('ai_opened');
   });
 
-  it('a suggestion chip starts the thread: user bubble, typing, then Ain reply + cards + follow-ups', async () => {
+  it('the first message continues the thread: opening, user bubble, typing, then Ain reply + cards + follow-ups', async () => {
     let resolve!: (r: ConciergeResult) => void;
     const ask = vi.fn(() => new Promise<ConciergeResult>((r) => (resolve = r)));
     const { harness, el } = await setup(ask);
 
-    qa(el, 'ask-ain-suggestion')[0].click();
-    harness.detectChanges();
+    typeAndSend(harness, el, 'an elegant abaya');
     expect(qa(el, 'ask-ain-user-turn')).toHaveLength(1);
     expect(q(el, 'ask-ain-typing')).not.toBeNull();
-    expect(qa(el, 'ask-ain-suggestion')).toHaveLength(0);
+    // The typing indicator renders inside the thread, after the user's message.
+    expect(threadOrder(el)).toEqual(['ask-ain-opening', 'ask-ain-user-turn', 'ask-ain-typing']);
+    // The local opening bubble is never sent as history.
+    expect(ask).toHaveBeenCalledWith('an elegant abaya', [], NO_SLOTS);
     // While waiting, only the short typing line is announced (i18n is not
     // loaded in tests, so assert the key the announcer renders).
     const page = harness.routeDebugElement!.componentInstance as AskAinPageComponent;
@@ -128,6 +152,10 @@ describe('AskAinPageComponent (chat thread)', () => {
     expect(el.querySelectorAll('ui-product-card')).toHaveLength(2);
     expect(qa(el, 'ask-ain-follow-up').map((b) => b.textContent!.trim())).toEqual(['In black', 'Cheaper']);
     expect(q(el, 'ask-ain-new-chat')).not.toBeNull();
+    // Reply, product cards and refine chips all live inside the thread.
+    const log = q(el, 'ask-ain-thread')!;
+    expect(log.querySelectorAll('ui-product-card')).toHaveLength(2);
+    expect(log.contains(q(el, 'ask-ain-chips'))).toBe(true);
   });
 
   it('tapping a follow-up chip sends its text with the conversation as history', async () => {
@@ -192,6 +220,7 @@ describe('AskAinPageComponent (chat thread)', () => {
     await settle(harness);
 
     expect(q(el, 'ask-ain-error')).not.toBeNull();
+    expect(q(el, 'ask-ain-thread')!.contains(q(el, 'ask-ain-retry'))).toBe(true);
     expect(qa(el, 'ask-ain-user-turn')).toHaveLength(1);
     q<HTMLButtonElement>(el, 'ask-ain-retry')!.click();
     await settle(harness);
@@ -201,7 +230,7 @@ describe('AskAinPageComponent (chat thread)', () => {
     expect(q(el, 'ask-ain-reply')!.textContent).toContain('Back with picks.');
   });
 
-  it('New chat resets to the fresh greeting state', async () => {
+  it('New chat resets to just the opening bubble', async () => {
     const ask = vi.fn(() => Promise.resolve(result({ reply: 'Hello!' })));
     const { harness, el } = await setup(ask);
     await TestBed.inject(AskAinThreadService).send('hi');
@@ -210,7 +239,9 @@ describe('AskAinPageComponent (chat thread)', () => {
     q<HTMLButtonElement>(el, 'ask-ain-new-chat')!.click();
     harness.detectChanges();
     expect(qa(el, 'ask-ain-user-turn')).toHaveLength(0);
-    expect(qa(el, 'ask-ain-suggestion')).toHaveLength(STARTER_COUNT);
+    expect(threadOrder(el)).toEqual(['ask-ain-opening']);
+    expect(qa(el, 'ask-ain-chips')).toHaveLength(0);
+    expect(q(el, 'ask-ain-new-chat')).toBeNull();
     expect(sessionStorage.getItem(AskAinThreadService.STORAGE_KEY)).toBeNull();
   });
 
@@ -235,7 +266,24 @@ describe('AskAinPageComponent (chat thread)', () => {
     expect(qa(el, 'ask-ain-user-turn')).toHaveLength(1);
     expect(q(el, 'ask-ain-reply')!.textContent).toContain('Pieces for you.');
     expect(el.querySelectorAll('ui-product-card')).toHaveLength(1);
-    expect(qa(el, 'ask-ain-suggestion')).toHaveLength(0);
+    // The opening bubble stays first; the restored turns follow it.
+    expect(threadOrder(el)).toEqual(['ask-ain-opening', 'ask-ain-user-turn', 'ask-ain-ain-turn']);
+  });
+
+  it('restores an older thread whose asked_slots used the combined style_or_colour slot', async () => {
+    sessionStorage.setItem(
+      AskAinThreadService.STORAGE_KEY,
+      JSON.stringify([
+        { id: 'u1', role: 'user', text: 'abaya' },
+        { id: 'a1', role: 'ain', status: 'ok', reply: 'Any style or colour?', cards: [], followUps: ['Black'], needsClarification: true, interactionId: 5, askedSlots: ['recipient', 'style_or_colour'], questionSlot: 'style_or_colour' },
+      ]),
+    );
+    const ask = vi.fn().mockResolvedValue(result({ reply: 'Ok.' }));
+    const { harness, el } = await setup(ask);
+    expect(q(el, 'ask-ain-progress')).not.toBeNull();
+    qa(el, 'ask-ain-follow-up')[0].click();
+    await settle(harness);
+    expect(ask.mock.calls[0][2]).toEqual({ askedSlots: ['recipient', 'colour', 'style'], showNow: false });
   });
 
   it('?q= starts a new conversation and drops the param from the URL', async () => {
@@ -244,6 +292,8 @@ describe('AskAinPageComponent (chat thread)', () => {
     await settle(harness);
     expect(ask).toHaveBeenCalledWith('An Eid gift', [], NO_SLOTS);
     expect(qa(el, 'ask-ain-user-turn')).toHaveLength(1);
+    // The opening bubble, then the deep-linked message, then Ain's answer.
+    expect(threadOrder(el)).toEqual(['ask-ain-opening', 'ask-ain-user-turn', 'ask-ain-ain-turn']);
     await harness.fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/ask-ain');
   });
@@ -255,7 +305,9 @@ describe('AskAinPageComponent (guided discovery)', () => {
       showNow: 'Show me what you have',
       progress: 'Question {{current}} of up to {{total}}',
       newChat: 'New chat',
-      starters: { gifts: { title: 'Gifts', sister: 'An Eid gift for my sister under 300 AED' } },
+      ain: 'Ain',
+      opening: 'Hi, I\'m Ain, your personal stylist at 3bayti.',
+      searchByPhoto: 'Search by a photo',
     },
   };
 
@@ -279,6 +331,21 @@ describe('AskAinPageComponent (guided discovery)', () => {
     vi.restoreAllMocks();
   });
 
+  it('counts a restored legacy style_or_colour slot as ONE question in the progress hint', async () => {
+    sessionStorage.setItem(
+      AskAinThreadService.STORAGE_KEY,
+      JSON.stringify([
+        { id: 'u1', role: 'user', text: 'abaya' },
+        { id: 'a1', role: 'ain', status: 'ok', reply: 'Any style or colour?', cards: [], followUps: ['Black'], needsClarification: true, interactionId: 5, askedSlots: ['recipient', 'style_or_colour'], questionSlot: 'style_or_colour' },
+      ]),
+    );
+    const { harness, el } = await setup(vi.fn());
+    useEnglish();
+    harness.detectChanges();
+    // Two questions were asked (recipient + the combined one), not three.
+    expect(q(el, 'ask-ain-progress')!.textContent!.trim()).toBe('Question 2 of up to 6');
+  });
+
   function question(o: Partial<ConciergeResult> = {}): ConciergeResult {
     return result({
       reply: 'What\'s the occasion?',
@@ -290,26 +357,32 @@ describe('AskAinPageComponent (guided discovery)', () => {
     });
   }
 
-  it('renders grouped starter prompts; tapping one sends its text', async () => {
+  it('the opening bubble is localized, offers only inline links (no chips), and nothing sits outside the thread but the header and composer', async () => {
     const ask = vi.fn(() => Promise.resolve(result({ reply: 'Lovely.' })));
     const { harness, el } = await setup(ask);
     useEnglish();
     harness.detectChanges();
 
-    const groups = qa(el, 'ask-ain-starter-group');
-    expect(groups).toHaveLength(STARTER_GROUPS.length);
-    expect(groups.length).toBeGreaterThanOrEqual(3);
-    for (const g of STARTER_GROUPS) {
-      expect(g.chips.length).toBeGreaterThanOrEqual(3);
-      expect(g.chips.length).toBeLessThanOrEqual(5);
-    }
-    const gifts = groups[STARTER_GROUPS.findIndex((g) => g.id === 'gifts')];
-    expect(gifts.querySelector('h2')!.textContent!.trim()).toBe('Gifts');
-    expect(gifts.getAttribute('role')).toBe('group');
+    expect(q(el, 'ask-ain-opening-text')!.textContent!.replace(/\s+/g, ' ').trim()).toBe('Ain: Hi, I\'m Ain, your personal stylist at 3bayti.');
+    const opening = q(el, 'ask-ain-opening')!;
+    expect(opening.querySelectorAll('button')).toHaveLength(0);
+    // No preselects: only the optional WhatsApp entry sits in the opening bubble.
+    expect(q(el, 'ask-ain-photo')).toBeNull();
+    // AIN_WHATSAPP_NUMBER is a build-time constant, so the link always renders:
+    // assert it unconditionally as an inline text link inside the bubble.
+    const wa = q(el, 'ask-ain-whatsapp');
+    expect(wa).not.toBeNull();
+    expect(opening.contains(wa)).toBe(true);
+    expect(wa!.tagName).toBe('A');
+    expect(wa!.classList.contains('ask-ain__chip')).toBe(false);
 
-    gifts.querySelector<HTMLButtonElement>('[data-testid="ask-ain-suggestion"]')!.click();
-    await settle(harness);
-    expect(ask).toHaveBeenCalledWith('An Eid gift for my sister under 300 AED', [], NO_SLOTS);
+    // The page is: header, the (visually hidden) announcer, the thread, the composer.
+    const section = el.querySelector('section.ask-ain')!;
+    const kids = Array.from(section.children).map(
+      (c) => c.tagName.toLowerCase() + (c.getAttribute('data-testid') ? '#' + c.getAttribute('data-testid') : ''),
+    );
+    expect(kids).toEqual(['header', 'p#ask-ain-announcer', 'div#ask-ain-thread', 'form#ask-ain-composer']);
+    expect(ask).not.toHaveBeenCalled();
   });
 
   it('renders a question turn: progress hint, wrapping answer chips, skip chip last and distinct, no products', async () => {
@@ -319,7 +392,7 @@ describe('AskAinPageComponent (guided discovery)', () => {
     await TestBed.inject(AskAinThreadService).send('an abaya');
     await settle(harness);
 
-    expect(q(el, 'ask-ain-progress')!.textContent!.trim()).toBe('Question 2 of up to 4');
+    expect(q(el, 'ask-ain-progress')!.textContent!.trim()).toBe('Question 2 of up to 6');
     expect(q(el, 'ask-ain-reply')!.textContent).toContain('What\'s the occasion?');
     expect(q(el, 'ask-ain-reply')!.classList).toContain('ask-ain__bubble--question');
     expect(el.querySelectorAll('ui-product-card')).toHaveLength(0);
@@ -349,7 +422,7 @@ describe('AskAinPageComponent (guided discovery)', () => {
     await settle(harness);
     expect(ask.mock.calls[1][0]).toBe('Eid');
     expect(ask.mock.calls[1][2]).toEqual({ askedSlots: ['recipient', 'occasion'], showNow: false });
-    expect(q(el, 'ask-ain-progress')!.textContent!.trim()).toBe('Question 3 of up to 4');
+    expect(q(el, 'ask-ain-progress')!.textContent!.trim()).toBe('Question 3 of up to 6');
     // The server sent no skip chip this time: the page adds its own.
     q<HTMLButtonElement>(el, 'ask-ain-show-now')!.click();
     await settle(harness);
@@ -399,7 +472,7 @@ describe('AskAinPageComponent (guided discovery)', () => {
     await settle(harness);
     q<HTMLButtonElement>(el, 'ask-ain-new-chat')!.click();
     harness.detectChanges();
-    qa(el, 'ask-ain-suggestion')[0].click();
+    typeAndSend(harness, el, 'hello');
     await settle(harness);
     expect(ask.mock.calls[1][2]).toEqual(NO_SLOTS);
   });
@@ -448,5 +521,13 @@ describe('AskAinPageComponent (guided discovery)', () => {
     expect(narrowAt).toBeGreaterThan(-1);
     const narrow = scss.slice(narrowAt);
     expect(rule('.ask-ain__new-label', narrow)).toMatch(/display:\s*none/);
+
+    // The pinned composer is centred like the header and thread (same width,
+    // auto side margins), so it lines up on wide screens.
+    const form = rule('.ask-ain__form');
+    expect(form).toMatch(/max-width:\s*64rem/);
+    expect(form).toMatch(/margin:\s*0 auto\b/);
+    expect(rule('.ask-ain__head')).toMatch(/margin:\s*0 auto\b/);
+    expect(rule('.ask-ain__thread')).toMatch(/margin:\s*0 auto\b/);
   });
 });

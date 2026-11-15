@@ -36,13 +36,24 @@ export interface ConciergeResult {
   askedSlots: ConciergeSlot[];
   /** The slot this turn asks about; null when products are shown. */
   questionSlot: ConciergeSlot | null;
+  /**
+   * Questions asked so far (this one included), for the progress hint. Differs
+   * from askedSlots.length only when an older API sent the combined
+   * 'style_or_colour' slot (one question, expanded to two slots).
+   */
+  questionCount?: number;
 }
 
-/** The guided-discovery slots, in the server's priority order. */
-export const CONCIERGE_SLOTS = ['recipient', 'occasion', 'type', 'style_or_colour', 'budget'] as const;
+/** The guided-discovery slots, in the server's priority order (one question each). */
+export const CONCIERGE_SLOTS = ['recipient', 'occasion', 'type', 'colour', 'style', 'budget'] as const;
 export type ConciergeSlot = (typeof CONCIERGE_SLOTS)[number];
-/** The planner asks at most this many questions before showing products. */
-export const CONCIERGE_MAX_QUESTIONS = 4;
+/** Ain asks at most this many questions (one per slot) before showing products. */
+export const CONCIERGE_MAX_QUESTIONS = 6;
+/**
+ * The combined slot older APIs / persisted threads used before colour and
+ * style became separate questions. It means both were asked.
+ */
+export const LEGACY_STYLE_OR_COLOUR = 'style_or_colour';
 
 /** Per-request guided-discovery state. */
 export interface ConciergeAskOptions {
@@ -56,16 +67,63 @@ export function isConciergeSlot(s: unknown): s is ConciergeSlot {
   return typeof s === 'string' && (CONCIERGE_SLOTS as readonly string[]).includes(s);
 }
 
-/** Known slot names only, de-duplicated, order kept, max 5. */
+/**
+ * A response's question_slot: a known slot, the legacy combined slot read as
+ * 'colour' (its first half), or null.
+ */
+export function toQuestionSlot(s: unknown): ConciergeSlot | null {
+  if (s === LEGACY_STYLE_OR_COLOUR) return 'colour';
+  return isConciergeSlot(s) ? s : null;
+}
+
+/**
+ * Known slot names only, de-duplicated, order kept, max 6. The legacy
+ * 'style_or_colour' expands to both 'colour' and 'style' (both were asked).
+ */
 export function sanitizeSlots(raw: unknown): ConciergeSlot[] {
   if (!Array.isArray(raw)) return [];
   const out: ConciergeSlot[] = [];
+  const add = (s: ConciergeSlot): void => {
+    if (!out.includes(s)) out.push(s);
+  };
   for (const s of raw) {
-    if (isConciergeSlot(s) && !out.includes(s)) {
-      out.push(s);
+    if (s === LEGACY_STYLE_OR_COLOUR) {
+      add('colour');
+      add('style');
+    } else if (isConciergeSlot(s)) {
+      add(s);
     }
   }
   return out.slice(0, CONCIERGE_SLOTS.length);
+}
+
+/**
+ * How many questions a raw asked_slots list stands for (for the progress
+ * hint). Unlike sanitizeSlots, the legacy 'style_or_colour' counts as ONE
+ * question (it was asked once), and a legacy entry plus 'colour'/'style'
+ * is not double counted. Max 6.
+ */
+export function countAskedQuestions(raw: unknown): number {
+  if (!Array.isArray(raw)) return 0;
+  const seen = new Set<string>();
+  let count = 0;
+  for (const s of raw) {
+    if (s === LEGACY_STYLE_OR_COLOUR) {
+      if (seen.has('colour') || seen.has('style')) {
+        // A 'colour'/'style' already counted covers the combined question.
+        seen.add('colour');
+        seen.add('style');
+        continue;
+      }
+      seen.add('colour');
+      seen.add('style');
+      count++;
+    } else if (isConciergeSlot(s) && !seen.has(s)) {
+      seen.add(s);
+      count++;
+    }
+  }
+  return Math.min(count, CONCIERGE_MAX_QUESTIONS);
 }
 
 /**
@@ -113,8 +171,8 @@ export function isShowNowChip(text: string, localizedLabel?: string): boolean {
   return !!localizedLabel && normalizeChip(localizedLabel) === n;
 }
 
-/** The server keeps only the last 8 history entries, each <= 500 chars. */
-export const CONCIERGE_HISTORY_LIMIT = 8;
+/** The server keeps only the last 12 history entries (6 questions + answers), each <= 500 chars. */
+export const CONCIERGE_HISTORY_LIMIT = 12;
 export const CONCIERGE_TEXT_LIMIT = 500;
 /** Answer chips on a guided-question turn / refine chips on a results turn. */
 export const QUESTION_CHIP_LIMIT = 8;
@@ -253,7 +311,7 @@ export class ConciergeService {
 
   /**
    * One conversational turn. `history` is the conversation BEFORE this query
-   * (oldest first); only the last 8 text entries are sent, and the field is
+   * (oldest first); only the last 12 text entries are sent, and the field is
    * omitted entirely for a fresh conversation (backward compatible).
    * `options.askedSlots` echoes the previous response's asked_slots and
    * `options.showNow` asks for products right away (the skip chip); both are
@@ -289,7 +347,7 @@ export class ConciergeService {
     const cards = Array.isArray(data.products) ? data.products : [];
     const reply = typeof data.reply === 'string' ? data.reply.trim() : '';
     const askedSlots = sanitizeSlots(data.asked_slots);
-    const questionSlot = isConciergeSlot(data.question_slot) ? data.question_slot : null;
+    const questionSlot = toQuestionSlot(data.question_slot);
     const limit = questionSlot ? QUESTION_CHIP_LIMIT : REFINE_CHIP_LIMIT;
     const followUps: string[] = [];
     if (Array.isArray(data.follow_ups)) {
@@ -316,6 +374,7 @@ export class ConciergeService {
       needsClarification,
       askedSlots,
       questionSlot,
+      questionCount: countAskedQuestions(data.asked_slots),
     };
   }
 

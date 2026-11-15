@@ -284,9 +284,9 @@ describe('AskAinThreadService', () => {
 
 describe('buildHistory', () => {
 
-  it('keeps user text + Ain reply text only, skips errors/empty replies, last 8', () => {
+  it('keeps user text + Ain reply text only, skips errors/empty replies, last 12', () => {
     const turns: ChatTurn[] = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {
       turns.push({ id: `u${i}`, role: 'user', text: `q${i}` });
       turns.push({
         id: `a${i}`,
@@ -302,8 +302,8 @@ describe('buildHistory', () => {
       });
     }
     const h = buildHistory(turns);
-    expect(h).toHaveLength(8);
-    expect(h[h.length - 1]).toEqual({ role: 'ain', text: 'r5' });
+    expect(h).toHaveLength(12);
+    expect(h[h.length - 1]).toEqual({ role: 'ain', text: 'r7' });
     expect(h.some((e) => e.text === 'r2' || e.text === '')).toBe(false);
     // The user message whose answer failed is not context either.
     expect(h.some((e) => e.text === 'q2')).toBe(false);

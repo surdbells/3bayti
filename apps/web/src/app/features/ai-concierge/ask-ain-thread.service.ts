@@ -4,10 +4,12 @@ import { isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../../core/auth/auth.service';
 import {
   CONCIERGE_HISTORY_LIMIT,
+  CONCIERGE_MAX_QUESTIONS,
   CONCIERGE_TEXT_LIMIT,
   ConciergeService,
-  isConciergeSlot,
+  countAskedQuestions,
   sanitizeSlots,
+  toQuestionSlot,
   type ConciergeCard,
   type ConciergeHistoryEntry,
   type ConciergeSlot,
@@ -42,6 +44,12 @@ export interface AinTurn {
   askedSlots: ConciergeSlot[];
   /** The guided-discovery slot this turn asks about; null on a results turn. */
   questionSlot: ConciergeSlot | null;
+  /**
+   * Questions asked so far, for the progress hint. Kept apart from
+   * askedSlots.length because a legacy 'style_or_colour' is one question
+   * expanded to two slots. Absent on turns stored before it existed.
+   */
+  questionCount?: number;
 }
 
 export type ChatTurn = UserTurn | AinTurn;
@@ -62,7 +70,7 @@ export function lastAskedSlots(turns: readonly ChatTurn[]): ConciergeSlot[] {
 
 /**
  * Build the wire history from the thread: user text + Ain's reply text only
- * (never product payloads), error bubbles skipped, the last 8 entries kept.
+ * (never product payloads), error bubbles skipped, the last 12 entries kept.
  * A user message Ain never answered (followed by an error bubble) is left out
  * too: if the customer moved on instead of tapping Retry, the server must not
  * merge that abandoned request (e.g. "in red") into the new one.
@@ -107,7 +115,10 @@ export class AskAinThreadService {
 
   readonly turns = this._turns.asReadonly();
   readonly pending = this._pending.asReadonly();
-  /** A fresh thread shows the greeting + suggestion chips. */
+  /**
+   * No messages yet: the page shows only Ain's local opening bubble (never
+   * stored or sent as history), with no preselected chips.
+   */
   readonly isFresh = computed(() => this._turns().length === 0 && !this._pending());
 
   constructor() {
@@ -186,6 +197,7 @@ export class AskAinThreadService {
           interactionId: res.interactionId,
           askedSlots: res.askedSlots ?? [],
           questionSlot: res.questionSlot ?? null,
+          questionCount: res.questionCount ?? (res.askedSlots ?? []).length,
         },
       ]);
     } catch {
@@ -284,7 +296,13 @@ export class AskAinThreadService {
         interactionId: typeof r['interactionId'] === 'number' ? r['interactionId'] : null,
         // Persisted with the turn so a reload keeps the guided-question progress.
         askedSlots: sanitizeSlots(r['askedSlots']),
-        questionSlot: isConciergeSlot(r['questionSlot']) ? r['questionSlot'] : null,
+        questionSlot: toQuestionSlot(r['questionSlot']),
+        // Counted from the RAW stored slots so a legacy 'style_or_colour'
+        // (one question) does not over-count once expanded.
+        questionCount:
+          typeof r['questionCount'] === 'number' && Number.isFinite(r['questionCount'])
+            ? Math.min(Math.max(Math.trunc(r['questionCount']), 0), CONCIERGE_MAX_QUESTIONS)
+            : countAskedQuestions(r['askedSlots']),
       };
     }
     return null;
