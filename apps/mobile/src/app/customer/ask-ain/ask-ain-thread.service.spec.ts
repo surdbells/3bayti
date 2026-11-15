@@ -4,7 +4,14 @@ import { Subject, of, throwError } from 'rxjs';
 
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
 import { SESSION_PERSISTENCE, SessionStore, type SessionPersistence } from '../../core/services/session-store.service';
-import { AIN_HISTORY_LIMIT, AinReplyTurn, AskAinThreadService } from './ask-ain-thread.service';
+import {
+  AIN_HISTORY_LIMIT,
+  AIN_MAX_QUESTIONS,
+  AIN_SLOTS,
+  AinReplyTurn,
+  AskAinThreadService,
+  sanitiseSlots,
+} from './ask-ain-thread.service';
 
 const CTX = { locale: 'en', sessionId: 's-1' };
 
@@ -86,16 +93,35 @@ describe('AskAinThreadService', () => {
     ]);
   });
 
-  it('keeps only the last 8 history entries, each capped at 500 chars', async () => {
+  it('keeps only the last 12 history entries (the server cap), each capped at 500 chars', async () => {
     const { thread, adapter } = setup();
     adapter.post_v3.and.returnValue(of(reply('ok')));
-    for (let i = 0; i < 6; i++) {
-      await thread.send(i === 5 ? 'x'.repeat(600) : 'msg ' + i, CTX);
+    for (let i = 0; i < 8; i++) {
+      await thread.send(i === 7 ? 'x'.repeat(600) : 'msg ' + i, CTX);
     }
     const history = thread.history();
+    expect(AIN_HISTORY_LIMIT).toBe(12);
     expect(history.length).toBe(AIN_HISTORY_LIMIT);
     expect(history[0]).toEqual({ role: 'user', text: 'msg 2' });
     expect(history.every((h) => h.text.length <= 500)).toBeTrue();
+  });
+
+  it('still sends the first message and first answer when a 6-question discovery ends', async () => {
+    const { thread, adapter } = setup();
+    adapter.post_v3.and.returnValue(of(reply('A quick question?', { needs_clarification: true })));
+    const answers = ['a dress', 'For my mother', 'Wedding', 'Abaya', 'Black', 'Embellished'];
+    for (const text of answers) {
+      await thread.send(text, CTX);
+    }
+    await thread.send('Under 500', CTX);
+
+    const body = adapter.post_v3.calls.mostRecent().args[1];
+    expect(body.query).toBe('Under 500');
+    // first message + 6 Ain questions + 5 answers = 12 entries, none dropped.
+    expect(body.history.length).toBe(12);
+    expect(body.history[0]).toEqual({ role: 'user', text: 'a dress' });
+    expect(body.history[2]).toEqual({ role: 'user', text: 'For my mother' });
+    expect(body.history.filter((h: { role: string }) => h.role === 'user').map((h: { text: string }) => h.text)).toEqual(answers);
   });
 
   it('caps and cleans follow-ups and reply text (no URLs / markup)', async () => {
@@ -201,6 +227,41 @@ describe('AskAinThreadService', () => {
       expect(ain.followUps).toEqual(['My sister']);
       await thread.send('My sister', CTX);
       expect(adapter.post_v3.calls.mostRecent().args[1].asked_slots).toEqual([]);
+    });
+
+    it('knows six slots in order (colour and style apart) and up to 6 questions', () => {
+      expect([...AIN_SLOTS]).toEqual(['recipient', 'occasion', 'type', 'colour', 'style', 'budget']);
+      expect(AIN_MAX_QUESTIONS).toBe(6);
+      expect(sanitiseSlots(['recipient', 'occasion', 'type', 'colour', 'style', 'budget', 'extra'])).toEqual([
+        'recipient',
+        'occasion',
+        'type',
+        'colour',
+        'style',
+        'budget',
+      ]);
+    });
+
+    it('reads an older API\'s style_or_colour as both colour and style asked', async () => {
+      expect(sanitiseSlots(['recipient', 'style_or_colour', 'colour'])).toEqual(['recipient', 'colour', 'style']);
+      const { thread, adapter } = setup();
+      adapter.post_v3.and.returnValue(of(question('style_or_colour', ['recipient'])));
+      await thread.send('a gift', CTX);
+      const ain = thread.turns()[1] as AinReplyTurn;
+      expect(ain.questionSlot).toBe('colour');
+      expect(ain.askedSlots).toEqual(['recipient', 'colour', 'style']);
+      await thread.send('Pastels', CTX);
+      expect(adapter.post_v3.calls.mostRecent().args[1].asked_slots).toEqual(['recipient', 'colour', 'style']);
+    });
+
+    it('echoes colour and style as separate asked slots', async () => {
+      const { thread, adapter } = setup();
+      adapter.post_v3.and.returnValue(of(question('style', ['recipient', 'occasion', 'type', 'colour', 'style'])));
+      await thread.send('a dress', CTX);
+      const ain = thread.turns()[1] as AinReplyTurn;
+      expect(ain.questionSlot).toBe('style');
+      await thread.send('Minimal', CTX);
+      expect(adapter.post_v3.calls.mostRecent().args[1].asked_slots).toEqual(['recipient', 'occasion', 'type', 'colour', 'style']);
     });
 
     it('recognises the skip chip in English and Arabic', () => {

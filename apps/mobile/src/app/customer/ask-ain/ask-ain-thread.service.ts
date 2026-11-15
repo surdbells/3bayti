@@ -87,10 +87,15 @@ export interface AinAskContext {
 }
 
 /** The guided-discovery slots the concierge may ask about, in priority order. */
-export const AIN_SLOTS = ['recipient', 'occasion', 'type', 'style_or_colour', 'budget'] as const;
+export const AIN_SLOTS = ['recipient', 'occasion', 'type', 'colour', 'style', 'budget'] as const;
 export type AinSlot = (typeof AIN_SLOTS)[number];
-/** Ain asks at most this many guided questions before showing products. */
-export const AIN_MAX_QUESTIONS = 4;
+/**
+ * Ain asks at most this many guided questions (one per unfilled slot) before
+ * showing products, unless the customer asks to see products sooner.
+ */
+export const AIN_MAX_QUESTIONS = 6;
+/** An older API's combined slot: it means both colour and style were asked. */
+const LEGACY_STYLE_OR_COLOUR = 'style_or_colour';
 
 /** Options for one send. */
 export interface AinSendOptions {
@@ -127,22 +132,37 @@ function normalisePhrase(value: string): string {
 
 const SKIP_SET = new Set(SKIP_PHRASES.map(normalisePhrase));
 
-/** Keep only known slots, de-duplicated, at most 5. */
+/**
+ * Keep only known slots, de-duplicated, at most 6. An older API's combined
+ * `style_or_colour` counts as both `colour` and `style`.
+ */
 export function sanitiseSlots(value: unknown): AinSlot[] {
   if (!Array.isArray(value)) {
     return [];
   }
   const out: AinSlot[] = [];
+  const add = (slot: AinSlot): void => {
+    if (!out.includes(slot)) {
+      out.push(slot);
+    }
+  };
   for (const v of value) {
-    if (typeof v === 'string' && (AIN_SLOTS as readonly string[]).includes(v) && !out.includes(v as AinSlot)) {
-      out.push(v as AinSlot);
+    if (v === LEGACY_STYLE_OR_COLOUR) {
+      add('colour');
+      add('style');
+    } else if (typeof v === 'string' && (AIN_SLOTS as readonly string[]).includes(v)) {
+      add(v as AinSlot);
     }
   }
   return out.slice(0, AIN_SLOTS.length);
 }
 
-/** The server keeps (and we send) only the last 8 conversation entries. */
-export const AIN_HISTORY_LIMIT = 8;
+/**
+ * The server keeps (and we send) only the last 12 conversation entries
+ * (ConversationHistory::MAX_TURNS) — enough for a full 6-question discovery:
+ * first message + 6 Ain questions + 5 answers.
+ */
+export const AIN_HISTORY_LIMIT = 12;
 /** Per-entry cap, matching the server's truncation. */
 export const AIN_TEXT_LIMIT = 500;
 /** Guided-question turns carry answer chips + "No preference" + the skip chip. */
@@ -215,7 +235,7 @@ export class AskAinThreadService {
     return this.turns().length === 0;
   }
 
-  /** Start over: a fresh thread (the greeting state shows again). */
+  /** Start over: a fresh thread (only Ain's local opening message shows again). */
   reset(): void {
     this.turns.set([]);
     this.pending.set(false);
@@ -241,7 +261,7 @@ export class AskAinThreadService {
   /**
    * The conversation BEFORE the next query, oldest first: user text + Ain reply
    * text only (no product payloads, no error bubbles, and no customer message
-   * that never got an answer — same rule as web), the last 8 entries, each
+   * that never got an answer — same rule as web), the last 12 entries, each
    * capped at 500 chars.
    */
   history(turns: readonly AinTurn[] = this.turns()): AinHistoryEntry[] {
@@ -393,12 +413,16 @@ export class AskAinThreadService {
 
   private toReply(data: any): AinReplyTurn {
     const products: AinCard[] = Array.isArray(data.products) ? (data.products as AinCard[]) : [];
+    // An older API's `style_or_colour` question maps to colour (+ style below).
     const rawSlot = sanitiseSlots([data.question_slot]);
     // A guided question never comes with products.
     const questionSlot: AinSlot | null = rawSlot.length && !products.length ? rawSlot[0] : null;
     const askedSlots = sanitiseSlots(data.asked_slots);
     if (questionSlot && !askedSlots.includes(questionSlot) && askedSlots.length < AIN_SLOTS.length) {
       askedSlots.push(questionSlot);
+    }
+    if (questionSlot && data.question_slot === LEGACY_STYLE_OR_COLOUR && !askedSlots.includes('style')) {
+      askedSlots.push('style');
     }
     const limit = questionSlot ? QUESTION_FOLLOW_UP_LIMIT : RESULTS_FOLLOW_UP_LIMIT;
     const followUps: string[] = [];

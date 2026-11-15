@@ -50,6 +50,11 @@ import {
  * opening a product and coming back. Works logged-out (personalises + enables
  * "add to closet" when signed in). Copy is LTR for both en/ar per the app-wide
  * pin. A `?q=` query param starts the conversation with that message.
+ *
+ * Everything happens inside the conversation: the thread always opens with
+ * Ain's own greeting bubble (local copy, no API call, never sent as history,
+ * no preset chips), then Ain asks up to 6 guided questions before showing
+ * products. There is no separate empty state outside the thread.
  */
 @Component({
   selector: 'app-ask-ain',
@@ -78,43 +83,6 @@ export class AskAinPage implements OnInit, OnDestroy {
   /** Expose cfImage for the template. */
   readonly cfImage = cfImage;
 
-  /**
-   * Grouped starter prompts shown on the empty state (i18n keys). Tapping one
-   * sends its text as the customer's first message.
-   */
-  readonly starterGroups: ReadonlyArray<{ title: string; icon: string; prompts: readonly string[] }> = [
-    {
-      title: 'ask_ain_group_occasions',
-      icon: 'sparkles',
-      prompts: [
-        'ask_ain_chip_wedding',
-        'ask_ain_starter_eid_outfit',
-        'ask_ain_starter_ramadan_evening',
-        'ask_ain_starter_work_everyday',
-      ],
-    },
-    {
-      title: 'ask_ain_group_gifts',
-      icon: 'gift',
-      prompts: [
-        'ask_ain_chip_eid_gift',
-        'ask_ain_starter_gift_mum',
-        'ask_ain_starter_gift_bride',
-        'ask_ain_starter_gift_friend',
-      ],
-    },
-    {
-      title: 'ask_ain_group_styles',
-      icon: 'shirt',
-      prompts: [
-        'ask_ain_chip_casual_beige',
-        'ask_ain_starter_embellished_kaftan',
-        'ask_ain_starter_minimal_set',
-        'ask_ain_starter_pastel_dress',
-      ],
-    },
-  ];
-
   /** Upper bound of guided questions (shown in the progress hint). */
   readonly maxQuestions = AIN_MAX_QUESTIONS;
 
@@ -122,7 +90,7 @@ export class AskAinPage implements OnInit, OnDestroy {
 
   messageText = '';
 
-  /** Whether the "Chat with Ain on WhatsApp" entry point is configured. */
+  /** Whether the "chat with Ain on WhatsApp" link (in the opening bubble) is configured. */
   readonly ainWhatsappEnabled = AIN_WHATSAPP !== '';
 
   @ViewChild(IonContent) private content?: IonContent;
@@ -152,7 +120,7 @@ export class AskAinPage implements OnInit, OnDestroy {
   private toast = inject(AxNotificationService);
   private session = inject(SessionStore);
 
-  /** Opening greeting/empty state when the thread has no turns yet. */
+  /** No messages yet: only Ain's opening bubble is in the thread. */
   get isFresh(): boolean {
     return this.thread.isEmpty;
   }
@@ -244,16 +212,12 @@ export class AskAinPage implements OnInit, OnDestroy {
     this.nav.back();
   }
 
-  /** "New chat": clear the thread back to the greeting state. */
+  /** "New chat": clear the thread back to just Ain's opening bubble. */
   newChat(): void {
     this.thread.reset();
     this.messageText = '';
     this.imageLoaded = {};
     this.focusComposer();
-  }
-
-  useSuggestion(key: string): void {
-    void this.ask(this.i18n.t(key));
   }
 
   /**
@@ -271,7 +235,7 @@ export class AskAinPage implements OnInit, OnDestroy {
   }
 
   /**
-   * "Question 2 of up to 4" for a guided-question turn, or '' for any other
+   * "Question 2 of up to 6" for a guided-question turn, or '' for any other
    * turn (results, small talk, or an older API without `question_slot`).
    */
   questionProgress(turn: AinReplyTurn): string {

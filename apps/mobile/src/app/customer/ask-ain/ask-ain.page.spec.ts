@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 
 import { AskAinPage } from './ask-ain.page';
 import { AinErrorTurn, AinReplyTurn, AskAinThreadService } from './ask-ain-thread.service';
@@ -75,25 +75,41 @@ async function settle(): Promise<void> {
   }
 }
 
+/** Ain's reply bubbles from the API (not the local opening bubble). */
+const REPLY_BUBBLE = '.aa-ain:not(.aa-ain--opening) .aa-ain-bubble';
+
 function create() {
   const fixture = TestBed.createComponent(AskAinPage);
   fixture.detectChanges();
   return { fixture, page: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
 }
 
+/** Create the page with the WhatsApp link flag set before the first render. */
+function createWithWhatsapp(enabled: boolean) {
+  const fixture = TestBed.createComponent(AskAinPage);
+  (fixture.componentInstance as any).ainWhatsappEnabled = enabled;
+  fixture.detectChanges();
+  return { fixture, page: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
+}
+
 describe('AskAinPage conversation', () => {
-  it('shows the greeting state with suggestions for a fresh thread', async () => {
-    await setup();
+  it('opens with Ain\'s own bubble in the thread: no preselects, no empty state outside it', async () => {
+    const { concierge } = await setup();
     const { el, page } = create();
     expect(page.isFresh).toBeTrue();
-    // Grouped starter prompts: Occasions / Gifts / Styles, 4 chips each.
-    expect(el.querySelectorAll('.aa-starter-group').length).toBe(3);
-    expect(Array.from(el.querySelectorAll('.aa-starter-group__title')).map((h) => h.textContent?.trim())).toEqual([
-      'ask_ain_group_occasions',
-      'ask_ain_group_gifts',
-      'ask_ain_group_styles',
-    ]);
-    expect(el.querySelectorAll('.aa-chip').length).toBe(12);
+    const thread = el.querySelector('.aa-thread[role="log"]') as HTMLElement;
+    const opening = thread.querySelector('.aa-ain--opening');
+    expect(opening).not.toBeNull();
+    // The opening is the thread's first message.
+    expect(thread.firstElementChild).toBe(opening);
+    expect(opening?.querySelector('.aa-ain-bubble')?.textContent).toContain('ask_ain_opening');
+    // No answer/starter chips before the conversation starts.
+    expect(el.querySelectorAll('.aa-followup, .aa-chip, .aa-starter-group').length).toBe(0);
+    // No greeting / orb block outside the thread.
+    expect(el.querySelector('.aa-intro')).toBeNull();
+    expect(el.querySelector('.aa-orb')).toBeNull();
+    // Local only: no concierge call just for opening.
+    expect(concierge).not.toHaveBeenCalled();
     // The thread's own live region is off (a whole turn with every card would
     // be read out); a separate polite line announces Ain's reply only.
     expect(el.querySelector('[role="log"][aria-live="off"]')).not.toBeNull();
@@ -126,7 +142,7 @@ describe('AskAinPage conversation', () => {
     expect(body.channel).toBe('MOBILE');
     expect(opts).toEqual({ authToken: 'live' });
     expect(el.querySelector('.aa-you .aa-bubble')?.textContent).toContain('black abaya for a wedding');
-    expect(el.querySelector('.aa-ain-bubble')?.textContent).toContain('Here are elegant options.');
+    expect(el.querySelector(REPLY_BUBBLE)?.textContent).toContain('Here are elegant options.');
     expect(el.querySelectorAll('.m6d-product-card').length).toBe(1);
     expect(Array.from(el.querySelectorAll('.aa-followup')).map((b) => b.textContent?.trim())).toEqual(['In navy', 'Cheaper ones']);
     expect(page.isFresh).toBeFalse();
@@ -183,7 +199,7 @@ describe('AskAinPage conversation', () => {
     expect(concierge.calls.mostRecent().args[0].query).toBe('linen dress');
     expect(el.querySelector('.aa-ain-bubble--error')).toBeNull();
     expect(el.querySelectorAll('.aa-you').length).toBe(1);
-    expect(el.querySelector('.aa-ain-bubble')?.textContent).toContain('Linen picks.');
+    expect(el.querySelector(REPLY_BUBBLE)?.textContent).toContain('Linen picks.');
   });
 
   it('keeps the thread when the page is re-created (e.g. back from a product)', async () => {
@@ -195,10 +211,10 @@ describe('AskAinPage conversation', () => {
 
     const second = create();
     expect(second.page.isFresh).toBeFalse();
-    expect(second.el.querySelector('.aa-ain-bubble')?.textContent).toContain('Found these.');
+    expect(second.el.querySelector(REPLY_BUBBLE)?.textContent).toContain('Found these.');
   });
 
-  it('New chat resets to the greeting state and forgets the guided questions', async () => {
+  it('New chat resets to just the opening bubble and forgets the guided questions', async () => {
     const { concierge } = await setup();
     concierge.and.returnValue(
       ok({ interaction_id: 3, products: [], reply: 'Who is it for?', follow_ups: ['For me'], needs_clarification: true, question_slot: 'recipient', asked_slots: ['recipient'] }),
@@ -210,7 +226,10 @@ describe('AskAinPage conversation', () => {
     page.newChat();
     fixture.detectChanges();
     expect(page.isFresh).toBeTrue();
-    expect(el.querySelectorAll('.aa-chip').length).toBe(12);
+    const thread = el.querySelector('.aa-thread') as HTMLElement;
+    expect(thread.querySelectorAll('.aa-ain').length).toBe(1);
+    expect(thread.querySelector('.aa-ain--opening')).not.toBeNull();
+    expect(el.querySelectorAll('.aa-you, .aa-followup').length).toBe(0);
     expect(el.querySelector('.aa-new-chat')).toBeNull();
 
     await page.ask('abaya');
@@ -218,15 +237,50 @@ describe('AskAinPage conversation', () => {
     expect(concierge.calls.mostRecent().args[0].history).toBeUndefined();
   });
 
-  it('a grouped starter prompt sends its text as the first message', async () => {
+  it('never sends the opening bubble as history', async () => {
     const { concierge } = await setup();
-    concierge.and.returnValue(ok({ interaction_id: 3, products: [], reply: 'Lovely!', follow_ups: [] }));
-    const { fixture, el } = create();
-    const gifts = el.querySelectorAll('.aa-starter-group')[1];
-    (gifts.querySelectorAll('.aa-chip')[1] as HTMLButtonElement).click();
-    await fixture.whenStable();
+    concierge.and.returnValue(ok({ interaction_id: 3, products: [], reply: 'Who is it for?', follow_ups: ['For me'], needs_clarification: true, question_slot: 'recipient', asked_slots: ['recipient'] }));
+    const { page } = create();
+    await page.ask('a dress');
+    expect(concierge.calls.mostRecent().args[0].history).toBeUndefined();
+    await page.ask('For me');
+    expect(concierge.calls.mostRecent().args[0].history).toEqual([
+      { role: 'user', text: 'a dress' },
+      { role: 'ain', text: 'Who is it for?' },
+    ]);
+  });
+
+  it('shows the WhatsApp entry as an inline link inside the opening bubble when configured', async () => {
+    await setup();
+    const { page, el } = createWithWhatsapp(true);
+    const link = el.querySelector('.aa-ain--opening .aa-whatsapp-link') as HTMLButtonElement;
+    expect(link).not.toBeNull();
+    expect(link.textContent).toContain('ask_ain_whatsapp_link');
+    const openSpy = spyOn(page, 'openAinWhatsapp');
+    link.click();
+    expect(openSpy).toHaveBeenCalled();
+  });
+
+  it('hides the WhatsApp link when it is not configured', async () => {
+    await setup();
+    const { page, el } = createWithWhatsapp(false);
+    expect(el.querySelector('.aa-whatsapp-link')).toBeNull();
+  });
+
+  it('renders the typing indicator inside the thread', async () => {
+    const { concierge } = await setup();
+    const pending = new Subject<unknown>();
+    concierge.and.returnValue(pending.asObservable());
+    const { fixture, page, el } = create();
+    void page.ask('abaya');
     await settle();
-    expect(concierge.calls.mostRecent().args[0].query).toBe('ask_ain_starter_gift_mum');
+    fixture.detectChanges();
+    expect(el.querySelector('.aa-thread .aa-thinking')).not.toBeNull();
+    pending.next({ response_code: 200, status: 'success', data: { products: [], reply: 'Hi', follow_ups: [] } });
+    pending.complete();
+    await settle();
+    fixture.detectChanges();
+    expect(el.querySelector('.aa-thinking')).toBeNull();
   });
 
   it('renders a guided question with progress, wrapping answer chips and a distinct skip chip', async () => {
@@ -250,7 +304,7 @@ describe('AskAinPage conversation', () => {
 
     expect(el.querySelector('.aa-ain-bubble--ask')?.textContent).toContain('What is the occasion?');
     expect(el.querySelector('.aa-progress')).not.toBeNull();
-    expect(i18n.t).toHaveBeenCalledWith('ask_ain_question_progress', { current: 2, total: 4 });
+    expect(i18n.t).toHaveBeenCalledWith('ask_ain_question_progress', { current: 2, total: 6 });
     expect(el.querySelector('.aa-followups--answers')).not.toBeNull();
     expect(el.querySelectorAll('.aa-followup').length).toBe(5);
     const skip = el.querySelectorAll('.aa-followup--skip');
@@ -269,7 +323,7 @@ describe('AskAinPage conversation', () => {
     fixture.detectChanges();
 
     concierge.and.returnValue(
-      ok({ interaction_id: 9, products: [], reply: 'Any style or colour?', follow_ups: ['Pastels', 'Show me what you have'], needs_clarification: true, question_slot: 'style_or_colour', asked_slots: ['recipient', 'occasion', 'style_or_colour'] }),
+      ok({ interaction_id: 9, products: [], reply: 'Any colour in mind?', follow_ups: ['Pastels', 'Show me what you have'], needs_clarification: true, question_slot: 'colour', asked_slots: ['recipient', 'occasion', 'colour'] }),
     );
     (el.querySelector('.aa-followup:not(.aa-followup--skip)') as HTMLButtonElement).click();
     await fixture.whenStable();
@@ -287,7 +341,7 @@ describe('AskAinPage conversation', () => {
     body = concierge.calls.mostRecent().args[0];
     expect(body.query).toBe('Show me what you have');
     expect(body.show_now).toBeTrue();
-    expect(body.asked_slots).toEqual(['recipient', 'occasion', 'style_or_colour']);
+    expect(body.asked_slots).toEqual(['recipient', 'occasion', 'colour']);
 
     fixture.detectChanges();
     // Results turn: products + refine chips, no progress hint, only the newest turn's chips.
@@ -318,6 +372,12 @@ describe('AskAinPage conversation', () => {
     await first.fixture.whenStable();
     expect(concierge).toHaveBeenCalledTimes(1);
     expect(concierge.calls.mostRecent().args[0].query).toBe('eid gift');
+    // The conversation reads: Ain's opening bubble, then the customer's message.
+    first.fixture.detectChanges();
+    const items = Array.from(first.el.querySelectorAll('.aa-thread > .aa-ain, .aa-thread > .aa-you'));
+    expect(items[0].classList.contains('aa-ain--opening')).toBeTrue();
+    expect(items[1].classList.contains('aa-you')).toBeTrue();
+    expect(items[1].textContent).toContain('eid gift');
     first.fixture.destroy();
 
     create();
