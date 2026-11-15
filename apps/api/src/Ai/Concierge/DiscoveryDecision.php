@@ -24,6 +24,8 @@ final class DiscoveryDecision
      * @param bool $showNow              the shopper asked to skip the questions this turn
      * @param string|null $pendingSlot   small talk in the MIDDLE of guided discovery: the
      *                                   question still awaiting an answer (its chips are re-offered)
+     * @param bool $fromSmallTalk        a question turn triggered by small talk before any
+     *                                   question was asked (the reply may lead with a friendly line)
      */
     public function __construct(
         public readonly string $action,
@@ -34,6 +36,7 @@ final class DiscoveryDecision
         public readonly bool $completeBefore,
         public readonly bool $showNow,
         public readonly ?string $pendingSlot = null,
+        public readonly bool $fromSmallTalk = false,
     ) {
     }
 

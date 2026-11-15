@@ -33,14 +33,21 @@ use Psr\Log\LoggerInterface;
  * web/app session to add-to-cart and check out. The reply is free-form text sent
  * inside the customer-initiated 24-hour window, so no message template is needed.
  *
- * Conversation memory: the last 8 turns (shopper text + Ain's reply text, never
- * product payloads) per number live in the KeyValueStore (Redis) under a hashed
- * key with a 30-minute idle TTL, and are passed to the concierge as history so
- * "cheaper" / "in black" refine the previous request. "new" / "reset" /
- * "start over" (en/ar) clears it. Guided discovery's asked_slots are stored
- * alongside the history, so Ain asks at most 4 short questions before showing
- * pieces; "show me what you have" / "أريني ما لديكِ" skips them. Memory fails OPEN: no Redis = no memory, Ain
- * still answers. Follow-ups are offered as plain-text suggestions — the channel
+ * Conversation memory: the last {@see ConversationHistory::MAX_TURNS} entries
+ * (shopper text + Ain's reply text, never product payloads) per number live in
+ * the KeyValueStore (Redis) under a hashed key with a 30-minute idle TTL, and
+ * are passed to the concierge as history so "cheaper" / "in black" refine the
+ * previous request. "new" / "reset" / "start over" (en/ar) clears it. Guided
+ * discovery's asked_slots are stored alongside the history, so Ain asks every
+ * slot the shopper has not given yet (at most 6 short questions) before
+ * showing pieces; "show me what you have" / "أريني ما لديكِ" skips them.
+ *
+ * The first message of a fresh conversation (no memory) is answered with Ain's
+ * opening line followed by the first question, in ONE message (the stored
+ * history keeps only the question, so a later turn still recognises it).
+ *
+ * Memory fails OPEN: no Redis = no memory, Ain still answers (straight to
+ * results). Follow-ups are offered as plain-text suggestions — the channel
  * only sends text (no interactive quick-reply buttons, and the webhook only
  * reads `text` messages).
  */
@@ -59,7 +66,7 @@ final class WhatsAppConversationService
     private const MAX_BODY_CHARS = 3800;
     private const MAX_REASON_CHARS = 160;
 
-    /** Conversation memory: last 8 turns per number, forgotten after 30 idle minutes. */
+    /** Conversation memory per number is forgotten after 30 idle minutes. */
     private const HISTORY_TTL_SECONDS = 1800;
 
     /** Whole-message commands that clear the memory (normalised, en + ar). */
@@ -104,29 +111,39 @@ final class WhatsAppConversationService
             $text = mb_substr($text, 0, ConversationHistory::MAX_TEXT_CHARS);
         }
 
-        // "new" / "reset" / "start over" wipes the conversation memory.
+        // "new" / "reset" / "start over" wipes the conversation memory. The
+        // reply invites a fresh request (no preset suggestions); an EMPTY
+        // conversation is stored so the next message goes straight into the
+        // questions instead of greeting the shopper a second time.
         if (self::isResetCommand($text)) {
             $this->forgetHistory($from);
-            $this->safeSend($from, $this->withSuggestions(
-                $this->message($locale, 'reset'),
-                ConciergeCopy::followUps(ConciergeCopy::KIND_GREETING, $locale),
-                $locale,
-            ));
+            $this->saveConversation($from, ConversationHistory::empty(), []);
+            $this->safeSend($from, $this->message($locale, 'reset'));
             return;
         }
 
-        [$history, $askedSlots] = $this->loadConversation($from);
+        [$history, $askedSlots, $fresh] = $this->loadConversation($from);
 
         try {
             // "show me what you have" (en/ar) is recognised by the planner itself.
-            $result = $this->concierge->ask($text, $locale, self::REPLY_LIMIT, $history, $askedSlots);
+            // An empty conversation (fresh, or just reset — the reset reply
+            // already invited a request) goes straight into the first question:
+            // "hi" never gets a second greeting with preset suggestions.
+            $opening = $history->isEmpty() && $askedSlots !== DiscoveryPlanner::SLOTS;
+            $result = $this->concierge->ask($text, $locale, self::REPLY_LIMIT, $history, $askedSlots, false, $opening);
         } catch (\Throwable $e) {
             $this->logger->warning('whatsapp.concierge_failed', ['error' => $e->getMessage()]);
             $this->safeSend($from, $this->message($locale, 'fallback'));
             return;
         }
 
+        // Only Ain's own reply is remembered (an exact question template, so a
+        // later turn still recognises what was asked) — never the greeting.
         $this->saveConversation($from, $history->withTurn($text, $result->reply), $result->askedSlots);
+        $reply = $result->reply;
+        if ($fresh) {
+            $reply = ConciergeCopy::opening($locale) . ($reply !== '' ? "\n\n" . $reply : '');
+        }
 
         $items = $result->items;
         $this->events->recordInteraction(
@@ -143,12 +160,12 @@ final class WhatsAppConversationService
         if ($items === []) {
             // A clarifying question, small talk or no match: Ain's reply text
             // (always set by the service) plus the follow-up suggestions.
-            $reply = $result->reply !== '' ? $result->reply : $this->message($locale, 'empty');
+            $reply = $reply !== '' ? $reply : $this->message($locale, 'empty');
             $this->safeSend($from, $this->withSuggestions($reply, $result->followUps, $locale));
             return;
         }
 
-        $this->safeSend($from, $this->buildReply($items, $locale, $result->reply, $result->followUps));
+        $this->safeSend($from, $this->buildReply($items, $locale, $reply, $result->followUps));
     }
 
     /** True when the whole message asks to start the conversation over (en/ar). */
@@ -165,10 +182,11 @@ final class WhatsAppConversationService
      * the guided-discovery asked_slots. Stored as {history, asked_slots}; a
      * pre-guided-discovery value (a bare history list) loads with asked_slots
      * null (the planner then infers from the history). No memory at all = a
-     * fresh conversation ([] asked). Fails OPEN: no Redis = no memory and no
-     * guided questions (straight to results), Ain still answers.
+     * fresh conversation ([] asked, fresh=true: the reply leads with Ain's
+     * greeting). Fails OPEN: no Redis = no memory and no guided questions
+     * (straight to results), Ain still answers.
      *
-     * @return array{0: ConversationHistory, 1: list<string>|null}
+     * @return array{0: ConversationHistory, 1: list<string>|null, 2: bool}
      */
     private function loadConversation(string $from): array
     {
@@ -178,19 +196,20 @@ final class WhatsAppConversationService
             $this->logger->warning('whatsapp.history_cache_failure — no memory', ['error' => $e->getMessage()]);
             // Without memory the answers could never accumulate (Ain would
             // re-ask forever), so skip guided discovery: straight to results.
-            return [ConversationHistory::empty(), DiscoveryPlanner::SLOTS];
+            return [ConversationHistory::empty(), DiscoveryPlanner::SLOTS, false];
         }
         if ($raw === null || $raw === '') {
-            return [ConversationHistory::empty(), []];
+            return [ConversationHistory::empty(), [], true];
         }
         $decoded = json_decode($raw, true);
         if (is_array($decoded) && array_key_exists('history', $decoded)) {
             return [
                 ConversationHistory::fromMixed($decoded['history']),
                 DiscoveryPlanner::sanitizeAskedSlots($decoded['asked_slots'] ?? []) ?? [],
+                false,
             ];
         }
-        return [ConversationHistory::fromMixed($decoded), null];
+        return [ConversationHistory::fromMixed($decoded), null, false];
     }
 
     /**

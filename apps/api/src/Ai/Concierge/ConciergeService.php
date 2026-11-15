@@ -12,8 +12,9 @@ namespace Bayti\Api\Ai\Concierge;
  * records analytics.
  *
  * Guided discovery: the deterministic {@see DiscoveryPlanner} decides whether
- * this turn asks ONE short question (recipient → occasion → type →
- * style/colour → budget, at most 4) or shows products. A guided question, a
+ * this turn asks ONE short question (recipient → occasion → type → colour →
+ * style → budget: every slot the shopper has not already given, at most 6) or
+ * shows products. A guided question, a
  * clarifying question or small talk skips retrieval entirely (no random dump
  * of products, no extra cost) — still exactly one model call per turn. Every collaborator degrades gracefully when AI is
  * off, so this always returns real catalogue results with a localized template
@@ -37,6 +38,10 @@ final class ConciergeService
      * @param list<string>|null $askedSlots the previous response's asked_slots, echoed
      *        by the client (sanitised); null = legacy client that sends none.
      * @param bool $showNow the shopper tapped "Show me what you have".
+     * @param bool $opening the first message of a conversation Ain has already
+     *        greeted (the apps' local opening bubble, WhatsApp's greeting prefix or
+     *        reset reply): small talk ("hi") then goes straight into the first
+     *        guided question instead of a second greeting.
      */
     public function ask(
         string $query,
@@ -45,6 +50,7 @@ final class ConciergeService
         array|ConversationHistory $history = [],
         ?array $askedSlots = null,
         bool $showNow = false,
+        bool $opening = false,
     ): ConciergeResult {
         $locale = ConciergeCopy::locale($locale);
         $history = ConversationHistory::fromMixed($history);
@@ -63,15 +69,23 @@ final class ConciergeService
         if (!$turn->modelParsed) {
             $planningIntent = self::withKeywords($planningIntent, DiscoveryLexicon::residualKeywords($texts));
         }
-        $decision = DiscoveryPlanner::plan($planningIntent, $query, $history, $askedSlots, $showNow, $turn->smallTalk);
+        $smallTalk = $turn->smallTalk;
+        if ($opening && $history->isEmpty()) {
+            // The greeting is already in the reply: start the questions now.
+            $smallTalk = false;
+        }
+        $decision = DiscoveryPlanner::plan($planningIntent, $query, $history, $askedSlots, $showNow, $smallTalk);
 
         if ($decision->action === DiscoveryDecision::ACTION_SMALL_TALK && $decision->pendingSlot !== null) {
-            // Small talk in the middle of the questions: answer kindly, and keep
-            // the pending question's answer chips on offer (same slot, not a new
-            // question — it does not count towards the 4).
-            $reply = $turn->modelParsed && $turn->reply !== ''
-                ? $turn->reply
-                : ConciergeCopy::question($decision->pendingSlot, $locale);
+            // Small talk in the middle of the questions: answer kindly, then
+            // repeat the pending question with its answer chips (same slot, not
+            // a new question — it does not count towards the 6). The reply ENDS
+            // with the question template so the next turn still knows a
+            // question is pending (never mistaken for results already shown).
+            $reply = ConciergeCopy::withQuestion(
+                $turn->modelParsed ? $turn->reply : '',
+                ConciergeCopy::question($decision->pendingSlot, $locale),
+            );
             return new ConciergeResult(
                 $turn->intent,
                 [],
@@ -84,6 +98,7 @@ final class ConciergeService
         }
 
         if ($decision->action === DiscoveryDecision::ACTION_SMALL_TALK) {
+            // After results (or with nothing left to ask): a friendly reply.
             $reply = $turn->reply !== ''
                 ? $turn->reply
                 : ConciergeCopy::reply(ConciergeCopy::KIND_GREETING, $locale);
@@ -95,10 +110,17 @@ final class ConciergeService
 
         if ($decision->isQuestion() && $decision->questionSlot !== null) {
             // A guided question: no retrieval / ranking at all (fast + cheap).
+            // Small talk before the first question ("what can you do?") keeps
+            // the model's friendly line in front of the question — never a
+            // second greeting with preset starter chips (the conversation
+            // already opened with Ain's greeting).
+            $question = ConciergeCopy::question($decision->questionSlot, $locale);
             return new ConciergeResult(
                 $planningIntent,
                 [],
-                ConciergeCopy::question($decision->questionSlot, $locale),
+                $decision->fromSmallTalk && $turn->modelParsed
+                    ? ConciergeCopy::withQuestion($turn->reply, $question)
+                    : $question,
                 ConciergeCopy::questionChips($decision->questionSlot, $locale, $compactChips),
                 true,
                 $decision->questionSlot,

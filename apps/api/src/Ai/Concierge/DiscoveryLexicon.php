@@ -46,7 +46,8 @@ final class DiscoveryLexicon
     private const OCCASIONS = [
         'eid' => ['eid', 'عيد'],
         'wedding' => ['wedding', 'bride', 'bridal', 'زفاف', 'عرس', 'زواج', 'عروس', 'ملكه'],
-        'everyday' => ['everyday', 'every day', 'daily', 'casual', 'day to day', 'يومي', 'كاجوال'],
+        // "casual" is a STYLE (the style question's "Casual" chip), not an occasion.
+        'everyday' => ['everyday', 'every day', 'daily', 'day to day', 'يومي'],
         'work' => ['work', 'office', 'workwear', 'عمل', 'دوام', 'مكتب'],
         'ramadan' => ['ramadan', 'iftar', 'suhoor', 'رمضان', 'افطار'],
         'party' => ['party', 'parties', 'evening', 'soiree', 'dinner', 'حفل', 'سهره', 'سهرات'],
@@ -55,7 +56,8 @@ final class DiscoveryLexicon
     ];
 
     private const COLOURS = [
-        'black' => ['black', '=اسود', '=سوداء', '=بالاسود', '=الاسود', '=باللون الاسود'],
+        // "Classic black" (the colour chip) is a colour answer, not a style one.
+        'black' => ['classic black', 'all black', '=اسود كلاسيكي', 'black','=اسود', '=سوداء', '=بالاسود', '=الاسود', '=باللون الاسود'],
         'white' => ['white', '=ابيض', '=بيضاء', '=الابيض'],
         'beige' => ['beige', 'بيج'],
         'cream' => ['cream', 'ivory', 'كريمي', 'عاجي'],
@@ -76,13 +78,15 @@ final class DiscoveryLexicon
         'classic' => ['classic', 'timeless', 'كلاسيك'],
         'embellished' => ['embellished', 'embroidered', 'embroidery', 'beaded', 'sequin', 'sparkly', 'مطرز', 'تطريز', 'مزين', 'خرز', 'ترتر'],
         'minimal' => ['minimal', 'minimalist', 'simple', 'plain', 'بسيط', 'ابسط', '=ساده'],
-        'modern' => ['modern', 'contemporary', 'trendy', 'عصري'],
+        'modern' => ['modern cut', 'modern', 'contemporary', 'trendy', 'عصري'],
+        'casual' => ['casual', 'relaxed', 'laid back', 'كاجوال'],
         'elegant' => ['elegant', 'chic', 'انيق'],
         'luxurious' => ['luxurious', 'luxury', 'فخم', 'فاخر'],
         'traditional' => ['traditional', 'تقليدي', 'تراثي'],
         'pastel' => ['pastel', 'باستيل'],
         'earthy' => ['earthy', 'earth tones', 'earthy tones', 'neutral', 'ترابي'],
         'colourful' => ['colourful', 'colorful', 'bright', 'vibrant', 'ملون', 'زاهي', '=بالوان اكثر'],
+        'jewel' => ['jewel tones', 'jewel toned', 'jewel tone', 'jewel', 'جواهر', 'زمردي'],
     ];
 
     private const SELF_TERMS = ['for me', 'for myself', 'myself', 'just me', '=لي', 'لنفسي', '=لي انا', '=الي انا'];
@@ -126,11 +130,15 @@ final class DiscoveryLexicon
         'بدلا', 'ذلك', 'بلون', 'اللون', 'لون', 'الوان', 'باللون', 'بالوان', 'قطعه', 'قطع', 'لا', 'يهم', 'بدون', 'تفضيل',
         'فرق', 'اي', 'درهم', 'دراهم', 'ميزانيه', 'حوالي', 'تقريبا', 'هل', 'نعم', 'اريني', 'ارني', 'اعرضي', 'المزيد', 'هذه',
         'هذا', 'للاستخدام', 'استخدام', 'ارخص', 'modest', 'محتشم', 'محتشمه', 'تحت', 'فوق', 'حتى', 'بحدود', 'حدود', 'نفس', 'اخرى', 'شيئ', 'فكره',
-        'help', 'hi', 'hello', 'hey', 'thanks', 'thank', 'stuff', 'hmm', 'salam', 'مرحبا', 'اهلا', 'ساعديني', 'ساعدني', 'شكرا',
+        'cut', 'قصه', 'help', 'hi', 'hello', 'hey', 'thanks', 'thank', 'stuff', 'hmm', 'salam', 'مرحبا', 'اهلا', 'ساعديني', 'ساعدني', 'شكرا',
     ];
 
-    /** Style tags that describe colour too: a new colour replaces them (and vice versa) on a refinement. */
-    private const COLOUR_STYLES = ['pastel', 'earthy', 'colourful'];
+    /**
+     * Style tags that describe a COLOUR palette rather than a cut/finish: they
+     * fill the colour slot (not the style slot), and a new colour replaces them
+     * (and vice versa) on a refinement.
+     */
+    public const COLOUR_STYLES = ['pastel', 'earthy', 'colourful', 'jewel'];
 
     /** At most this many leftover free-text keywords are carried into an AI-off search. */
     public const MAX_RESIDUAL_KEYWORDS = 3;
@@ -281,7 +289,13 @@ final class DiscoveryLexicon
         return $out;
     }
 
-    /** True when the message names anything for a discovery slot (recipient, type, occasion, colour/style, budget). */
+    /** True when a style tag describes a colour palette (pastel, earthy, colourful, jewel) rather than a style. */
+    public static function isColourStyle(string $style): bool
+    {
+        return in_array(mb_strtolower(trim($style)), self::COLOUR_STYLES, true);
+    }
+
+    /** True when the message names anything for a discovery slot (recipient, type, occasion, colour, style, budget). */
     public static function recognisesAnything(string $text): bool
     {
         $one = self::extractOne($text);

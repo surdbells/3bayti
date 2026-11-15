@@ -198,7 +198,8 @@ final class ConciergePipelineTest extends TestCase
             new ConciergeRanker($ai),
         );
 
-        $result = $service->ask('an elegant black abaya for a wedding', 'en');
+        // Discovery already complete (a refinement): straight to products.
+        $result = $service->ask('an elegant black abaya for a wedding', 'en', ConciergeService::DEFAULT_LIMIT, [], \Bayti\Api\Ai\Concierge\DiscoveryPlanner::SLOTS);
 
         // The non-orderable draft (2) and out-of-stock (3) are never surfaced.
         self::assertSame([4, 1], $result->productIds());

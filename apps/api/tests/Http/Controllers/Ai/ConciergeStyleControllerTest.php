@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Tests\Http\Controllers\Ai;
 
 use Bayti\Api\Ai\AiProviderInterface;
+use Bayti\Api\Ai\Concierge\ConciergeCopy;
 use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\Catalog\Vendor;
@@ -65,6 +66,7 @@ final class ConciergeStyleControllerTest extends HttpTestCase
         $res = $this->handle($this->jsonRequest('POST', '/v3/ai/concierge/style', [
             'query' => 'an elegant black abaya for a wedding',
             'locale' => 'en',
+            'show_now' => true,
         ]));
 
         self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
@@ -84,7 +86,15 @@ final class ConciergeStyleControllerTest extends HttpTestCase
         $this->bindDisabledAi();
         $this->bindProducts([$this->makeProduct(1, 'Black Abaya')]);
 
-        $res = $this->handle($this->jsonRequest('POST', '/v3/ai/concierge/style', ['query' => 'black abaya for eid']));
+        // A specific first request is still a conversation: no shortcut to products.
+        $res = $this->handle($this->jsonRequest('POST', '/v3/ai/concierge/style', ['query' => 'black abaya for eid', 'asked_slots' => []]));
+        $data = $this->dataOf($res);
+        self::assertSame([], $data['products']);
+        self::assertSame('recipient', $data['question_slot']);
+        self::assertSame(['recipient'], $data['asked_slots']);
+        self::assertTrue($data['needs_clarification']);
+
+        $res = $this->handle($this->jsonRequest('POST', '/v3/ai/concierge/style', ['query' => 'black abaya for eid', 'show_now' => true]));
 
         self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
         $data = $this->dataOf($res);
@@ -100,7 +110,7 @@ final class ConciergeStyleControllerTest extends HttpTestCase
         self::assertFalse($data['needs_clarification']);
         // Guided-discovery fields: results => no question, discovery complete.
         self::assertNull($data['question_slot']);
-        self::assertSame(['recipient', 'occasion', 'type', 'style_or_colour', 'budget'], $data['asked_slots']);
+        self::assertSame(['recipient', 'occasion', 'type', 'colour', 'style', 'budget'], $data['asked_slots']);
     }
 
     #[Test]
@@ -182,7 +192,7 @@ final class ConciergeStyleControllerTest extends HttpTestCase
         self::assertCount(1, $data['products']);
         self::assertFalse($data['needs_clarification']);
         self::assertNull($data['question_slot']);
-        self::assertSame(['recipient', 'occasion', 'type', 'style_or_colour', 'budget'], $data['asked_slots']);
+        self::assertSame(['recipient', 'occasion', 'type', 'colour', 'style', 'budget'], $data['asked_slots']);
         // The chip text is never searched: the subject comes from the intent.
         self::assertSame('Here are some pieces for “abaya”.', $data['reply']);
 
@@ -258,7 +268,7 @@ final class ConciergeStyleControllerTest extends HttpTestCase
             ['role' => 'user', 'text' => 'black abaya'],
             ['role' => 'ain', 'text' => 'Here are some pieces for “black abaya”.'],
         ];
-        for ($i = 0; $i < 10; $i++) {
+        for ($i = 0; $i < 14; $i++) {
             $history[] = ['role' => 'user', 'text' => 'abaya ' . $i];
         }
 
@@ -276,7 +286,7 @@ final class ConciergeStyleControllerTest extends HttpTestCase
         self::assertSame('abaya', $data['intent']['product_type']);
         self::assertSame(['navy'], $data['intent']['colours']);
         self::assertSame([], $data['intent']['keywords']);
-        self::assertSame('Here are some pieces for “abaya 8 in navy”.', $data['reply']);
+        self::assertSame('Here are some pieces for “abaya 12 in navy”.', $data['reply']);
 
         $started = null;
         foreach ($events as $e) {
@@ -285,7 +295,7 @@ final class ConciergeStyleControllerTest extends HttpTestCase
             }
         }
         self::assertIsArray($started);
-        self::assertSame(8, $started['history_length']);
+        self::assertSame(12, $started['history_length']);
     }
 
     #[Test]
@@ -310,7 +320,7 @@ final class ConciergeStyleControllerTest extends HttpTestCase
     }
 
     #[Test]
-    public function aGreetingGetsAFriendlyArabicReplyAndNoProducts(): void
+    public function aGreetingGetsTheFirstArabicQuestionAndNoProducts(): void
     {
         $this->bindDisabledAi();
         $this->bindProducts([$this->makeProduct(1, 'Black Abaya')]);
@@ -323,9 +333,44 @@ final class ConciergeStyleControllerTest extends HttpTestCase
         self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
         $data = $this->dataOf($res);
         self::assertSame([], $data['products']);
-        self::assertStringContainsString('عين', $data['reply']);
+        self::assertSame(ConciergeCopy::question('recipient', 'ar'), $data['reply']);
+        self::assertSame('recipient', $data['question_slot']);
         self::assertNotEmpty($data['follow_ups']);
-        self::assertFalse($data['needs_clarification']);
+        self::assertTrue($data['needs_clarification']);
+    }
+
+    #[Test]
+    public function aFirstHiAfterTheLocalOpeningBubbleGetsTheFirstQuestionNotASecondGreeting(): void
+    {
+        // AI ON: the model calls "hi" small talk and writes its own greeting +
+        // starter suggestions.
+        $ai = $this->createMock(AiProviderInterface::class);
+        $ai->method('isEnabled')->willReturn(true);
+        $ai->method('completeJson')->willReturn([
+            'keywords' => [], 'is_gift' => false,
+            'reply' => "Hi there, I'm Ain! What are you looking for today?",
+            'follow_ups' => ['An abaya for Eid', 'A gift for my mother'],
+            'needs_clarification' => false, 'small_talk' => true,
+        ]);
+        $ai->method('embed')->willReturn([]);
+        $this->bind(AiProviderInterface::class, $ai);
+        $this->bindProducts([$this->makeProduct(1, 'Black Abaya')]);
+
+        // A guided client (asked_slots sent) already showed Ain's opening bubble.
+        $res = $this->handle($this->jsonRequest('POST', '/v3/ai/concierge/style', [
+            'query' => 'hi',
+            'history' => [],
+            'asked_slots' => [],
+        ]));
+
+        self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
+        $data = $this->dataOf($res);
+        self::assertSame([], $data['products']);
+        self::assertSame(ConciergeCopy::question('recipient', 'en'), $data['reply']);
+        self::assertSame(ConciergeCopy::questionChips('recipient', 'en'), $data['follow_ups']);
+        self::assertNotContains('An abaya for Eid', $data['follow_ups']);
+        self::assertSame('recipient', $data['question_slot']);
+        self::assertSame(['recipient'], $data['asked_slots']);
     }
 
     /** @return array<string, mixed> */

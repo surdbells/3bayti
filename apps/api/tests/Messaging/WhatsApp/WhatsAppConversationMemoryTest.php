@@ -133,23 +133,26 @@ final class WhatsAppConversationMemoryTest extends TestCase
     {
         $svc = $this->service();
 
-        // Specific enough (type + colour + occasion) => straight to products.
+        // Even a specific request is a conversation: Ain greets, then asks.
         $svc->handleInbound(self::FROM, 'black abaya for eid');
-        self::assertStringStartsWith('Here are some pieces for “black abaya for eid”.', $this->channel->last());
+        self::assertStringStartsWith(ConciergeCopy::opening('en') . "\n\n" . ConciergeCopy::question('recipient', 'en'), $this->channel->last());
+        self::assertStringNotContainsString('/product/', $this->channel->last());
+
+        $svc->handleInbound(self::FROM, 'show me what you have');
         self::assertStringContainsString('/product/p-1', $this->channel->last());
         // Refine chips offered as text suggestions.
         self::assertStringContainsString('You can reply with:', $this->channel->last());
         self::assertStringContainsString('• Show more like these', $this->channel->last());
 
         $svc->handleInbound(self::FROM, 'in navy');
-        // AI off: the short follow-up is combined with the previous message.
-        self::assertStringStartsWith('Here are some pieces for “black abaya for eid in navy”.', $this->channel->last());
+        self::assertStringContainsString('/product/p-1', $this->channel->last());
 
         $stored = $this->storedHistory();
-        self::assertCount(4, $stored);
+        self::assertCount(6, $stored);
         self::assertSame(['role' => 'user', 'text' => 'black abaya for eid'], $stored[0]);
-        self::assertSame('ain', $stored[1]['role']);
-        self::assertSame('in navy', $stored[2]['text']);
+        // Only the question is remembered — never the greeting.
+        self::assertSame(['role' => 'ain', 'text' => ConciergeCopy::question('recipient', 'en')], $stored[1]);
+        self::assertSame('in navy', $stored[4]['text']);
         // Product payloads are never stored — only the reply text.
         self::assertStringNotContainsString('/product/', (string) json_encode($stored));
         // 30-minute idle TTL, re-armed every turn.
@@ -161,15 +164,15 @@ final class WhatsAppConversationMemoryTest extends TestCase
     }
 
     #[Test]
-    public function memoryIsCappedAtTheLastEightEntries(): void
+    public function memoryIsCappedAtTheLastTwelveEntries(): void
     {
         $svc = $this->service();
-        for ($i = 0; $i < 6; $i++) {
+        for ($i = 0; $i < 8; $i++) {
             $svc->handleInbound(self::FROM, 'abaya number ' . $i . ' please now');
         }
 
         $stored = $this->storedHistory();
-        self::assertCount(8, $stored);
+        self::assertCount(12, $stored);
         self::assertSame('abaya number 2 please now', $stored[0]['text']);
     }
 
@@ -190,6 +193,15 @@ final class WhatsAppConversationMemoryTest extends TestCase
         $svc->handleInbound(self::FROM, 'in navy');
         self::assertStringStartsWith(ConciergeCopy::question('recipient', 'en'), $this->channel->last());
 
+        // A "hi" right after a reset: the first question — no second greeting,
+        // no preset starter suggestions.
+        $svc->handleInbound(self::FROM, 'start over');
+        $svc->handleInbound(self::FROM, 'hi');
+        self::assertStringStartsWith(ConciergeCopy::question('recipient', 'en'), $this->channel->last());
+        self::assertStringNotContainsString(ConciergeCopy::opening('en'), $this->channel->last());
+        self::assertStringNotContainsString('An abaya for Eid', $this->channel->last());
+        self::assertSame(['recipient'], $this->storedAskedSlots());
+
         self::assertTrue(WhatsAppConversationService::isResetCommand('new'));
         self::assertTrue(WhatsAppConversationService::isResetCommand('ابدأ من جديد'));
         self::assertTrue(WhatsAppConversationService::isResetCommand('محادثة جديدة'));
@@ -204,9 +216,9 @@ final class WhatsAppConversationMemoryTest extends TestCase
         // Simulate the 30-minute idle TTL lapsing.
         $this->store->inner->flushAll();
 
-        // A fresh conversation: guided discovery from the first question.
+        // A fresh conversation: Ain greets again, then the first question.
         $svc->handleInbound(self::FROM, 'in navy');
-        self::assertStringStartsWith(ConciergeCopy::question('recipient', 'en'), $this->channel->last());
+        self::assertStringStartsWith(ConciergeCopy::opening('en') . "\n\n" . ConciergeCopy::question('recipient', 'en'), $this->channel->last());
         self::assertSame(['recipient'], $this->storedAskedSlots());
     }
 
@@ -226,13 +238,41 @@ final class WhatsAppConversationMemoryTest extends TestCase
     }
 
     #[Test]
-    public function aGreetingGetsAReplyWithSuggestionsAndNoProducts(): void
+    public function aFreshGreetingGetsTheOpeningLineAndTheFirstQuestionInOneMessage(): void
     {
         $this->service()->handleInbound(self::FROM, 'hello');
 
-        self::assertStringStartsWith("Hi, I'm Ain!", $this->channel->last());
+        self::assertCount(1, $this->channel->sent);
+        self::assertStringStartsWith(
+            ConciergeCopy::opening('en') . "\n\n" . ConciergeCopy::question('recipient', 'en'),
+            $this->channel->last(),
+        );
+        self::assertStringStartsWith("Hi, I'm Ain, your personal stylist at 3bayti.", $this->channel->last());
         self::assertStringNotContainsString('/product/', $this->channel->last());
-        self::assertStringContainsString('• An abaya for Eid', $this->channel->last());
+        self::assertStringContainsString('• For me', $this->channel->last());
+        self::assertStringContainsString('• Show me what you have', $this->channel->last());
+        self::assertSame(['recipient'], $this->storedAskedSlots());
+        self::assertSame([
+            ['role' => 'user', 'text' => 'hello'],
+            ['role' => 'ain', 'text' => ConciergeCopy::question('recipient', 'en')],
+        ], $this->storedHistory());
+
+        // Discovery continues: the next message is answered with the next question only.
+        $this->service()->handleInbound(self::FROM, 'For me');
+        self::assertStringStartsWith(ConciergeCopy::question('occasion', 'en'), $this->channel->last());
+    }
+
+    #[Test]
+    public function aSpecificFirstMessageStillGetsEveryRemainingQuestionBeforeProducts(): void
+    {
+        $svc = $this->service();
+        $svc->handleInbound(self::FROM, 'an embellished black abaya for my mother for eid');
+        self::assertStringStartsWith(ConciergeCopy::opening('en') . "\n\n" . ConciergeCopy::question('budget', 'en'), $this->channel->last());
+        self::assertStringNotContainsString('/product/', $this->channel->last());
+
+        $svc->handleInbound(self::FROM, 'Under 300 AED');
+        self::assertStringContainsString('/product/p-1', $this->channel->last());
+        self::assertStringNotContainsString(ConciergeCopy::opening('en'), $this->channel->last());
     }
 
     #[Test]
@@ -241,19 +281,20 @@ final class WhatsAppConversationMemoryTest extends TestCase
         $svc = $this->service();
 
         $svc->handleInbound(self::FROM, 'أبحث عن عباية سوداء للعيد');
-        self::assertStringStartsWith('إليكِ بعض القطع لـ «أبحث عن عباية سوداء للعيد».', $this->channel->last());
+        self::assertStringStartsWith(ConciergeCopy::opening('ar') . "\n\n" . ConciergeCopy::question('recipient', 'ar'), $this->channel->last());
         self::assertStringContainsString('يمكنكِ الرد بـ:', $this->channel->last());
-        self::assertStringContainsString('• أقل من 300 درهم', $this->channel->last());
+        self::assertStringContainsString('• لي أنا', $this->channel->last());
 
+        // Small talk mid-discovery (AI off) repeats the pending question.
         $svc->handleInbound(self::FROM, 'مرحبا');
-        self::assertStringStartsWith(ConciergeCopy::reply(ConciergeCopy::KIND_GREETING, 'ar'), $this->channel->last());
+        self::assertStringStartsWith(ConciergeCopy::question('recipient', 'ar'), $this->channel->last());
 
         $svc->handleInbound(self::FROM, 'ابدأ من جديد');
         self::assertStringStartsWith('بداية جديدة!', $this->channel->last());
 
-        // A Latin-script message stays English.
+        // A Latin-script message stays English (no second greeting after the reset).
         $svc->handleInbound(self::FROM, 'black abaya for a wedding');
-        self::assertStringStartsWith('Here are some pieces for “black abaya for a wedding”.', $this->channel->last());
+        self::assertStringStartsWith(ConciergeCopy::question('recipient', 'en'), $this->channel->last());
     }
 
     #[Test]
@@ -262,7 +303,7 @@ final class WhatsAppConversationMemoryTest extends TestCase
         $svc = $this->service();
 
         $svc->handleInbound(self::FROM, 'abaya');
-        self::assertStringStartsWith(ConciergeCopy::question('recipient', 'en'), $this->channel->last());
+        self::assertStringStartsWith(ConciergeCopy::opening('en') . "\n\n" . ConciergeCopy::question('recipient', 'en'), $this->channel->last());
         self::assertStringContainsString('• For me', $this->channel->last());
         self::assertStringContainsString('• Show me what you have', $this->channel->last());
         self::assertStringNotContainsString('/product/', $this->channel->last());
@@ -276,7 +317,7 @@ final class WhatsAppConversationMemoryTest extends TestCase
         // The skip phrase, typed as plain text, shows products.
         $svc->handleInbound(self::FROM, 'show me what you have');
         self::assertStringContainsString('/product/p-1', $this->channel->last());
-        self::assertSame(['recipient', 'occasion', 'type', 'style_or_colour', 'budget'], $this->storedAskedSlots());
+        self::assertSame(['recipient', 'occasion', 'type', 'colour', 'style', 'budget'], $this->storedAskedSlots());
 
         // Refinements now go straight to results.
         $svc->handleInbound(self::FROM, 'in navy');
@@ -288,7 +329,7 @@ final class WhatsAppConversationMemoryTest extends TestCase
     {
         $svc = $this->service();
         $svc->handleInbound(self::FROM, 'عباية');
-        self::assertStringStartsWith(ConciergeCopy::question('recipient', 'ar'), $this->channel->last());
+        self::assertStringStartsWith(ConciergeCopy::opening('ar') . "\n\n" . ConciergeCopy::question('recipient', 'ar'), $this->channel->last());
 
         $svc->handleInbound(self::FROM, 'أريني ما لديكِ');
         self::assertStringContainsString('/product/p-1', $this->channel->last());

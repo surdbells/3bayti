@@ -68,7 +68,7 @@ final class ConversationalConciergeTest extends TestCase
     // ===== ConversationHistory (K1) =====
 
     #[Test]
-    public function historyKeepsTheLastEightValidEntriesTruncatedAndDropsMalformedOnes(): void
+    public function historyKeepsTheLastTwelveValidEntriesTruncatedAndDropsMalformedOnes(): void
     {
         $raw = [
             'not-an-entry',
@@ -77,18 +77,18 @@ final class ConversationalConciergeTest extends TestCase
             ['role' => 'user', 'text' => '   '],
             ['role' => 'ain', 'text' => 42],
         ];
-        for ($i = 1; $i <= 10; $i++) {
+        for ($i = 1; $i <= 14; $i++) {
             $raw[] = ['role' => $i % 2 === 1 ? 'user' : 'ain', 'text' => "turn {$i}"];
         }
         $raw[] = ['role' => 'USER', 'text' => str_repeat('a', 900)];
 
         $h = ConversationHistory::fromMixed($raw);
 
-        self::assertSame(8, $h->count());
+        self::assertSame(12, $h->count());
         $entries = $h->entries();
         self::assertSame('turn 4', $entries[0]['text']);
-        self::assertSame('user', $entries[7]['role']);
-        self::assertSame(500, mb_strlen($entries[7]['text']));
+        self::assertSame('user', $entries[11]['role']);
+        self::assertSame(500, mb_strlen($entries[11]['text']));
         self::assertTrue(ConversationHistory::fromMixed('nope')->isEmpty());
         self::assertTrue(ConversationHistory::fromMixed(null)->isEmpty());
     }
@@ -287,7 +287,7 @@ final class ConversationalConciergeTest extends TestCase
     }
 
     #[Test]
-    public function aiOffGreetingGetsAFriendlyReplyWithoutAProductDump(): void
+    public function aiOffGreetingStartsTheQuestionsWithoutAProductDump(): void
     {
         $ai = new RecordingAiProvider();
         $ai->enabled = false;
@@ -297,9 +297,15 @@ final class ConversationalConciergeTest extends TestCase
         $result = $this->service($ai, $repo)->ask('hello', 'ar');
 
         self::assertSame([], $result->items);
-        self::assertFalse($result->needsClarification);
+        self::assertTrue($result->needsClarification);
+        self::assertSame('recipient', $result->questionSlot);
+        self::assertSame(ConciergeCopy::question('recipient', 'ar'), $result->reply);
+        self::assertNotContains(ConciergeCopy::followUps(ConciergeCopy::KIND_GREETING, 'ar')[0], $result->followUps);
+
+        // After results, a greeting keeps its own friendly reply.
+        $result = $this->service($ai, $repo)->ask('hello', 'ar', 12, [], DiscoveryPlanner::SLOTS);
+        self::assertNull($result->questionSlot);
         self::assertSame(ConciergeCopy::reply(ConciergeCopy::KIND_GREETING, 'ar'), $result->reply);
-        self::assertSame(ConciergeCopy::followUps(ConciergeCopy::KIND_GREETING, 'ar'), $result->followUps);
     }
 
     #[Test]
@@ -309,8 +315,8 @@ final class ConversationalConciergeTest extends TestCase
         $ai->enabled = false;
         $repo = $this->repoReturning([$this->product(1, 'Black Abaya')]);
 
-        // Specific enough (type + colour + occasion) => straight to results.
-        $result = $this->service($ai, $repo)->ask('black abaya for eid', 'en');
+        // The shopper skips the questions => straight to results.
+        $result = $this->service($ai, $repo)->ask('black abaya for eid', 'en', 12, [], [], true);
 
         self::assertSame([1], $result->productIds());
         self::assertSame('Here are some pieces for “black abaya for eid”.', $result->reply);
@@ -384,7 +390,8 @@ final class ConversationalConciergeTest extends TestCase
             return ['items' => $items, 'total' => count($items)];
         });
 
-        $result = $this->service($ai, $repo)->ask('black wedding abaya under 300', 'en');
+        // A refinement after results (discovery complete).
+        $result = $this->service($ai, $repo)->ask('black wedding abaya under 300', 'en', 12, [], DiscoveryPlanner::SLOTS);
 
         self::assertSame([7], $result->productIds());
         self::assertStringStartsWith("I couldn't find an exact match for “black wedding abaya under 300”", $result->reply);

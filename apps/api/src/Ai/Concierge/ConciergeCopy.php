@@ -46,16 +46,29 @@ final class ConciergeCopy
             DiscoveryPlanner::SLOT_RECIPIENT => 'Happy to help! Is this for you, or a gift for someone special?',
             DiscoveryPlanner::SLOT_OCCASION => "Lovely! What's the occasion?",
             DiscoveryPlanner::SLOT_TYPE => 'What kind of piece do you have in mind?',
-            DiscoveryPlanner::SLOT_STYLE => 'Any colours or style you love?',
+            DiscoveryPlanner::SLOT_COLOUR => 'Which colours are you drawn to?',
+            DiscoveryPlanner::SLOT_STYLE => 'And what style do you love?',
             DiscoveryPlanner::SLOT_BUDGET => 'And roughly what budget would you like me to stay within?',
         ],
         'ar' => [
             DiscoveryPlanner::SLOT_RECIPIENT => 'يسعدني مساعدتكِ! هل هذه القطعة لكِ، أم هدية لشخص عزيز؟',
             DiscoveryPlanner::SLOT_OCCASION => 'جميل! ما هي المناسبة؟',
             DiscoveryPlanner::SLOT_TYPE => 'ما نوع القطعة التي تفكّرين بها؟',
-            DiscoveryPlanner::SLOT_STYLE => 'هل هناك ألوان أو أسلوب تحبّينه؟',
+            DiscoveryPlanner::SLOT_COLOUR => 'ما الألوان التي تميلين إليها؟',
+            DiscoveryPlanner::SLOT_STYLE => 'وما الأسلوب الذي تحبّينه؟',
             DiscoveryPlanner::SLOT_BUDGET => 'وما الميزانية التقريبية التي تفضّلين أن أبقى ضمنها؟',
         ],
+    ];
+
+    /**
+     * RETIRED question templates, still recognised in a history (older
+     * clients / stored WhatsApp memory) as "already asked". Never sent.
+     *
+     * @var array<string, list<string>> template => slots it asked
+     */
+    private const LEGACY_QUESTIONS = [
+        'Any colours or style you love?' => [DiscoveryPlanner::SLOT_COLOUR, DiscoveryPlanner::SLOT_STYLE],
+        'هل هناك ألوان أو أسلوب تحبّينه؟' => [DiscoveryPlanner::SLOT_COLOUR, DiscoveryPlanner::SLOT_STYLE],
     ];
 
     /** Predefined ANSWER chips per slot (phrased as the shopper would answer). */
@@ -64,16 +77,28 @@ final class ConciergeCopy
             DiscoveryPlanner::SLOT_RECIPIENT => ['For me', 'A gift'],
             DiscoveryPlanner::SLOT_OCCASION => ['Eid', 'Wedding', 'Everyday', 'Work', 'Ramadan', 'Party / evening'],
             DiscoveryPlanner::SLOT_TYPE => ['Abaya', 'Kaftan', 'Jalabiya', 'Dress', 'Modest set', 'Accessories'],
-            DiscoveryPlanner::SLOT_STYLE => ['Classic black', 'Pastels', 'Earthy tones', 'Embellished', 'Minimal'],
+            DiscoveryPlanner::SLOT_COLOUR => ['Classic black', 'White & cream', 'Pastels', 'Earthy tones', 'Jewel tones'],
+            DiscoveryPlanner::SLOT_STYLE => ['Classic & elegant', 'Embellished', 'Minimal', 'Modern cut', 'Casual'],
             DiscoveryPlanner::SLOT_BUDGET => ['Under 300 AED', '300–700 AED', '700+ AED'],
         ],
         'ar' => [
             DiscoveryPlanner::SLOT_RECIPIENT => ['لي أنا', 'هدية'],
             DiscoveryPlanner::SLOT_OCCASION => ['العيد', 'حفل زفاف', 'للاستخدام اليومي', 'العمل', 'رمضان', 'حفلة / سهرة'],
             DiscoveryPlanner::SLOT_TYPE => ['عباية', 'قفطان', 'جلابية', 'فستان', 'طقم محتشم', 'إكسسوارات'],
-            DiscoveryPlanner::SLOT_STYLE => ['أسود كلاسيكي', 'ألوان باستيل', 'ألوان ترابية', 'مطرّز', 'بسيط'],
+            DiscoveryPlanner::SLOT_COLOUR => ['أسود كلاسيكي', 'أبيض وكريمي', 'ألوان باستيل', 'ألوان ترابية', 'ألوان الجواهر'],
+            DiscoveryPlanner::SLOT_STYLE => ['كلاسيكي وأنيق', 'مطرّز', 'بسيط', 'قصّة عصرية', 'كاجوال'],
             DiscoveryPlanner::SLOT_BUDGET => ['أقل من 300 درهم', '300–700 درهم', 'أكثر من 700 درهم'],
         ],
+    ];
+
+    /**
+     * Ain's opening line: the conversation starts with it (rendered locally by
+     * the apps, never sent as history; the first WhatsApp reply of a fresh
+     * conversation leads with it, followed by the first question).
+     */
+    private const OPENING = [
+        'en' => "Hi, I'm Ain, your personal stylist at 3bayti. Tell me what you're looking for and I'll ask a few quick questions to find the perfect pieces.",
+        'ar' => 'أهلاً، أنا عين، منسّقة أزيائكِ الشخصية في 3bayti. أخبريني عمّا تبحثين عنه وسأطرح عليكِ بضعة أسئلة سريعة لأجد لكِ القطع المثالية.',
     ];
 
     /** Always offered on a question turn, in this order, as the LAST two chips. */
@@ -195,11 +220,21 @@ final class ConciergeCopy
         return $table[$kind] ?? $table[self::KIND_FOUND];
     }
 
-    /** Ain's localized question for a discovery slot. */
+    /**
+     * Ain's localized question for a discovery slot (the retired
+     * 'style_or_colour' asks the colour question).
+     */
     public static function question(string $slot, string $locale): string
     {
         $table = self::QUESTIONS[self::locale($locale)];
-        return $table[$slot] ?? $table[DiscoveryPlanner::SLOT_RECIPIENT];
+        $slot = DiscoveryPlanner::expandSlot($slot)[0] ?? DiscoveryPlanner::SLOT_RECIPIENT;
+        return $table[$slot];
+    }
+
+    /** Ain's localized opening line (the conversation starts with it). */
+    public static function opening(string $locale): string
+    {
+        return self::OPENING[self::locale($locale)];
     }
 
     /**
@@ -216,6 +251,7 @@ final class ConciergeCopy
     public static function questionChips(string $slot, string $locale, bool $compact = false): array
     {
         $locale = self::locale($locale);
+        $slot = DiscoveryPlanner::expandSlot($slot)[0] ?? $slot;
         $answers = self::ANSWER_CHIPS[$locale][$slot] ?? [];
         if ($compact) {
             return [...array_slice($answers, 0, self::LEGACY_FOLLOW_UPS - 1), self::SHOW_NOW[$locale]];
@@ -224,7 +260,7 @@ final class ConciergeCopy
         return [...$answers, self::NO_PREFERENCE[$locale], self::SHOW_NOW[$locale]];
     }
 
-    /** True when the text is Ain's greeting template (either locale). */
+    /** True when the text is Ain's greeting template or opening line (either locale). */
     public static function isGreetingReply(string $text): bool
     {
         $text = trim($text);
@@ -233,7 +269,7 @@ final class ConciergeCopy
                 return true;
             }
         }
-        return false;
+        return in_array($text, self::OPENING, true);
     }
 
     /** The localized "Show me what you have" (skip the questions) chip. */
@@ -249,20 +285,68 @@ final class ConciergeCopy
     }
 
     /**
-     * Which slot an Ain message asks about, when it is exactly one of the
-     * question templates (either locale); null otherwise.
+     * Which slot an Ain message asks about, when it is (or ends with, after a
+     * friendly line) one of the question templates (either locale); null otherwise.
      */
     public static function questionSlotFor(string $text): ?string
+    {
+        return self::questionSlotsFor($text)[0] ?? null;
+    }
+
+    /**
+     * Every slot an Ain message asks about: one for a current question
+     * template, colour + style for the retired combined "colours or style"
+     * question, [] otherwise.
+     *
+     * @return list<string>
+     */
+    public static function questionSlotsFor(string $text): array
     {
         $text = trim($text);
         foreach (self::QUESTIONS as $table) {
             foreach ($table as $slot => $q) {
-                if ($q === $text) {
-                    return $slot;
+                if ($q === $text || self::endsWithQuestion($text, $q)) {
+                    return [$slot];
                 }
             }
         }
-        return null;
+        foreach (self::LEGACY_QUESTIONS as $q => $slots) {
+            if ($q === $text || self::endsWithQuestion($text, $q)) {
+                return $slots;
+            }
+        }
+        return [];
+    }
+
+    /**
+     * Ain's friendly line (small talk) followed by a question template — the
+     * message still ENDS with the exact template, so it is recognised as that
+     * question ({@see self::questionSlotsFor()}). Any question the line itself
+     * asks is dropped (Ain asks exactly one); an empty or greeting-template line
+     * gives the bare question.
+     */
+    public static function withQuestion(string $friendlyLine, string $question): string
+    {
+        $line = trim($friendlyLine);
+        if ($line === '' || self::isGreetingReply($line) || self::questionSlotsFor($line) !== []) {
+            return $question;
+        }
+        $sentences = preg_split('/(?<=[.!?؟…])\s+/u', $line, -1, PREG_SPLIT_NO_EMPTY);
+        $kept = array_filter(
+            is_array($sentences) ? $sentences : [$line],
+            static fn (string $s): bool => !preg_match('/[?؟]\s*$/u', $s),
+        );
+        $line = trim(implode(' ', $kept));
+        return $line === '' ? $question : $line . ' ' . $question;
+    }
+
+    /** "<friendly line> <template>": the template ends the text after whitespace. */
+    private static function endsWithQuestion(string $text, string $question): bool
+    {
+        $len = strlen($question);
+        return strlen($text) > $len
+            && str_ends_with($text, $question)
+            && ctype_space($text[strlen($text) - $len - 1]);
     }
 
     /**

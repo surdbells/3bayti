@@ -79,8 +79,16 @@ final class GuidedDiscoveryTest extends TestCase
         self::assertSame('type', $d->questionSlot);
 
         $d = $this->plan(ConciergeIntent::keywordFallback('x'), 'No preference', [], ['recipient', 'occasion', 'type']);
-        self::assertSame('style_or_colour', $d->questionSlot);
-        self::assertSame(['recipient', 'occasion', 'type', 'style_or_colour'], $d->askedSlots);
+        self::assertSame('colour', $d->questionSlot);
+        self::assertSame(['recipient', 'occasion', 'type', 'colour'], $d->askedSlots);
+
+        $d = $this->plan(ConciergeIntent::keywordFallback('x'), 'No preference', [], ['recipient', 'occasion', 'type', 'colour']);
+        self::assertSame('style', $d->questionSlot);
+
+        $d = $this->plan(ConciergeIntent::keywordFallback('x'), 'No preference', [], ['recipient', 'occasion', 'type', 'colour', 'style']);
+        self::assertSame('budget', $d->questionSlot);
+        self::assertSame(DiscoveryPlanner::SLOTS, $d->askedSlots);
+        self::assertSame(['recipient', 'occasion', 'type', 'colour', 'style', 'budget'], DiscoveryPlanner::SLOTS);
     }
 
     #[Test]
@@ -93,7 +101,18 @@ final class GuidedDiscoveryTest extends TestCase
         self::assertSame(['occasion', 'type'], $d->filledSlots);
 
         $d = $this->plan($intent, 'For me', [['role' => 'user', 'text' => 'abaya for eid']], ['recipient']);
-        self::assertSame('style_or_colour', $d->questionSlot);
+        self::assertSame('colour', $d->questionSlot);
+
+        // A palette fills the COLOUR slot; a cut/finish fills the STYLE slot.
+        $d = $this->plan(ConciergeIntent::keywordFallback('pastel kaftan'), 'pastel kaftan', [], []);
+        self::assertSame(['type', 'colour'], $d->filledSlots);
+        $d = $this->plan(ConciergeIntent::keywordFallback('embellished kaftan'), 'embellished kaftan', [], []);
+        self::assertSame(['type', 'style'], $d->filledSlots);
+        $d = $this->plan(ConciergeIntent::keywordFallback('قفطان مطرز بألوان ترابية'), 'قفطان مطرز بألوان ترابية', [], []);
+        self::assertSame(['type', 'colour', 'style'], $d->filledSlots);
+        // The model's palette style fills colour, its cut style fills style.
+        $m = new ConciergeIntent('kaftan', null, [], [], ['jewel', 'minimal'], null, null, [], [], false, 0.9);
+        self::assertSame(['type', 'colour', 'style'], DiscoveryPlanner::filledSlots($m, ['x']));
 
         // isGift fills recipient.
         $gift = new ConciergeIntent(null, null, [], [], [], null, null, [], [], true, 0.9);
@@ -106,22 +125,34 @@ final class GuidedDiscoveryTest extends TestCase
     }
 
     #[Test]
-    public function anAskedSlotCountsAsFilledAndAtMostFourQuestionsAreAsked(): void
+    public function anAskedSlotCountsAsFilledAndAtMostSixQuestionsAreAsked(): void
     {
-        $asked = ['recipient', 'occasion', 'type', 'style_or_colour'];
-        $d = $this->plan(ConciergeIntent::keywordFallback('No preference'), 'No preference', [], $asked);
+        self::assertSame(6, DiscoveryPlanner::MAX_QUESTIONS);
+        // The answer to the 6th question: every slot asked, and Ain's latest
+        // message is that question — guided results, not a refinement.
+        $history = [
+            ['role' => 'user', 'text' => 'No preference'],
+            ['role' => 'ain', 'text' => ConciergeCopy::question('budget', 'en')],
+        ];
+        $d = $this->plan(ConciergeIntent::keywordFallback('No preference'), 'No preference', $history, DiscoveryPlanner::SLOTS);
 
         self::assertSame(DiscoveryDecision::ACTION_RESULTS, $d->action);
         self::assertNull($d->questionSlot);
+        self::assertFalse($d->completeBefore);
         // Products shown => every slot marked (discovery complete).
         self::assertSame(DiscoveryPlanner::SLOTS, $d->askedSlots);
+        self::assertTrue($d->isGuidedResults());
+
+        // Five asked + the budget given in the answer: results too.
+        $d = $this->plan(ConciergeIntent::keywordFallback('Under 300 AED'), 'Under 300 AED', [], ['recipient', 'occasion', 'type', 'colour', 'style']);
+        self::assertSame(DiscoveryDecision::ACTION_RESULTS, $d->action);
         self::assertTrue($d->isGuidedResults());
     }
 
     #[Test]
     public function allSlotsFilledShowsProducts(): void
     {
-        $intent = new ConciergeIntent('abaya', null, ['eid'], ['black'], [], null, 500.0, ['abaya'], [], true, 0.9);
+        $intent = new ConciergeIntent('abaya', null, ['eid'], ['black'], ['embellished'], null, 500.0, ['abaya'], [], true, 0.9);
         $d = $this->plan($intent, 'Under 500 AED', [], ['recipient']);
         self::assertSame(DiscoveryDecision::ACTION_RESULTS, $d->action);
     }
@@ -143,15 +174,41 @@ final class GuidedDiscoveryTest extends TestCase
     }
 
     #[Test]
-    public function aSpecificFirstMessageGoesStraightToResults(): void
+    public function aSpecificFirstMessageStillAsksEveryRemainingSlot(): void
     {
-        $d = $this->plan(ConciergeIntent::keywordFallback('an elegant black abaya for a wedding'), 'an elegant black abaya for a wedding', [], []);
-        self::assertSame(DiscoveryDecision::ACTION_RESULTS, $d->action);
-        self::assertFalse($d->isGuidedResults());
-
-        // Two slots only => still a question.
-        $d = $this->plan(ConciergeIntent::keywordFallback('black abaya'), 'black abaya', [], []);
+        // Occasion, type, colour and style given: no shortcut — Ain still asks
+        // the recipient, then the budget, before any products.
+        $msg = 'an elegant black abaya for a wedding';
+        $d = $this->plan(ConciergeIntent::keywordFallback($msg), $msg, [], []);
         self::assertSame(DiscoveryDecision::ACTION_ASK, $d->action);
+        self::assertSame('recipient', $d->questionSlot);
+        self::assertSame(['occasion', 'type', 'colour', 'style'], $d->filledSlots);
+
+        $history = [['role' => 'user', 'text' => $msg], ['role' => 'ain', 'text' => ConciergeCopy::question('recipient', 'en')]];
+        $d = $this->plan(ConciergeIntent::keywordFallback('For me'), 'For me', $history, ['recipient']);
+        self::assertSame('budget', $d->questionSlot);
+        self::assertSame(['recipient', 'budget'], $d->askedSlots);
+
+        $history = [...$history, ['role' => 'user', 'text' => 'For me'], ['role' => 'ain', 'text' => ConciergeCopy::question('budget', 'en')]];
+        $d = $this->plan(ConciergeIntent::keywordFallback('Under 300 AED'), 'Under 300 AED', $history, ['recipient', 'budget']);
+        self::assertSame(DiscoveryDecision::ACTION_RESULTS, $d->action);
+        self::assertTrue($d->isGuidedResults());
+
+        // Even a message that fills every slot but the budget gets that question.
+        $msg = 'an embellished black abaya for my mother for eid';
+        $d = $this->plan(ConciergeIntent::keywordFallback($msg), $msg, [], []);
+        self::assertSame('budget', $d->questionSlot);
+    }
+
+    #[Test]
+    public function aSlotBeforeTheLatestAskedOneIsNeverReAsked(): void
+    {
+        // The first message (which gave the type) scrolled out of the history:
+        // later slots were asked after it, so the type is not asked again.
+        $d = $this->plan(ConciergeIntent::keywordFallback('No preference'), 'No preference', [], ['recipient', 'occasion', 'colour', 'style']);
+        self::assertSame('budget', $d->questionSlot);
+        self::assertNull(DiscoveryPlanner::nextSlot(['recipient', 'budget'], []));
+        self::assertSame('occasion', DiscoveryPlanner::nextSlot(['recipient'], ['type']));
     }
 
     #[Test]
@@ -166,14 +223,51 @@ final class GuidedDiscoveryTest extends TestCase
     #[Test]
     public function aLegacyClientWithoutAskedSlotsNeverLoops(): void
     {
-        // History holds Ain's 4 question templates: the 4-question cap applies.
+        // History holds Ain's 4 question templates: the legacy 4-question cap applies.
         $history = [];
-        foreach (['recipient', 'occasion', 'type', 'style_or_colour'] as $i => $slot) {
+        foreach (['recipient', 'occasion', 'type', 'colour'] as $i => $slot) {
             $history[] = ['role' => 'user', 'text' => $i === 0 ? 'help me' : 'No preference'];
             $history[] = ['role' => 'ain', 'text' => ConciergeCopy::question($slot, 'en')];
         }
         $d = $this->plan(ConciergeIntent::keywordFallback('No preference'), 'No preference', $history, null);
         self::assertSame(DiscoveryDecision::ACTION_RESULTS, $d->action);
+
+        // The retired combined question (older history) counts as colour AND style.
+        $old = [
+            ['role' => 'user', 'text' => 'help me'],
+            ['role' => 'ain', 'text' => ConciergeCopy::question('recipient', 'en')],
+            ['role' => 'user', 'text' => 'For me'],
+            ['role' => 'ain', 'text' => 'Any colours or style you love?'],
+        ];
+        self::assertSame(['recipient', 'colour', 'style'], DiscoveryPlanner::inferAskedFromHistory(ConversationHistory::fromMixed($old)));
+        $d = $this->plan(ConciergeIntent::keywordFallback('Pastels'), 'Pastels', $old, null);
+        self::assertSame('budget', $d->questionSlot);
+        $d = $this->plan(ConciergeIntent::keywordFallback('Pastels'), 'Pastels', $old, ['recipient', 'style_or_colour']);
+        self::assertSame('budget', $d->questionSlot);
+        self::assertSame(['recipient', 'colour', 'style', 'budget'], $d->askedSlots);
+        // An older client's "results shown" echo (the 5 old slot names) is complete.
+        $d = $this->plan(ConciergeIntent::keywordFallback('in navy'), 'in navy', [], ['recipient', 'occasion', 'type', 'style_or_colour', 'budget']);
+        self::assertSame(DiscoveryDecision::ACTION_RESULTS, $d->action);
+        self::assertTrue($d->completeBefore);
+
+        // A legacy client playing a whole conversation (its history cut to 8
+        // entries) always ends in results and never repeats a question.
+        $history = [];
+        $slots = [];
+        $q = 'help me';
+        for ($turn = 0; $turn < 8; $turn++) {
+            $d = $this->plan(ConciergeIntent::keywordFallback($q), $q, array_slice($history, -8), null);
+            if ($d->action === DiscoveryDecision::ACTION_RESULTS) {
+                break;
+            }
+            self::assertNotContains($d->questionSlot, $slots);
+            $slots[] = $d->questionSlot;
+            $history[] = ['role' => 'user', 'text' => $q];
+            $history[] = ['role' => 'ain', 'text' => ConciergeCopy::question((string) $d->questionSlot, 'en')];
+            $q = 'No preference';
+        }
+        self::assertSame(DiscoveryDecision::ACTION_RESULTS, $d->action);
+        self::assertCount(DiscoveryPlanner::LEGACY_MAX_QUESTIONS, $slots);
 
         // Mid-way: the asked slots are inferred from the templates (no repeats).
         $d = $this->plan(ConciergeIntent::keywordFallback('For me'), 'For me', [
@@ -222,7 +316,9 @@ final class GuidedDiscoveryTest extends TestCase
             ['occasion', 'recipient'],
             DiscoveryPlanner::sanitizeAskedSlots(['OCCASION', 'bogus', 42, 'recipient', 'occasion', ['x']]),
         );
-        self::assertCount(5, DiscoveryPlanner::sanitizeAskedSlots([...DiscoveryPlanner::SLOTS, ...DiscoveryPlanner::SLOTS]) ?? []);
+        self::assertCount(6, DiscoveryPlanner::sanitizeAskedSlots([...DiscoveryPlanner::SLOTS, ...DiscoveryPlanner::SLOTS]) ?? []);
+        // The retired combined slot means both colour and style were asked.
+        self::assertSame(['type', 'colour', 'style'], DiscoveryPlanner::sanitizeAskedSlots(['type', 'style_or_colour', 'colour']));
     }
 
     // ===== DiscoveryLexicon =====
@@ -234,7 +330,8 @@ final class GuidedDiscoveryTest extends TestCase
             'recipient' => static fn (array $x): bool => $x['recipient'] !== null,
             'occasion' => static fn (array $x): bool => $x['occasions'] !== [],
             'type' => static fn (array $x): bool => $x['type'] !== null,
-            'style_or_colour' => static fn (array $x): bool => $x['colours'] !== [] || $x['styles'] !== [],
+            'colour' => static fn (array $x): bool => $x['colours'] !== [] || array_filter($x['styles'], [DiscoveryLexicon::class, 'isColourStyle']) !== [],
+            'style' => static fn (array $x): bool => $x['styles'] !== [],
             'budget' => static fn (array $x): bool => $x['budget_min'] !== null || $x['budget_max'] !== null,
         ];
         foreach (['en', 'ar'] as $locale) {
@@ -243,6 +340,8 @@ final class GuidedDiscoveryTest extends TestCase
                 foreach (array_slice($chips, 0, -2) as $chip) {
                     self::assertTrue($expect[$slot](DiscoveryLexicon::extract([$chip])), "{$locale}/{$slot}: {$chip}");
                     self::assertTrue(DiscoveryLexicon::isConsumed($chip), "{$locale}: {$chip} is chip text, not a search keyword");
+                    // Each answer fills ONLY its own slot (a colour chip never skips the style question).
+                    self::assertSame([$slot], DiscoveryPlanner::filledSlots(ConciergeIntent::keywordFallback(''), [$chip]), "{$locale}/{$slot} fills only itself: {$chip}");
                 }
             }
         }
@@ -271,7 +370,7 @@ final class GuidedDiscoveryTest extends TestCase
         self::assertSame('abaya', $e->productType);
         self::assertSame(['eid'], $e->occasions);
         self::assertSame(['black'], $e->colours);
-        self::assertSame(['classic'], $e->styles);
+        self::assertSame([], $e->styles, '"Classic black" is a colour answer');
         self::assertSame(300.0, $e->budgetMax);
         self::assertTrue($e->isGift);
         self::assertSame([], $e->keywords);
@@ -341,7 +440,7 @@ final class GuidedDiscoveryTest extends TestCase
         $history = [];
         $asked = [];
         $turns = [];
-        foreach (['abaya', 'For me', 'Eid', 'Classic black', 'Under 300 AED'] as $msg) {
+        foreach (['abaya', 'For me', 'Eid', 'Classic black', 'Casual', 'Under 300 AED'] as $msg) {
             $r = $svc->ask($msg, 'en', 12, $history, $asked);
             $turns[] = $r;
             $history[] = ['role' => 'user', 'text' => $msg];
@@ -349,16 +448,16 @@ final class GuidedDiscoveryTest extends TestCase
             $asked = $r->askedSlots;
         }
 
-        // 'abaya' fills type: recipient → occasion → style → budget, then results.
-        self::assertSame(['recipient', 'occasion', 'style_or_colour', 'budget', null], array_map(static fn ($r) => $r->questionSlot, $turns));
-        foreach (array_slice($turns, 0, 4) as $q) {
+        // 'abaya' fills type: recipient → occasion → colour → style → budget, then results.
+        self::assertSame(['recipient', 'occasion', 'colour', 'style', 'budget', null], array_map(static fn ($r) => $r->questionSlot, $turns));
+        foreach (array_slice($turns, 0, 5) as $q) {
             self::assertTrue($q->needsClarification);
             self::assertSame([], $q->items);
         }
         self::assertSame(ConciergeCopy::question('occasion', 'en'), $turns[1]->reply);
         self::assertSame(ConciergeCopy::questionChips('occasion', 'en'), $turns[1]->followUps);
 
-        $final = $turns[4];
+        $final = $turns[5];
         self::assertFalse($final->needsClarification);
         self::assertSame([5], $final->productIds());
         self::assertSame(DiscoveryPlanner::SLOTS, $final->askedSlots);
@@ -366,6 +465,8 @@ final class GuidedDiscoveryTest extends TestCase
         self::assertSame('abaya', $filters[0]['searchQuery']);
         self::assertSame(['black'], $filters[0]['colors']);
         self::assertSame(300.0, $filters[0]['maxPrice']);
+        self::assertSame(['casual'], $final->intent->styles);
+        self::assertSame(['eid'], $final->intent->occasions);
         self::assertSame('Here are some pieces for “black abaya for eid”.', $final->reply);
         self::assertLessThanOrEqual(6, count($final->followUps));
         self::assertContains('Show more like these', $final->followUps);
@@ -471,7 +572,8 @@ final class GuidedDiscoveryTest extends TestCase
         });
         $svc = $this->service($ai, $repo);
 
-        [, , $last] = $this->converse($svc, ['something with pearls', 'For me', 'Eid', 'Abaya', 'Under 300 AED']);
+        // All six questions: the first message is still in the (12-entry) history.
+        [, , $last] = $this->converse($svc, ['something with pearls', 'For me', 'Eid', 'Abaya', 'No preference', 'No preference', 'Under 300 AED']);
 
         self::assertNull($last->questionSlot);
         self::assertSame(['pearls'], $last->intent->keywords);
@@ -534,7 +636,10 @@ final class GuidedDiscoveryTest extends TestCase
             ['role' => 'ain', 'text' => ConciergeCopy::question('recipient', 'en')],
         ], ['recipient']);
 
-        self::assertSame('You are welcome! Is it for you or a gift?', $r->reply);
+        // The friendly line, then the pending question template (the model's own
+        // question is dropped: Ain asks exactly one, and it stays recognisable).
+        self::assertSame('You are welcome! ' . ConciergeCopy::question('recipient', 'en'), $r->reply);
+        self::assertSame('recipient', ConciergeCopy::questionSlotFor($r->reply));
         self::assertSame(ConciergeCopy::questionChips('recipient', 'en'), $r->followUps);
         self::assertSame('recipient', $r->questionSlot);
         self::assertSame(['recipient'], $r->askedSlots, 'the same question, not a new one');
@@ -579,6 +684,158 @@ final class GuidedDiscoveryTest extends TestCase
         // New clients (asked_slots sent) keep the full set.
         $r = $this->service($ai, $repo)->ask('abaya', 'en', 12, [], []);
         self::assertSame(ConciergeCopy::questionChips('recipient', 'en'), $r->followUps);
+    }
+
+    #[Test]
+    public function anOpeningGreetingGoesStraightIntoTheFirstQuestion(): void
+    {
+        $ai = new GuidedAiProvider();
+        $ai->enabled = false;
+        $repo = $this->createMock(ProductRepository::class);
+        $repo->expects(self::never())->method('findActivePaginated');
+        $svc = $this->service($ai, $repo);
+
+        // Small talk before any question starts the questions too — never a
+        // second greeting with preset starter chips.
+        $r = $svc->ask('hello', 'en', 12, [], []);
+        self::assertSame('recipient', $r->questionSlot);
+        self::assertSame(ConciergeCopy::question('recipient', 'en'), $r->reply);
+        self::assertSame(ConciergeCopy::questionChips('recipient', 'en'), $r->followUps);
+        self::assertSame(['recipient'], $r->askedSlots);
+        $r = $svc->ask('For me', 'en', 12, [['role' => 'user', 'text' => 'hello'], ['role' => 'ain', 'text' => $r->reply]], $r->askedSlots);
+        self::assertSame('occasion', $r->questionSlot);
+
+        // Opening turn (the greeting is already in the reply): the first question now.
+        $r = $svc->ask('مرحبا', 'ar', 12, [], [], false, true);
+        self::assertSame('recipient', $r->questionSlot);
+        self::assertSame(ConciergeCopy::question('recipient', 'ar'), $r->reply);
+        self::assertSame(ConciergeCopy::questionChips('recipient', 'ar'), $r->followUps);
+
+        // The opening line is localized, warm, and recognised as a greeting.
+        self::assertStringStartsWith("Hi, I'm Ain, your personal stylist at 3bayti.", ConciergeCopy::opening('en'));
+        self::assertStringStartsWith('أهلاً، أنا عين', ConciergeCopy::opening('ar'));
+        self::assertTrue(ConciergeCopy::isGreetingReply(ConciergeCopy::opening('ar')));
+        self::assertNull(ConciergeCopy::questionSlotFor(ConciergeCopy::opening('en')));
+    }
+
+    #[Test]
+    public function modelFlaggedSmallTalkAtTheStartStartsTheQuestionsAndNeverSkipsThem(): void
+    {
+        // Planner: small talk before any question asks the first slot.
+        $d = $this->plan(ConciergeIntent::keywordFallback('What can you do?'), 'What can you do?', [], [], false, true);
+        self::assertSame(DiscoveryDecision::ACTION_ASK, $d->action);
+        self::assertSame('recipient', $d->questionSlot);
+        self::assertTrue($d->fromSmallTalk);
+        self::assertSame(['recipient'], $d->askedSlots);
+
+        // Service, AI on: "What can you do?" is not on the fixed small-talk list.
+        $ai = new GuidedAiProvider();
+        $ai->queue = [
+            [
+                'keywords' => [], 'is_gift' => false,
+                'reply' => "I'm Ain, I help you find the perfect pieces. What are you looking for?",
+                'follow_ups' => ['An abaya for Eid'], 'needs_clarification' => false, 'small_talk' => true,
+            ],
+            [
+                'keywords' => ['abaya'], 'product_type' => 'abaya', 'is_gift' => true,
+                'reply' => 'Let me look for an abaya for your sister.', 'follow_ups' => [],
+                'needs_clarification' => false, 'small_talk' => false,
+            ],
+        ];
+        $repo = $this->createMock(ProductRepository::class);
+        $repo->expects(self::never())->method('findActivePaginated');
+        $svc = $this->service($ai, $repo);
+
+        $r = $svc->ask('What can you do?', 'en', 12, [], []);
+        self::assertSame("I'm Ain, I help you find the perfect pieces. " . ConciergeCopy::question('recipient', 'en'), $r->reply);
+        self::assertSame(ConciergeCopy::questionChips('recipient', 'en'), $r->followUps);
+        self::assertSame(['recipient'], $r->askedSlots, 'never an empty echo after small talk');
+
+        // The real request now continues the questions — no products yet.
+        $r = $svc->ask('an abaya for my sister', 'en', 12, [
+            ['role' => 'user', 'text' => 'What can you do?'],
+            ['role' => 'ain', 'text' => $r->reply],
+        ], $r->askedSlots);
+        self::assertSame([], $r->items);
+        self::assertSame('occasion', $r->questionSlot);
+    }
+
+    #[Test]
+    public function anOpeningConversationNeverLeadsWithASecondGreeting(): void
+    {
+        $smallTalk = [
+            'keywords' => [], 'is_gift' => false, 'reply' => "Hello! I'm Ain, so happy you're here.",
+            'follow_ups' => ['An abaya for Eid'], 'needs_clarification' => false, 'small_talk' => true,
+        ];
+        $repo = $this->createMock(ProductRepository::class);
+
+        // Already greeted (local opening bubble / WhatsApp prefix): the bare question.
+        $ai = new GuidedAiProvider();
+        $ai->queue = [$smallTalk];
+        $r = $this->service($ai, $repo)->ask('hi', 'en', 12, [], [], false, true);
+        self::assertSame(ConciergeCopy::question('recipient', 'en'), $r->reply);
+        self::assertSame(ConciergeCopy::questionChips('recipient', 'en'), $r->followUps);
+
+        // Not greeted yet (legacy client): the friendly line, then the question.
+        $ai = new GuidedAiProvider();
+        $ai->queue = [$smallTalk];
+        $r = $this->service($ai, $repo)->ask('hi', 'en', 12, [], null);
+        self::assertSame("Hello! I'm Ain, so happy you're here. " . ConciergeCopy::question('recipient', 'en'), $r->reply);
+        self::assertSame('recipient', $r->questionSlot);
+    }
+
+    #[Test]
+    public function smallTalkAtTheSixthQuestionStillLeadsToTheFirstResults(): void
+    {
+        $history = [['role' => 'user', 'text' => 'help me']];
+        $answers = ['For me', 'Eid', 'Abaya', 'Pastels', 'Minimal'];
+        foreach (DiscoveryPlanner::SLOTS as $i => $slot) {
+            $history[] = ['role' => 'ain', 'text' => ConciergeCopy::question($slot, 'en')];
+            if (isset($answers[$i])) {
+                $history[] = ['role' => 'user', 'text' => $answers[$i]];
+            }
+        }
+        // Small talk at the 6th (budget) question: the friendly line + the question.
+        $history[] = ['role' => 'user', 'text' => "haha you're sweet"];
+        $history[] = ['role' => 'ain', 'text' => ConciergeCopy::withQuestion('Aw, thank you!', ConciergeCopy::question('budget', 'en'))];
+
+        $d = $this->plan(ConciergeIntent::keywordFallback('Under 300 AED'), 'Under 300 AED', $history, DiscoveryPlanner::SLOTS);
+        self::assertSame(DiscoveryDecision::ACTION_RESULTS, $d->action);
+        self::assertFalse($d->completeBefore, 'the first results, not a refinement');
+
+        // Service, AI on: the model's clarifying question is NOT honoured here.
+        $ai = new GuidedAiProvider();
+        $ai->queue = [[
+            'keywords' => ['abaya'], 'product_type' => 'abaya', 'is_gift' => false,
+            'reply' => 'Which shade of pastel?', 'follow_ups' => [],
+            'needs_clarification' => true, 'small_talk' => false,
+        ]];
+        $r = $this->service($ai, $this->repoReturning([$this->product(1, 'Pastel Abaya')]))
+            ->ask('Under 300 AED', 'en', 12, $history, DiscoveryPlanner::SLOTS);
+        self::assertNotSame([], $r->items);
+        self::assertNull($r->questionSlot);
+    }
+
+    #[Test]
+    public function aFiveSlotGuidedClientKeepsItsFourQuestionCap(): void
+    {
+        $history = [
+            ['role' => 'user', 'text' => 'help me'],
+            ['role' => 'ain', 'text' => ConciergeCopy::question('recipient', 'en')],
+            ['role' => 'user', 'text' => 'For me'],
+            ['role' => 'ain', 'text' => ConciergeCopy::question('occasion', 'en')],
+            ['role' => 'user', 'text' => 'Eid'],
+            ['role' => 'ain', 'text' => ConciergeCopy::question('type', 'en')],
+            ['role' => 'user', 'text' => 'No preference'],
+            ['role' => 'ain', 'text' => ConciergeCopy::question('colour', 'en')],
+        ];
+        // An installed pre-six-slot client drops 'colour' from its echo.
+        $d = $this->plan(ConciergeIntent::keywordFallback('Pastels'), 'Pastels', $history, ['recipient', 'occasion', 'type']);
+        self::assertSame(DiscoveryDecision::ACTION_RESULTS, $d->action);
+
+        // A six-slot client echoes it and gets the remaining questions.
+        $d = $this->plan(ConciergeIntent::keywordFallback('Pastels'), 'Pastels', $history, ['recipient', 'occasion', 'type', 'colour']);
+        self::assertSame('style', $d->questionSlot);
     }
 
     #[Test]

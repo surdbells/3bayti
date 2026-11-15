@@ -27,24 +27,30 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Body: { query, locale?, session_id?, channel?, history? }. history is the
  * conversation BEFORE this query, oldest first: [{ role: 'user'|'ain', text }];
- * only the last 8 entries are kept, each text capped at 500 chars, malformed
- * entries dropped silently (never a 422 — fully backward compatible).
+ * only the last 12 entries are kept (all 6 guided question/answer pairs), each
+ * text capped at 500 chars, malformed entries dropped silently (never a 422 —
+ * fully backward compatible). Ain's opening line is local to the client and is
+ * not sent as history.
  *
  * Guided discovery (stateless): optional asked_slots (string[]: echo the
- * previous response's asked_slots; unknown values dropped, max 5) and
- * show_now (bool: the shopper tapped "Show me what you have"). Old clients that
- * send neither still work (see DiscoveryPlanner).
+ * previous response's asked_slots; unknown values dropped, max 6; the retired
+ * 'style_or_colour' is read as both 'colour' and 'style') and show_now (bool:
+ * the shopper tapped "Show me what you have"). Old clients that send neither
+ * still work (see DiscoveryPlanner).
+ *
+ * Ain asks every slot the shopper has not already given (one per turn, at most
+ * 6) before showing any products, unless the shopper asks to see them.
  *
  * Response: { interaction_id, intent, products, reply, follow_ups,
  * needs_clarification, question_slot, asked_slots } — reply is Ain's short
  * message in the locale. A guided question turn has needs_clarification=true,
- * question_slot set (recipient|occasion|type|style_or_colour|budget), no
+ * question_slot set (recipient|occasion|type|colour|style|budget), no
  * products, and up to 8 answer chips whose last two are always "No preference"
  * and "Show me what you have" (send that one with show_now=true). A results turn
  * has question_slot=null and up to 6 refine chips. asked_slots lists every slot
  * asked so far including this turn's; once products are shown it holds ALL
- * slots (discovery complete), so the progress hint ("Question N of up to 4")
- * should only be shown when question_slot is set.
+ * slots (discovery complete), so the progress hint ("Question N of up to 6",
+ * N = asked_slots length) should only be shown when question_slot is set.
  */
 final class ConciergeStyleController
 {
@@ -95,7 +101,20 @@ final class ConciergeStyleController
             'history_length' => $historyLength,
         ]);
 
-        $result = $this->concierge->ask($query, $locale, ConciergeService::DEFAULT_LIMIT, $history, $askedSlots, $showNow);
+        // A guided client (it sends asked_slots) opens every conversation with
+        // Ain's local greeting bubble, so its first message ("hi") goes straight
+        // into the first question — never a second greeting with starter chips.
+        $opening = $askedSlots !== null && $history->isEmpty();
+
+        $result = $this->concierge->ask(
+            $query,
+            $locale,
+            ConciergeService::DEFAULT_LIMIT,
+            $history,
+            $askedSlots,
+            $showNow,
+            $opening,
+        );
         $productIds = $result->productIds();
 
         $interactionId = $this->events->recordInteraction(

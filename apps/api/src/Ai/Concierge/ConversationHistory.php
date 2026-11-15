@@ -18,7 +18,12 @@ namespace Bayti\Api\Ai\Concierge;
  */
 final class ConversationHistory
 {
-    public const MAX_TURNS = 8;
+    /**
+     * Entries kept: room for all 6 guided question/answer pairs, so the
+     * shopper's first message (and every answer) is still visible when the
+     * results are retrieved.
+     */
+    public const MAX_TURNS = 12;
     public const MAX_TEXT_CHARS = 500;
 
     public const ROLE_USER = 'user';
