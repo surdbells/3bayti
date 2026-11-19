@@ -6,7 +6,7 @@ import {
   computed,
   OnInit,
 } from '@angular/core';
-import { NgIf, NgFor, NgClass, DatePipe } from '@angular/common';
+import { NgIf, NgFor, NgClass, NgSwitch, NgSwitchCase, DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { OrderService, ORDER_STATUS_LABELS } from '../../core/orders';
@@ -15,6 +15,7 @@ import { ToastService } from '../../shared/forms';
 import { ConfirmModalComponent } from '../../shared/ui';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { decodeHtmlEntities } from '../../shared/util/decode-html-entities';
+import { parseOrderCashback, type OrderCashback } from '../cashback/cashback.model';
 
 /** One step in the client-derived fallback stepper (used only when the
  *  server timeline feed is unavailable). */
@@ -81,7 +82,7 @@ interface TimelineEventView {
 @Component({
   selector: 'app-account-order-detail',
   standalone: true,
-  imports: [CfImagePipe, NgIf, NgFor, NgClass, DatePipe, RouterLink, TranslatePipe, ConfirmModalComponent],
+  imports: [CfImagePipe, NgIf, NgFor, NgClass, NgSwitch, NgSwitchCase, DatePipe, RouterLink, TranslatePipe, ConfirmModalComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="orders-page" data-testid="order-detail-page">
@@ -249,6 +250,44 @@ interface TimelineEventView {
               {{ 'orders.detail.appliedPromo' | translate }}:
               <strong>{{ order()!.applied_promo!.code }}</strong>
             </p>
+
+            <!-- Cashback programme: pending until release, issued as a gift
+                 card (linked by its v3 id), or cancelled / reversed. -->
+            <div
+              *ngIf="cashback() as cb"
+              class="order-detail__cashback"
+              [attr.data-status]="cb.status"
+              data-testid="order-detail-cashback"
+            >
+              <div class="order-detail__cashback-head">
+                <span class="order-detail__cashback-label">{{ 'cashback.order.label' | translate }}</span>
+                <span
+                  class="order-detail__cashback-amount"
+                  [class.order-detail__cashback-amount--void]="cb.status === 'cancelled' || cb.status === 'reversed'"
+                >{{ cb.currency }} {{ cb.amount }}</span>
+              </div>
+              <p class="order-detail__cashback-status" data-testid="order-detail-cashback-status">
+                <ng-container [ngSwitch]="cb.status">
+                  <ng-container *ngSwitchCase="'pending'">
+                    <ng-container *ngIf="cb.release_at; else pendingNoDate">
+                      {{ 'cashback.order.pendingUntil' | translate: { date: (cb.release_at | date:'mediumDate') } }}
+                    </ng-container>
+                    <ng-template #pendingNoDate>{{ 'cashback.order.pending' | translate }}</ng-template>
+                  </ng-container>
+                  <ng-container *ngSwitchCase="'issued'">
+                    {{ 'cashback.order.issued' | translate }}
+                    <a
+                      *ngIf="cb.gift_card_id !== null"
+                      [routerLink]="['/account/gift-cards', cb.gift_card_id]"
+                      class="order-detail__cashback-link"
+                      data-testid="order-detail-cashback-card"
+                    >{{ 'cashback.order.viewCard' | translate }}</a>
+                  </ng-container>
+                  <ng-container *ngSwitchCase="'cancelled'">{{ 'cashback.order.cancelled' | translate }}</ng-container>
+                  <ng-container *ngSwitchCase="'reversed'">{{ 'cashback.order.reversed' | translate }}</ng-container>
+                </ng-container>
+              </p>
+            </div>
           </section>
 
           <section
@@ -518,6 +557,11 @@ export class AccountOrderDetailPageComponent implements OnInit {
     const excluded = ['pending_payment', 'cancelled', 'failed', 'refunded'];
     return !excluded.includes(o.status);
   });
+
+  /** Cashback award for this order (null when it earned none). */
+  protected readonly cashback = computed<OrderCashback | null>(() =>
+    parseOrderCashback(this._order()?.cashback),
+  );
 
   protected readonly hasDiscount = computed(() => {
     const o = this._order();

@@ -815,6 +815,50 @@
   letter-spacing: 0.02em;
 }
 
+/* Cashback programme badge, under the price */
+.pdp-cashback {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  max-width: 100%;
+  margin: 0;
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.pdp-cashback__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.pdp-cashback__text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2xs);
+  min-width: 0;
+}
+
+.pdp-cashback__value {
+  font-weight: 700;
+}
+
+.pdp-cashback__cap {
+  font-weight: 600;
+}
+
+.pdp-cashback__note {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
 /* ----- Options ---------------------------------------------------------- */
 
 .pdp-options {

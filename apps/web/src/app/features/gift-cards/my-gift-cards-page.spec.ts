@@ -167,4 +167,14 @@ describe('MyGiftCardsPageComponent', () => {
 
     expect(fixture.nativeElement.querySelector('.gca__pay-error')).not.toBeNull();
   });
+
+  it('tags cashback cards with a Cashback label', async () => {
+    const { fixture } = setup({
+      cards: [makeCard(1, 'birthday', { source: 'cashback' }), makeCard(2, 'eid', { source: 'purchase' })],
+    });
+    await flush();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="my-gift-card-cashback-1"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="my-gift-card-cashback-2"]')).toBeNull();
+  });
 });

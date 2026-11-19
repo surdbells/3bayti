@@ -471,6 +471,15 @@
 .gca__status--pending { background: rgba(245, 166, 35, 0.16); color: #a9741a; }
 .gca__status--used { background: rgba(139, 111, 71, 0.15); color: #8b6f47; }
 .gca__status--ended { background: rgba(192, 57, 43, 0.12); color: #c0392b; }
+/* Status + cashback source tag sit on one row; the row owns the bottom gap. */
+.gca__tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
+.gca__tags .gca__status { margin-bottom: 0; }
+.gca__source-tag,
+.gcd__source-tag {
+  display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em;
+  padding: 3px 10px; border-radius: 999px;
+  background: var(--color-success-bg, #e6f2ea); color: var(--color-success, #2f7d52);
+}
 .gca__tile-foot {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px;
 }
@@ -495,3 +504,8 @@
 .gcd__status--pending { background: rgba(245, 166, 35, 0.16); color: #a9741a; }
 .gcd__status--used { background: rgba(139, 111, 71, 0.15); color: #8b6f47; }
 .gcd__status--ended { background: rgba(192, 57, 43, 0.12); color: #c0392b; }
+.gcd__tags { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.gcd__cashback-note {
+  margin: 0 0 4px; font-size: 0.8rem; line-height: 1.45;
+  color: var(--color-text-secondary, #5a4a3c);
+}

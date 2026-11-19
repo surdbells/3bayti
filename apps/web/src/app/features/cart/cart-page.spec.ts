@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { CartPageComponent } from './cart-page';
 import { CartService } from '../../core/cart';
@@ -404,6 +404,51 @@ describe('CartPageComponent', () => {
       btn.click();
       await Promise.resolve();
       expect(navigateByUrlSpy).toHaveBeenCalledWith('/checkout/address');
+    });
+  });
+
+  /* -----------------------------------------------------------------
+     Cashback estimate (GET /v3/cart/cashback)
+     ----------------------------------------------------------------- */
+  describe('cashback estimate', () => {
+    const isCashback = (r: { url: string }): boolean => r.url.endsWith('/v3/cart/cashback');
+    async function settle(): Promise<void> {
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+    }
+
+    it('fetches the estimate for a signed-in cart and shows the line', async () => {
+      const { fixture } = setup({ items: [makeItem()], authed: true });
+      fixture.detectChanges();
+      const req = TestBed.inject(HttpTestingController).expectOne(isCashback);
+      expect(req.request.params.get('channel')).toBe('web');
+      req.flush({
+        data: {
+          estimated_amount: '10.00', currency: 'AED', eligible: true, reason: null,
+          hold_days: 14, uses_cashback_credit: false, wallet_has_cashback_credit: true,
+        },
+      });
+      await settle();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="cashback-estimate"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="cashback-wallet-note"]')).not.toBeNull();
+    });
+
+    it('hides the line when nothing is earned', async () => {
+      const { fixture } = setup({ items: [makeItem()], authed: true });
+      fixture.detectChanges();
+      TestBed.inject(HttpTestingController).expectOne(isCashback).flush({
+        data: { estimated_amount: '0.00', currency: 'AED', eligible: false, reason: 'no_matching_rule' },
+      });
+      await settle();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="cashback-estimate"]')).toBeNull();
+    });
+
+    it('does not ask guests', async () => {
+      const { fixture } = setup({ items: [makeItem()], authed: false });
+      fixture.detectChanges();
+      await settle();
+      expect(TestBed.inject(HttpTestingController).match(isCashback)).toHaveLength(0);
     });
   });
 });

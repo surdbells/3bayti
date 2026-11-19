@@ -180,4 +180,10 @@ export interface ProductDetail extends Product {
   measurement_instructions?: string | null;
   /** AI virtual try-on available for this product (drives the "Try it on" CTA). */
   try_on_enabled?: boolean;
+  /**
+   * Cashback programme: best live rule for this product ({type, value, max,
+   * min_eligible_amount, channel, first_order_only, allow_with_promo}) or
+   * null. PDP only. Parse with parseProductCashback() / webProductCashback().
+   */
+  cashback?: unknown;
 }

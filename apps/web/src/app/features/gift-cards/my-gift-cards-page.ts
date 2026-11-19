@@ -17,6 +17,7 @@ import { CheckoutService } from '../../core/checkout/checkout.service';
 import { markGiftCardCheckout } from './gift-card-checkout-handoff';
 import { SeoService } from '../../core/seo/seo.service';
 import type { GiftCard, GiftCardStatus } from './gift-card.model';
+import { isCashbackGiftCard } from '../cashback/cashback.model';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -148,9 +149,16 @@ type GiftCardFilter = 'all' | 'active' | 'pending_payment' | 'used' | 'expired' 
                       </div>
                     } @else {
                       <div class="gca__tile" [attr.data-card-id]="c.id">
-                        <span class="gca__status" [class]="'gca__status--' + statusVariant(c.status)">
-                          {{ ('giftCards.status.' + c.status) | translate }}
-                        </span>
+                        <div class="gca__tags">
+                          <span class="gca__status" [class]="'gca__status--' + statusVariant(c.status)">
+                            {{ ('giftCards.status.' + c.status) | translate }}
+                          </span>
+                          @if (isCashback(c)) {
+                            <span class="gca__source-tag" [attr.data-testid]="'my-gift-card-cashback-' + c.id">
+                              {{ 'cashback.tag' | translate }}
+                            </span>
+                          }
+                        </div>
                         <a [routerLink]="['/account/gift-cards', c.id]" class="gca__tile-link">
                           <ui-gift-card [card]="c" [theme]="c.theme" />
                         </a>
@@ -255,6 +263,11 @@ export class MyGiftCardsPageComponent implements OnInit {
 
   protected setFilter(key: GiftCardFilter): void {
     this.filter.set(key);
+  }
+
+  /** Paid out by the cashback programme (shows the "Cashback" tag). */
+  protected isCashback(card: GiftCard): boolean {
+    return isCashbackGiftCard(card);
   }
 
   /** Badge colour variant for a status. */

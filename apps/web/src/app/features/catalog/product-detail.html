@@ -264,6 +264,32 @@
                 <span class="price-current">{{ formatMoney(p.price) }}</span>
               }
             </div>
+
+            @if (cashbackBadge(); as cb) {
+              <p class="pdp-cashback" data-testid="pdp-cashback">
+                <span class="pdp-cashback__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="8" width="18" height="12" rx="2" />
+                    <path d="M3 12h18M12 8v12M12 8c-1.5-3-5-3-5-1s3 1 5 1zm0 0c1.5-3 5-3 5-1s-3 1-5 1z" />
+                  </svg>
+                </span>
+                <span class="pdp-cashback__text">
+                  <strong class="pdp-cashback__value" data-testid="pdp-cashback-value">
+                    @if (cb.type === 'percentage') {
+                      {{ 'cashback.badge.percent' | translate: { value: cashbackValue(cb.value) } }}
+                    } @else {
+                      {{ 'cashback.badge.fixed' | translate: { amount: cashbackValue(cb.value) } }}
+                    }
+                  </strong>
+                  @if (cb.type === 'percentage' && cb.max) {
+                    <span class="pdp-cashback__cap">{{ 'cashback.badge.upTo' | translate: { amount: cashbackValue(cb.max) } }}</span>
+                  }
+                  <span class="pdp-cashback__note">
+                    {{ (cb.first_order_only ? 'cashback.badge.noteFirstOrder' : 'cashback.badge.note') | translate }}
+                  </span>
+                </span>
+              </p>
+            }
           </div>
 
           <div class="pdp-options">

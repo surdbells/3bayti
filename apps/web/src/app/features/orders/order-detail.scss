@@ -333,6 +333,67 @@
   }
 }
 
+/* --- Cashback ------------------------------------------------------- */
+
+.order-detail__cashback {
+  margin: 12px 0 0 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--color-success-bg, #e6f2ea);
+  font-size: 13px;
+  color: var(--color-text-secondary, #5a4a3c);
+
+  &[data-status='cancelled'],
+  &[data-status='reversed'] {
+    background: var(--color-bg-muted, #f4f0ea);
+  }
+}
+
+.order-detail__cashback-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.order-detail__cashback-label {
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+}
+
+.order-detail__cashback-amount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-success, #2f7d52);
+}
+
+.order-detail__cashback-amount--void {
+  color: var(--color-text-tertiary, #8a7868);
+  text-decoration: line-through;
+}
+
+.order-detail__cashback-status {
+  margin: 4px 0 0 0;
+}
+
+.order-detail__cashback-link {
+  margin-inline-start: 6px;
+  font-weight: 600;
+  color: var(--color-brand-600, #8c6f0f);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover {
+    color: var(--color-brand-700, #5a3a2c);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500, #b18f1f);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
 /* --- Returns -------------------------------------------------------- */
 
 .order-returns {

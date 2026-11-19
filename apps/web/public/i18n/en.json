@@ -2093,5 +2093,29 @@
       "title": "Product Cards",
       "note": "Reusable card for product grids on /category/:slug, PDP related-products, /designer/:slug, and search. Renders all branches: image present + missing, on sale + regular price, in stock + out of stock, with rating + without, and the defensive \"no slug\" fallback (renders as div, not anchor)."
     }
+  },
+  "cashback": {
+    "tag": "Cashback",
+    "cardNote": "A cashback reward. Spend it on your next order. Orders paid with cashback credit don't earn cashback, and it can't be used to buy gift cards.",
+    "estimate": "You'll earn ≈ {{currency}} {{amount}} cashback",
+    "estimateHint": "Paid as a gift card after delivery",
+    "estimateHintDays": "Paid as a gift card {{days}} days after delivery",
+    "paidWithCredit": "Paying with cashback credit means this order won't earn cashback",
+    "badge": {
+      "percent": "Earn {{value}}% cashback",
+      "fixed": "Earn AED {{amount}} cashback",
+      "upTo": "up to AED {{amount}}",
+      "note": "Paid as a gift card after delivery",
+      "noteFirstOrder": "On your first order. Paid as a gift card after delivery"
+    },
+    "order": {
+      "label": "Cashback",
+      "pending": "Pending. Paid as a gift card after delivery.",
+      "pendingUntil": "Pending. Paid as a gift card on {{date}}.",
+      "issued": "Added to your gift cards.",
+      "viewCard": "View gift card",
+      "cancelled": "Cancelled. This order no longer earns cashback.",
+      "reversed": "Reversed after a refund or return."
+    }
   }
 }

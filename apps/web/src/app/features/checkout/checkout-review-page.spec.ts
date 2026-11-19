@@ -787,4 +787,49 @@ describe('CheckoutReviewPageComponent', () => {
       expect(cmp(fixture)['appliedGiftCode']()).toBeNull();
     });
   });
+
+  describe('cashback estimate', () => {
+    function cmp(fixture: ComponentFixture<CheckoutReviewPageComponent>): Record<string, any> {
+      return fixture.componentInstance as unknown as Record<string, any>;
+    }
+    const isCashback = (r: { url: string }): boolean => r.url.endsWith('/v3/cart/cashback');
+
+    it('shows the estimate, then the no-cashback note once a cashback card is applied', async () => {
+      const { fixture } = setup({});
+      await flush();
+      fixture.detectChanges();
+      const ctrl = TestBed.inject(HttpTestingController);
+
+      const first = ctrl.expectOne(isCashback);
+      expect(first.request.params.get('channel')).toBe('web');
+      expect(first.request.params.has('gift_card_code')).toBe(false);
+      first.flush({
+        data: {
+          estimated_amount: '6.00', currency: 'AED', eligible: true, reason: null,
+          hold_days: 14, uses_cashback_credit: false, wallet_has_cashback_credit: false,
+        },
+      });
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="cashback-estimate"]')).not.toBeNull();
+
+      cmp(fixture)['giftCardForm'].controls.code.setValue('GIFT-ABCD-1234');
+      await cmp(fixture)['onApplyGiftCard']();
+      await flush();
+      fixture.detectChanges();
+
+      const second = ctrl.expectOne(isCashback);
+      expect(second.request.params.get('gift_card_code')).toBe('GIFTABCD1234');
+      second.flush({
+        data: {
+          estimated_amount: '0.00', currency: 'AED', eligible: false, reason: 'paid_with_cashback',
+          hold_days: null, uses_cashback_credit: true, wallet_has_cashback_credit: true,
+        },
+      });
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="cashback-estimate"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="cashback-credit-note"]')).not.toBeNull();
+    });
+  });
 });

@@ -99,8 +99,17 @@ export interface GiftCard {
   expires_at: string | null;
   created_at: string;
   is_buyer: boolean;
+  /**
+   * Where the card came from: purchase | admin | cashback. Cashback cards are
+   * paid out by the cashback programme; an order that spends one earns no
+   * cashback, and they can't buy gift cards. Optional for older payloads.
+   */
+  source?: GiftCardSource;
   transactions?: GiftCardTransaction[];
 }
+
+/** Origin of a gift card (mirrors GiftCard::SOURCE_* on the API). */
+export type GiftCardSource = 'purchase' | 'admin' | 'cashback';
 
 /** Body for POST /v3/gift-cards/purchase. */
 export interface GiftCardPurchaseInput {

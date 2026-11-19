@@ -15,6 +15,7 @@ import { GiftCardVisualComponent } from './gift-card-visual';
 import { GiftCardService } from './gift-card.service';
 import { SeoService } from '../../core/seo/seo.service';
 import type { GiftCard, GiftCardStatus, GiftCardTransaction } from './gift-card.model';
+import { isCashbackGiftCard } from '../cashback/cashback.model';
 
 type LoadState = 'loading' | 'ready' | 'notfound' | 'error';
 
@@ -119,10 +120,22 @@ type LoadState = 'loading' | 'ready' | 'notfound' | 'error';
                 }
                 <div class="gcd__row">
                   <span class="gcd__row-label">{{ 'giftCards.detail.statusLabel' | translate }}</span>
-                  <span class="gcd__status" [class]="'gcd__status--' + statusVariant(card()!.status)">
-                    {{ ('giftCards.status.' + card()!.status) | translate }}
+                  <span class="gcd__tags">
+                    <span class="gcd__status" [class]="'gcd__status--' + statusVariant(card()!.status)">
+                      {{ ('giftCards.status.' + card()!.status) | translate }}
+                    </span>
+                    @if (isCashback()) {
+                      <span class="gcd__source-tag" data-testid="gift-card-detail-cashback">
+                        {{ 'cashback.tag' | translate }}
+                      </span>
+                    }
                   </span>
                 </div>
+                @if (isCashback()) {
+                  <p class="gcd__cashback-note" data-testid="gift-card-detail-cashback-note">
+                    {{ 'cashback.cardNote' | translate }}
+                  </p>
+                }
                 @if (card()!.expires_at) {
                   <div class="gcd__row">
                     <span class="gcd__row-label">{{ 'giftCards.detail.expiresLabel' | translate }}</span>
@@ -190,6 +203,9 @@ export class GiftCardDetailPageComponent implements OnInit {
   });
 
   /** Badge colour variant for a status (mirrors the wallet list). */
+  /** Paid out by the cashback programme. */
+  protected readonly isCashback = computed(() => isCashbackGiftCard(this.card()));
+
   protected statusVariant(status: GiftCardStatus): string {
     switch (status) {
       case 'active':

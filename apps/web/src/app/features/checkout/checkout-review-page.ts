@@ -4,6 +4,8 @@ import {
   inject,
   signal,
   computed,
+  effect,
+  untracked,
   OnInit,
 } from '@angular/core';
 import { DecimalPipe, NgIf, NgFor } from '@angular/common';
@@ -25,6 +27,9 @@ import { ToastService } from '../../shared/forms';
 import { CurrencyService } from '../../core/currency/currency.service';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { PriceChangeNoteComponent } from '../../shared/ui/price-change-note';
+import { CashbackService } from '../cashback/cashback.service';
+import { CashbackEstimateComponent } from '../cashback/cashback-estimate';
+import type { CartCashbackPreview } from '../cashback/cashback.model';
 import { CART_PRICES_CHANGED } from '../../core/checkout/checkout.types';
 import type { CartPriceChange, CartPricesChangedDetails } from '../../core/checkout/checkout.types';
 
@@ -92,7 +97,7 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
 @Component({
   selector: 'app-checkout-review',
   standalone: true,
-  imports: [CfImagePipe, DecimalPipe, NgIf, NgFor, ReactiveFormsModule, TranslatePipe, CheckoutStepperComponent, PriceChangeNoteComponent],
+  imports: [CfImagePipe, DecimalPipe, NgIf, NgFor, ReactiveFormsModule, TranslatePipe, CheckoutStepperComponent, PriceChangeNoteComponent, CashbackEstimateComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="checkout-page checkout-page--review" data-testid="checkout-review-page">
@@ -429,6 +434,14 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
               </dd>
             </div>
           </dl>
+
+          <!-- Cashback programme: estimate for this order as currently paid
+               (promo + gift card / wallet), or the note that spending
+               cashback credit earns none. -->
+          <app-cashback-estimate
+            [preview]="cashback()"
+            [showWalletHint]="walletAvailable() && !walletApplied()"
+          />
         </section>
 
         @if (isDisplayConverted()) {
@@ -516,6 +529,14 @@ export class CheckoutReviewPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly currencyService = inject(CurrencyService);
+  private readonly cashbackApi = inject(CashbackService);
+
+  /** Cashback estimate (GET /v3/cart/cashback) for the current payment selection; null hides it. */
+  protected readonly cashback = signal<CartCashbackPreview | null>(null);
+  /** Set once the bounce guards pass and the first quote is in. */
+  private readonly cashbackReady = signal<boolean>(false);
+  private cashbackKey: string | null = null;
+  private cashbackSeq = 0;
   /** True when the visitor has a non-AED display currency set. */
   protected readonly isDisplayConverted = this.currencyService.isConverted;
 
@@ -656,6 +677,42 @@ export class CheckoutReviewPageComponent implements OnInit {
     this.giftCardForm = fb.group({
       code: fb.control('', [Validators.required, Validators.minLength(4)]),
     });
+
+    /* Re-estimate cashback when the cart, the valid promo, the applied gift
+       card or the wallet toggle changes: a promo lowers the paid amount and
+       may exclude rules, and spending a cashback card earns nothing. */
+    effect(() => {
+      if (!this.cashbackReady()) return;
+      const cart = this.cart.cart();
+      const promo = this.promoStatus() === 'valid' ? this.appliedPromo() : null;
+      const giftCode = this.appliedGiftCode();
+      const wallet = giftCode === null && this.walletApplied();
+      const lines = (cart.items ?? []).map((i) => `${i.id}x${i.quantity}`).join(',');
+      const key = `${lines}|${cart.subtotal}|${promo ?? ''}|${giftCode ?? ''}|${wallet}`;
+      untracked(() => void this.loadCashback(key, lines !== '', promo, giftCode, wallet));
+    });
+  }
+
+  private async loadCashback(
+    key: string,
+    enabled: boolean,
+    promo: string | null,
+    giftCode: string | null,
+    wallet: boolean,
+  ): Promise<void> {
+    if (key === this.cashbackKey) return;
+    this.cashbackKey = key;
+    const seq = ++this.cashbackSeq;
+    if (!enabled) {
+      this.cashback.set(null);
+      return;
+    }
+    const preview = await this.cashbackApi.previewCart({
+      promoCode: promo,
+      giftCardCode: giftCode,
+      useGiftWallet: wallet,
+    });
+    if (seq === this.cashbackSeq) this.cashback.set(preview);
   }
 
   async ngOnInit(): Promise<void> {
@@ -686,6 +743,9 @@ export class CheckoutReviewPageComponent implements OnInit {
 
     /* Gift wallet availability for this cart (non-blocking). */
     await this.loadWalletPreview();
+
+    /* Cashback estimate tracks promo / gift card / wallet from here on. */
+    this.cashbackReady.set(true);
   }
 
   private async resolveShippingAddress(): Promise<void> {

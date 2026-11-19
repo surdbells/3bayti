@@ -507,6 +507,58 @@ describe('AccountOrderDetailPageComponent', () => {
     });
   });
 
+  describe('cashback row', () => {
+    it('is hidden when the order earned no cashback', async () => {
+      const { fixture } = setup({ order: makeOrder({ cashback: null }) });
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-cashback"]')).toBeNull();
+    });
+
+    it('shows a pending award with its amount', async () => {
+      const { fixture } = setup({
+        order: makeOrder({
+          cashback: { status: 'pending', amount: '6.25', currency: 'AED', release_at: '2026-12-01T10:00:00+00:00', gift_card_id: null },
+        }),
+      });
+      await flush();
+      fixture.detectChanges();
+      const row = fixture.nativeElement.querySelector('[data-testid="order-detail-cashback"]') as HTMLElement;
+      expect(row).not.toBeNull();
+      expect(row.getAttribute('data-status')).toBe('pending');
+      expect(row.textContent).toContain('AED 6.25');
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-cashback-card"]')).toBeNull();
+    });
+
+    it('links an issued award to its gift card by v3 id', async () => {
+      const { fixture } = setup({
+        order: makeOrder({
+          status: 'delivered',
+          cashback: { status: 'issued', amount: '6.25', currency: 'AED', release_at: '2026-11-01T00:00:00+00:00', gift_card_id: 555 },
+        }),
+      });
+      await flush();
+      fixture.detectChanges();
+      const link = fixture.nativeElement.querySelector('[data-testid="order-detail-cashback-card"]') as HTMLAnchorElement;
+      expect(link).not.toBeNull();
+      expect(link.getAttribute('href')).toBe('/account/gift-cards/555');
+    });
+
+    it('shows a cancelled award without a card link', async () => {
+      const { fixture } = setup({
+        order: makeOrder({
+          status: 'cancelled',
+          cashback: { status: 'cancelled', amount: '6.25', currency: 'AED', release_at: null, gift_card_id: null },
+        }),
+      });
+      await flush();
+      fixture.detectChanges();
+      const row = fixture.nativeElement.querySelector('[data-testid="order-detail-cashback"]') as HTMLElement;
+      expect(row.getAttribute('data-status')).toBe('cancelled');
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-cashback-card"]')).toBeNull();
+    });
+  });
+
   describe('error paths', () => {
     it('shows error state when :id is missing', async () => {
       const { fixture, orderService } = setup({ routeId: null });

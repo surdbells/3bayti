@@ -4,6 +4,8 @@ import {
   inject,
   signal,
   computed,
+  effect,
+  untracked,
   OnInit,
 } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
@@ -17,6 +19,9 @@ import { AuthService } from '../../core/auth/auth.service';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { GiftCardNudgeComponent } from '../gift-cards/gift-card-nudge';
 import { PriceChangeNoteComponent } from '../../shared/ui/price-change-note';
+import { CashbackService } from '../cashback/cashback.service';
+import { CashbackEstimateComponent } from '../cashback/cashback-estimate';
+import type { CartCashbackPreview } from '../cashback/cashback.model';
 
 /**
  * Cart page, `/cart`.
@@ -61,7 +66,7 @@ import { PriceChangeNoteComponent } from '../../shared/ui/price-change-note';
 @Component({
   selector: 'app-cart-page',
   standalone: true,
-  imports: [CfImagePipe, NgIf, NgFor, ReactiveFormsModule, RouterLink, TranslatePipe, GiftCardNudgeComponent, PriceChangeNoteComponent],
+  imports: [CfImagePipe, NgIf, NgFor, ReactiveFormsModule, RouterLink, TranslatePipe, GiftCardNudgeComponent, PriceChangeNoteComponent, CashbackEstimateComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="cart-page" data-testid="cart-page">
@@ -283,6 +288,9 @@ import { PriceChangeNoteComponent } from '../../shared/ui/price-change-note';
                   </div>
                 </dl>
 
+                <!-- Cashback programme: estimate for this cart (auth only). -->
+                <app-cashback-estimate [preview]="cashback()" [showWalletHint]="true" />
+
                 <p *ngIf="!hasQuote()" class="cart-page__shipping-note">
                   {{ 'cart.drawer.shippingNote' | translate }}
                 </p>
@@ -328,6 +336,14 @@ export class CartPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  private readonly cashbackApi = inject(CashbackService);
+
+  /** Cashback estimate for the current cart (GET /v3/cart/cashback); null hides the line. */
+  protected readonly cashback = signal<CartCashbackPreview | null>(null);
+  /** Last requested (auth|lines|subtotal|promo) key, so an unchanged cart isn't re-fetched. */
+  private cashbackKey: string | null = null;
+  /** Guards against an older response landing after a newer one. */
+  private cashbackSeq = 0;
 
   protected readonly items = computed<CartItem[]>(() => this.cart.cart().items);
   protected readonly itemCount = this.cart.itemCount;
@@ -384,6 +400,29 @@ export class CartPageComponent implements OnInit {
     this.promoForm = fb.group({
       code: fb.control('', [Validators.required, Validators.minLength(2)]),
     });
+
+    /* Re-estimate cashback whenever the cart lines, subtotal or the valid
+       promo change (a promo lowers the paid amount and may exclude rules). */
+    effect(() => {
+      const authed = this.isAuthenticated();
+      const cart = this.cart.cart();
+      const promo = this.promoStatus() === 'valid' ? this.appliedPromo() : null;
+      const lines = (cart.items ?? []).map((i) => `${i.id}x${i.quantity}`).join(',');
+      const key = `${authed}|${lines}|${cart.subtotal}|${promo ?? ''}`;
+      untracked(() => void this.loadCashback(key, authed && lines !== '', promo));
+    });
+  }
+
+  private async loadCashback(key: string, enabled: boolean, promo: string | null): Promise<void> {
+    if (key === this.cashbackKey) return;
+    this.cashbackKey = key;
+    const seq = ++this.cashbackSeq;
+    if (!enabled) {
+      this.cashback.set(null);
+      return;
+    }
+    const preview = await this.cashbackApi.previewCart({ promoCode: promo });
+    if (seq === this.cashbackSeq) this.cashback.set(preview);
   }
 
   ngOnInit(): void {

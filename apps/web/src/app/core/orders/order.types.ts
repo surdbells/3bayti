@@ -114,6 +114,19 @@ export interface Order extends OrderListItem {
   shipping_address: OrderAddress | null;
   /** Slowest-store delivery range for the whole order; null for gift cards. */
   delivery_estimate?: { min_days: number; max_days: number } | null;
+  /**
+   * Cashback programme award for this order, or null when it earned none.
+   * status: pending | issued | cancelled | reversed. Pending release_at is the
+   * expected release date (null until fulfilment settles); gift_card_id is the
+   * issued cashback card's v3 id. Parse with parseOrderCashback() before use.
+   */
+  cashback?: {
+    status: string;
+    amount: string;
+    currency: string;
+    release_at: string | null;
+    gift_card_id: number | null;
+  } | null;
 }
 
 /**

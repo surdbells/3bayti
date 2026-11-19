@@ -47,6 +47,7 @@ import type {
   StoreSizeChartRow,
 } from './product.model';
 import { mapPublicReview } from './product.model';
+import { formatCashbackNumber, webProductCashback, type ProductCashbackBadge } from '../cashback/cashback.model';
 import { RecommendationsService } from './recommendations.service';
 import { CompleteTheLookService, type CompleteLookItem, type CompleteLookResult } from './complete-the-look.service';
 import { AnalyticsService } from '../../core/monitoring/analytics.service';
@@ -1221,6 +1222,19 @@ export class ProductDetailComponent implements OnDestroy {
     if (!p?.sale_price?.amount) return false;
     return p.sale_price.amount < p.price.amount;
   });
+
+  /**
+   * Cashback programme badge ("Earn 5% cashback") under the price, from the
+   * PDP payload's `cashback` block. Mobile-only rules are hidden on web.
+   */
+  readonly cashbackBadge = computed<ProductCashbackBadge | null>(() =>
+    webProductCashback(this.product()?.cashback),
+  );
+
+  /** "5.00" → "5", "2.50" → "2.5" for the badge copy. */
+  cashbackValue(value: string): string {
+    return formatCashbackNumber(value);
+  }
 
   /**
    * Savings as a whole-number percent off, or null when not on sale.
