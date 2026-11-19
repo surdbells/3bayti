@@ -141,7 +141,13 @@ try {
     // reducer (4th ctor arg). Resolve it from the container so this
     // registration can't drift out of sync with the command signature.
     $flashStock = $container->get(\Bayti\Api\Domain\Catalog\FlashCampaignStockReducer::class);
-    $cli->add(new ReconcilePendingOrdersCommand($em, $gateway, $logger, $flashStock));
+    $cli->add(new ReconcilePendingOrdersCommand(
+        $em,
+        $gateway,
+        $logger,
+        $flashStock,
+        $container->get(\Bayti\Api\Domain\GiftCard\GiftCardOrderReversal::class),
+    ));
 } catch (\Throwable $e) {
     // Log the reason — visible if anyone runs `bin/console
     // orders:reconcile-pending` and gets a "command not found"

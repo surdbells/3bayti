@@ -128,6 +128,7 @@ final class CancelOrderController
                 'was_already_cancelled' => $result->wasAlreadyCancelled,
                 'refund_issued' => $result->refundIssued,
                 'refund_amount' => $result->refundAmount,
+                'gift_card_restored' => $result->giftCardRestored,
             ],
         ]);
     }

@@ -6,6 +6,7 @@ namespace Bayti\Api\Tests\Http\Controllers\Admin\Order;
 
 use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\Audit\AuditLog;
+use Bayti\Api\Domain\GiftCard\GiftCardOrderReversal;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\Payment\PaymentTransaction;
@@ -275,6 +276,129 @@ final class RefundOrderControllerTest extends HttpTestCase
             'reason' => 'test',
         ]);
         self::assertSame(422, $response->getStatusCode());
+    }
+
+    // ===== Split tender: card part via Noon, gift-card part back to the card =====
+
+    #[Test]
+    public function fullRefundOfSplitOrderRefundsCardPartThenRestoresGiftCard(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $order = $this->makeOrder($this->makeUser(id: 42), id: 100, reference: 'V3-001', subtotal: '299.00');
+        $order->applyGiftCard('100.00', 'ABCD1234ABCD1234');
+        $this->setEntityProp($order, 'status', Order::STATUS_DELIVERED);
+
+        $initiateTxn = $this->makeTxn($order, 'INITIATE', 'Initiated', '199.00', 'NOON-REF-1');
+
+        // Only the 199.00 the card was charged may go through Noon.
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::once())
+            ->method('refund')
+            ->with('NOON-REF-1', '199.00', 'AED', self::anything())
+            ->willReturn($this->refundedResponse('199.00'));
+
+        $reversal = $this->createMock(GiftCardOrderReversal::class);
+        $reversal->method('outstandingForOrder')->willReturn('100.00');
+        $reversal->expects(self::once())
+            ->method('restoreForOrder')
+            ->with($order, self::stringContains('damaged'), '100.00')
+            ->willReturn('100.00');
+
+        $this->bindEnvironment($admin, $order, [$initiateTxn], '0.00', $gateway);
+        $this->bind(GiftCardOrderReversal::class, $reversal);
+
+        $response = $this->makePost($admin, '/v3/admin/orders/100/refund', ['reason' => 'damaged']);
+
+        self::assertSame(200, $response->getStatusCode());
+        $refund = $this->jsonBody($response)['refund'];
+        self::assertSame('299.00', $refund['amount']);
+        self::assertSame('199.00', $refund['gateway_amount']);
+        self::assertSame('100.00', $refund['gift_card_restored']);
+        self::assertSame('299.00', $refund['total_refunded']);
+        self::assertTrue($refund['is_full_refund']);
+        self::assertSame(Order::STATUS_REFUNDED, $order->getStatus());
+    }
+
+    #[Test]
+    public function partialRefundGoesToTheCardFirstThenTheGiftCard(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $order = $this->makeOrder($this->makeUser(id: 42), id: 100, reference: 'V3-001', subtotal: '299.00');
+        $order->applyGiftCard('100.00', 'ABCD1234ABCD1234');
+        $this->setEntityProp($order, 'status', Order::STATUS_DELIVERED);
+
+        $initiateTxn = $this->makeTxn($order, 'INITIATE', 'Initiated', '199.00', 'NOON-REF-1');
+
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::once())
+            ->method('refund')
+            ->with('NOON-REF-1', '199.00', 'AED', self::anything())
+            ->willReturn($this->refundedResponse('199.00'));
+
+        $reversal = $this->createMock(GiftCardOrderReversal::class);
+        $reversal->method('outstandingForOrder')->willReturn('100.00');
+        $reversal->expects(self::once())
+            ->method('restoreForOrder')
+            ->with($order, self::anything(), '51.00')
+            ->willReturn('51.00');
+
+        $this->bindEnvironment($admin, $order, [$initiateTxn], '0.00', $gateway);
+        $this->bind(GiftCardOrderReversal::class, $reversal);
+
+        $response = $this->makePost($admin, '/v3/admin/orders/100/refund', [
+            'amount' => '250.00',
+            'reason' => 'two items damaged',
+        ]);
+
+        self::assertSame(200, $response->getStatusCode());
+        $refund = $this->jsonBody($response)['refund'];
+        self::assertSame('250.00', $refund['amount']);
+        self::assertSame('199.00', $refund['gateway_amount']);
+        self::assertSame('51.00', $refund['gift_card_restored']);
+        self::assertFalse($refund['is_full_refund']);
+        self::assertSame(Order::STATUS_DELIVERED, $order->getStatus());
+    }
+
+    #[Test]
+    public function giftCardOnlyOrderRefundsWithoutAPaymentRecord(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $order = $this->makeOrder($this->makeUser(id: 42), id: 100, reference: 'V3-001', subtotal: '299.00');
+        $order->applyGiftCard('299.00', 'ABCD1234ABCD1234');
+        $this->setEntityProp($order, 'status', Order::STATUS_DELIVERED);
+
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::never())->method('refund');
+
+        $reversal = $this->createMock(GiftCardOrderReversal::class);
+        $reversal->method('outstandingForOrder')->willReturn('299.00');
+        $reversal->expects(self::once())->method('restoreForOrder')->willReturn('299.00');
+
+        // No INITIATE transaction at all: the order never went to Noon.
+        $this->bindEnvironment($admin, $order, [], '0.00', $gateway);
+        $this->bind(GiftCardOrderReversal::class, $reversal);
+
+        $response = $this->makePost($admin, '/v3/admin/orders/100/refund', ['reason' => 'customer request']);
+
+        self::assertSame(200, $response->getStatusCode());
+        $refund = $this->jsonBody($response)['refund'];
+        self::assertSame('0.00', $refund['gateway_amount']);
+        self::assertSame('299.00', $refund['gift_card_restored']);
+        self::assertTrue($refund['is_full_refund']);
+        self::assertSame(Order::STATUS_REFUNDED, $order->getStatus());
+    }
+
+    private function refundedResponse(string $amount): OrderStatusResponse
+    {
+        return new OrderStatusResponse(
+            providerOrderRef: 'NOON-REF-1',
+            status: 'Refunded',
+            terminal: true,
+            paid: false,
+            amount: $amount,
+            currency: 'AED',
+            rawResponse: [],
+        );
     }
 
     // ===== Helpers =====

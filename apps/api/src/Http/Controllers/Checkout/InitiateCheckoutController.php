@@ -123,6 +123,9 @@ final class InitiateCheckoutController
         private readonly \Bayti\Api\Domain\Catalog\FlashCampaignStockReducer $flashStock,
         private readonly \Bayti\Api\Domain\Cart\DeliveryFeeCalculator $delivery,
         private readonly \Bayti\Api\Domain\Cart\CartPriceRefresher $prices,
+        // Gives gift-card balance back when the gateway call fails after
+        // the card was debited (the debit commits with the order).
+        private readonly \Bayti\Api\Domain\GiftCard\GiftCardOrderReversal $giftCardReversal,
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
@@ -1434,6 +1437,24 @@ final class InitiateCheckoutController
                 'order_id' => $order->getId(),
                 'cart_id' => $cart?->getId(),
                 'error' => $flushErr->getMessage(),
+            ]);
+            // Still pending_payment: leave its gift-card debit in place. The
+            // customer can cancel it (which restores) or the reconcile cron
+            // fails it (which restores).
+            return;
+        }
+
+        // The gift-card debit committed with the order, before the gateway
+        // call. The order is now failed and can never be paid, so give the
+        // balance back. A miss is logged, never rethrown: the customer must
+        // still get the clean "try again" error.
+        try {
+            $this->giftCardReversal->restoreForOrder($order, 'Payment could not be started');
+        } catch (\Throwable $restoreErr) {
+            $this->logger->error('checkout.initiate: gift card balance not restored for failed order', [
+                'order_id' => $order->getId(),
+                'order_reference' => $order->getOrderReference(),
+                'error' => $restoreErr->getMessage(),
             ]);
         }
     }

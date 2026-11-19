@@ -194,6 +194,60 @@ final class AdminOrderControllersTest extends HttpTestCase
     }
 
     #[Test]
+    public function overrideToCancelledGivesTheGiftCardBalanceBack(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $order = $this->makeOrder($this->makeUser(id: 42), id: 100, reference: 'V3-001', subtotal: '299.00');
+        $order->applyGiftCard('50.00', 'ABCD1234ABCD1234');
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findByIdForAdmin')->willReturn($order);
+        $this->bindEm($admin, $orderRepo);
+
+        $reversal = $this->createMock(\Bayti\Api\Domain\GiftCard\GiftCardOrderReversal::class);
+        $reversal->expects(self::once())
+            ->method('restoreForOrder')
+            ->with($order, self::stringContains('stuck order'))
+            ->willReturn('50.00');
+        $this->bind(\Bayti\Api\Domain\GiftCard\GiftCardOrderReversal::class, $reversal);
+
+        $response = $this->makePatch($admin, '/v3/admin/orders/100/status', [
+            'status' => Order::STATUS_CANCELLED,
+            'reason' => 'stuck order',
+        ]);
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame(Order::STATUS_CANCELLED, $order->getStatus());
+        self::assertSame('50.00', end($this->recordedAuditLogs)->getChanges()['gift_card_restored']);
+    }
+
+    #[Test]
+    public function overrideCannotReactivateAnOrderWhoseGiftCardSpendWasReturned(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $order = $this->makeOrder($this->makeUser(id: 42), id: 100, reference: 'V3-001', subtotal: '299.00');
+        $order->applyGiftCard('50.00', 'ABCD1234ABCD1234');
+        $this->setEntityProp($order, 'status', Order::STATUS_CANCELLED);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findByIdForAdmin')->willReturn($order);
+        $this->bindEm($admin, $orderRepo);
+
+        $reversal = $this->createMock(\Bayti\Api\Domain\GiftCard\GiftCardOrderReversal::class);
+        $reversal->method('hasRestoredForOrder')->willReturn(true);
+        $reversal->expects(self::never())->method('restoreForOrder');
+        $this->bind(\Bayti\Api\Domain\GiftCard\GiftCardOrderReversal::class, $reversal);
+
+        $response = $this->makePatch($admin, '/v3/admin/orders/100/status', [
+            'status' => Order::STATUS_PAID,
+            'reason' => 'reopen',
+        ]);
+
+        self::assertSame(422, $response->getStatusCode());
+        self::assertSame(Order::STATUS_CANCELLED, $order->getStatus());
+    }
+
+    #[Test]
     public function overrideStatusRequiresReason(): void
     {
         $admin = $this->makeAdminUser(99);

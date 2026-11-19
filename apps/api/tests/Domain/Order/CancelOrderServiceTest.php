@@ -6,7 +6,9 @@ namespace Bayti\Api\Tests\Domain\Order;
 
 use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\Audit\AuditLog;
+use Bayti\Api\Domain\GiftCard\GiftCardOrderReversal;
 use Bayti\Api\Domain\Order\CancelOrderService;
+use Bayti\Api\Payment\OrderStatusResponse;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Payment\PaymentTransaction;
 use Bayti\Api\Domain\Payment\PaymentTransactionRepository;
@@ -100,16 +102,133 @@ final class CancelOrderServiceTest extends TestCase
         self::assertSame(Order::STATUS_CANCELLED, $order->getStatus());
     }
 
+    // ===== Gift-card balance goes back on cancel =====
+
+    #[Test]
+    public function pendingPaymentCancelGivesTheGiftCardBalanceBack(): void
+    {
+        $user = $this->makeUser();
+        $order = $this->makeOrder($user);
+        $this->setProp($order, 'status', Order::STATUS_PENDING_PAYMENT);
+        $order->applyGiftCard('40.00', 'ABCD1234ABCD1234');
+
+        $reversal = $this->createMock(GiftCardOrderReversal::class);
+        $reversal->expects(self::once())
+            ->method('restoreForOrder')
+            ->with($order, self::stringContains('changed my mind'))
+            ->willReturn('40.00');
+
+        $service = $this->makeService(
+            order: $order,
+            notifications: $this->noopEmailService(),
+            push: $this->noopPushService(),
+            reversal: $reversal,
+        );
+
+        $result = $service->cancel($order, $user, $this->makeRequest(), 'changed my mind', false);
+
+        self::assertSame(Order::STATUS_CANCELLED, $order->getStatus());
+        self::assertSame('40.00', $result->giftCardRestored);
+        self::assertFalse($result->refundIssued);
+    }
+
+    #[Test]
+    public function paidOrderCoveredEntirelyByGiftCardCancelsWithoutAGatewayRefund(): void
+    {
+        // Previously threw "Order has no payment record": a gift-card-only
+        // order never went to Noon. It must cancel and restore the card.
+        $admin = $this->makeUser(1);
+        $order = $this->makeOrder($this->makeUser());
+        $order->applyGiftCard('99.00', 'ABCD1234ABCD1234');
+        $this->setProp($order, 'status', Order::STATUS_PAID);
+
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::never())->method('refund');
+
+        $reversal = $this->createMock(GiftCardOrderReversal::class);
+        $reversal->expects(self::once())->method('restoreForOrder')->willReturn('99.00');
+
+        $service = $this->makeService(
+            order: $order,
+            notifications: $this->noopEmailService(),
+            push: $this->noopPushService(),
+            reversal: $reversal,
+            gateway: $gateway,
+        );
+
+        $result = $service->cancel($order, $admin, $this->makeRequest(), 'out of stock', true);
+
+        self::assertSame(Order::STATUS_CANCELLED, $order->getStatus());
+        self::assertFalse($result->refundIssued);
+        self::assertSame('99.00', $result->giftCardRestored);
+    }
+
+    #[Test]
+    public function paidSplitOrderRefundsOnlyTheCardPartThroughNoon(): void
+    {
+        // 99.00 total, 40.00 paid by gift card → only 59.00 was charged to
+        // the card, so only 59.00 may go back through Noon (not 99.00).
+        $admin = $this->makeUser(1);
+        $order = $this->makeOrder($this->makeUser());
+        $order->applyGiftCard('40.00', 'ABCD1234ABCD1234');
+        $this->setProp($order, 'status', Order::STATUS_PAID);
+
+        $initiate = $this->createMock(PaymentTransaction::class);
+        $initiate->method('getProviderOrderRef')->willReturn('NOON-1');
+
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::once())
+            ->method('refund')
+            ->with('NOON-1', '59.00', 'AED', self::anything())
+            ->willReturn(new OrderStatusResponse(
+                providerOrderRef: 'NOON-1',
+                status: 'Refunded',
+                terminal: true,
+                paid: false,
+                amount: '59.00',
+                currency: 'AED',
+                rawResponse: [],
+            ));
+
+        $reversal = $this->createMock(GiftCardOrderReversal::class);
+        $reversal->expects(self::once())->method('restoreForOrder')->willReturn('40.00');
+
+        $service = $this->makeService(
+            order: $order,
+            notifications: $this->noopEmailService(),
+            push: $this->noopPushService(),
+            reversal: $reversal,
+            gateway: $gateway,
+            initiate: $initiate,
+        );
+
+        $result = $service->cancel($order, $admin, $this->makeRequest(), 'vendor rejected', true);
+
+        self::assertSame(Order::STATUS_CANCELLED, $order->getStatus());
+        self::assertTrue($result->refundIssued);
+        self::assertSame('59.00', $result->refundAmount);
+        self::assertSame('40.00', $result->giftCardRestored);
+    }
+
     // ===== Builders =====
 
     private function makeService(
         Order $order,
         OrderNotificationService $notifications,
         PushNotificationService $push,
+        ?GiftCardOrderReversal $reversal = null,
+        ?PaymentGatewayInterface $gateway = null,
+        ?PaymentTransaction $initiate = null,
     ): CancelOrderService {
         $txnRepo = $this->createMock(PaymentTransactionRepository::class);
         $txnRepo->method('sumRefundsForOrder')->willReturn('0.00');
-        $txnRepo->method('findLatestInitiateForOrder')->willReturn(null);
+        $txnRepo->method('findLatestInitiateForOrder')->willReturn($initiate);
+        $txnRepo->method('save');
+
+        if ($reversal === null) {
+            $reversal = $this->createMock(GiftCardOrderReversal::class);
+            $reversal->method('restoreForOrder')->willReturn('0.00');
+        }
 
         $auditRepo = new class extends \Doctrine\ORM\EntityRepository {
             public function __construct()
@@ -135,11 +254,12 @@ final class CancelOrderServiceTest extends TestCase
 
         return new CancelOrderService(
             em: $em,
-            gateway: $this->createMock(PaymentGatewayInterface::class),
+            gateway: $gateway ?? $this->createMock(PaymentGatewayInterface::class),
             audit: new AuditEmitter($em, new NullLogger()),
             notifications: $notifications,
             pushNotifications: $push,
             logger: new NullLogger(),
+            giftCardReversal: $reversal,
         );
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Admin\Order;
 
 use Bayti\Api\Domain\Audit\AuditEmitter;
+use Bayti\Api\Domain\GiftCard\GiftCardOrderReversal;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\Payment\PaymentTransaction;
@@ -31,27 +32,31 @@ use Psr\Log\LoggerInterface;
  * Issue a full or partial refund against an existing paid order.
  *
  * Body: { "amount": "29.99"?, "reason": "..." }
- *   - amount: optional decimal string. If null/omitted, refunds the
- *     full remaining amount (paid - already_refunded).
+ *   - amount: optional decimal string. If null/omitted, refunds
+ *     everything still refundable.
  *   - reason: required; recorded in the audit + transaction log.
+ *
+ * Money goes back to the tender it came from:
+ *   - the CARD part (order total minus what gift cards paid) is refunded
+ *     through Noon, never more than the card was actually charged;
+ *   - the GIFT-CARD part is put back on the customer's gift card(s).
+ * Refundable = (card charged − card refunds) + (gift-card balance the
+ * order still holds). A partial refund goes to the card first, then to
+ * the gift card(s). The order becomes REFUNDED once both parts are fully
+ * returned.
  *
  * Flow:
  *   1. Find order via findByIdForAdmin (404 if not found)
- *   2. Refundable balance = order.total - sum(prior refunds)
- *   3. Validate amount > 0 AND amount <= refundable balance
- *      (422 with allowed_max if over)
- *   4. Look up provider_order_ref from INITIATE transaction
- *   5. Call gateway.refund(provider_ref, amount, currency, reason)
- *   6. On gateway success: persist PaymentTransaction(REFUND)
- *      with the gateway's response. Mark order REFUNDED if
- *      cumulative refunds now equal the total.
- *   7. On gateway failure: persist PaymentTransaction with failed
- *      status (forensic record) + return 502 to caller
- *   8. Audit ACTION_OVERRIDDEN with amount + reason
+ *   2. Validate amount > 0 AND amount <= refundable (422 otherwise)
+ *   3. Card part: look up the provider_order_ref, call gateway.refund,
+ *      persist a PaymentTransaction(REFUND) (failed attempts too, 502)
+ *   4. Gift-card part: GiftCardOrderReversal::restoreForOrder (ledgered)
+ *   5. Mark REFUNDED when nothing remains; audit with amount + reason
  *
  * Idempotency: each refund request generates a unique idempotency_key.
  * Re-issuing the same body produces a new refund (not deduped at HTTP
- * layer), admins should be careful. The gateway itself may dedupe.
+ * layer), admins should be careful. The gateway itself may dedupe; the
+ * gift-card part can never exceed what the order still holds.
  */
 final class RefundOrderController
 {
@@ -67,6 +72,7 @@ final class RefundOrderController
         private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
         private readonly \Bayti\Api\Notification\Push\PushNotificationService $pushNotifications,
         private readonly LoggerInterface $logger,
+        private readonly GiftCardOrderReversal $giftCardReversal,
     ) {
     }
 
@@ -119,10 +125,21 @@ final class RefundOrderController
         /** @var PaymentTransactionRepository $txnRepo */
         $txnRepo = $this->em->getRepository(PaymentTransaction::class);
 
-        // Compute refundable balance
-        $alreadyRefunded = $txnRepo->sumRefundsForOrder($order);
-        $orderTotal = $order->getTotal();
-        $refundable = bcsub($orderTotal, $alreadyRefunded, 2);
+        $orderTotal     = $order->getTotal();
+        $gatewayCharged = $order->gatewayChargeAmount();
+        $giftCardPaid   = $order->getGiftCardAmount();
+
+        // Card part still refundable (never below 0, e.g. legacy over-refunds).
+        $alreadyRefunded   = $txnRepo->sumRefundsForOrder($order);
+        $gatewayRefundable = bcsub($gatewayCharged, $alreadyRefunded, 2);
+        if (bccomp($gatewayRefundable, '0.00', 2) < 0) {
+            $gatewayRefundable = '0.00';
+        }
+        // Gift-card part still held by the order (debits − restores).
+        $giftCardHeld = $this->giftCardReversal->outstandingForOrder($order);
+
+        $refundable = bcadd($gatewayRefundable, $giftCardHeld, 2);
+        $totalRefundedBefore = $this->totalRefunded($alreadyRefunded, $giftCardPaid, $giftCardHeld);
 
         if (bccomp($refundable, '0.00', 2) <= 0) {
             throw new HttpException(
@@ -131,7 +148,7 @@ final class RefundOrderController
                 publicMessage: 'Order has already been fully refunded.',
                 details: [
                     'order_total' => $orderTotal,
-                    'already_refunded' => $alreadyRefunded,
+                    'already_refunded' => $totalRefundedBefore,
                 ],
             );
         }
@@ -162,88 +179,106 @@ final class RefundOrderController
                         'requested' => $amount,
                         'refundable' => $refundable,
                         'order_total' => $orderTotal,
-                        'already_refunded' => $alreadyRefunded,
+                        'already_refunded' => $totalRefundedBefore,
                     ],
                 );
             }
         }
 
-        // Look up provider_order_ref from the INITIATE transaction
-        $initiate = $txnRepo->findLatestInitiateForOrder($order);
-        if ($initiate === null) {
-            throw new HttpException(
-                status: 422,
-                errorCode: 'no_initiate_transaction',
-                publicMessage: 'Order has no payment record; cannot refund.',
-            );
-        }
-        $providerOrderRef = $initiate->getProviderOrderRef();
-        if ($providerOrderRef === null || $providerOrderRef === '') {
-            throw new HttpException(
-                status: 422,
-                errorCode: 'no_provider_order_ref',
-                publicMessage: 'Order has no provider reference; cannot refund.',
-            );
-        }
+        // Split: card first, then gift card(s).
+        $gatewayPart  = bccomp($amount, $gatewayRefundable, 2) > 0 ? $gatewayRefundable : $amount;
+        $giftCardPart = bcsub($amount, $gatewayPart, 2);
 
-        // Generate idempotency key for this refund attempt
         $idempotencyKey = bin2hex(random_bytes(16));
-
         $previousOrderStatus = $order->getStatus();
 
-        // Call the gateway
-        try {
-            $gatewayResponse = $this->gateway->refund(
-                providerOrderRef: $providerOrderRef,
-                amount: $amount,
-                currency: $order->getCurrency(),
-                reason: $reason,
-            );
-        } catch (PaymentGatewayException $e) {
-            // Record the failed attempt for forensics
-            $failedTxn = new PaymentTransaction(
+        if (bccomp($gatewayPart, '0.00', 2) > 0) {
+            // Look up provider_order_ref from the INITIATE transaction
+            $initiate = $txnRepo->findLatestInitiateForOrder($order);
+            if ($initiate === null) {
+                throw new HttpException(
+                    status: 422,
+                    errorCode: 'no_initiate_transaction',
+                    publicMessage: 'Order has no payment record; cannot refund.',
+                );
+            }
+            $providerOrderRef = $initiate->getProviderOrderRef();
+            if ($providerOrderRef === null || $providerOrderRef === '') {
+                throw new HttpException(
+                    status: 422,
+                    errorCode: 'no_provider_order_ref',
+                    publicMessage: 'Order has no provider reference; cannot refund.',
+                );
+            }
+
+            try {
+                $gatewayResponse = $this->gateway->refund(
+                    providerOrderRef: $providerOrderRef,
+                    amount: $gatewayPart,
+                    currency: $order->getCurrency(),
+                    reason: $reason,
+                );
+            } catch (PaymentGatewayException $e) {
+                // Record the failed attempt for forensics
+                $failedTxn = new PaymentTransaction(
+                    order: $order,
+                    operation: PaymentTransaction::OPERATION_REFUND,
+                    status: 'Failed',
+                    amount: $gatewayPart,
+                    idempotencyKey: $idempotencyKey,
+                    providerOrderRef: $providerOrderRef,
+                    currency: $order->getCurrency(),
+                    responsePayload: ['error' => $e->getMessage(), 'kind' => $e->kind],
+                );
+                $txnRepo->save($failedTxn);
+
+                $this->logger->error('admin.refund.gateway_failed', [
+                    'order_id' => $order->getId(),
+                    'amount' => $gatewayPart,
+                    'error' => $e->getMessage(),
+                    'kind' => $e->kind,
+                ]);
+
+                throw new HttpException(
+                    status: 502,
+                    errorCode: 'gateway_refund_failed',
+                    publicMessage: 'Payment gateway rejected the refund.',
+                    details: ['gateway_error' => $e->getMessage()],
+                );
+            }
+
+            // Persist successful refund transaction
+            $refundTxn = new PaymentTransaction(
                 order: $order,
                 operation: PaymentTransaction::OPERATION_REFUND,
-                status: 'Failed',
-                amount: $amount,
+                status: 'Refunded',
+                amount: $gatewayPart,
                 idempotencyKey: $idempotencyKey,
                 providerOrderRef: $providerOrderRef,
                 currency: $order->getCurrency(),
-                responsePayload: ['error' => $e->getMessage(), 'kind' => $e->kind],
+                responsePayload: $gatewayResponse->rawResponse,
             );
-            $txnRepo->save($failedTxn);
+            $txnRepo->save($refundTxn);
+        }
 
-            $this->logger->error('admin.refund.gateway_failed', [
-                'order_id' => $order->getId(),
-                'amount' => $amount,
-                'error' => $e->getMessage(),
-                'kind' => $e->kind,
-            ]);
-
-            throw new HttpException(
-                status: 502,
-                errorCode: 'gateway_refund_failed',
-                publicMessage: 'Payment gateway rejected the refund.',
-                details: ['gateway_error' => $e->getMessage()],
+        $giftCardRestored = '0.00';
+        if (bccomp($giftCardPart, '0.00', 2) > 0) {
+            $giftCardRestored = $this->giftCardReversal->restoreForOrder(
+                $order,
+                'Refund: ' . $reason,
+                $giftCardPart,
             );
         }
 
-        // Persist successful refund transaction
-        $refundTxn = new PaymentTransaction(
-            order: $order,
-            operation: PaymentTransaction::OPERATION_REFUND,
-            status: 'Refunded',
-            amount: $amount,
-            idempotencyKey: $idempotencyKey,
-            providerOrderRef: $providerOrderRef,
-            currency: $order->getCurrency(),
-            responsePayload: $gatewayResponse->rawResponse,
-        );
-        $txnRepo->save($refundTxn);
+        $gatewayRefundedNow = bcadd($alreadyRefunded, $gatewayPart, 2);
+        $giftCardHeldNow    = bcsub($giftCardHeld, $giftCardRestored, 2);
+        $newTotalRefunded   = $this->totalRefunded($gatewayRefundedNow, $giftCardPaid, $giftCardHeldNow);
+        $refundedThisCall   = bcadd($gatewayPart, $giftCardRestored, 2);
 
-        // Roll order to REFUNDED if cumulative refunds now equal total
-        $newTotalRefunded = bcadd($alreadyRefunded, $amount, 2);
-        $isFullRefund = bccomp($newTotalRefunded, $orderTotal, 2) >= 0;
+        // Fully refunded once the card is refunded in full AND the gift
+        // cards hold nothing more for this order.
+        $isFullRefund = bccomp($gatewayRefundedNow, $gatewayCharged, 2) >= 0
+            && bccomp($giftCardHeldNow, '0.00', 2) <= 0;
 
         if ($isFullRefund && $order->getStatus() !== Order::STATUS_REFUNDED) {
             $order->overrideStatus(Order::STATUS_REFUNDED);
@@ -258,13 +293,15 @@ final class RefundOrderController
             changes: [
                 'before' => [
                     'status' => $previousOrderStatus,
-                    'already_refunded' => $alreadyRefunded,
+                    'already_refunded' => $totalRefundedBefore,
                 ],
                 'after' => [
                     'status' => $order->getStatus(),
                     'total_refunded' => $newTotalRefunded,
                 ],
-                'refund_amount' => $amount,
+                'refund_amount' => $refundedThisCall,
+                'gateway_amount' => $gatewayPart,
+                'gift_card_restored' => $giftCardRestored,
                 'is_full_refund' => $isFullRefund,
                 'reason' => $reason,
                 'idempotency_key' => $idempotencyKey,
@@ -273,7 +310,9 @@ final class RefundOrderController
 
         $this->logger->info('admin.refund.success', [
             'order_id' => $order->getId(),
-            'amount' => $amount,
+            'amount' => $refundedThisCall,
+            'gateway_amount' => $gatewayPart,
+            'gift_card_restored' => $giftCardRestored,
             'is_full_refund' => $isFullRefund,
             'actor_user_id' => $user->getId(),
         ]);
@@ -281,7 +320,7 @@ final class RefundOrderController
         // M3.1.7-H, notify customer of the refund. Fire-and-forget;
         // email failure must not block the response or the audit row.
         $this->notifications->orderRefunded($order, [
-            'refund_amount' => $amount,
+            'refund_amount' => $refundedThisCall,
             'is_full_refund' => $isFullRefund,
         ]);
         $this->pushNotifications->orderRefunded($order);
@@ -289,13 +328,28 @@ final class RefundOrderController
         return $this->ok([
             'order' => $this->serializer->detailShape($order),
             'refund' => [
-                'amount' => $amount,
+                'amount' => $refundedThisCall,
+                'gateway_amount' => $gatewayPart,
+                'gift_card_restored' => $giftCardRestored,
                 'currency' => $order->getCurrency(),
                 'total_refunded' => $newTotalRefunded,
                 'order_total' => $orderTotal,
                 'is_full_refund' => $isFullRefund,
             ],
         ]);
+    }
+
+    /**
+     * Total given back so far = card refunds + gift-card balance restored
+     * (gift-card paid minus what the order still holds).
+     */
+    private function totalRefunded(string $gatewayRefunded, string $giftCardPaid, string $giftCardHeld): string
+    {
+        $restored = bcsub($giftCardPaid, $giftCardHeld, 2);
+        if (bccomp($restored, '0.00', 2) < 0) {
+            $restored = '0.00';
+        }
+        return bcadd($gatewayRefunded, $restored, 2);
     }
 
     /**

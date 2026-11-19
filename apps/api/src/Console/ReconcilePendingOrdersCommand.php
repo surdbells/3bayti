@@ -96,6 +96,7 @@ final class ReconcilePendingOrdersCommand extends Command
         private readonly PaymentGatewayInterface $gateway,
         private readonly LoggerInterface $logger,
         private readonly \Bayti\Api\Domain\Catalog\FlashCampaignStockReducer $flashStock,
+        private readonly ?\Bayti\Api\Domain\GiftCard\GiftCardOrderReversal $giftCardReversal = null,
     ) {
         parent::__construct();
     }
@@ -329,6 +330,20 @@ final class ReconcilePendingOrdersCommand extends Command
                 'error' => $e->getMessage(),
             ]);
             return 'mark_failed_error';
+        }
+        // Failed is terminal: give back any gift-card balance the order
+        // held. The restore flushes in its own transaction (taking the
+        // failed status with it). A miss is logged for ops; the restore is
+        // idempotent, so a later cancel/admin action can still recover it.
+        if ($this->giftCardReversal !== null) {
+            try {
+                $this->giftCardReversal->restoreForOrder($order, 'Payment failed');
+            } catch (\Throwable $e) {
+                $this->logger->error('reconcile_pending.gift_card_restore_failed', [
+                    'order_id' => $order->getId(),
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
         return 'marked_failed';
     }

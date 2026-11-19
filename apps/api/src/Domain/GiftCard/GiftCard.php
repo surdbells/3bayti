@@ -448,6 +448,63 @@ class GiftCard
         return $tx;
     }
 
+    /**
+     * Give back balance that an ORDER spent, because that order did not
+     * go through (payment failed, cancelled, refunded). Writes a CREDIT
+     * ledger row tagged with the order, so what the order still holds
+     * (its debits minus its credits) drops by exactly this amount.
+     * GiftCardOrderReversal ensures the total given back never exceeds
+     * what the order took.
+     *
+     * Unlike credit() this is NOT capped at the denomination: an admin
+     * top-up can legitimately leave a balance above it, and the order's
+     * ledger rows (not the denomination) bound a restore. A voided card
+     * is terminal and is never revived. If the card expired while the
+     * order was open, the customer gets 30 days to spend what came back.
+     *
+     * @throws \LogicException if the card is voided
+     */
+    public function restoreOrderDebit(
+        string $amount,
+        string $orderReference,
+        ?int $orderId,
+        string $reason,
+    ): GiftCardTransaction {
+        $this->assertNotVoided();
+        $this->assertValidMoney($amount, 'amount');
+        if (bccomp($amount, '0.01', 2) < 0) {
+            throw new \InvalidArgumentException('Restore amount must be at least 0.01.');
+        }
+
+        $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $this->balance = bcadd($this->balance, $amount, 2);
+        $this->status  = bccomp($this->balance, bcadd($this->denomination, '0.00', 2), 2) >= 0
+            ? self::STATUS_ACTIVE
+            : self::STATUS_PARTIALLY_USED;
+        if ($this->expiresAt !== null && $this->expiresAt <= $now) {
+            $this->expiresAt = $now->modify('+30 days');
+        }
+        $this->updatedAt = $now;
+
+        $tx = new GiftCardTransaction(
+            giftCard: $this,
+            type: GiftCardTransaction::TYPE_CREDIT,
+            amount: bcadd($amount, '0.00', 2),
+            balanceAfter: $this->balance,
+            orderReference: $orderReference,
+            orderId: $orderId,
+            reason: mb_substr($reason, 0, 255),
+        );
+        $this->transactions->add($tx);
+
+        return $tx;
+    }
+
+    public function isVoided(): bool
+    {
+        return $this->status === self::STATUS_VOIDED;
+    }
+
     /** Admin-initiated void. */
     public function void(): void
     {

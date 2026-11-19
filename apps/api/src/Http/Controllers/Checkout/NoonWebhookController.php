@@ -88,6 +88,8 @@ final class NoonWebhookController
         // $logger above. Used to deliver a gift card to its recipient the
         // moment its funding payment is confirmed (deliverIfDue).
         private readonly \Bayti\Api\Notification\GiftCardDeliveryService $giftCardDelivery,
+        // Gives gift-card balance back when Noon reports the payment failed.
+        private readonly \Bayti\Api\Domain\GiftCard\GiftCardOrderReversal $giftCardReversal,
     ) {
     }
 
@@ -355,6 +357,17 @@ final class NoonWebhookController
                 }
             }
         } elseif ($transition === 'failed') {
+            // A failed order is terminal (it can never be paid), so any
+            // gift-card balance it held goes back to the customer. Never
+            // aborts the webhook; a miss is logged for ops.
+            try {
+                $this->giftCardReversal->restoreForOrder($order, 'Payment failed');
+            } catch (\Throwable $e) {
+                $this->logger->error('noon.webhook: gift card balance not restored for failed order', [
+                    'order_id' => $order->getId(),
+                    'error'    => $e->getMessage(),
+                ]);
+            }
             $this->notifications->orderPaymentFailed($order);
             $this->pushNotifications->orderPaymentFailed($order);
         }

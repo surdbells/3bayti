@@ -511,6 +511,14 @@ final class NoonWebhookControllerTest extends HttpTestCase
     {
         $user = $this->makeUser(id: 7);
         $order = new Order(user: $user, orderReference: 'V3-PEND-002', subtotal: '299.00');
+
+        // A failed order can never be paid: its gift-card spend goes back.
+        $reversal = $this->createMock(\Bayti\Api\Domain\GiftCard\GiftCardOrderReversal::class);
+        $reversal->expects(self::once())
+            ->method('restoreForOrder')
+            ->with($order, 'Payment failed')
+            ->willReturn('0.00');
+        $this->bind(\Bayti\Api\Domain\GiftCard\GiftCardOrderReversal::class, $reversal);
         $this->setEntityId($order, 100);
 
         $verifier = $this->createMock(NoonWebhookSignatureVerifier::class);

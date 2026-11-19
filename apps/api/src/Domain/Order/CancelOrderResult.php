@@ -14,6 +14,8 @@ final class CancelOrderResult
         public readonly bool $wasAlreadyCancelled,
         public readonly bool $refundIssued,
         public readonly ?string $refundAmount,
+        /** Gift-card balance given back to the customer's card(s). */
+        public readonly string $giftCardRestored = '0.00',
     ) {
     }
 }

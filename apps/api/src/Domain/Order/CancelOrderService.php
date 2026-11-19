@@ -60,6 +60,7 @@ final class CancelOrderService
         private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
         private readonly \Bayti\Api\Notification\Push\PushNotificationService $pushNotifications,
         private readonly LoggerInterface $logger,
+        private readonly \Bayti\Api\Domain\GiftCard\GiftCardOrderReversal $giftCardReversal,
     ) {
     }
 
@@ -127,6 +128,14 @@ final class CancelOrderService
         if ($currentStatus === Order::STATUS_PENDING_PAYMENT) {
             $order->overrideStatus(Order::STATUS_CANCELLED);
 
+            // Gift-card balance was debited when the order was created;
+            // the order will now never be paid, so it all goes back. The
+            // restore commits the cancelled status in the same transaction.
+            $giftCardRestored = $this->giftCardReversal->restoreForOrder(
+                $order,
+                'Order cancelled: ' . $reason,
+            );
+
             $this->audit->recordOverride(
                 request: $request,
                 actor: $actor,
@@ -136,6 +145,7 @@ final class CancelOrderService
                     'after' => ['status' => Order::STATUS_CANCELLED],
                     'reason' => $reason,
                     'auto_refund' => false,
+                    'gift_card_restored' => $giftCardRestored,
                     'actor_type' => $allowedFromAdmin ? 'admin' : 'customer',
                 ],
             );
@@ -148,6 +158,7 @@ final class CancelOrderService
                 'previous_status' => $currentStatus,
                 'actor_user_id' => $actor->getId(),
                 'auto_refund' => false,
+                'gift_card_restored' => $giftCardRestored,
             ]);
 
             // M3.1.7-H, notify customer + vendors. Fire-and-forget.
@@ -179,6 +190,7 @@ final class CancelOrderService
                 wasAlreadyCancelled: false,
                 refundIssued: false,
                 refundAmount: null,
+                giftCardRestored: $giftCardRestored,
             );
         }
 
@@ -190,29 +202,38 @@ final class CancelOrderService
             );
         }
 
-        // Auto-refund path: requires admin authority + provider_order_ref
+        // Refund each part to the tender it came from: what the card was
+        // charged goes back through Noon; what gift cards paid goes back to
+        // the gift cards (below). Only the CARD-charged amount (total minus
+        // gift-card portion) is ever sent to Noon, never the full total.
         /** @var PaymentTransactionRepository $txnRepo */
         $txnRepo = $this->em->getRepository(PaymentTransaction::class);
-        $initiate = $txnRepo->findLatestInitiateForOrder($order);
-        if ($initiate === null) {
-            throw new CancellationNotAllowedException(
-                'Order has no payment record; cannot auto-refund for cancellation.',
-                $currentStatus,
-            );
-        }
-        $providerOrderRef = $initiate->getProviderOrderRef();
-        if ($providerOrderRef === null || $providerOrderRef === '') {
-            throw new CancellationNotAllowedException(
-                'Order has no provider reference; cannot auto-refund.',
-                $currentStatus,
-            );
+        $alreadyRefunded = $txnRepo->sumRefundsForOrder($order);
+        $refundable = bcsub($order->gatewayChargeAmount(), $alreadyRefunded, 2);
+        if (bccomp($refundable, '0.00', 2) < 0) {
+            $refundable = '0.00';
         }
 
-        // Compute remaining refundable balance (defensive, a partial
-        // refund may have happened previously)
-        $alreadyRefunded = $txnRepo->sumRefundsForOrder($order);
-        $orderTotal = $order->getTotal();
-        $refundable = bcsub($orderTotal, $alreadyRefunded, 2);
+        // A gateway refund needs the Noon order reference. An order paid
+        // entirely by gift card never went to Noon, so it has none and
+        // needs none.
+        $providerOrderRef = '';
+        if (bccomp($refundable, '0.00', 2) > 0) {
+            $initiate = $txnRepo->findLatestInitiateForOrder($order);
+            if ($initiate === null) {
+                throw new CancellationNotAllowedException(
+                    'Order has no payment record; cannot auto-refund for cancellation.',
+                    $currentStatus,
+                );
+            }
+            $providerOrderRef = (string) $initiate->getProviderOrderRef();
+            if ($providerOrderRef === '') {
+                throw new CancellationNotAllowedException(
+                    'Order has no provider reference; cannot auto-refund.',
+                    $currentStatus,
+                );
+            }
+        }
 
         $idempotencyKey = bin2hex(random_bytes(16));
         $refundIssued = false;
@@ -280,6 +301,15 @@ final class CancelOrderService
         // transition validation, we already validated via this method)
         $order->overrideStatus(Order::STATUS_CANCELLED);
 
+        // Gift-card portion back to the gift card(s), committed together
+        // with the cancelled status. If this throws, the gateway refund
+        // above is already recorded, so a retried cancel refunds nothing
+        // twice and just finishes the restore (it is idempotent).
+        $giftCardRestored = $this->giftCardReversal->restoreForOrder(
+            $order,
+            'Order cancelled: ' . $reason,
+        );
+
         $this->audit->recordOverride(
             request: $request,
             actor: $actor,
@@ -293,6 +323,7 @@ final class CancelOrderService
                     'status' => Order::STATUS_CANCELLED,
                     'refund_issued' => $refundIssued,
                     'refund_amount' => $refundAmount,
+                    'gift_card_restored' => $giftCardRestored,
                 ],
                 'reason' => $reason,
                 'auto_refund' => $refundIssued,
@@ -310,6 +341,7 @@ final class CancelOrderService
             'actor_user_id' => $actor->getId(),
             'auto_refund' => $refundIssued,
             'refund_amount' => $refundAmount,
+            'gift_card_restored' => $giftCardRestored,
         ]);
 
         // M3.1.7-H, notify customer + vendors of the cancellation.
@@ -341,6 +373,7 @@ final class CancelOrderService
             wasAlreadyCancelled: false,
             refundIssued: $refundIssued,
             refundAmount: $refundAmount,
+            giftCardRestored: $giftCardRestored,
         );
     }
 }

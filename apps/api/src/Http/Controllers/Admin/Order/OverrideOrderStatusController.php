@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Admin\Order;
 
 use Bayti\Api\Domain\Audit\AuditEmitter;
+use Bayti\Api\Domain\GiftCard\GiftCardOrderReversal;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\User\User;
@@ -46,8 +47,16 @@ final class OverrideOrderStatusController
         private readonly AuditEmitter $audit,
         private readonly OrderNotificationService $notifications,
         private readonly PushNotificationService $pushNotifications,
+        private readonly GiftCardOrderReversal $giftCardReversal,
     ) {
     }
+
+    /** Statuses in which the order no longer holds the customer's gift-card money. */
+    private const RELEASING_STATUSES = [
+        Order::STATUS_CANCELLED,
+        Order::STATUS_FAILED,
+        Order::STATUS_REFUNDED,
+    ];
 
     protected function getResponseFactory(): ResponseFactoryInterface
     {
@@ -87,7 +96,32 @@ final class OverrideOrderStatusController
         $newStatus = $input->status ?? '';
         $reason = $input->reason ?? '';
 
+        // Once an order's gift-card spend has been given back, moving it
+        // back to an active status would leave it "paid" with money the
+        // customer already has again. Refuse; the customer can re-order.
+        if (!in_array($newStatus, self::RELEASING_STATUSES, true)
+            && $this->giftCardReversal->hasRestoredForOrder($order)) {
+            throw new HttpException(
+                status: 422,
+                errorCode: 'gift_card_balance_restored',
+                publicMessage: 'This order\'s gift card payment was already returned to the customer, so it cannot be reactivated.',
+                details: ['current_status' => $order->getStatus()],
+            );
+        }
+
         $previousStatus = $order->overrideStatus($newStatus);
+
+        // Cancelled / failed / refunded: the order no longer holds the
+        // customer's gift-card money, so give it back. The restore commits
+        // the new status with it (same transaction). Any card refund is
+        // the admin's separate refund action, as before.
+        $giftCardRestored = '0.00';
+        if (in_array($newStatus, self::RELEASING_STATUSES, true)) {
+            $giftCardRestored = $this->giftCardReversal->restoreForOrder(
+                $order,
+                'Order ' . $newStatus . ' by admin: ' . $reason,
+            );
+        }
 
         $this->em->flush();
 
@@ -99,6 +133,7 @@ final class OverrideOrderStatusController
                 'before' => ['status' => $previousStatus],
                 'after' => ['status' => $newStatus],
                 'reason' => $reason,
+                'gift_card_restored' => $giftCardRestored,
             ],
         );
 
