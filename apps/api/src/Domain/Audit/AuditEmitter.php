@@ -287,6 +287,8 @@ final class AuditEmitter
                 => $this->snapshotPromoCode($subject),
             $subject instanceof \Bayti\Api\Domain\Currency\FxRate
                 => $this->snapshotFxRate($subject),
+            $subject instanceof \Bayti\Api\Domain\Cashback\CashbackRule
+                => $this->snapshotCashbackRule($subject),
             default => throw new \InvalidArgumentException(
                 'No snapshot strategy for ' . $subject::class,
             ),
@@ -740,6 +742,43 @@ final class AuditEmitter
             'valid_from' => $p->getValidFrom()?->format(\DateTimeInterface::ATOM),
             'valid_until' => $p->getValidUntil()?->format(\DateTimeInterface::ATOM),
             'is_active' => $p->isActive(),
+        ];
+    }
+
+    /**
+     * CashbackRule snapshot (cashback programme). Business fields + the
+     * target set as "type:id" / "!type:id" (exclusion) strings so a scope
+     * change diffs readably.
+     *
+     * @return array<string, mixed>
+     */
+    private function snapshotCashbackRule(\Bayti\Api\Domain\Cashback\CashbackRule $r): array
+    {
+        $targets = [];
+        foreach ($r->getTargets() as $t) {
+            $targets[] = ($t->isExclusion() ? '!' : '') . $t->getTargetType() . ':' . $t->getTargetId();
+        }
+        sort($targets);
+        return [
+            'name' => $r->getName(),
+            'description' => $r->getDescription(),
+            'is_active' => $r->isActive(),
+            'priority' => $r->getPriority(),
+            'reward_type' => $r->getRewardType(),
+            'reward_value' => $r->getRewardValue(),
+            'max_reward_per_order' => $r->getMaxRewardPerOrder(),
+            'min_eligible_amount' => $r->getMinEligibleAmount(),
+            'valid_from' => $r->getValidFrom()?->format(\DateTimeInterface::ATOM),
+            'valid_until' => $r->getValidUntil()?->format(\DateTimeInterface::ATOM),
+            'scope' => $r->getScope(),
+            'channel' => $r->getChannel(),
+            'first_order_only' => $r->isFirstOrderOnly(),
+            'per_customer_limit' => $r->getPerCustomerLimit(),
+            'budget_total' => $r->getBudgetTotal(),
+            'allow_with_promo' => $r->allowsWithPromo(),
+            'hold_days' => $r->getHoldDays(),
+            'gift_card_validity_days' => $r->getGiftCardValidityDays(),
+            'targets' => implode(',', $targets),
         ];
     }
 

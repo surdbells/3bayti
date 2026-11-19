@@ -144,7 +144,7 @@ class CashbackAwardRepository extends EntityRepository
     /**
      * Admin ledger.
      *
-     * @param array{status?: string, rule_id?: int, user_id?: int, order_reference?: string, date_from?: DateTimeImmutable, date_to?: DateTimeImmutable, limit: int, offset: int} $filters
+     * @param array{status?: string, rule_id?: int, user_id?: int, customer?: string, order_reference?: string, date_from?: DateTimeImmutable, date_to?: DateTimeImmutable, limit: int, offset: int} $filters
      * @return array{items: list<CashbackAward>, total: int}
      */
     public function findFilteredPaginated(array $filters): array
@@ -161,6 +161,10 @@ class CashbackAwardRepository extends EntityRepository
         }
         if (isset($filters['user_id'])) {
             $qb->andWhere('IDENTITY(a.user) = :uid')->setParameter('uid', $filters['user_id']);
+        }
+        if (isset($filters['customer'])) {
+            $qb->andWhere('LOWER(u.email) LIKE :cust OR LOWER(u.phone) LIKE :cust')
+                ->setParameter('cust', '%' . mb_strtolower(addcslashes($filters['customer'], '%_')) . '%');
         }
         if (isset($filters['order_reference'])) {
             $qb->andWhere('UPPER(o.orderReference) LIKE :ref')

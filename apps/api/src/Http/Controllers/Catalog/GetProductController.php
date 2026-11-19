@@ -37,6 +37,7 @@ final class GetProductController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $serializer,
+        private readonly \Bayti\Api\Domain\Cashback\CashbackService $cashback,
     ) {
     }
 
@@ -81,8 +82,11 @@ final class GetProductController
             ->getQuery()
             ->getResult();
 
-        return $this->ok(PaginatedEnvelope::single(
-            $this->serializer->configureFromRequest($request)->detailShape($product, $reviews),
-        ));
+        $shape = $this->serializer->configureFromRequest($request)->detailShape($product, $reviews);
+        // Cashback programme: "Earn X cashback" badge (PDP only, not
+        // listings). Null when no live rule covers the product. Fail-safe.
+        $shape['cashback'] = $this->cashback->badgeForProduct($product);
+
+        return $this->ok(PaginatedEnvelope::single($shape));
     }
 }

@@ -169,6 +169,9 @@ return function (App $app): void {
         // Empty body is a 200 no-op.
         $group->patch('/profile', UpdateProfileController::class);
 
+        // Cashback programme: totals + award history.
+        $group->get('/cashback', \Bayti\Api\Http\Controllers\Me\GetMyCashbackController::class);
+
         // Workstream C, profile picture upload (mobile + portal).
         $group->post('/avatar', \Bayti\Api\Http\Controllers\Me\UpdateMeAvatarController::class);
 
@@ -373,6 +376,8 @@ return function (App $app): void {
         // Wallet preview: how much of the customer's WHOLE gift-card wallet
         // applies to the cart (one-tap alternative to a single code). Pure read.
         $group->get('/gift-wallet', \Bayti\Api\Http\Controllers\GiftCard\PreviewGiftWalletForCartController::class);
+        // Cashback programme: estimated cashback for the cart. Pure read.
+        $group->get('/cashback', \Bayti\Api\Http\Controllers\Cart\GetCartCashbackController::class);
     })->add(AuthMiddleware::class);
 
     // ===================================================================
@@ -1199,6 +1204,41 @@ return function (App $app): void {
         // whichever is on file). gift_cards.edit = a mutating card action.
         $group->post('/gift-cards/{id:[0-9]+}/send',
             \Bayti\Api\Http\Controllers\Admin\GiftCard\SendGiftCardController::class)->add($perm->for('gift_cards.edit'));
+
+        // Cashback programme (paid out as gift cards). Settings + rules CRUD
+        // + the award ledger. View = cashback.view; release / cancel /
+        // reverse an award = cashback.manage. Literal paths (settings,
+        // summary) don't collide with the {id} routes.
+        $group->get('/cashback/settings',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\GetCashbackSettingsController::class)->add($perm->for('cashback.view'));
+        $group->put('/cashback/settings',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\UpdateCashbackSettingsController::class)->add($perm->for('cashback.edit'));
+        $group->get('/cashback/summary',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\GetCashbackSummaryController::class)->add($perm->for('cashback.view'));
+        $group->get('/cashback/rules',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\ListCashbackRulesController::class)->add($perm->for('cashback.view'));
+        $group->post('/cashback/rules',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\CreateCashbackRuleController::class)->add($perm->for('cashback.create'));
+        $group->get('/cashback/rules/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\GetCashbackRuleController::class)->add($perm->for('cashback.view'));
+        $group->put('/cashback/rules/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\UpdateCashbackRuleController::class)->add($perm->for('cashback.edit'));
+        $group->post('/cashback/rules/{id:[0-9]+}/activate',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\SetCashbackRuleActiveController::class)->add($perm->for('cashback.edit'));
+        $group->post('/cashback/rules/{id:[0-9]+}/deactivate',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\SetCashbackRuleActiveController::class)->add($perm->for('cashback.edit'));
+        $group->delete('/cashback/rules/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\DeleteCashbackRuleController::class)->add($perm->for('cashback.delete'));
+        $group->get('/cashback/awards',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\ListCashbackAwardsController::class)->add($perm->for('cashback.view'));
+        $group->get('/cashback/awards/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\GetCashbackAwardController::class)->add($perm->for('cashback.view'));
+        $group->post('/cashback/awards/{id:[0-9]+}/release',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\ReleaseCashbackAwardController::class)->add($perm->for('cashback.manage'));
+        $group->post('/cashback/awards/{id:[0-9]+}/cancel',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\CancelCashbackAwardController::class)->add($perm->for('cashback.manage'));
+        $group->post('/cashback/awards/{id:[0-9]+}/reverse',
+            \Bayti\Api\Http\Controllers\Admin\Cashback\ReverseCashbackAwardController::class)->add($perm->for('cashback.manage'));
 
         // M3.2.X.18-F, Returns admin surface
         $group->get('/returns',

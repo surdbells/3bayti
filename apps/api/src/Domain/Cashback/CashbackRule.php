@@ -281,14 +281,21 @@ class CashbackRule
      */
     public function replaceTargets(array $targets): void
     {
-        $this->targets->clear();
-        $seen = [];
+        $wanted = [];
         foreach ($targets as $t) {
-            $key = $t['target_type'] . ':' . $t['target_id'] . ':' . ($t['is_exclusion'] ? '1' : '0');
-            if (isset($seen[$key])) {
-                continue;
+            $wanted[$t['target_type'] . ':' . $t['target_id'] . ':' . ($t['is_exclusion'] ? '1' : '0')] = $t;
+        }
+        // Keep rows that stay (Doctrine runs INSERTs before orphan DELETEs,
+        // so re-adding an identical target would hit the unique index).
+        foreach ($this->targets->toArray() as $existing) {
+            $key = $existing->getTargetType() . ':' . $existing->getTargetId() . ':' . ($existing->isExclusion() ? '1' : '0');
+            if (isset($wanted[$key])) {
+                unset($wanted[$key]);
+            } else {
+                $this->targets->removeElement($existing);
             }
-            $seen[$key] = true;
+        }
+        foreach ($wanted as $t) {
             $this->targets->add(new CashbackRuleTarget($this, $t['target_type'], $t['target_id'], $t['is_exclusion']));
         }
     }

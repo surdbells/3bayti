@@ -373,6 +373,50 @@ final class CashbackServiceTest extends TestCase
         $this->service()->reverseAward($award, 'nope');
     }
 
+    // ── read-only estimates ──────────────────────────────────────────
+
+    #[Test]
+    public function productBadgeShowsTheBestCoveringRuleAndSkipsSpentBudgets(): void
+    {
+        $vendor = new Vendor('vendor-10', 'Vendor 10', 'v10@example.test');
+        $this->setProp($vendor, 'id', 10);
+        $product = new Product(vendor: $vendor, slug: 'p-1', name: 'P 1');
+        $this->setProp($product, 'id', 1);
+        $this->setProp($product, 'price', '200.00');
+
+        $spent = $this->rule(1, '20.00');
+        $spent->setPriority(5);
+        $spent->setBudgetTotal('100.00');
+        $best = $this->rule(2, '10.00');
+        $best->setMaxRewardPerOrder('15.00');
+        $other = $this->rule(3, '5.00');
+        $this->rules->method('findLive')->willReturn([$spent, $best, $other]);
+        $this->rules->method('spentByRuleIds')->willReturn([1 => '100.00']);
+
+        $badge = $this->service()->badgeForProduct($product);
+        self::assertNotNull($badge);
+        self::assertSame('percentage', $badge['type']);
+        self::assertSame('10.00', $badge['value']);
+        self::assertSame('15.00', $badge['max']);
+    }
+
+    #[Test]
+    public function orderSummaryIsTheCustomerFacingAwardShape(): void
+    {
+        $order = $this->paidOrder();
+        $award = $this->pendingAward($order);
+        $this->deliver($order, new DateTimeImmutable('2026-11-01T10:00:00+00:00'));
+        $this->awards->method('findOneByOrder')->willReturn($award);
+
+        self::assertSame([
+            'status'       => 'pending',
+            'amount'       => '10.00',
+            'currency'     => 'AED',
+            'release_at'   => '2026-11-15T10:00:00+00:00',
+            'gift_card_id' => null,
+        ], $this->service()->orderSummary($order));
+    }
+
     // ── helpers ──────────────────────────────────────────────────────
 
     private function service(

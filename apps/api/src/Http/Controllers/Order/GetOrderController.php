@@ -44,6 +44,7 @@ final class GetOrderController
         private readonly EntityManagerInterface $em,
         private readonly OrderSerializer $serializer,
         private readonly ShipmentSerializer $shipmentSerializer,
+        private readonly \Bayti\Api\Domain\Cashback\CashbackService $cashback,
     ) {
     }
 
@@ -114,8 +115,13 @@ final class GetOrderController
         $shipmentRepo = $this->em->getRepository(OrderShipment::class);
         $shipments = $this->shipmentSerializer->shapeMany($shipmentRepo->findForOrder($order));
 
+        $shape = $this->serializer->detailShape($order, $returns, $giftCard, $shipments);
+        // Cashback programme: {status, amount, currency, release_at,
+        // gift_card_id} or null when the order earns none. Fail-safe.
+        $shape['cashback'] = $this->cashback->orderSummary($order);
+
         return $this->ok([
-            'order' => $this->serializer->detailShape($order, $returns, $giftCard, $shipments),
+            'order' => $shape,
         ]);
     }
 }
