@@ -499,6 +499,26 @@ export const routes: Routes = [
     title: 'Coupon usage'
   },
   {
+    // Cashback programme (paid out as gift cards): programme switch +
+    // settings + rules list. Backed by /admin/cashback/* (cashback.* perms).
+    path: 'admin/cashback',
+    loadComponent: () => import('./backend/cashback/cashback-rules.component').then(m => m.CashbackRulesComponent),
+    canActivate: [adminGuard, requirePermission('cashback.view')],
+    title: 'Cashback'
+  },
+  {
+    path: 'admin/cashback/rules/form',   // create (no ?id) or edit (?id=12)
+    loadComponent: () => import('./backend/cashback/cashback-rule-form.component').then(m => m.CashbackRuleFormComponent),
+    canActivate: [adminGuard, requirePermission('cashback.view'), requireAnyPermission('cashback.create', 'cashback.edit')],
+    title: 'Cashback rule'
+  },
+  {
+    path: 'admin/cashback/awards',       // ledger; ?status= ?rule_id= filter, ?award=<id> opens one
+    loadComponent: () => import('./backend/cashback/cashback-awards.component').then(m => m.CashbackAwardsComponent),
+    canActivate: [adminGuard, requirePermission('cashback.view')],
+    title: 'Cashback awards'
+  },
+  {
     path: 'admin/order-manage',
     loadComponent: () => import('./backend/processing/single/single.component').then(m => m.SingleComponent),
     canActivate: [adminGuard, requirePermission('orders.view_detail')],

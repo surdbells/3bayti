@@ -1,0 +1,87 @@
+/* Layout comes from the shared .ax-* utilities; colours only via tokens so
+   light and dark themes both work. */
+.ax-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.ax-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.cb-program {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+.cb-program-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.cb-muted {
+  font-size: 0.8125rem;
+  color: var(--ax-color-text-secondary);
+}
+.cb-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--ax-radius-md, 0.5rem);
+  font-size: 0.8125rem;
+  background-color: var(--ax-color-bg-warning-subtle);
+  color: var(--ax-color-text-primary);
+}
+
+.cb-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem 1rem;
+  align-items: start;
+}
+.cb-settings-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  grid-column: 1 / -1;
+}
+.cb-error {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ax-color-text-danger);
+}
+
+.cb-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.75rem;
+}
+.cb-stats a.ax-stat-card {
+  text-decoration: none;
+  color: inherit;
+}
+
+.cb-budget {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 8rem;
+}
+.cb-rule-link {
+  text-decoration: none;
+}
+.cb-rule-link:hover {
+  text-decoration: underline;
+}
+.cb-inline-switch {
+  justify-content: center;
+}

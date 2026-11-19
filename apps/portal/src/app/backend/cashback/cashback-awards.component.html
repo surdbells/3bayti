@@ -1,0 +1,262 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> {{ 'cashback.awards.back' | translate }}
+        </button>
+        <span class="ax-page-header-eyebrow">{{ 'cashback.title' | translate }}</span>
+        <h1 class="ax-page-title">{{ 'cashback.awards.title' | translate }}</h1>
+        <p class="ax-page-subtitle">{{ 'cashback.awards.subtitle' | translate }}</p>
+      </div>
+    </header>
+
+    <section class="ax-card ax-p-0">
+      @if (config) {
+        <app-ax-data-table [config]="config" [dataSource]="dataSource"
+                           (rowAction)="onRowAction($event)" (rowClick)="onRowClick($event)" class="cb-clickable">
+          <ng-template axCell="order" let-row>
+            @if (row.order) {
+              <a class="ax-font-medium ax-text-primary cb-link" [routerLink]="['/admin/orders', row.order.id]" (click)="$event.stopPropagation()">
+                {{ row.order.order_reference }}
+              </a>
+              <span class="ax-block ax-text-sm ax-text-secondary">AED {{ formatMoney(row.order.total) }} · {{ row.order.status }}</span>
+            } @else { — }
+          </ng-template>
+          <ng-template axCell="customer" let-row>
+            <span class="ax-text-primary">{{ row.customer?.name || '—' }}</span>
+            @if (row.customer?.email) { <span class="ax-block ax-text-sm ax-text-secondary">{{ row.customer.email }}</span> }
+          </ng-template>
+          <ng-template axCell="amount" let-row>
+            <span class="ax-font-medium">{{ row.currency }} {{ formatMoney(row.amount) }}</span>
+            @if (hasMoney(row.reversed_amount)) {
+              <span class="ax-block ax-text-sm cb-text-danger">−{{ formatMoney(row.reversed_amount) }} {{ 'cashback.awards.reversed_short' | translate }}</span>
+            }
+          </ng-template>
+          <ng-template axCell="status" let-row>
+            <span class="ax-badge" [ngClass]="awardStatusBadge(row.status)">{{ statusLabel(row.status) }}</span>
+          </ng-template>
+          <ng-template axCell="release_at" let-row>
+            @if (row.released_at) {
+              <span>{{ fmtDate(row.released_at) }}</span>
+              <span class="ax-block ax-text-sm ax-text-secondary">{{ 'cashback.awards.released_on' | translate }}</span>
+            } @else if (row.status === 'pending') {
+              @if (row.release_at) {
+                <span>{{ fmtDate(row.release_at) }}</span>
+                <span class="ax-block ax-text-sm ax-text-secondary">{{ 'cashback.awards.due' | translate }}</span>
+              } @else {
+                <span class="ax-text-sm ax-text-secondary">{{ 'cashback.awards.awaiting_delivery' | translate }}</span>
+              }
+            } @else { — }
+          </ng-template>
+          <ng-template axCell="gift_card" let-row>
+            @if (row.gift_card) {
+              <a class="cb-link cb-code" [routerLink]="['/admin/gift-cards', row.gift_card.id]" (click)="$event.stopPropagation()">{{ row.gift_card.code }}</a>
+              <span class="ax-block ax-text-sm ax-text-secondary">{{ 'cashback.awards.balance' | translate }}: {{ formatMoney(row.gift_card.balance) }}</span>
+            } @else { — }
+          </ng-template>
+          <ng-template axCell="rules" let-row>
+            @for (r of row.rules; track r.id) {
+              <span class="ax-badge ax-badge-neutral cb-rule-chip">{{ r.name }}</span>
+            } @empty { — }
+          </ng-template>
+        </app-ax-data-table>
+      }
+    </section>
+  </div>
+
+  <!-- Detail dialog -->
+  @if (detail || detailLoading) {
+    <div class="cb-backdrop" (click)="closeDetail()">
+      <div class="ax-modal ax-modal-lg cb-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="cb-detail-title">
+        <header class="ax-modal-header">
+          <h2 class="ax-modal-title" id="cb-detail-title">
+            {{ 'cashback.awards.detail_title' | translate }}
+            @if (detail?.order) { · {{ detail?.order?.order_reference }} }
+          </h2>
+          <button type="button" class="ax-modal-close" (click)="closeDetail()" [attr.aria-label]="'cashback.close' | translate">
+            <app-icon name="close"></app-icon>
+          </button>
+        </header>
+        <div class="ax-modal-body">
+          @if (detailLoading) {
+            <div class="ax-flex ax-justify-center ax-py-8"><span class="ax-spinner ax-spinner-lg" aria-label="Loading"></span></div>
+          } @else if (detail) {
+            <div class="cb-detail-grid">
+              <div class="cb-cell">
+                <span class="cb-cell-label">{{ 'cashback.awards.col_status' | translate }}</span>
+                <span class="ax-badge" [ngClass]="awardStatusBadge(detail.status)">{{ statusLabel(detail.status) }}</span>
+                @if (detail.status_reason) { <span class="ax-text-sm ax-text-secondary">{{ detail.status_reason }}</span> }
+              </div>
+              <div class="cb-cell">
+                <span class="cb-cell-label">{{ 'cashback.awards.col_amount' | translate }}</span>
+                <span class="ax-h5 ax-m-0">{{ detail.currency }} {{ formatMoney(detail.amount) }}</span>
+                @if (detail.accrued_amount !== detail.amount) {
+                  <span class="ax-text-sm ax-text-secondary">{{ 'cashback.awards.accrued' | translate }}: {{ formatMoney(detail.accrued_amount) }}</span>
+                }
+              </div>
+              @if (hasMoney(detail.reversed_amount)) {
+                <div class="cb-cell">
+                  <span class="cb-cell-label">{{ 'cashback.awards.reversed_amount' | translate }}</span>
+                  <span class="cb-text-danger">{{ formatMoney(detail.reversed_amount) }}</span>
+                </div>
+              }
+              @if (hasMoney(detail.uncollected_amount)) {
+                <div class="cb-cell">
+                  <span class="cb-cell-label">{{ 'cashback.awards.uncollected' | translate }}</span>
+                  <span>{{ formatMoney(detail.uncollected_amount) }}</span>
+                  <span class="ax-text-sm ax-text-secondary">{{ 'cashback.awards.uncollected_hint' | translate }}</span>
+                </div>
+              }
+              <div class="cb-cell">
+                <span class="cb-cell-label">{{ 'cashback.awards.col_customer' | translate }}</span>
+                <span>{{ detail.customer?.name || '—' }}</span>
+                <span class="ax-text-sm ax-text-secondary">{{ detail.customer?.email }}</span>
+              </div>
+              @if (detail.order) {
+                <div class="cb-cell">
+                  <span class="cb-cell-label">{{ 'cashback.awards.col_order' | translate }}</span>
+                  <a class="cb-link" [routerLink]="['/admin/orders', detail.order.id]">{{ detail.order.order_reference }}</a>
+                  <span class="ax-text-sm ax-text-secondary">AED {{ formatMoney(detail.order.total) }} · {{ detail.order.status }}</span>
+                </div>
+                <div class="cb-cell">
+                  <span class="cb-cell-label">{{ 'cashback.awards.paid_delivered' | translate }}</span>
+                  <span class="ax-text-sm">{{ fmtDate(detail.order.paid_at, true) }}</span>
+                  <span class="ax-text-sm ax-text-secondary">{{ detail.order.delivered_at ? fmtDate(detail.order.delivered_at, true) : ('cashback.awards.not_delivered' | translate) }}</span>
+                </div>
+              }
+              <div class="cb-cell">
+                <span class="cb-cell-label">{{ 'cashback.awards.col_release' | translate }}</span>
+                @if (detail.released_at) {
+                  <span>{{ fmtDate(detail.released_at, true) }}</span>
+                } @else if (detail.release_at) {
+                  <span>{{ fmtDate(detail.release_at, true) }}</span>
+                  <span class="ax-text-sm ax-text-secondary">{{ 'cashback.awards.hold_days' | translate: { days: detail.hold_days ?? '—' } }}</span>
+                } @else {
+                  <span class="ax-text-sm ax-text-secondary">{{ 'cashback.awards.awaiting_delivery' | translate }}</span>
+                }
+              </div>
+              @if (detail.gift_card) {
+                <div class="cb-cell">
+                  <span class="cb-cell-label">{{ 'cashback.awards.col_gift_card' | translate }}</span>
+                  <a class="cb-link cb-code" [routerLink]="['/admin/gift-cards', detail.gift_card.id]">{{ detail.gift_card.code }}</a>
+                  <span class="ax-text-sm ax-text-secondary">{{ 'cashback.awards.balance' | translate }}: {{ formatMoney(detail.gift_card.balance) }} · {{ detail.gift_card.status }}</span>
+                </div>
+              }
+              @if (detail.cancelled_at || detail.reversed_at) {
+                <div class="cb-cell">
+                  <span class="cb-cell-label">{{ (detail.cancelled_at ? 'cashback.awards.cancelled_at' : 'cashback.awards.reversed_at') | translate }}</span>
+                  <span class="ax-text-sm">{{ fmtDate(detail.cancelled_at || detail.reversed_at, true) }}</span>
+                </div>
+              }
+            </div>
+
+            @if (detail.lines?.length) {
+              <h3 class="ax-h6 ax-mt-4 ax-mb-2">{{ 'cashback.awards.lines' | translate }}</h3>
+              <div class="cb-table-wrap">
+                <table class="ax-table">
+                  <thead>
+                    <tr>
+                      <th>{{ 'cashback.awards.line_rule' | translate }}</th>
+                      <th>{{ 'cashback.awards.line_item' | translate }}</th>
+                      <th class="cb-num">{{ 'cashback.awards.line_base' | translate }}</th>
+                      <th class="cb-num">{{ 'cashback.awards.line_accrued' | translate }}</th>
+                      <th class="cb-num">{{ 'cashback.awards.line_amount' | translate }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (l of detail.lines; track l.id) {
+                      <tr>
+                        <td>{{ l.rule_name }}</td>
+                        <td>#{{ l.order_item_id }}</td>
+                        <td class="cb-num">{{ formatMoney(l.base_amount) }}</td>
+                        <td class="cb-num">{{ formatMoney(l.accrued_amount) }}</td>
+                        <td class="cb-num" [class.cb-text-danger]="lineChanged(l)">{{ formatMoney(l.amount) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+
+            @if (awardRecoveries(detail).length) {
+              <h3 class="ax-h6 ax-mt-4 ax-mb-2">{{ 'cashback.awards.recoveries' | translate }}</h3>
+              <ul class="cb-recoveries">
+                @for (r of awardRecoveries(detail); track $index) {
+                  <li>{{ fmtDate(r.at, true) }} · {{ formatMoney(r.amount) }} · {{ r.order_reference }}</li>
+                }
+              </ul>
+            }
+          }
+        </div>
+        @if (detail && perms.can('cashback.manage') && (detail.status === 'pending' || detail.status === 'issued')) {
+          <footer class="ax-modal-footer">
+            @if (detail.status === 'pending') {
+              <button type="button" class="ax-btn ax-btn-outline" (click)="openAction('cancel', detail)">
+                <app-icon name="cancel" aria-hidden="true"></app-icon> {{ 'cashback.awards.action_cancel' | translate }}
+              </button>
+              <button type="button" class="ax-btn ax-btn-primary" (click)="openAction('release', detail)">
+                <app-icon name="card_giftcard" aria-hidden="true"></app-icon> {{ 'cashback.awards.action_release' | translate }}
+              </button>
+            } @else {
+              <button type="button" class="ax-btn ax-btn-danger" (click)="openAction('reverse', detail)">
+                <app-icon name="undo" aria-hidden="true"></app-icon> {{ 'cashback.awards.action_reverse' | translate }}
+              </button>
+            }
+          </footer>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Action dialog -->
+  @if (action) {
+    <div class="cb-backdrop cb-backdrop-top" (click)="closeAction()">
+      <div class="ax-modal ax-modal-sm cb-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="cb-action-title">
+        <header class="ax-modal-header">
+          <h2 class="ax-modal-title" id="cb-action-title">{{ ('cashback.awards.' + action.type + '_title') | translate }}</h2>
+          <button type="button" class="ax-modal-close" (click)="closeAction()" [attr.aria-label]="'cashback.close' | translate">
+            <app-icon name="close"></app-icon>
+          </button>
+        </header>
+        <div class="ax-modal-body ax-flex ax-flex-col ax-gap-3">
+          <p class="ax-m-0 ax-text-sm">
+            {{ ('cashback.awards.' + action.type + '_msg') | translate: {
+              amount: formatMoney(action.award.amount),
+              ref: action.award.order?.order_reference ?? ''
+            } }}
+          </p>
+          @if (action.type === 'reverse') {
+            <label class="ax-form-field">
+              <span class="ax-label">{{ 'cashback.awards.reverse_amount' | translate }}</span>
+              <div class="ax-input-group">
+                <span class="ax-input-group-prefix">AED</span>
+                <input type="text" inputmode="decimal" class="ax-input ax-numeric" name="reverse_amount"
+                       [placeholder]="reversible(action.award)" [(ngModel)]="actionForm.amount" />
+              </div>
+              <span class="ax-hint">{{ 'cashback.awards.reverse_amount_hint' | translate: { max: reversible(action.award) } }}</span>
+            </label>
+          }
+          <label class="ax-form-field">
+            <span class="ax-label ax-label-required">{{ 'cashback.awards.reason' | translate }}</span>
+            <textarea class="ax-textarea" rows="3" maxlength="255" name="reason"
+                      [placeholder]="'cashback.awards.reason_ph' | translate"
+                      [(ngModel)]="actionForm.reason"></textarea>
+          </label>
+          @if (actionError) { <p class="cb-text-danger ax-text-sm ax-m-0" role="alert">{{ actionError }}</p> }
+        </div>
+        <footer class="ax-modal-footer">
+          <button type="button" class="ax-btn ax-btn-ghost" (click)="closeAction()" [disabled]="actionSaving">{{ 'cashback.cancel' | translate }}</button>
+          <button type="button" class="ax-btn"
+                  [class.ax-btn-primary]="action.type === 'release'"
+                  [class.ax-btn-danger]="action.type !== 'release'"
+                  [disabled]="actionSaving || !actionForm.reason.trim()"
+                  (click)="submitAction()">
+            @if (actionSaving) { <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> }
+            {{ ('cashback.awards.' + action.type + '_confirm') | translate }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+</app-admin-shell>

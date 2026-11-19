@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
@@ -39,6 +39,10 @@ interface GiftCardRow extends Record<string, unknown> {
   recipient_email: string;
   is_delivered: boolean;
   created_at: string;
+  /** purchase | admin | cashback */
+  source: string;
+  /** Set when source === 'cashback': the award that issued the card. */
+  cashback_award_id: number | null;
 }
 
 /** A row from GET /admin/gift-cards/redemptions, one checkout debit. */
@@ -72,7 +76,7 @@ interface GiftCardFilters {
   standalone: true,
   imports: [
     AdminShellComponent, CommonModule, FormsModule,
-    AxDataTableComponent, AxCellDirective, IconComponent, TranslatePipe, AxComboboxComponent,
+    AxDataTableComponent, AxCellDirective, IconComponent, TranslatePipe, AxComboboxComponent, RouterLink,
   ],
   styles: [`
     .ax-filter-grid {
@@ -185,6 +189,11 @@ interface GiftCardFilters {
         <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowClick)="openDetail($event)" style="cursor:pointer">
           <ng-template axCell="code" let-row>
             <span class="ax-font-medium ax-text-primary" style="font-variant-numeric:tabular-nums">{{ row.code }}</span>
+            <a *ngIf="row.source === 'cashback'" class="ax-badge ax-badge-brand" style="margin-inline-start:0.375rem;text-decoration:none"
+               [routerLink]="row.cashback_award_id ? '/admin/cashback/awards' : null"
+               [queryParams]="row.cashback_award_id ? { award: row.cashback_award_id } : null"
+               [title]="'gift_cards_admin.source_cashback_hint' | translate"
+               (click)="$event.stopPropagation()">{{ 'gift_cards_admin.source_cashback' | translate }}</a>
           </ng-template>
           <ng-template axCell="status" let-row>
             <span class="ax-badge" [ngClass]="statusBadgeClass(row.status)">{{ statusLabel(row.status) }}</span>
@@ -502,6 +511,8 @@ export class GiftCardsAdminComponent implements OnInit {
       recipient_email: g.recipient_email ?? g.recipient_user?.email ?? '',
       is_delivered: !!g.is_delivered,
       created_at: g.created_at ?? '',
+      source: g.source ?? 'purchase',
+      cashback_award_id: g.cashback_award_id != null ? Number(g.cashback_award_id) : null,
     } as GiftCardRow;
   }
 

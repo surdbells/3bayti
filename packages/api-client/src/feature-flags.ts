@@ -1427,6 +1427,17 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/cart/gift-wallet',
     shape: 'v3-envelope',
   },
+  // Cashback programme estimate for the current cart: { estimated_amount,
+  // currency, eligible, reason, hold_days, uses_cashback_credit,
+  // wallet_has_cashback_credit }. Pure read. Query: channel, promo_code,
+  // gift_card_code, use_gift_wallet. Backing: Cart\GetCartCashbackController.
+  'GET /cart/cashback': {
+    target: 'new', oldPath: '', newPath: '/v3/cart/cashback', shape: 'v3-envelope',
+  },
+  // Customer cashback history + totals. Backing: Me\GetMyCashbackController.
+  'GET /me/cashback': {
+    target: 'new', oldPath: '', newPath: '/v3/me/cashback', shape: 'v3-envelope',
+  },
   // M3.1.6f1 backend uses POST /v3/checkout/initiate (more specific
   // than the previous /v3/checkout entry). Corrected; flipped back to
   // 'old' pending mobile rewrite.
@@ -2044,6 +2055,55 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
   'DELETE /admin/promo-codes/:id': {
     target: 'new', oldPath: '/v3/admin/promo-codes/:id', newPath: '/v3/admin/promo-codes/:id', shape: 'v3-envelope',
+  },
+
+  // Admin cashback programme (paid out as gift cards): programme settings,
+  // rules CRUD + activate/deactivate, the award ledger + release/cancel/
+  // reverse, and the summary. v3-native. Backing controllers: Admin\Cashback\*.
+  'GET /admin/cashback/settings': {
+    target: 'new', oldPath: '/v3/admin/cashback/settings', newPath: '/v3/admin/cashback/settings', shape: 'v3-envelope',
+  },
+  'PUT /admin/cashback/settings': {
+    target: 'new', oldPath: '/v3/admin/cashback/settings', newPath: '/v3/admin/cashback/settings', shape: 'v3-envelope',
+  },
+  'GET /admin/cashback/summary': {
+    target: 'new', oldPath: '/v3/admin/cashback/summary', newPath: '/v3/admin/cashback/summary', shape: 'v3-envelope',
+  },
+  'GET /admin/cashback/rules': {
+    target: 'new', oldPath: '/v3/admin/cashback/rules', newPath: '/v3/admin/cashback/rules', shape: 'v3-envelope',
+  },
+  'POST /admin/cashback/rules': {
+    target: 'new', oldPath: '/v3/admin/cashback/rules', newPath: '/v3/admin/cashback/rules', shape: 'v3-envelope',
+  },
+  'GET /admin/cashback/rules/:id': {
+    target: 'new', oldPath: '/v3/admin/cashback/rules/:id', newPath: '/v3/admin/cashback/rules/:id', shape: 'v3-envelope',
+  },
+  'PUT /admin/cashback/rules/:id': {
+    target: 'new', oldPath: '/v3/admin/cashback/rules/:id', newPath: '/v3/admin/cashback/rules/:id', shape: 'v3-envelope',
+  },
+  'POST /admin/cashback/rules/:id/activate': {
+    target: 'new', oldPath: '/v3/admin/cashback/rules/:id/activate', newPath: '/v3/admin/cashback/rules/:id/activate', shape: 'v3-envelope',
+  },
+  'POST /admin/cashback/rules/:id/deactivate': {
+    target: 'new', oldPath: '/v3/admin/cashback/rules/:id/deactivate', newPath: '/v3/admin/cashback/rules/:id/deactivate', shape: 'v3-envelope',
+  },
+  'DELETE /admin/cashback/rules/:id': {
+    target: 'new', oldPath: '/v3/admin/cashback/rules/:id', newPath: '/v3/admin/cashback/rules/:id', shape: 'v3-envelope',
+  },
+  'GET /admin/cashback/awards': {
+    target: 'new', oldPath: '/v3/admin/cashback/awards', newPath: '/v3/admin/cashback/awards', shape: 'v3-envelope',
+  },
+  'GET /admin/cashback/awards/:id': {
+    target: 'new', oldPath: '/v3/admin/cashback/awards/:id', newPath: '/v3/admin/cashback/awards/:id', shape: 'v3-envelope',
+  },
+  'POST /admin/cashback/awards/:id/release': {
+    target: 'new', oldPath: '/v3/admin/cashback/awards/:id/release', newPath: '/v3/admin/cashback/awards/:id/release', shape: 'v3-envelope',
+  },
+  'POST /admin/cashback/awards/:id/cancel': {
+    target: 'new', oldPath: '/v3/admin/cashback/awards/:id/cancel', newPath: '/v3/admin/cashback/awards/:id/cancel', shape: 'v3-envelope',
+  },
+  'POST /admin/cashback/awards/:id/reverse': {
+    target: 'new', oldPath: '/v3/admin/cashback/awards/:id/reverse', newPath: '/v3/admin/cashback/awards/:id/reverse', shape: 'v3-envelope',
   },
   'POST /admin/orders/:id/resend-vendor-notification': {
     target: 'new', oldPath: '', newPath: '/v3/admin/orders/:id/resend-vendor-notification', shape: 'raw',

@@ -1,0 +1,78 @@
+/* Shared .ax-* form utilities do the heavy lifting; colours via tokens only
+   so the page follows light and dark themes. */
+.ax-container-narrow {
+  max-width: 56rem;
+}
+
+.cb-error {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ax-color-text-danger);
+}
+
+.cb-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--ax-radius-md, 0.5rem);
+  font-size: 0.8125rem;
+  background-color: var(--ax-color-bg-info-subtle);
+  color: var(--ax-color-text-primary);
+}
+
+.cb-scope-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.5rem;
+}
+.cb-scope-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  text-align: start;
+  border-radius: var(--ax-radius-md, 0.5rem);
+  border: 1px solid var(--ax-color-border-subtle);
+  background-color: var(--ax-color-bg-surface);
+  color: var(--ax-color-text-primary);
+  cursor: pointer;
+  transition: border-color var(--ax-duration-base, 150ms) var(--ax-ease-out, ease-out),
+              background-color var(--ax-duration-base, 150ms) var(--ax-ease-out, ease-out);
+}
+.cb-scope-option:hover {
+  border-color: var(--ax-color-border-strong);
+}
+.cb-scope-option:focus-visible {
+  outline: 2px solid var(--ax-color-border-brand, var(--ax-color-text-brand));
+  outline-offset: 2px;
+}
+.cb-scope-option-active {
+  border-color: var(--ax-color-text-brand);
+  background-color: var(--ax-color-bg-brand-subtle);
+}
+.cb-scope-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.cb-scope-desc {
+  font-size: 0.75rem;
+  color: var(--ax-color-text-secondary);
+}
+
+.cb-product-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--ax-color-text-tertiary);
+}
+.cb-product-search .ax-input {
+  flex: 1;
+}
+
+.cb-exclusions > summary {
+  cursor: pointer;
+  user-select: none;
+}

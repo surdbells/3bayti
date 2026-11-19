@@ -1,0 +1,199 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> {{ 'cashback.back_dashboard' | translate }}
+        </button>
+        <span class="ax-page-header-eyebrow">{{ 'cashback.eyebrow' | translate }}</span>
+        <h1 class="ax-page-title">{{ 'cashback.title' | translate }}</h1>
+        <p class="ax-page-subtitle">{{ 'cashback.subtitle' | translate }}</p>
+      </div>
+      <div class="ax-page-header-actions">
+        <a routerLink="/admin/cashback/awards" class="ax-btn ax-btn-outline">
+          <app-icon name="receipt_long" aria-hidden="true"></app-icon> {{ 'cashback.awards_link' | translate }}
+        </a>
+        <button type="button" class="ax-btn ax-btn-primary" (click)="createRule()" *axCan="'cashback.create'">
+          <app-icon name="add" aria-hidden="true"></app-icon> {{ 'cashback.rules.new' | translate }}
+        </button>
+      </div>
+    </header>
+
+    <!-- Programme switch + settings -->
+    <section class="ax-card ax-mb-4 cb-program" aria-labelledby="cb-program-title">
+      <div class="cb-program-head">
+        <div>
+          <h2 id="cb-program-title" class="ax-h6 ax-m-0">{{ 'cashback.program.title' | translate }}</h2>
+          <p class="cb-muted ax-m-0 ax-mt-1">{{ 'cashback.program.desc' | translate }}</p>
+        </div>
+        @if (settings) {
+          <label class="ax-switch ax-switch-lg">
+            <input type="checkbox"
+                   [checked]="settings.enabled"
+                   [disabled]="!perms.can('cashback.edit') || toggling"
+                   (click)="$event.preventDefault(); toggleProgramme()"
+                   aria-labelledby="cb-program-title" />
+            <span class="ax-switch-track" aria-hidden="true"></span>
+            <span class="ax-switch-label">
+              {{ (settings.enabled ? 'cashback.program.on' : 'cashback.program.off') | translate }}
+            </span>
+          </label>
+        } @else if (settingsLoading) {
+          <span class="ax-spinner ax-spinner-sm" aria-label="Loading"></span>
+        }
+      </div>
+
+      @if (settings && !settings.enabled) {
+        <p class="cb-note ax-m-0">
+          <app-icon name="info" aria-hidden="true"></app-icon>
+          {{ 'cashback.program.off_note' | translate }}
+        </p>
+      }
+
+      @if (settings) {
+        <form class="cb-settings-grid" (ngSubmit)="saveSettings()">
+          <label class="ax-form-field">
+            <span class="ax-label">{{ 'cashback.settings.min_award' | translate }}</span>
+            <div class="ax-input-group">
+              <span class="ax-input-group-prefix">AED</span>
+              <input type="text" inputmode="decimal" class="ax-input ax-numeric" name="min_award"
+                     [(ngModel)]="settingsForm.min_award" [disabled]="!perms.can('cashback.edit')"
+                     [class.ax-input-invalid]="settingsErrors['min_award']" />
+            </div>
+            <span class="ax-hint">{{ 'cashback.settings.min_award_hint' | translate }}</span>
+            @if (settingsErrors['min_award']) { <span class="cb-error">{{ errText(settingsErrors['min_award']) }}</span> }
+          </label>
+          <label class="ax-form-field">
+            <span class="ax-label">{{ 'cashback.settings.max_award' | translate }}</span>
+            <div class="ax-input-group">
+              <span class="ax-input-group-prefix">AED</span>
+              <input type="text" inputmode="decimal" class="ax-input ax-numeric" name="max_award_per_order"
+                     [placeholder]="'cashback.no_cap' | translate"
+                     [(ngModel)]="settingsForm.max_award_per_order" [disabled]="!perms.can('cashback.edit')"
+                     [class.ax-input-invalid]="settingsErrors['max_award_per_order']" />
+            </div>
+            <span class="ax-hint">{{ 'cashback.settings.max_award_hint' | translate }}</span>
+            @if (settingsErrors['max_award_per_order']) { <span class="cb-error">{{ errText(settingsErrors['max_award_per_order']) }}</span> }
+          </label>
+          <label class="ax-form-field">
+            <span class="ax-label">{{ 'cashback.settings.hold_days' | translate }}</span>
+            <input type="number" min="0" max="365" step="1" class="ax-input ax-numeric" name="default_hold_days"
+                   [(ngModel)]="settingsForm.default_hold_days" [disabled]="!perms.can('cashback.edit')"
+                   [class.ax-input-invalid]="settingsErrors['default_hold_days']" />
+            <span class="ax-hint">{{ 'cashback.settings.hold_days_hint' | translate }}</span>
+            @if (settingsErrors['default_hold_days']) { <span class="cb-error">{{ errText(settingsErrors['default_hold_days']) }}</span> }
+          </label>
+          <label class="ax-form-field">
+            <span class="ax-label">{{ 'cashback.settings.validity_days' | translate }}</span>
+            <input type="number" min="1" max="1825" step="1" class="ax-input ax-numeric" name="default_validity_days"
+                   [(ngModel)]="settingsForm.default_validity_days" [disabled]="!perms.can('cashback.edit')"
+                   [class.ax-input-invalid]="settingsErrors['default_validity_days']" />
+            <span class="ax-hint">{{ 'cashback.settings.validity_days_hint' | translate }}</span>
+            @if (settingsErrors['default_validity_days']) { <span class="cb-error">{{ errText(settingsErrors['default_validity_days']) }}</span> }
+          </label>
+          <div class="cb-settings-actions" *axCan="'cashback.edit'">
+            <button type="submit" class="ax-btn ax-btn-primary ax-btn-sm" [disabled]="settingsSaving">
+              @if (settingsSaving) { <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> }
+              @else { <app-icon name="save" aria-hidden="true"></app-icon> }
+              {{ 'cashback.settings.save' | translate }}
+            </button>
+          </div>
+        </form>
+      }
+    </section>
+
+    <!-- Headline totals -->
+    @if (summary) {
+      <section class="cb-stats ax-mb-4" aria-label="Cashback totals">
+        <a class="ax-stat-card ax-stat-card-interactive" routerLink="/admin/cashback/awards" [queryParams]="{ status: 'pending' }">
+          <div class="ax-stat-card-header">
+            <span class="ax-stat-card-label">{{ 'cashback.stats.pending' | translate }}</span>
+            <span class="ax-stat-card-icon"><app-icon name="calendar_today" aria-hidden="true"></app-icon></span>
+          </div>
+          <div class="ax-stat-card-value">AED {{ formatMoney(summary.pending.amount) }}</div>
+          <div class="ax-stat-card-caption">{{ 'cashback.stats.awards_count' | translate: { count: summary.pending.count } }}</div>
+        </a>
+        <a class="ax-stat-card ax-stat-card-interactive" routerLink="/admin/cashback/awards" [queryParams]="{ status: 'issued' }">
+          <div class="ax-stat-card-header">
+            <span class="ax-stat-card-label">{{ 'cashback.stats.issued' | translate }}</span>
+            <span class="ax-stat-card-icon"><app-icon name="card_giftcard" aria-hidden="true"></app-icon></span>
+          </div>
+          <div class="ax-stat-card-value">AED {{ formatMoney(summary.issued.amount) }}</div>
+          <div class="ax-stat-card-caption">{{ 'cashback.stats.awards_count' | translate: { count: summary.issued.count } }}</div>
+        </a>
+        <div class="ax-stat-card">
+          <div class="ax-stat-card-header">
+            <span class="ax-stat-card-label">{{ 'cashback.stats.redeemed' | translate }}</span>
+            <span class="ax-stat-card-icon"><app-icon name="shopping_cart" aria-hidden="true"></app-icon></span>
+          </div>
+          <div class="ax-stat-card-value">AED {{ formatMoney(summary.redeemed) }}</div>
+          <div class="ax-stat-card-caption">{{ 'cashback.stats.redeemed_hint' | translate }}</div>
+        </div>
+        <div class="ax-stat-card">
+          <div class="ax-stat-card-header">
+            <span class="ax-stat-card-label">{{ 'cashback.stats.outstanding' | translate }}</span>
+            <span class="ax-stat-card-icon"><app-icon name="savings" aria-hidden="true"></app-icon></span>
+          </div>
+          <div class="ax-stat-card-value">AED {{ formatMoney(summary.outstanding) }}</div>
+          <div class="ax-stat-card-caption">{{ 'cashback.stats.outstanding_hint' | translate }}</div>
+        </div>
+      </section>
+    }
+
+    <!-- Rules -->
+    <section class="ax-card ax-p-0">
+      @if (config) {
+        <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+          <ng-template axCell="name" let-row>
+            <a class="ax-font-medium ax-text-primary cb-rule-link"
+               [routerLink]="perms.can('cashback.edit') ? '/admin/cashback/rules/form' : '/admin/cashback/awards'"
+               [queryParams]="perms.can('cashback.edit') ? { id: row.id } : { rule_id: row.id }">{{ row.name }}</a>
+            <span class="ax-block ax-text-sm ax-text-secondary">
+              {{ ('cashback.channel.' + row.channel) | translate }}
+              @if (row.first_order_only) { · {{ 'cashback.rules.first_order' | translate }} }
+              @if (row.allow_with_promo) { · {{ 'cashback.rules.with_promo' | translate }} }
+            </span>
+          </ng-template>
+          <ng-template axCell="reward" let-row>
+            <span class="ax-badge" [class.ax-badge-brand]="row.reward_type === 'percentage'" [class.ax-badge-info]="row.reward_type === 'fixed'">
+              {{ rewardLabel(row) }}
+            </span>
+            @if (row.max_reward_per_order) {
+              <span class="ax-block ax-text-sm ax-text-secondary">{{ 'cashback.rules.cap' | translate: { amount: formatMoney(row.max_reward_per_order) } }}</span>
+            }
+          </ng-template>
+          <ng-template axCell="status" let-row>
+            <span class="ax-badge" [ngClass]="ruleStatusBadge(row.status)">{{ ('cashback.rule_status.' + row.status) | translate }}</span>
+          </ng-template>
+          <ng-template axCell="is_active" let-row>
+            <label class="ax-switch ax-switch-sm cb-inline-switch" (click)="$event.stopPropagation()">
+              <input type="checkbox"
+                     [checked]="row.is_active"
+                     [disabled]="!perms.can('cashback.edit') || busyRules.has(row.id)"
+                     (change)="toggleRule(row, $event)"
+                     [attr.aria-label]="(row.is_active ? 'cashback.rules.aria_deactivate' : 'cashback.rules.aria_activate') | translate: { name: row.name }" />
+              <span class="ax-switch-track" aria-hidden="true"></span>
+            </label>
+          </ng-template>
+          <ng-template axCell="budget" let-row>
+            @if (budgetPercent(row); as pct) {
+              <div class="cb-budget" [attr.title]="pct + '%'">
+                <div class="ax-progress ax-progress-sm" role="progressbar" [attr.aria-valuenow]="pct" aria-valuemin="0" aria-valuemax="100">
+                  <div class="ax-progress-bar" [ngClass]="budgetBarClass(pct)" [style.width.%]="pct"></div>
+                </div>
+                <span class="ax-text-sm ax-text-secondary">{{ formatMoney(row.budget_spent) }} / {{ formatMoney(row.budget_total) }}</span>
+              </div>
+            } @else if (row.budget_total) {
+              <div class="cb-budget">
+                <div class="ax-progress ax-progress-sm"><div class="ax-progress-bar ax-progress-bar-success" style="width:0%"></div></div>
+                <span class="ax-text-sm ax-text-secondary">0.00 / {{ formatMoney(row.budget_total) }}</span>
+              </div>
+            } @else {
+              <span class="ax-text-sm ax-text-secondary">{{ formatMoney(row.budget_spent) }} · {{ 'cashback.rules.no_budget' | translate }}</span>
+            }
+          </ng-template>
+        </app-ax-data-table>
+      }
+    </section>
+  </div>
+</app-admin-shell>

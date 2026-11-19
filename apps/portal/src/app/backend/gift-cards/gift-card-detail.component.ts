@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NavigationHistoryService } from '../../services/navigation-history.service';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
@@ -18,7 +18,7 @@ import { apiErrorMessage } from '../../shared/http/api-error';
 @Component({
   selector: 'app-gift-card-detail',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent, TranslatePipe, AxComboboxComponent, AxCopyToClipboardDirective],
+  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent, TranslatePipe, AxComboboxComponent, AxCopyToClipboardDirective, RouterLink],
   styles: [`
     /* Consistent inner padding for the summary / delivery / ledger cards. */
     .gc-summary,
@@ -159,6 +159,18 @@ import { apiErrorMessage } from '../../shared/http/api-error';
           <div class="gc-cell" *ngIf="card.recipient_message">
             <span class="ax-field-label">{{ 'gift_cards_admin.detail_message' | translate }}</span>
             <div class="ax-text-sm">{{ card.recipient_message }}</div>
+          </div>
+          <div class="gc-cell" *ngIf="card.source === 'cashback'">
+            <span class="ax-field-label">{{ 'gift_cards_admin.detail_source' | translate }}</span>
+            <div>
+              <a *ngIf="card.cashback_award_id; else cbPlain" class="ax-badge ax-badge-brand" style="text-decoration:none"
+                 routerLink="/admin/cashback/awards" [queryParams]="{ award: card.cashback_award_id }"
+                 [title]="'gift_cards_admin.source_cashback_hint' | translate">{{ 'gift_cards_admin.source_cashback' | translate }}</a>
+              <ng-template #cbPlain><span class="ax-badge ax-badge-brand">{{ 'gift_cards_admin.source_cashback' | translate }}</span></ng-template>
+            </div>
+            <a *ngIf="card.cashback_award_id" class="ax-text-sm" routerLink="/admin/cashback/awards" [queryParams]="{ award: card.cashback_award_id }">
+              {{ 'gift_cards_admin.view_cashback_award' | translate }}
+            </a>
           </div>
           <div class="gc-cell" *ngIf="card.purchase_order_reference">
             <span class="ax-field-label">{{ 'gift_cards_admin.detail_order_ref' | translate }}</span>

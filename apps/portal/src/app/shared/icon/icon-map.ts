@@ -14,7 +14,7 @@ import {
   // commerce
   Store, ShoppingCart, ShoppingBag, Package, ReceiptText,
   Receipt, Truck, CreditCard, Wallet, Gift, BadgePercent, Landmark,
-  ArrowRightLeft, FileText,
+  ArrowRightLeft, FileText, PiggyBank,
   // people / account
   User, UserPlus, Users, CircleUserRound, Phone, PhoneCall, Mail, Key,
   Lock, LogOut, ShieldUser,
@@ -122,6 +122,7 @@ export const ICON_MAP: Record<string, LucideIconData> = {
   credit_card: CreditCard,
   payments: Wallet,
   card_giftcard: Gift,
+  savings: PiggyBank,
   sell: BadgePercent,
   account_balance: Landmark,
   currency_exchange: ArrowRightLeft,

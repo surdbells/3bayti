@@ -3,13 +3,14 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 387 route keys.
+ * 404 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
 export type V3RouteKey =
   | 'DELETE /admin/brands/:id'
   | 'DELETE /admin/campaigns/:id'
+  | 'DELETE /admin/cashback/rules/:id'
   | 'DELETE /admin/categories/:id'
   | 'DELETE /admin/collections/:id'
   | 'DELETE /admin/notification-templates/:id'
@@ -43,6 +44,12 @@ export type V3RouteKey =
   | 'GET /admin/brands'
   | 'GET /admin/campaigns'
   | 'GET /admin/campaigns/:id'
+  | 'GET /admin/cashback/awards'
+  | 'GET /admin/cashback/awards/:id'
+  | 'GET /admin/cashback/rules'
+  | 'GET /admin/cashback/rules/:id'
+  | 'GET /admin/cashback/settings'
+  | 'GET /admin/cashback/summary'
   | 'GET /admin/categories'
   | 'GET /admin/collections'
   | 'GET /admin/collections/:id'
@@ -109,6 +116,7 @@ export type V3RouteKey =
   | 'GET /campaigns/:slug'
   | 'GET /campaigns/active'
   | 'GET /cart'
+  | 'GET /cart/cashback'
   | 'GET /cart/gift-wallet'
   | 'GET /categories'
   | 'GET /categories/:slug'
@@ -132,6 +140,7 @@ export type V3RouteKey =
   | 'GET /me/addresses/:id'
   | 'GET /me/ai/for-you'
   | 'GET /me/billing-address'
+  | 'GET /me/cashback'
   | 'GET /me/customization-requests'
   | 'GET /me/customization-requests/:id'
   | 'GET /me/gift-reminders'
@@ -247,6 +256,12 @@ export type V3RouteKey =
   | 'POST /account/deletion-request'
   | 'POST /admin/brands'
   | 'POST /admin/campaigns'
+  | 'POST /admin/cashback/awards/:id/cancel'
+  | 'POST /admin/cashback/awards/:id/release'
+  | 'POST /admin/cashback/awards/:id/reverse'
+  | 'POST /admin/cashback/rules'
+  | 'POST /admin/cashback/rules/:id/activate'
+  | 'POST /admin/cashback/rules/:id/deactivate'
   | 'POST /admin/categories'
   | 'POST /admin/collections'
   | 'POST /admin/gift-cards'
@@ -371,6 +386,8 @@ export type V3RouteKey =
   | 'POST /wishlist'
   | 'PUT /admin/brands/:id'
   | 'PUT /admin/campaigns/:id'
+  | 'PUT /admin/cashback/rules/:id'
+  | 'PUT /admin/cashback/settings'
   | 'PUT /admin/categories/:id'
   | 'PUT /admin/collections/:id'
   | 'PUT /admin/collections/:id/products'
@@ -400,6 +417,7 @@ export type V3RouteKey =
 export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'DELETE /admin/brands/:id',
   'DELETE /admin/campaigns/:id',
+  'DELETE /admin/cashback/rules/:id',
   'DELETE /admin/categories/:id',
   'DELETE /admin/collections/:id',
   'DELETE /admin/notification-templates/:id',
@@ -433,6 +451,12 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/brands',
   'GET /admin/campaigns',
   'GET /admin/campaigns/:id',
+  'GET /admin/cashback/awards',
+  'GET /admin/cashback/awards/:id',
+  'GET /admin/cashback/rules',
+  'GET /admin/cashback/rules/:id',
+  'GET /admin/cashback/settings',
+  'GET /admin/cashback/summary',
   'GET /admin/categories',
   'GET /admin/collections',
   'GET /admin/collections/:id',
@@ -499,6 +523,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /campaigns/:slug',
   'GET /campaigns/active',
   'GET /cart',
+  'GET /cart/cashback',
   'GET /cart/gift-wallet',
   'GET /categories',
   'GET /categories/:slug',
@@ -522,6 +547,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /me/addresses/:id',
   'GET /me/ai/for-you',
   'GET /me/billing-address',
+  'GET /me/cashback',
   'GET /me/customization-requests',
   'GET /me/customization-requests/:id',
   'GET /me/gift-reminders',
@@ -637,6 +663,12 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /account/deletion-request',
   'POST /admin/brands',
   'POST /admin/campaigns',
+  'POST /admin/cashback/awards/:id/cancel',
+  'POST /admin/cashback/awards/:id/release',
+  'POST /admin/cashback/awards/:id/reverse',
+  'POST /admin/cashback/rules',
+  'POST /admin/cashback/rules/:id/activate',
+  'POST /admin/cashback/rules/:id/deactivate',
   'POST /admin/categories',
   'POST /admin/collections',
   'POST /admin/gift-cards',
@@ -761,6 +793,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /wishlist',
   'PUT /admin/brands/:id',
   'PUT /admin/campaigns/:id',
+  'PUT /admin/cashback/rules/:id',
+  'PUT /admin/cashback/settings',
   'PUT /admin/categories/:id',
   'PUT /admin/collections/:id',
   'PUT /admin/collections/:id/products',

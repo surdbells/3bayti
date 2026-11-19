@@ -165,6 +165,12 @@
             <span class="ax-sidenav-link-label">Coupons &amp; discounts</span>
           </a>
         </li>
+        <li *axCan="'cashback.view'">
+          <a routerLink="/admin/cashback" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+            <app-icon name="savings" aria-hidden="true"></app-icon>
+            <span class="ax-sidenav-link-label">Cashback</span>
+          </a>
+        </li>
       </ul>
     </div>
 

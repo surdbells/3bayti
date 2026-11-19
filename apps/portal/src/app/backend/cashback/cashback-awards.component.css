@@ -1,0 +1,74 @@
+/* Shared .ax-* utilities for layout; colours via tokens only so light and
+   dark themes both work. */
+.cb-clickable {
+  cursor: pointer;
+}
+.cb-link {
+  color: var(--ax-color-text-brand);
+  text-decoration: none;
+}
+.cb-link:hover {
+  text-decoration: underline;
+}
+.cb-code {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.cb-text-danger {
+  color: var(--ax-color-text-danger);
+}
+.cb-rule-chip {
+  margin: 0 0.25rem 0.25rem 0;
+}
+
+.cb-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.45);
+}
+.cb-backdrop-top {
+  z-index: 1010;
+}
+.cb-modal .ax-modal-body {
+  overflow-y: auto;
+}
+
+.cb-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1rem;
+}
+.cb-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cb-cell-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ax-color-text-secondary);
+}
+
+.cb-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-md, 0.5rem);
+}
+.cb-num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.cb-recoveries {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--ax-color-text-secondary);
+}

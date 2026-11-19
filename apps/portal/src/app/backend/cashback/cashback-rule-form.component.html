@@ -1,0 +1,314 @@
+<app-admin-shell>
+  <div class="ax-container ax-container-narrow">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> {{ 'cashback.form.back' | translate }}
+        </button>
+        <span class="ax-page-header-eyebrow">{{ 'cashback.title' | translate }}</span>
+        <h1 class="ax-page-title">{{ (isEdit ? 'cashback.form.edit_title' : 'cashback.form.new_title') | translate }}</h1>
+        <p class="ax-page-subtitle">{{ (isEdit ? 'cashback.form.edit_subtitle' : 'cashback.form.new_subtitle') | translate }}</p>
+      </div>
+    </header>
+
+    @if (ui.loading) {
+      <div class="ax-flex ax-justify-center ax-py-8">
+        <span class="ax-spinner ax-spinner-lg" aria-label="Loading"></span>
+      </div>
+    } @else {
+      <form (ngSubmit)="save()" class="ax-flex ax-flex-col ax-gap-3" novalidate>
+        @if (rule && rule.awards_count > 0) {
+          <p class="cb-note ax-m-0">
+            <app-icon name="info" aria-hidden="true"></app-icon>
+            {{ 'cashback.form.used_note' | translate: { count: rule.awards_count } }}
+          </p>
+        }
+
+        <!-- Basics -->
+        <div class="ax-card ax-p-5">
+          <h3 class="ax-h6 ax-m-0 ax-mb-3">{{ 'cashback.form.section_basics' | translate }}</h3>
+          <div class="ax-form-field ax-mb-3">
+            <label class="ax-label ax-label-required" for="cb-name">{{ 'cashback.form.name' | translate }}</label>
+            <input id="cb-name" type="text" class="ax-input" name="name" maxlength="120" autocomplete="off"
+                   [placeholder]="'cashback.form.name_ph' | translate"
+                   [(ngModel)]="form.name" [class.ax-input-invalid]="errors['name']" />
+            @if (errors['name']) { <span class="cb-error">{{ errText('name') }}</span> }
+          </div>
+          <div class="ax-form-field ax-mb-3">
+            <label class="ax-label" for="cb-description">{{ 'cashback.form.description' | translate }}</label>
+            <textarea id="cb-description" class="ax-textarea" name="description" rows="2"
+                      [placeholder]="'cashback.form.description_ph' | translate"
+                      [(ngModel)]="form.description"></textarea>
+          </div>
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
+            <div class="ax-form-field">
+              <span class="ax-label">{{ 'cashback.form.status' | translate }}</span>
+              <label class="ax-switch">
+                <input type="checkbox" name="is_active" [(ngModel)]="form.is_active" />
+                <span class="ax-switch-track" aria-hidden="true"></span>
+                <span class="ax-switch-label">{{ (form.is_active ? 'cashback.form.active' : 'cashback.form.inactive') | translate }}</span>
+              </label>
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label" for="cb-priority">{{ 'cashback.form.priority' | translate }}</label>
+              <input id="cb-priority" type="number" step="1" min="-1000" max="1000" class="ax-input ax-numeric" name="priority"
+                     [(ngModel)]="form.priority" [class.ax-input-invalid]="errors['priority']" />
+              <span class="ax-hint">{{ 'cashback.form.priority_hint' | translate }}</span>
+              @if (errors['priority']) { <span class="cb-error">{{ errText('priority') }}</span> }
+            </div>
+          </div>
+        </div>
+
+        <!-- Reward -->
+        <div class="ax-card ax-p-5">
+          <h3 class="ax-h6 ax-m-0 ax-mb-3">{{ 'cashback.form.section_reward' | translate }}</h3>
+          <div class="ax-form-field ax-mb-3">
+            <span class="ax-label ax-label-required">{{ 'cashback.form.reward_type' | translate }}</span>
+            <div class="ax-flex ax-gap-4 ax-flex-wrap">
+              <label class="ax-radio">
+                <input type="radio" name="reward_type" value="percentage" [(ngModel)]="form.reward_type" />
+                <span class="ax-radio-dot"></span>
+                <span class="ax-radio-label">{{ 'cashback.form.reward_percentage' | translate }}</span>
+              </label>
+              <label class="ax-radio">
+                <input type="radio" name="reward_type" value="fixed" [(ngModel)]="form.reward_type" />
+                <span class="ax-radio-dot"></span>
+                <span class="ax-radio-label">{{ 'cashback.form.reward_fixed' | translate }}</span>
+              </label>
+            </div>
+            <span class="ax-hint">
+              {{ (form.reward_type === 'percentage' ? 'cashback.form.reward_percentage_hint' : 'cashback.form.reward_fixed_hint') | translate }}
+            </span>
+          </div>
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-3">
+            <div class="ax-form-field">
+              <label class="ax-label ax-label-required" for="cb-reward_value">
+                {{ (form.reward_type === 'percentage' ? 'cashback.form.percentage' : 'cashback.form.amount') | translate }}
+              </label>
+              <div class="ax-input-group">
+                <input id="cb-reward_value" type="text" inputmode="decimal" class="ax-input ax-numeric" name="reward_value"
+                       [(ngModel)]="form.reward_value" [class.ax-input-invalid]="errors['reward_value']" />
+                <span class="ax-input-group-suffix">{{ form.reward_type === 'percentage' ? '%' : 'AED' }}</span>
+              </div>
+              @if (errors['reward_value']) { <span class="cb-error">{{ errText('reward_value') }}</span> }
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label" for="cb-max_reward_per_order">{{ 'cashback.form.max_reward' | translate }}</label>
+              <div class="ax-input-group">
+                <span class="ax-input-group-prefix">AED</span>
+                <input id="cb-max_reward_per_order" type="text" inputmode="decimal" class="ax-input ax-numeric" name="max_reward_per_order"
+                       [placeholder]="'cashback.no_cap' | translate"
+                       [(ngModel)]="form.max_reward_per_order" [class.ax-input-invalid]="errors['max_reward_per_order']" />
+              </div>
+              <span class="ax-hint">{{ 'cashback.form.max_reward_hint' | translate }}</span>
+              @if (errors['max_reward_per_order']) { <span class="cb-error">{{ errText('max_reward_per_order') }}</span> }
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label" for="cb-min_eligible_amount">{{ 'cashback.form.min_eligible' | translate }}</label>
+              <div class="ax-input-group">
+                <span class="ax-input-group-prefix">AED</span>
+                <input id="cb-min_eligible_amount" type="text" inputmode="decimal" class="ax-input ax-numeric" name="min_eligible_amount"
+                       [placeholder]="'cashback.no_minimum' | translate"
+                       [(ngModel)]="form.min_eligible_amount" [class.ax-input-invalid]="errors['min_eligible_amount']" />
+              </div>
+              <span class="ax-hint">{{ 'cashback.form.min_eligible_hint' | translate }}</span>
+              @if (errors['min_eligible_amount']) { <span class="cb-error">{{ errText('min_eligible_amount') }}</span> }
+            </div>
+          </div>
+        </div>
+
+        <!-- Scope -->
+        <div class="ax-card ax-p-5">
+          <h3 class="ax-h6 ax-m-0 ax-mb-3">{{ 'cashback.form.section_scope' | translate }}</h3>
+          <div class="ax-form-field ax-mb-3">
+            <span class="ax-label ax-label-required">{{ 'cashback.form.scope' | translate }}</span>
+            <div class="cb-scope-grid" role="radiogroup" [attr.aria-label]="'cashback.form.scope' | translate">
+              @for (s of scopes; track s) {
+                <button type="button" class="cb-scope-option" role="radio"
+                        [class.cb-scope-option-active]="form.scope === s"
+                        [attr.aria-checked]="form.scope === s"
+                        (click)="setScope(s)">
+                  <span class="cb-scope-title">{{ ('cashback.scope.' + s) | translate }}</span>
+                  <span class="cb-scope-desc">{{ ('cashback.scope_desc.' + s) | translate }}</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          @if (includeType; as inc) {
+            <div class="ax-form-field ax-mb-3" id="cb-targets">
+              <span class="ax-label ax-label-required">{{ ('cashback.form.include_' + inc) | translate }}</span>
+              @if (inc === 'product') {
+                <div class="cb-product-search">
+                  <app-icon name="search" aria-hidden="true"></app-icon>
+                  <input type="search" class="ax-input ax-input-sm" name="product_search_include"
+                         [placeholder]="'cashback.form.product_search' | translate"
+                         [ngModel]="productSearch" (ngModelChange)="onProductSearch($event)" />
+                  @if (productSearching) { <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> }
+                </div>
+              }
+              <app-ax-multiselect
+                name="include_ids"
+                [options]="includeOptions()"
+                [(ngModel)]="form.include_ids"
+                (selectionChange)="onSelectionChanged(inc)"
+                [placeholder]="('cashback.form.include_' + inc + '_ph') | translate"
+                [searchPlaceholder]="'cashback.form.filter_list' | translate"
+                [showSelectAll]="inc !== 'product'"
+                [chipLimit]="6"
+                [invalid]="!!errors['targets']"></app-ax-multiselect>
+              @if (errors['targets']) { <span class="cb-error">{{ errText('targets') }}</span> }
+            </div>
+          } @else if (errors['targets']) {
+            <span class="cb-error ax-mb-3" id="cb-targets">{{ errText('targets') }}</span>
+          }
+
+          <details class="cb-exclusions" [open]="hasExclusions">
+            <summary class="ax-label">{{ 'cashback.form.exclusions' | translate }}</summary>
+            <p class="ax-hint ax-mt-1 ax-mb-3">{{ 'cashback.form.exclusions_hint' | translate }}</p>
+            <div class="ax-flex ax-flex-col ax-gap-3">
+              <div class="ax-form-field">
+                <span class="ax-label">{{ 'cashback.form.exclude_vendor' | translate }}</span>
+                <app-ax-multiselect name="exclude_vendor_ids" [options]="vendorOptions"
+                  [(ngModel)]="form.exclude_vendor_ids" (selectionChange)="onSelectionChanged('vendor')"
+                  [placeholder]="'cashback.form.none' | translate" [searchPlaceholder]="'cashback.form.filter_list' | translate"
+                  [showSelectAll]="false" [chipLimit]="6"></app-ax-multiselect>
+              </div>
+              <div class="ax-form-field">
+                <span class="ax-label">{{ 'cashback.form.exclude_product' | translate }}</span>
+                @if (includeType !== 'product') {
+                  <div class="cb-product-search">
+                    <app-icon name="search" aria-hidden="true"></app-icon>
+                    <input type="search" class="ax-input ax-input-sm" name="product_search_exclude"
+                           [placeholder]="'cashback.form.product_search' | translate"
+                           [ngModel]="productSearch" (ngModelChange)="onProductSearch($event)" />
+                    @if (productSearching) { <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> }
+                  </div>
+                }
+                <app-ax-multiselect name="exclude_product_ids" [options]="productOptions"
+                  [(ngModel)]="form.exclude_product_ids" (selectionChange)="onSelectionChanged('product')"
+                  [placeholder]="'cashback.form.none' | translate" [searchPlaceholder]="'cashback.form.filter_list' | translate"
+                  [showSelectAll]="false" [chipLimit]="6"></app-ax-multiselect>
+              </div>
+              <div class="ax-form-field">
+                <span class="ax-label">{{ 'cashback.form.exclude_category' | translate }}</span>
+                <app-ax-multiselect name="exclude_category_ids" [options]="categoryOptions"
+                  [(ngModel)]="form.exclude_category_ids" (selectionChange)="onSelectionChanged('category')"
+                  [placeholder]="'cashback.form.none' | translate" [searchPlaceholder]="'cashback.form.filter_list' | translate"
+                  [showSelectAll]="false" [chipLimit]="6"></app-ax-multiselect>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Conditions -->
+        <div class="ax-card ax-p-5">
+          <h3 class="ax-h6 ax-m-0 ax-mb-3">{{ 'cashback.form.section_conditions' | translate }}</h3>
+          <div class="ax-form-field ax-mb-3">
+            <span class="ax-label">{{ 'cashback.form.channel' | translate }}</span>
+            <div class="ax-flex ax-gap-4 ax-flex-wrap">
+              @for (c of channels; track c) {
+                <label class="ax-radio">
+                  <input type="radio" name="channel" [value]="c" [(ngModel)]="form.channel" />
+                  <span class="ax-radio-dot"></span>
+                  <span class="ax-radio-label">{{ ('cashback.channel.' + c) | translate }}</span>
+                </label>
+              }
+            </div>
+          </div>
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-3">
+            <div class="ax-form-field">
+              <label class="ax-check">
+                <input type="checkbox" class="ax-check-box" name="first_order_only" [(ngModel)]="form.first_order_only" />
+                <span class="ax-check-label">{{ 'cashback.form.first_order_only' | translate }}</span>
+              </label>
+              <span class="ax-hint">{{ 'cashback.form.first_order_only_hint' | translate }}</span>
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-check">
+                <input type="checkbox" class="ax-check-box" name="allow_with_promo" [(ngModel)]="form.allow_with_promo" />
+                <span class="ax-check-label">{{ 'cashback.form.allow_with_promo' | translate }}</span>
+              </label>
+              <span class="ax-hint">{{ 'cashback.form.allow_with_promo_hint' | translate }}</span>
+            </div>
+          </div>
+          <div class="ax-form-field" style="max-width: 16rem;">
+            <label class="ax-label" for="cb-per_customer_limit">{{ 'cashback.form.per_customer_limit' | translate }}</label>
+            <input id="cb-per_customer_limit" type="number" min="1" step="1" class="ax-input ax-numeric" name="per_customer_limit"
+                   [placeholder]="'cashback.unlimited' | translate"
+                   [(ngModel)]="form.per_customer_limit" [class.ax-input-invalid]="errors['per_customer_limit']" />
+            <span class="ax-hint">{{ 'cashback.form.per_customer_limit_hint' | translate }}</span>
+            @if (errors['per_customer_limit']) { <span class="cb-error">{{ errText('per_customer_limit') }}</span> }
+          </div>
+        </div>
+
+        <!-- Validity -->
+        <div class="ax-card ax-p-5">
+          <h3 class="ax-h6 ax-m-0 ax-mb-3">{{ 'cashback.form.section_validity' | translate }}</h3>
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
+            <div class="ax-form-field">
+              <label class="ax-label" for="cb-valid_from">{{ 'cashback.form.valid_from' | translate }}</label>
+              <input id="cb-valid_from" type="datetime-local" class="ax-input" name="valid_from" [(ngModel)]="form.valid_from" />
+              <span class="ax-hint">{{ 'cashback.form.valid_from_hint' | translate }}</span>
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label" for="cb-valid_until">{{ 'cashback.form.valid_until' | translate }}</label>
+              <input id="cb-valid_until" type="datetime-local" class="ax-input" name="valid_until" [(ngModel)]="form.valid_until"
+                     [class.ax-input-invalid]="errors['valid_until']" />
+              <span class="ax-hint">{{ 'cashback.form.valid_until_hint' | translate }}</span>
+              @if (errors['valid_until']) { <span class="cb-error">{{ errText('valid_until') }}</span> }
+            </div>
+          </div>
+        </div>
+
+        <!-- Budget & payout -->
+        <div class="ax-card ax-p-5">
+          <h3 class="ax-h6 ax-m-0 ax-mb-3">{{ 'cashback.form.section_payout' | translate }}</h3>
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-3">
+            <div class="ax-form-field">
+              <label class="ax-label" for="cb-budget_total">{{ 'cashback.form.budget_total' | translate }}</label>
+              <div class="ax-input-group">
+                <span class="ax-input-group-prefix">AED</span>
+                <input id="cb-budget_total" type="text" inputmode="decimal" class="ax-input ax-numeric" name="budget_total"
+                       [placeholder]="'cashback.unlimited' | translate"
+                       [(ngModel)]="form.budget_total" [class.ax-input-invalid]="errors['budget_total']" />
+              </div>
+              <span class="ax-hint">{{ 'cashback.form.budget_total_hint' | translate }}</span>
+              @if (rule?.budget_total) {
+                <span class="ax-hint">{{ 'cashback.form.budget_used' | translate: { spent: rule?.budget_spent, total: rule?.budget_total } }}</span>
+              }
+              @if (errors['budget_total']) { <span class="cb-error">{{ errText('budget_total') }}</span> }
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label ax-label-required" for="cb-hold_days">{{ 'cashback.form.hold_days' | translate }}</label>
+              <input id="cb-hold_days" type="number" min="0" max="365" step="1" class="ax-input ax-numeric" name="hold_days"
+                     [(ngModel)]="form.hold_days" [class.ax-input-invalid]="errors['hold_days']" />
+              <span class="ax-hint">{{ 'cashback.form.hold_days_hint' | translate }}</span>
+              @if (errors['hold_days']) { <span class="cb-error">{{ errText('hold_days') }}</span> }
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label ax-label-required" for="cb-gift_card_validity_days">{{ 'cashback.form.validity_days' | translate }}</label>
+              <input id="cb-gift_card_validity_days" type="number" min="1" max="1825" step="1" class="ax-input ax-numeric" name="gift_card_validity_days"
+                     [(ngModel)]="form.gift_card_validity_days" [class.ax-input-invalid]="errors['gift_card_validity_days']" />
+              <span class="ax-hint">{{ 'cashback.form.validity_days_hint' | translate }}</span>
+              @if (errors['gift_card_validity_days']) { <span class="cb-error">{{ errText('gift_card_validity_days') }}</span> }
+            </div>
+          </div>
+        </div>
+
+        @if (errors['_root']) {
+          <p class="cb-error ax-m-0">{{ errText('_root') }}</p>
+        }
+
+        <div class="ax-flex ax-gap-2 ax-justify-end">
+          <button type="button" class="ax-btn ax-btn-ghost" (click)="goBack()">{{ 'cashback.cancel' | translate }}</button>
+          <button type="submit" class="ax-btn ax-btn-primary" [disabled]="ui.saving">
+            @if (ui.saving) { <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> }
+            @else { <app-icon [name]="isEdit ? 'save' : 'add_circle'" aria-hidden="true"></app-icon> }
+            {{ (isEdit ? 'cashback.form.save' : 'cashback.form.create') | translate }}
+          </button>
+        </div>
+      </form>
+    }
+  </div>
+</app-admin-shell>
