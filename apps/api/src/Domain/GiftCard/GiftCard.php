@@ -99,6 +99,15 @@ class GiftCard
     /** Pre-set denomination options (AED). */
     public const PRESET_DENOMINATIONS = ['100.00', '200.00', '500.00', '1000.00', '2000.00', '5000.00', '10000.00'];
 
+    // ── Source (how the card came to exist) ───────────────────────────
+    /** Bought by a customer through checkout (the default). */
+    public const SOURCE_PURCHASE = 'purchase';
+    /** Issued / comped by an admin (issueByAdmin). */
+    public const SOURCE_ADMIN = 'admin';
+    /** Cashback reward paid out by the cashback programme (issueCashback). */
+    public const SOURCE_CASHBACK = 'cashback';
+    public const SOURCES = [self::SOURCE_PURCHASE, self::SOURCE_ADMIN, self::SOURCE_CASHBACK];
+
     // ── Identity ──────────────────────────────────────────────────────
 
     #[ORM\Id]
@@ -222,6 +231,18 @@ class GiftCard
     #[ORM\Column(name: 'purchase_order_reference', type: 'string', length: 32, nullable: true, unique: true)]
     private ?string $purchaseOrderReference = null;
 
+    /**
+     * How the card came to exist: purchase | admin | cashback. A cashback
+     * card is excluded from earning more cashback (an order that spends one
+     * earns none) and may not be used to buy other gift cards.
+     */
+    #[ORM\Column(name: 'source', type: 'string', length: 16, options: ['default' => self::SOURCE_PURCHASE])]
+    private string $source = self::SOURCE_PURCHASE;
+
+    /** The cashback award that paid out this card (source=cashback only). Plain id. */
+    #[ORM\Column(name: 'cashback_award_id', type: 'bigint', nullable: true, unique: true)]
+    private ?int $cashbackAwardId = null;
+
     /** @var Collection<int, GiftCardTransaction> */
     #[ORM\OneToMany(targetEntity: GiftCardTransaction::class, mappedBy: 'giftCard', cascade: ['persist'], orphanRemoval: true)]
     #[ORM\OrderBy(['id' => 'ASC'])]
@@ -320,6 +341,7 @@ class GiftCard
 
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $card->status      = self::STATUS_ACTIVE;
+        $card->source      = self::SOURCE_ADMIN;
         $card->activatedAt = $now;
         $card->expiresAt   = $now->modify('+12 months');
         $card->updatedAt   = $now;
@@ -341,6 +363,68 @@ class GiftCard
 
         return $card;
     }
+
+    /**
+     * Pay a cashback award out as a gift card (cashback programme).
+     *
+     * The card is born ACTIVE and already in the customer's wallet: both
+     * buyer and recipient are the customer and no recipient contact is set,
+     * so it is spendable by them immediately (no redeem step) and is never
+     * picked up by the recipient-delivery cron. Like issueByAdmin, the
+     * ledger opens with a CREDIT row for the value.
+     *
+     * Cashback amounts are small (AED 1+), so MIN_DENOMINATION does not
+     * apply; MAX_DENOMINATION still caps a single card.
+     *
+     * @param string $amount DECIMAL(10,2) string > 0
+     */
+    public static function issueCashback(
+        User $customer,
+        string $amount,
+        DateTimeImmutable $expiresAt,
+        int $cashbackAwardId,
+        string $orderReference,
+    ): self {
+        if (!preg_match('/^\d+(\.\d{1,2})?$/', $amount) || bccomp($amount, '0.01', 2) < 0) {
+            throw new \InvalidArgumentException("Cashback amount must be a positive DECIMAL(10,2) string, got '{$amount}'.");
+        }
+        if (bccomp($amount, self::MAX_DENOMINATION, 2) > 0) {
+            throw new \InvalidArgumentException('Cashback amount cannot exceed ' . self::MAX_DENOMINATION . ' AED.');
+        }
+        $value = bcadd($amount, '0', 2);
+
+        // The constructor enforces the purchase denomination bounds; build
+        // at the minimum and then set the real (smaller) value.
+        $card = new self(buyerUser: $customer, denomination: self::MIN_DENOMINATION, theme: self::THEME_LUXURY);
+        $card->denomination = $value;
+        $card->balance      = $value;
+        $card->recipientUser = $customer;
+        $card->source        = self::SOURCE_CASHBACK;
+        $card->cashbackAwardId = $cashbackAwardId;
+
+        $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $card->status      = self::STATUS_ACTIVE;
+        $card->activatedAt = $now;
+        $card->expiresAt   = $expiresAt;
+        $card->updatedAt   = $now;
+
+        $card->transactions->add(new GiftCardTransaction(
+            giftCard: $card,
+            type: GiftCardTransaction::TYPE_CREDIT,
+            amount: $value,
+            balanceAfter: $value,
+            orderReference: null,
+            orderId: null,
+            reason: mb_substr('Cashback for order ' . $orderReference, 0, 255),
+            actorUserId: null,
+        ));
+
+        return $card;
+    }
+
+    public function getSource(): string { return $this->source; }
+    public function isCashback(): bool { return $this->source === self::SOURCE_CASHBACK; }
+    public function getCashbackAwardId(): ?int { return $this->cashbackAwardId !== null ? (int) $this->cashbackAwardId : null; }
 
     // ── Business methods ──────────────────────────────────────────────
 

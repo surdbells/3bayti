@@ -130,6 +130,67 @@ HTML,
         );
     }
 
+    /**
+     * Cashback payout email: the reward for $orderReference was issued as a
+     * gift card that is already in the customer's wallet (no redeem step).
+     */
+    public function renderCashback(GiftCard $card, string $orderReference, ?string $firstName = null): RenderedEmail
+    {
+        $name      = ($firstName !== null && $firstName !== '') ? $firstName : 'there';
+        $amount    = $card->getDenomination();
+        $currency  = $card->getCurrency();
+        $code      = $card->formattedCode();
+        $expires   = $card->getExpiresAt()?->format('j M Y') ?? '';
+        $walletUrl = self::REDEEM_URL;
+        $expiryLineText = $expires !== '' ? "It can be used until {$expires}.\n" : '';
+        $expiryLineHtml = $expires !== ''
+            ? '<p>It can be used until <strong>' . $this->esc($expires) . '</strong>.</p>'
+            : '';
+
+        $textBody = <<<TXT
+Hi {$name},
+
+Your cashback for order {$orderReference} is here: {$amount} {$currency}.
+
+It has been added to your 3bayti gift card wallet as a gift card and will be
+used automatically when you pay with your wallet at checkout.
+Gift card code: {$code}
+{$expiryLineText}
+Note: orders paid with cashback credit do not earn more cashback.
+
+See your wallet: {$walletUrl}
+
+— 3bayti
+TXT;
+
+        $cardPanel = <<<HTML
+<div style="background:#1A1200;border:2px solid #E8C040;border-radius:12px;padding:24px;text-align:center;margin:24px 0;">
+  <div style="color:#E8C040;font-size:13px;letter-spacing:2px;text-transform:uppercase;">3bayti Cashback</div>
+  <div style="color:#FFFFFF;font-size:34px;font-weight:700;margin:12px 0;">{$this->esc($amount)} {$this->esc($currency)}</div>
+  <div style="color:#E8C040;font-size:18px;font-family:'Courier New',monospace;letter-spacing:3px;margin-top:8px;">{$this->esc($code)}</div>
+</div>
+HTML;
+
+        $htmlBody = $this->wrapHtml(
+            title: 'Your cashback is here',
+            body: <<<HTML
+<p>Hi {$this->esc($name)},</p>
+<p>Your cashback for order <strong>{$this->esc($orderReference)}</strong> has been added to your gift card wallet.</p>
+{$cardPanel}
+<p>It is used automatically when you pay with your gift card wallet at checkout.</p>
+{$expiryLineHtml}
+<p style="font-size:13px;color:#636366;">Orders paid with cashback credit do not earn more cashback.</p>
+<p><a href="{$walletUrl}">View your wallet</a></p>
+HTML,
+        );
+
+        return new RenderedEmail(
+            subject: 'Your 3bayti cashback is here',
+            textBody: $textBody,
+            htmlBody: $htmlBody,
+        );
+    }
+
     private function wrapHtml(string $title, string $body): string
     {
         $titleEsc = $this->esc($title);

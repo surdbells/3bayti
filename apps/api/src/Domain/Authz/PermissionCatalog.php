@@ -117,6 +117,16 @@ final class PermissionCatalog
                     'gift_cards.adjust_balance' => 'Adjust balances',
                 ],
             ],
+            'cashback' => [
+                'label' => 'Cashback',
+                'permissions' => [
+                    'cashback.view' => 'View cashback rules and awards',
+                    'cashback.create' => 'Create cashback rules',
+                    'cashback.edit' => 'Edit cashback rules and settings',
+                    'cashback.delete' => 'Delete cashback rules',
+                    'cashback.manage' => 'Release, cancel and reverse cashback awards',
+                ],
+            ],
             'payouts' => [
                 'label' => 'Payouts & finance',
                 'permissions' => [

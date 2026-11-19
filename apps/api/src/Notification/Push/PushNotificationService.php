@@ -332,6 +332,52 @@ class PushNotificationService
     }
 
     /**
+     * Cashback paid out (cashback programme): the reward for an order was
+     * issued as a gift card into the customer's wallet. Transactional, so it
+     * ignores marketing opt-out. Deep-links to the gift-card detail by v3 id.
+     * Fire-and-forget: never throws.
+     */
+    public function cashbackIssued(\Bayti\Api\Domain\GiftCard\GiftCard $card, string $orderReference): void
+    {
+        $user   = $card->getRecipientUser() ?? $card->getBuyerUser();
+        $tokens = $this->activeTokensFor($user);
+        if ($tokens === []) {
+            return;
+        }
+
+        $amount = $card->getDenomination();
+        if ($this->localeFor($user) === User::LOCALE_AR) {
+            $title = 'وصلك الكاش باك';
+            $body  = sprintf('أضفنا %s درهم كاش باك عن طلبك %s إلى محفظة بطاقات الهدايا.', $amount, $orderReference);
+        } else {
+            $title = 'Your cashback is here';
+            $body  = sprintf('AED %s cashback for order %s is now in your gift card wallet.', $amount, $orderReference);
+        }
+
+        $message = new PushMessage(
+            title: $title,
+            body: $body,
+            data: [
+                'type'            => 'cashback.issued',
+                'card_id'         => (string) ($card->getId() ?? ''),
+                'gift_card_id'    => (string) ($card->getId() ?? ''),
+                'order_reference' => $orderReference,
+                'amount'          => $amount,
+            ],
+        );
+
+        $context = [
+            'event'   => 'cashback.issued',
+            'card_id' => $card->getId(),
+            'user_id' => $user->getId(),
+        ];
+
+        foreach ($tokens as $deviceToken) {
+            $this->sendOne($deviceToken, $message, $context);
+        }
+    }
+
+    /**
      * Gift-reminder nudge (Gift Reminder Engine). Sent by the
      * gift-reminders:dispatch cron at 14/7/2 days before the saved date. A
      * user-requested reminder (like the gift-card expiry nudge), so it sends

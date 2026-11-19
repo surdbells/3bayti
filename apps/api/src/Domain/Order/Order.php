@@ -212,6 +212,14 @@ class Order
     #[ORM\Column(name: 'gift_card_code_snapshot', type: 'string', length: 16, nullable: true)]
     private ?string $giftCardCodeSnapshot = null;
 
+    /**
+     * True when checkout debited ANY cashback gift card for this order
+     * (cashback programme guard: an order paid, even partly, with cashback
+     * credit earns no cashback). Set inside the checkout transaction.
+     */
+    #[ORM\Column(name: 'used_cashback_credit', type: 'boolean', options: ['default' => false])]
+    private bool $usedCashbackCredit = false;
+
     public function __construct(
         User $user,
         string $orderReference,
@@ -650,6 +658,13 @@ class Order
 
     public function getGiftCardAmount(): string { return $this->giftCardAmount; }
     public function getGiftCardCodeSnapshot(): ?string { return $this->giftCardCodeSnapshot; }
+    public function hasUsedCashbackCredit(): bool { return $this->usedCashbackCredit; }
+
+    /** Checkout debited a cashback gift card for this order (one-way flag). */
+    public function markUsedCashbackCredit(): void
+    {
+        $this->usedCashbackCredit = true;
+    }
 
     /**
      * Record that a gift card was applied to this order.
