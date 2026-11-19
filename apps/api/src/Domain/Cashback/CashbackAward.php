@@ -6,6 +6,7 @@ namespace Bayti\Api\Domain\Cashback;
 
 use Bayti\Api\Domain\GiftCard\GiftCard;
 use Bayti\Api\Domain\Order\Order;
+use Bayti\Api\Domain\Order\OrderItem;
 use Bayti\Api\Domain\User\User;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -63,6 +64,16 @@ class CashbackAward
 
     #[ORM\Column(name: 'reversed_amount', type: 'decimal', precision: 10, scale: 2, options: ['default' => '0.00'])]
     private string $reversedAmount = '0.00';
+
+    /**
+     * Clawed back but not collected: the customer had already spent it when
+     * the award was reversed (written off). If that spend later comes back
+     * to the cashback card (the order it paid for is cancelled / failed /
+     * refunded), GiftCardOrderReversal debits it straight back and lowers
+     * this. Still counts against the rule budget while > 0.
+     */
+    #[ORM\Column(name: 'uncollected_amount', type: 'decimal', precision: 10, scale: 2, options: ['default' => '0.00'])]
+    private string $uncollectedAmount = '0.00';
 
     #[ORM\Column(name: 'currency', type: 'string', length: 3, options: ['default' => 'AED'])]
     private string $currency = 'AED';
@@ -212,6 +223,10 @@ class CashbackAward
         }
         $at ??= new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $this->reversedAmount = bcadd($this->reversedAmount, $value, 2);
+        $writtenOff = bcsub(bcadd($value, '0', 2), bcadd($collected, '0', 2), 2);
+        if (bccomp($writtenOff, '0.00', 2) > 0) {
+            $this->uncollectedAmount = bcadd($this->uncollectedAmount, $writtenOff, 2);
+        }
         if ($full || bccomp($this->reversedAmount, $this->amount, 2) >= 0) {
             $this->reversedAmount = $this->amount;
             $this->status = self::STATUS_REVERSED;
@@ -234,6 +249,31 @@ class CashbackAward
         $this->touch();
     }
 
+    /**
+     * Part of the written-off clawback was recovered (the spend came back
+     * to the cashback card and was debited straight back). Works in any
+     * post-issue status. Logged in the snapshot under `recoveries`.
+     */
+    public function recordRecovery(string $amount, string $orderReference, ?DateTimeImmutable $at = null): void
+    {
+        $amount = bcadd($amount, '0', 2);
+        if (bccomp($amount, '0.00', 2) <= 0) {
+            return;
+        }
+        if (bccomp($amount, $this->uncollectedAmount, 2) > 0) {
+            throw new \LogicException("Cannot recover {$amount}: only {$this->uncollectedAmount} is uncollected.");
+        }
+        $at ??= new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $this->uncollectedAmount = bcsub($this->uncollectedAmount, $amount, 2);
+        $log = $this->snapshot['recoveries'] ?? [];
+        if (!is_array($log)) {
+            $log = [];
+        }
+        $log[] = ['at' => $at->format(DATE_ATOM), 'amount' => $amount, 'order_reference' => $orderReference];
+        $this->snapshot['recoveries'] = $log;
+        $this->touch();
+    }
+
     /** What is still claw-back-able (issued amount minus prior clawbacks). */
     public function remainingAmount(): string
     {
@@ -253,11 +293,61 @@ class CashbackAward
         if ($this->status !== self::STATUS_PENDING) {
             return null;
         }
-        $delivered = $this->order->getDeliveredAt();
-        if ($delivered === null) {
+        $settled = self::fulfilmentSettledAt($this->order);
+        if ($settled === null) {
             return null;
         }
-        return $delivered->modify('+' . $this->holdDays . ' days');
+        return $settled->modify('+' . $this->holdDays . ' days');
+    }
+
+    /** Item statuses that end an item's fulfilment. */
+    public const SETTLED_ITEM_STATES = [
+        OrderItem::ITEM_STATUS_DELIVERED,
+        OrderItem::ITEM_STATUS_REJECTED,
+        OrderItem::ITEM_STATUS_CANCELLED,
+        OrderItem::ITEM_STATUS_RETURNED,
+        OrderItem::ITEM_STATUS_REFUNDED,
+    ];
+
+    /**
+     * When the order's fulfilment finished (the hold counts from here), or
+     * null while it is still in progress.
+     *
+     *   - Order rolled up to DELIVERED: delivered_at (falling back to the
+     *     latest item change, then the order's updated_at, when an admin
+     *     override left it unstamped).
+     *   - Otherwise, once EVERY item is settled (delivered / rejected /
+     *     cancelled / returned / refunded): the latest of delivered_at and
+     *     the items' last change. The rollup never reaches DELIVERED when an
+     *     item was rejected/cancelled, or drops back to SHIPPED after a
+     *     return, so this is what lets those orders release.
+     *
+     * Mirrored in SQL by CashbackAwardRepository::findDueIds.
+     */
+    public static function fulfilmentSettledAt(Order $order): ?DateTimeImmutable
+    {
+        $latestItem = null;
+        $allSettled = true;
+        $any = false;
+        foreach ($order->getItems() as $item) {
+            $any = true;
+            if (!in_array($item->getItemStatus(), self::SETTLED_ITEM_STATES, true)) {
+                $allSettled = false;
+            }
+            $u = $item->getUpdatedAt();
+            if ($latestItem === null || $u > $latestItem) {
+                $latestItem = $u;
+            }
+        }
+
+        $delivered = $order->getDeliveredAt();
+        if ($order->getStatus() === Order::STATUS_DELIVERED) {
+            return $delivered ?? $latestItem ?? $order->getUpdatedAt();
+        }
+        if (!$any || !$allSettled) {
+            return null;
+        }
+        return ($delivered !== null && $delivered > $latestItem) ? $delivered : $latestItem;
     }
 
     /** @param array<string, mixed> $extra */
@@ -280,6 +370,7 @@ class CashbackAward
     public function getAmount(): string { return $this->amount; }
     public function getAccruedAmount(): string { return $this->accruedAmount; }
     public function getReversedAmount(): string { return $this->reversedAmount; }
+    public function getUncollectedAmount(): string { return $this->uncollectedAmount; }
     public function getCurrency(): string { return $this->currency; }
     public function getStatus(): string { return $this->status; }
     public function getHoldDays(): int { return $this->holdDays; }

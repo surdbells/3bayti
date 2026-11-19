@@ -74,9 +74,11 @@ class CashbackAwardRepository extends EntityRepository
     }
 
     /**
-     * Pending awards the release cron should look at: the order was delivered
-     * and its hold elapsed, OR the order ended cancelled/refunded/failed (those
-     * get cancelled).
+     * Pending awards the release cron should look at: the order's fulfilment
+     * finished (rolled up to delivered, or every item settled) and the hold
+     * elapsed with no open return, OR the order ended cancelled/refunded/
+     * failed (those get cancelled). Mirrors CashbackAward::fulfilmentSettledAt;
+     * the service re-checks every candidate under the row lock.
      *
      * @return list<int>
      */
@@ -88,15 +90,38 @@ class CashbackAwardRepository extends EntityRepository
               JOIN orders o ON o.id = a.order_id
              WHERE a.status = 'pending'
                AND (
-                    (o.status = 'delivered'
-                     AND o.delivered_at IS NOT NULL
-                     AND o.delivered_at + (a.hold_days * INTERVAL '1 day') <= CAST(:now AS TIMESTAMPTZ)
-                     AND NOT EXISTS (
-                         SELECT 1 FROM order_return_requests r
-                          WHERE r.order_id = o.id
-                            AND r.status IN ('pending', 'approved', 'picked_up')
-                     ))
-                 OR o.status IN ('cancelled', 'refunded', 'failed')
+                    o.status IN ('cancelled', 'refunded', 'failed')
+                 OR (
+                    NOT EXISTS (
+                        SELECT 1 FROM order_return_requests r
+                         WHERE r.order_id = o.id
+                           AND r.status IN ('pending', 'approved', 'picked_up')
+                    )
+                    AND (
+                        -- Rolled up to delivered (an admin override may have
+                        -- left delivered_at unstamped: fall back).
+                        (o.status = 'delivered'
+                         AND COALESCE(
+                               o.delivered_at,
+                               (SELECT MAX(i.updated_at) FROM order_items i WHERE i.order_id = o.id),
+                               o.updated_at
+                             ) + (a.hold_days * INTERVAL '1 day') <= CAST(:now AS TIMESTAMPTZ))
+                        -- Every item settled (a rejected/cancelled item keeps
+                        -- the rollup at fulfilling; a return drops it back to
+                        -- shipped): due from the last item change.
+                     OR (o.status IN ('paid', 'fulfilling', 'shipped')
+                         AND EXISTS (SELECT 1 FROM order_items i WHERE i.order_id = o.id)
+                         AND NOT EXISTS (
+                             SELECT 1 FROM order_items i
+                              WHERE i.order_id = o.id
+                                AND i.item_status NOT IN ('delivered', 'rejected', 'cancelled', 'returned', 'refunded')
+                         )
+                         AND GREATEST(
+                               o.delivered_at,
+                               (SELECT MAX(i.updated_at) FROM order_items i WHERE i.order_id = o.id)
+                             ) + (a.hold_days * INTERVAL '1 day') <= CAST(:now AS TIMESTAMPTZ))
+                    )
+                 )
                )
              ORDER BY a.id ASC
              LIMIT :lim
@@ -296,11 +321,13 @@ class CashbackAwardRepository extends EntityRepository
     }
 
     /**
-     * The customer's paid PRODUCT orders (item-less gift-card / customization
-     * orders don't count) placed before $orderId (all of them when null).
-     * 0 = this is their first order.
+     * The customer's OTHER paid PRODUCT orders (item-less gift-card /
+     * customization orders don't count): any id except $orderId (all of
+     * them when null). 0 = this is their first order. Not "id < $orderId":
+     * an older order paid AFTER a newer one would then also count as first
+     * and earn first-order cashback a second time.
      */
-    public function countEarlierPaidProductOrders(User $user, ?int $orderId): int
+    public function countOtherPaidProductOrders(User $user, ?int $orderId): int
     {
         $qb = $this->getEntityManager()->createQueryBuilder()
             ->select('COUNT(o.id)')
@@ -310,7 +337,7 @@ class CashbackAwardRepository extends EntityRepository
             ->andWhere('o.items IS NOT EMPTY')
             ->setParameter('u', $user);
         if ($orderId !== null) {
-            $qb->andWhere('o.id < :oid')->setParameter('oid', $orderId);
+            $qb->andWhere('o.id <> :oid')->setParameter('oid', $orderId);
         }
         return (int) $qb->getQuery()->getSingleScalarResult();
     }

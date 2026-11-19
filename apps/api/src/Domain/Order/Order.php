@@ -475,6 +475,12 @@ class Order
             throw new \InvalidArgumentException("Unknown Order status: '{$newStatus}'");
         }
         $this->status = $newStatus;
+        // Same stamp as the item rollup: the first time the order is
+        // DELIVERED (here by an admin override) records when. Cashback
+        // release and the hold window count from it.
+        if ($newStatus === self::STATUS_DELIVERED && $this->deliveredAt === null) {
+            $this->deliveredAt = new DateTimeImmutable();
+        }
         $this->touchUpdatedAt();
         return $previous;
     }

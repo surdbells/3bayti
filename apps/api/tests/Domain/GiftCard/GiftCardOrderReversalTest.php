@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Tests\Domain\GiftCard;
 
+use Bayti\Api\Domain\Cashback\CashbackAward;
+use Bayti\Api\Domain\Cashback\CashbackRule;
 use Bayti\Api\Domain\GiftCard\GiftCard;
 use Bayti\Api\Domain\GiftCard\GiftCardOrderReversal;
 use Bayti\Api\Domain\GiftCard\GiftCardTransaction;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\User\User;
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -18,6 +21,7 @@ use Psr\Log\NullLogger;
 
 #[CoversClass(GiftCardOrderReversal::class)]
 #[CoversClass(GiftCard::class)]
+#[CoversClass(CashbackAward::class)]
 final class GiftCardOrderReversalTest extends TestCase
 {
     // ── plan(): how a restore is split across cards ─────────────────────
@@ -144,7 +148,114 @@ final class GiftCardOrderReversalTest extends TestCase
         $card->restoreOrderDebit('0.00', '3B-ORDER-6', 60, 'Order cancelled');
     }
 
+    // ── cashback clawback recovery ──────────────────────────────────────
+
+    #[Test]
+    public function aFullyClawedBackCashbackSpendDoesNotComeBackWhenItsOrderIsCancelled(): void
+    {
+        // Cashback card of 50; 30 spent on order Z; the award is then fully
+        // reversed: 20 collected, 30 written off. Z is cancelled.
+        [$card, $award, $order] = $this->clawedBackCashback(reverse: null);
+        self::assertSame('0.00', $card->getBalance());
+        self::assertSame('30.00', $award->getUncollectedAmount());
+
+        $restored = $this->reversal($card, $award)->restoreForOrder($order, 'Order cancelled');
+
+        self::assertSame('30.00', $restored);
+        // Credited back to the card, then debited straight back.
+        self::assertSame('0.00', $card->getBalance());
+        self::assertSame('0.00', $award->getUncollectedAmount());
+        $last = $card->getTransactions()->last();
+        self::assertNotFalse($last);
+        self::assertSame(GiftCardTransaction::TYPE_DEBIT, $last->getType());
+        self::assertSame('30.00', $last->getAmount());
+    }
+
+    #[Test]
+    public function aPartlyClawedBackCashbackKeepsOnlyWhatTheCustomerIsStillOwed(): void
+    {
+        // Card of 50, 30 spent on Z, then 25 of the award clawed back:
+        // 20 collected, 5 written off. Z cancelled: the 30 comes back, 5 is
+        // recovered, the customer keeps the 25 they still earned.
+        [$card, $award, $order] = $this->clawedBackCashback(reverse: '25.00');
+        self::assertSame('5.00', $award->getUncollectedAmount());
+
+        $this->reversal($card, $award)->restoreForOrder($order, 'Order cancelled');
+
+        self::assertSame('25.00', $card->getBalance());
+        self::assertSame('0.00', $award->getUncollectedAmount());
+        $recoveries = $award->getSnapshot()['recoveries'] ?? [];
+        self::assertIsArray($recoveries);
+        self::assertSame('5.00', $recoveries[0]['amount']);
+    }
+
+    #[Test]
+    public function aCashbackCardWithNothingUncollectedIsRestoredNormally(): void
+    {
+        [$card, $award, $order] = $this->clawedBackCashback(reverse: false);
+        self::assertSame('0.00', $award->getUncollectedAmount());
+
+        $this->reversal($card, $award)->restoreForOrder($order, 'Payment failed');
+
+        self::assertSame('50.00', $card->getBalance());
+    }
+
     // ── builders ────────────────────────────────────────────────────────
+
+    /**
+     * A 50.00 cashback card, 30.00 of it spent on order 3B-Z (id 55), then
+     * the award reversed: null = in full, a string = that amount, false = not.
+     *
+     * @return array{GiftCard, CashbackAward, Order}
+     */
+    private function clawedBackCashback(string|false|null $reverse): array
+    {
+        $user = $this->user();
+        $earnedOn = new Order(user: $user, orderReference: '3B-Y', subtotal: '500.00');
+        $this->set($earnedOn, 'id', 54);
+        $rule = new CashbackRule('R', CashbackRule::REWARD_PERCENTAGE, '10.00');
+        $award = new CashbackAward($earnedOn, $user, '50.00', 'AED', 0, 365);
+        $award->addLine($rule, null, '500.00', '50.00');
+        $this->set($award, 'id', 900);
+
+        $card = GiftCard::issueCashback($user, '50.00', new \DateTimeImmutable('+365 days'), 900, '3B-Y');
+        $this->set($card, 'id', 11);
+        $award->markIssued($card, new \DateTimeImmutable());
+
+        $order = new Order(user: $user, orderReference: '3B-Z', subtotal: '30.00');
+        $this->set($order, 'id', 55);
+        $order->applyGiftCard('30.00', $card->getCode());
+        $card->debit('30.00', '3B-Z', 55);
+
+        if ($reverse !== false) {
+            $value = $reverse ?? $award->remainingAmount();
+            $collected = bccomp($card->getBalance(), $value, 2) < 0 ? $card->getBalance() : $value;
+            $card->adminDebit($collected, 'Cashback reversed');
+            $award->recordReversal($value, $collected, 'Order Y refunded', $reverse === null);
+        }
+        return [$card, $award, $order];
+    }
+
+    private function reversal(GiftCard $card, CashbackAward $award): GiftCardOrderReversal
+    {
+        $conn = $this->createMock(Connection::class);
+        $conn->method('fetchFirstColumn')->willReturn([11]);
+        $conn->method('fetchAllAssociative')->willReturn([
+            ['gift_card_id' => 11, 'held' => '30.00', 'last_debit' => 7],
+        ]);
+        $conn->method('isTransactionActive')->willReturn(true);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('getConnection')->willReturn($conn);
+        $em->method('find')->willReturnCallback(
+            static fn (string $class, mixed $id): ?object => match ($class) {
+                GiftCard::class       => $card,
+                CashbackAward::class  => $award,
+                default               => null,
+            },
+        );
+        return new GiftCardOrderReversal($em, new NullLogger());
+    }
 
     private function card(
         string $denomination,

@@ -119,6 +119,7 @@ final class CashbackSerializer
             'amount'                  => $award->getAmount(),
             'accrued_amount'          => $award->getAccruedAmount(),
             'reversed_amount'         => $award->getReversedAmount(),
+            'uncollected_amount'      => $award->getUncollectedAmount(),
             'currency'                => $award->getCurrency(),
             'hold_days'               => $award->getHoldDays(),
             'gift_card_validity_days' => $award->getGiftCardValidityDays(),
@@ -168,6 +169,7 @@ final class CashbackSerializer
                 'order_item_id' => $l->getOrderItemId(),
                 'base_amount'   => $l->getBaseAmount(),
                 'amount'        => $l->getAmount(),
+                'accrued_amount' => $l->getAccruedAmount(),
             ],
             $award->getLines()->toArray(),
         ));

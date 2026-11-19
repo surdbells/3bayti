@@ -245,7 +245,7 @@ class CashbackRule
 
     public function setBudgetTotal(?string $value): void
     {
-        $this->budgetTotal = self::optionalPositiveMoney($value, 'budget_total');
+        $this->budgetTotal = self::optionalPositiveMoney($value, 'budget_total', 10);
     }
 
     public function setAllowWithPromo(bool $v): void
@@ -415,19 +415,23 @@ class CashbackRule
 
     // ── Helpers ──────────────────────────────────────────────────────
 
-    private static function assertMoney(string $v, string $field): void
+    /**
+     * $digits = integer digits: 8 for NUMERIC(10,2) columns, 10 for
+     * budget_total (NUMERIC(12,2)).
+     */
+    private static function assertMoney(string $v, string $field, int $digits = 8): void
     {
-        if (!preg_match('/^\d{1,10}(\.\d{1,2})?$/', $v)) {
+        if (!preg_match('/^\d{1,' . $digits . '}(\.\d{1,2})?$/', $v)) {
             throw new \InvalidArgumentException("{$field} must be a non-negative decimal string with up to 2 decimals, got '{$v}'.");
         }
     }
 
-    private static function optionalPositiveMoney(?string $value, string $field): ?string
+    private static function optionalPositiveMoney(?string $value, string $field, int $digits = 8): ?string
     {
         if ($value === null) {
             return null;
         }
-        self::assertMoney($value, $field);
+        self::assertMoney($value, $field, $digits);
         if (bccomp($value, '0.00', 2) <= 0) {
             throw new \InvalidArgumentException("{$field} must be greater than 0 (or null for none).");
         }

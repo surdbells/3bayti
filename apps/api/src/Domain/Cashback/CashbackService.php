@@ -234,9 +234,14 @@ class CashbackService
             if ($award === null) {
                 return;
             }
-            if ($award->isPending()) {
-                $this->cancelAward($award, $reason);
-            } elseif ($award->isIssued()) {
+            // Decide under the row lock: cancelAward re-reads the award FOR
+            // UPDATE (lockById refreshes this same managed instance). If a
+            // racing release issued it meanwhile, it comes back `issued` and
+            // falls through to the clawback below instead of being skipped.
+            if ($award->isPending() && $this->cancelAward($award, $reason)) {
+                return;
+            }
+            if ($award->isIssued()) {
                 $this->reverseAward($award, $reason);
             }
         } catch (\Throwable $e) {
@@ -285,6 +290,36 @@ class CashbackService
         }
     }
 
+    /**
+     * Money came back to the customer AFTER the award was issued (a partial
+     * refund, or anything else that lowers what the order earns): recompute
+     * what the order is worth now, exactly as release would (accrued line
+     * values, dropped items, refunded share), and claw back the difference
+     * between what is still issued and that value. A pending award needs
+     * nothing (release does the same maths). Idempotent: a second call finds
+     * nothing left to claw back. Never throws.
+     */
+    public function settleIssuedForOrder(Order $order, string $reason): void
+    {
+        try {
+            $award = $this->awards()->findOneByOrder($order);
+            if ($award === null || !$award->isIssued()) {
+                return;
+            }
+            $calc = $this->releaseAmount($award, $order, $this->returnsFor($order));
+            $claw = bcsub($award->remainingAmount(), $calc['amount'], 2);
+            if (bccomp($claw, '0.00', 2) <= 0) {
+                return;
+            }
+            $this->reverseAward($award, $reason, null, $claw);
+        } catch (\Throwable $e) {
+            $this->logger->error('cashback.settle_for_order_failed', [
+                'order_id' => $order->getId(),
+                'error'    => $e->getMessage(),
+            ]);
+        }
+    }
+
     // ── Admin-grade operations (throw) ───────────────────────────────
 
     /**
@@ -317,6 +352,14 @@ class CashbackService
         $awardId = (int) $award->getId();
         /** @var array{value: string, collected: string} $out */
         $out = $this->inTransaction(function () use ($awardId, $reason, $actor, $value): array {
+            // Lock order card → award, the same order GiftCardOrderReversal
+            // takes when it restores spend to a cashback card (and recovers
+            // any uncollected clawback), so the two can't deadlock.
+            $conn = $this->em->getConnection();
+            $cardId = $conn->fetchOne('SELECT gift_card_id FROM cashback_awards WHERE id = ?', [$awardId]);
+            if (is_numeric($cardId)) {
+                $conn->executeQuery('SELECT id FROM gift_cards WHERE id = ? FOR UPDATE', [(int) $cardId]);
+            }
             $locked = $this->awards()->lockById($awardId);
             if ($locked === null) {
                 throw new \DomainException('Cashback award not found.');
@@ -373,12 +416,28 @@ class CashbackService
     {
         $ids = $this->awards()->findDueIds($now, $limit);
         $stats = ['due' => count($ids), 'issued' => 0, 'cancelled' => 0, 'skipped' => 0, 'errors' => 0];
-        foreach ($ids as $id) {
+        foreach ($ids as $n => $id) {
             try {
                 $outcome = $this->releaseAwardById($id, $now, false, $dryRun);
             } catch (\Throwable $e) {
                 $outcome = 'error';
                 $this->logger->error('cashback.release_failed', ['award_id' => $id, 'error' => $e->getMessage()]);
+                // The DB was rolled back but the UnitOfWork was not: drop
+                // every managed entity so a half-mutated award / unsaved card
+                // can't be flushed by the NEXT award's transaction. Each award
+                // is re-loaded by id, so clearing is safe here (cron only).
+                if (!$this->em->isOpen()) {
+                    // A failed flush closed the EntityManager: nothing more
+                    // can be written in this run.
+                    $left = count($ids) - $n;
+                    $stats['errors'] += $left;
+                    $this->logger->error('cashback.release_batch_aborted', ['award_id' => $id, 'not_processed' => $left - 1]);
+                    if ($onProgress !== null) {
+                        $onProgress($id, $outcome);
+                    }
+                    break;
+                }
+                $this->em->clear();
             }
             match ($outcome) {
                 self::OUTCOME_ISSUED, self::OUTCOME_WOULD_ISSUE => $stats['issued']++,
@@ -412,6 +471,11 @@ class CashbackService
                 return self::OUTCOME_NOT_PENDING;
             }
             $order = $award->getOrder();
+            // Lock the order row too, so release and an order-status change
+            // (cancel / refund / override) serialise: either the cancel
+            // commits first and we see the dead status, or we issue first
+            // and its cancelForOrder sees `issued` and claws back.
+            $this->em->getConnection()->executeQuery('SELECT id FROM orders WHERE id = ? FOR UPDATE', [(int) $order->getId()]);
             $this->em->refresh($order);
 
             if (in_array($order->getStatus(), self::DEAD_STATES, true)) {
@@ -445,11 +509,8 @@ class CashbackService
                 return self::OUTCOME_WOULD_ISSUE;
             }
 
-            foreach ($award->getLines() as $i => $line) {
-                $line->setAmount($calc['lines'][$i] ?? '0.00');
-            }
-            $award->adjustAmount($calc['amount']);
-
+            // Build (validate) the card BEFORE touching the award: if issuing
+            // throws, nothing in the UnitOfWork has been mutated.
             $card = GiftCard::issueCashback(
                 customer: $award->getUser(),
                 amount: $calc['amount'],
@@ -457,6 +518,11 @@ class CashbackService
                 cashbackAwardId: $awardId,
                 orderReference: $order->getOrderReference(),
             );
+
+            foreach ($award->getLines() as $i => $line) {
+                $line->setAmount($calc['lines'][$i] ?? '0.00');
+            }
+            $award->adjustAmount($calc['amount']);
             $this->em->persist($card);
             $award->markIssued($card, $now);
             $award->mergeSnapshot(['release' => [
@@ -485,10 +551,14 @@ class CashbackService
     }
 
     /**
-     * What the award is worth at release: drop lines on cancelled /
+     * What the award is worth now (at release, or when settling an issued
+     * award): start from the ACCRUED line values, drop lines on cancelled /
      * rejected / returned / refunded items (and items of returns that reached
-     * the vendor), then scale by the share of the order already refunded
-     * (card refunds + gift-card spend given back).
+     * the vendor), then scale by the share of the order refunded that those
+     * dropped items do not already explain (card refunds + gift-card spend
+     * given back, minus the dropped items' paid bases, over the order total
+     * minus those bases). So refunding a dropped item does not reduce the
+     * award twice. Never above GiftCard::MAX_DENOMINATION.
      *
      * @param list<OrderReturnRequest> $returns
      * @return array{amount: string, lines: array<int, string>, excluded_item_ids: list<int>, refunded_share: string}
@@ -516,22 +586,47 @@ class CashbackService
         $kept = [];
         foreach ($award->getLines() as $i => $line) {
             $oid = $line->getOrderItemId();
-            $kept[$i] = ($oid !== null && isset($excluded[$oid])) ? '0.00' : $line->getAmount();
+            $kept[$i] = ($oid !== null && isset($excluded[$oid])) ? '0.00' : $line->getAccruedAmount();
         }
         $keptTotal = CashbackCalculator::sum($kept);
+
+        // Paid base of the dropped items (subtotal minus their pro-rata
+        // discount share), i.e. the refund money they already explain.
+        $excludedBase = '0.00';
+        if ($excluded !== []) {
+            $items = array_values($order->getItems()->toArray());
+            $bases = CashbackCalculator::lineBases($this->orderLines($order), $order->getDiscount());
+            foreach ($items as $i => $item) {
+                $id = $item->getId();
+                if ($id !== null && isset($excluded[$id])) {
+                    $excludedBase = bcadd($excludedBase, $bases[$i] ?? '0.00', 2);
+                }
+            }
+        }
 
         $share = '0';
         $total = $order->getTotal();
         if (bccomp($total, '0.00', 2) > 0) {
             $refunded = bcadd($this->gatewayRefunded($order), $this->giftCardRestored($order), 2);
-            $share = bcdiv($refunded, $total, 6);
-            if (bccomp($share, '1', 6) > 0) {
+            $residual = bcsub($refunded, $excludedBase, 2);
+            $denominator = bcsub($total, $excludedBase, 2);
+            if (bccomp($residual, '0.00', 2) <= 0) {
+                $share = '0';
+            } elseif (bccomp($denominator, '0.00', 2) <= 0) {
                 $share = '1';
+            } else {
+                $share = bcdiv($residual, $denominator, 6);
+                if (bccomp($share, '1', 6) > 0) {
+                    $share = '1';
+                }
             }
         }
         $amount = bcmul($keptTotal, bcsub('1', $share, 6), 2);
         if (bccomp($amount, '0.00', 2) < 0) {
             $amount = '0.00';
+        }
+        if (bccomp($amount, GiftCard::MAX_DENOMINATION, 2) > 0) {
+            $amount = GiftCard::MAX_DENOMINATION;
         }
 
         return [
@@ -694,16 +789,24 @@ class CashbackService
         return self::OUTCOME_CANCELLED;
     }
 
+    /**
+     * Due = fulfilment is finished and the hold has elapsed since. "Finished"
+     * is the order rolled up to DELIVERED, OR every item is settled
+     * (delivered / rejected / cancelled / returned / refunded): the order
+     * rollup never reaches DELIVERED when one item was rejected or cancelled
+     * (it stays FULFILLING) or returned after delivery (back to SHIPPED).
+     * Mirrored in CashbackAwardRepository::findDueIds.
+     */
     private function isDue(CashbackAward $award, Order $order, DateTimeImmutable $now): bool
     {
-        if ($order->getStatus() !== Order::STATUS_DELIVERED) {
+        if (!in_array($order->getStatus(), self::PAID_STATES, true)) {
             return false;
         }
-        $deliveredAt = $order->getDeliveredAt();
-        if ($deliveredAt === null) {
+        $settledAt = CashbackAward::fulfilmentSettledAt($order);
+        if ($settledAt === null) {
             return false;
         }
-        return $deliveredAt->modify('+' . $award->getHoldDays() . ' days') <= $now;
+        return $settledAt->modify('+' . $award->getHoldDays() . ' days') <= $now;
     }
 
     /** @return list<OrderReturnRequest> */
@@ -743,10 +846,10 @@ class CashbackService
         return $this->awards()->orderSpentCashbackCredit($order);
     }
 
-    /** No earlier paid product order for this customer. */
+    /** No OTHER paid product order for this customer (whatever its id). */
     private function isFirstOrder(User $user, ?int $orderId): bool
     {
-        return $this->awards()->countEarlierPaidProductOrders($user, $orderId) === 0;
+        return $this->awards()->countOtherPaidProductOrders($user, $orderId) === 0;
     }
 
     /** @return list<CashbackLineInput> */

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Domain\GiftCard;
 
+use Bayti\Api\Domain\Cashback\CashbackAward;
 use Bayti\Api\Domain\Order\Order;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -164,9 +166,53 @@ class GiftCardOrderReversal
                 reason: $reason,
             );
             $restored = bcadd($restored, $amount, 2);
+            $this->recoverCashbackClawback($card, $amount, $order);
         }
 
         return $restored;
+    }
+
+    /**
+     * A cashback card whose award was clawed back after the customer had
+     * already spent part of it carries an uncollected (written-off) amount
+     * on the award. When that spend comes back to the card here, debit it
+     * straight back (up to what is still uncollected), so a reversed
+     * cashback can never return through a cancelled/failed/refunded order.
+     *
+     * Lock order is card → award (the card is already locked by the
+     * caller); CashbackService::reverseAward takes the same order.
+     */
+    private function recoverCashbackClawback(GiftCard $card, string $restoredAmount, Order $order): void
+    {
+        $awardId = $card->getCashbackAwardId();
+        if (!$card->isCashback() || $awardId === null) {
+            return;
+        }
+        $award = $this->em->find(CashbackAward::class, $awardId, LockMode::PESSIMISTIC_WRITE);
+        if (!$award instanceof CashbackAward) {
+            return;
+        }
+        $this->em->refresh($award);
+        $take = $award->getUncollectedAmount();
+        foreach ([$restoredAmount, $card->getBalance()] as $cap) {
+            if (bccomp($take, $cap, 2) > 0) {
+                $take = $cap;
+            }
+        }
+        if (bccomp($take, '0.01', 2) < 0) {
+            return;
+        }
+        $card->adminDebit(
+            bcadd($take, '0', 2),
+            mb_substr('Cashback clawback recovered (award ' . $awardId . ', order ' . $order->getOrderReference() . ' restore)', 0, 255),
+        );
+        $award->recordRecovery($take, $order->getOrderReference());
+        $this->logger->info('cashback.clawback_recovered', [
+            'award_id'        => $awardId,
+            'gift_card_id'    => $card->getId(),
+            'order_reference' => $order->getOrderReference(),
+            'amount'          => $take,
+        ]);
     }
 
     /**

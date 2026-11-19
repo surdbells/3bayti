@@ -37,8 +37,13 @@ class CashbackAwardLine
     #[ORM\Column(name: 'base_amount', type: 'decimal', precision: 10, scale: 2)]
     private string $baseAmount;
 
+    /** Current value (rewritten at release). */
     #[ORM\Column(name: 'amount', type: 'decimal', precision: 10, scale: 2)]
     private string $amount;
+
+    /** Value at accrual (never changes): post-release settlement recomputes from it. */
+    #[ORM\Column(name: 'accrued_amount', type: 'decimal', precision: 10, scale: 2)]
+    private string $accruedAmount;
 
     public function __construct(CashbackAward $award, CashbackRule $rule, ?int $orderItemId, string $baseAmount, string $amount)
     {
@@ -47,6 +52,7 @@ class CashbackAwardLine
         $this->orderItemId = $orderItemId;
         $this->baseAmount = bcadd($baseAmount, '0', 2);
         $this->amount = bcadd($amount, '0', 2);
+        $this->accruedAmount = $this->amount;
     }
 
     public function setAmount(string $amount): void
@@ -60,4 +66,5 @@ class CashbackAwardLine
     public function getOrderItemId(): ?int { return $this->orderItemId !== null ? (int) $this->orderItemId : null; }
     public function getBaseAmount(): string { return $this->baseAmount; }
     public function getAmount(): string { return $this->amount; }
+    public function getAccruedAmount(): string { return $this->accruedAmount; }
 }

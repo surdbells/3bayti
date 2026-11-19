@@ -100,6 +100,9 @@ final class CashbackProgramSettings
                 $m = self::money($body['max_award_per_order']);
                 if ($m === null || bccomp($m, '0.00', 2) <= 0) {
                     $errors['max_award_per_order'][] = 'Must be a positive amount, or null for no cap.';
+                } elseif (bccomp($m, \Bayti\Api\Domain\GiftCard\GiftCard::MAX_DENOMINATION, 2) > 0) {
+                    // One award = one cashback gift card, which cannot hold more.
+                    $errors['max_award_per_order'][] = 'Must not exceed ' . \Bayti\Api\Domain\GiftCard\GiftCard::MAX_DENOMINATION . ' (the largest gift card).';
                 } else {
                     $max = $m;
                 }

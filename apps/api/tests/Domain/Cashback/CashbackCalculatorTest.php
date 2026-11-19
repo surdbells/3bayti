@@ -11,6 +11,7 @@ use Bayti\Api\Domain\Cashback\CashbackProgramSettings;
 use Bayti\Api\Domain\Cashback\CashbackResult;
 use Bayti\Api\Domain\Cashback\CashbackRule;
 use Bayti\Api\Domain\Cashback\CashbackRuleTarget;
+use Bayti\Api\Domain\GiftCard\GiftCard;
 use DateTimeImmutable;
 use DateTimeZone;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -292,6 +293,56 @@ final class CashbackCalculatorTest extends TestCase
         [$bad, $errors2] = CashbackProgramSettings::fromAdminInput(['default_hold_days' => -1], CashbackProgramSettings::default());
         self::assertNull($bad);
         self::assertArrayHasKey('default_hold_days', $errors2);
+    }
+
+    #[Test]
+    public function anAwardNeverExceedsTheLargestGiftCard(): void
+    {
+        // 10% with no rule cap and no programme cap on a 150,000 order
+        // would be 15,000 -- more than one cashback card can hold.
+        $rule = $this->rule(1, CashbackRule::REWARD_PERCENTAGE, '10.00');
+        $r = $this->calc->calculate($this->order([$this->line(1, self::VENDOR_A, '150000.00')]), [$rule], $this->settings());
+        self::assertSame(GiftCard::MAX_DENOMINATION, $r->total);
+
+        // A programme cap below the card maximum still wins.
+        $r2 = $this->calc->calculate($this->order([$this->line(1, self::VENDOR_A, '150000.00')]), [$rule], $this->settings(max: '500.00'));
+        self::assertSame('500.00', $r2->total);
+    }
+
+    #[Test]
+    public function programmeMaxAboveTheLargestGiftCardIsRejected(): void
+    {
+        [$bad, $errors] = CashbackProgramSettings::fromAdminInput(['max_award_per_order' => '10000.01'], CashbackProgramSettings::default());
+        self::assertNull($bad);
+        self::assertArrayHasKey('max_award_per_order', $errors);
+
+        [$ok, $errors2] = CashbackProgramSettings::fromAdminInput(['max_award_per_order' => '10000.00'], CashbackProgramSettings::default());
+        self::assertSame([], $errors2);
+        self::assertSame('10000.00', $ok?->maxAwardPerOrder);
+    }
+
+    #[Test]
+    public function ruleMoneyFieldsFitTheirColumns(): void
+    {
+        // reward_value / max_reward_per_order / min_eligible_amount are
+        // NUMERIC(10,2): at most 8 integer digits.
+        $rule = new CashbackRule('Big', CashbackRule::REWARD_FIXED, '99999999.99');
+        self::assertSame('99999999.99', $rule->getRewardValue());
+        foreach ([
+            static fn () => new CashbackRule('Too big', CashbackRule::REWARD_FIXED, '123456789'),
+            static fn () => $rule->setMaxRewardPerOrder('123456789.00'),
+            static fn () => $rule->setMinEligibleAmount('1234567890'),
+        ] as $call) {
+            try {
+                $call();
+                self::fail('Expected an InvalidArgumentException for a 9+ digit amount.');
+            } catch (\InvalidArgumentException) {
+                self::addToAssertionCount(1);
+            }
+        }
+        // budget_total is NUMERIC(12,2): 10 integer digits are fine.
+        $rule->setBudgetTotal('1234567890.00');
+        self::assertSame('1234567890.00', $rule->getBudgetTotal());
     }
 
     // ── helpers ─────────────────────────────────────────────────────

@@ -321,6 +321,12 @@ return [
     // service directly); PHP-DI skips optional params, so wire it explicitly.
     \Bayti\Api\Domain\Order\CancelOrderService::class => \DI\autowire()
         ->constructorParameter('cashback', \DI\get(\Bayti\Api\Domain\Cashback\CashbackService::class)),
+    // Cashback: the logger is an optional ctor param (NullLogger default for
+    // tests), so wire the real one or every fail-safe catch logs to nowhere.
+    \Bayti\Api\Domain\Cashback\CashbackService::class => \DI\autowire()
+        ->constructorParameter('logger', \DI\get(\Psr\Log\LoggerInterface::class)),
+    \Bayti\Api\Notification\CashbackNotifier::class => \DI\autowire()
+        ->constructorParameter('logger', \DI\get(\Psr\Log\LoggerInterface::class)),
     \Bayti\Api\Http\Controllers\Admin\Order\CancelOrderController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Order\CancelOrderController::class => \DI\autowire(),
 

@@ -152,8 +152,11 @@ final class CashbackCalculator
         $total = self::sum($amountsOnly);
 
         // ── Programme cap per order ──────────────────────────────────
-        if ($settings->maxAwardPerOrder !== null && bccomp($total, $settings->maxAwardPerOrder, 2) > 0) {
-            $scaled = self::distribute($settings->maxAwardPerOrder, $amountsOnly);
+        // Never above what ONE gift card can hold (GiftCard::MAX_DENOMINATION),
+        // otherwise the award could never be released.
+        $programCap = self::programCap($settings);
+        if (bccomp($total, $programCap, 2) > 0) {
+            $scaled = self::distribute($programCap, $amountsOnly);
             foreach ($scaled as $i => $amt) {
                 $lineAmounts[$i]['amount'] = $amt;
             }
@@ -188,6 +191,17 @@ final class CashbackCalculator
     }
 
     // ── Helpers (public static: reused by the service at release) ───
+
+    /**
+     * The most one order can earn: the programme max_award_per_order,
+     * never above GiftCard::MAX_DENOMINATION (one cashback card per award).
+     */
+    public static function programCap(CashbackProgramSettings $settings): string
+    {
+        $hard = \Bayti\Api\Domain\GiftCard\GiftCard::MAX_DENOMINATION;
+        $max = $settings->maxAwardPerOrder;
+        return ($max !== null && bccomp($max, $hard, 2) < 0) ? bcadd($max, '0', 2) : $hard;
+    }
 
     /**
      * Per-line paid base: subtotal minus the line's pro-rata share of the

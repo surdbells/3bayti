@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Domain\Cashback;
 
 use DateTimeImmutable;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityRepository;
 
@@ -63,9 +64,17 @@ class CashbackRuleRepository extends EntityRepository
     }
 
     /**
-     * Amount committed per rule: lines of pending + issued awards (issued
-     * lines carry the release-time amount). Reversed/cancelled awards free
-     * their budget.
+     * Amount committed per rule. Each line counts at its share of what the
+     * platform still pays (or already lost) on its award:
+     *
+     *     line.amount × (award.amount − reversed_amount + uncollected_amount) / award.amount
+     *
+     *   - pending / issued with no clawback: the full line (release-time
+     *     amount once issued);
+     *   - clawed back (partly or fully): the reversed part frees budget only
+     *     when it was actually COLLECTED from the card; the written-off part
+     *     (the customer had already spent it) stays spent until recovered;
+     *   - cancelled awards free everything.
      *
      * @param list<int> $ruleIds
      * @return array<int, string> rule id => spent
@@ -75,20 +84,23 @@ class CashbackRuleRepository extends EntityRepository
         if ($ruleIds === []) {
             return [];
         }
-        $rows = $this->getEntityManager()->createQueryBuilder()
-            ->select('IDENTITY(l.rule) AS rule_id, SUM(l.amount) AS spent')
-            ->from(CashbackAwardLine::class, 'l')
-            ->join('l.award', 'a')
-            ->where('IDENTITY(l.rule) IN (:ids)')
-            ->andWhere('a.status IN (:st)')
-            ->setParameter('ids', $ruleIds)
-            ->setParameter('st', [CashbackAward::STATUS_PENDING, CashbackAward::STATUS_ISSUED])
-            ->groupBy('l.rule')
-            ->getQuery()
-            ->getScalarResult();
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            "SELECT l.rule_id,
+                    SUM(CASE WHEN a.amount > 0
+                             THEN l.amount * (a.amount - a.reversed_amount + a.uncollected_amount) / a.amount
+                             ELSE 0 END) AS spent
+               FROM cashback_award_lines l
+               JOIN cashback_awards a ON a.id = l.award_id
+              WHERE l.rule_id IN (:ids)
+                AND a.status IN ('pending', 'issued', 'reversed')
+              GROUP BY l.rule_id",
+            ['ids' => array_map('intval', $ruleIds)],
+            ['ids' => ArrayParameterType::INTEGER],
+        );
         $out = [];
         foreach ($rows as $row) {
-            $out[(int) $row['rule_id']] = bcadd((string) ($row['spent'] ?? '0'), '0', 2);
+            $spent = bcadd((string) ($row['spent'] ?? '0'), '0', 2);
+            $out[(int) $row['rule_id']] = bccomp($spent, '0.00', 2) < 0 ? '0.00' : $spent;
         }
         return $out;
     }

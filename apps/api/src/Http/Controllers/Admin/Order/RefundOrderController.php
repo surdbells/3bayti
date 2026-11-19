@@ -287,11 +287,14 @@ final class RefundOrderController
         }
 
         // Cashback: a full refund means the order earns nothing (pending
-        // award cancelled, issued award clawed back). A partial refund is
-        // handled at release, which scales the award by the refunded share.
-        // Fail-safe.
+        // award cancelled, issued award clawed back). A partial refund on a
+        // pending award is handled at release (scaled by the refunded
+        // share); on an already-issued award the newly refunded share is
+        // clawed back now. Fail-safe.
         if ($isFullRefund) {
             $this->cashback->cancelForOrder($order, 'Order refunded: ' . $reason);
+        } else {
+            $this->cashback->settleIssuedForOrder($order, 'Partial refund: ' . $reason);
         }
 
         // Audit with full context

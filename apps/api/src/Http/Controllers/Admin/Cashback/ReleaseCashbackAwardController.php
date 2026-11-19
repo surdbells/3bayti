@@ -54,7 +54,15 @@ final class ReleaseCashbackAwardController
         $reason = $this->reasonFrom($request, true);
         $before = $award->getStatus();
 
-        $outcome = $this->cashback->releaseAwardById((int) $award->getId(), null, true);
+        try {
+            $outcome = $this->cashback->releaseAwardById((int) $award->getId(), null, true);
+        } catch (\InvalidArgumentException | \DomainException | \LogicException $e) {
+            // e.g. the card could not be issued; nothing was committed.
+            throw HttpException::businessRuleViolation(
+                'CASHBACK_RELEASE_FAILED',
+                'The cashback gift card could not be issued: ' . $e->getMessage(),
+            );
+        }
 
         match ($outcome) {
             CashbackService::OUTCOME_NOT_PENDING => throw HttpException::conflict(

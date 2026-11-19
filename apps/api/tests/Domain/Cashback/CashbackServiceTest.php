@@ -97,7 +97,7 @@ final class CashbackServiceTest extends TestCase
         $this->rules->method('findLive')->willReturn([$rule]);
         $this->rules->method('spentByRuleIds')->willReturn([]);
         $this->awards->method('customerAwardCounts')->willReturn([]);
-        $this->awards->method('countEarlierPaidProductOrders')->willReturn(3);
+        $this->awards->method('countOtherPaidProductOrders')->willReturn(3);
         $this->awards->method('findOneByOrder')->willReturnCallback(function (): ?CashbackAward {
             foreach ($this->persisted as $o) {
                 if ($o instanceof CashbackAward) {
@@ -231,18 +231,125 @@ final class CashbackServiceTest extends TestCase
         $returns = $this->createMock(OrderReturnRequestRepository::class);
         $returns->method('findAllByOrder')->willReturn([$rr]);
 
-        // And 50 of the 200 order total was refunded to the card.
+        // 150 of the 200 order total was refunded to the card: 100 of it is
+        // the returned item's own refund, the other 50 is a partial refund
+        // on the item the customer kept.
         $txns = $this->createMock(PaymentTransactionRepository::class);
-        $txns->method('sumRefundsForOrder')->willReturn('50.00');
+        $txns->method('sumRefundsForOrder')->willReturn('150.00');
 
         self::assertSame(CashbackService::OUTCOME_ISSUED, $this->service($returns, $txns)->releaseAwardById(900, $this->now()));
-        // 10.00 - 5.00 (returned item) = 5.00, then x 0.75 (25% refunded)
-        self::assertSame('3.75', $award->getAmount());
+        // 10.00 - 5.00 (returned item) = 5.00, then x (1 - 50/100): only the
+        // refund the returned item does not already explain scales the rest.
+        self::assertSame('2.50', $award->getAmount());
         self::assertSame('10.00', $award->getAccruedAmount());
-        self::assertSame('3.75', $award->getGiftCard()?->getBalance());
+        self::assertSame('2.50', $award->getGiftCard()?->getBalance());
         $lines = $award->getLines()->toArray();
         self::assertSame('0.00', $lines[0]->getAmount());
-        self::assertSame('3.75', $lines[1]->getAmount());
+        self::assertSame('2.50', $lines[1]->getAmount());
+        self::assertSame('5.00', $lines[0]->getAccruedAmount());
+    }
+
+    #[Test]
+    public function refundingADroppedItemDoesNotReduceTheAwardTwice(): void
+    {
+        // Item 2 rejected and its 100 refunded; item 1 delivered. The order
+        // rollup stays FULFILLING (a rejected item never rolls up to
+        // delivered), but fulfilment is finished: the award is due.
+        $order = $this->paidOrder();
+        $award = $this->pendingAward($order);
+        $this->awards->method('lockById')->willReturn($award);
+        $this->settleItems($order, [OrderItem::ITEM_STATUS_DELIVERED, OrderItem::ITEM_STATUS_REJECTED], $this->now()->modify('-20 days'));
+        self::assertSame(Order::STATUS_FULFILLING, $order->getStatus());
+
+        $txns = $this->createMock(PaymentTransactionRepository::class);
+        $txns->method('sumRefundsForOrder')->willReturn('100.00');
+
+        self::assertSame(CashbackService::OUTCOME_ISSUED, $this->service(null, $txns)->releaseAwardById(900, $this->now()));
+        // Item 1's 5.00, NOT 5.00 x 0.5.
+        self::assertSame('5.00', $award->getAmount());
+    }
+
+    #[Test]
+    public function anOrderWithARejectedItemIsDueOnceEveryItemIsSettled(): void
+    {
+        $order = $this->paidOrder();
+        $award = $this->pendingAward($order);
+        $this->awards->method('lockById')->willReturn($award);
+
+        // Item 1 still on its way: not due.
+        $this->settleItems($order, [OrderItem::ITEM_STATUS_SHIPPED, OrderItem::ITEM_STATUS_REJECTED], $this->now()->modify('-20 days'));
+        self::assertSame(CashbackService::OUTCOME_NOT_DUE, $this->service()->releaseAwardById(900, $this->now()));
+        self::assertNull($award->expectedReleaseAt());
+
+        // Delivered 5 days ago (hold 14): not due yet, but the release date is known.
+        $this->settleItems($order, [OrderItem::ITEM_STATUS_DELIVERED, OrderItem::ITEM_STATUS_REJECTED], $this->now()->modify('-5 days'));
+        self::assertSame(CashbackService::OUTCOME_NOT_DUE, $this->service()->releaseAwardById(900, $this->now()));
+        self::assertNotNull($award->expectedReleaseAt());
+
+        // 20 days ago: released, without the rejected item's line.
+        $this->settleItems($order, [OrderItem::ITEM_STATUS_DELIVERED, OrderItem::ITEM_STATUS_REJECTED], $this->now()->modify('-20 days'));
+        self::assertSame(CashbackService::OUTCOME_ISSUED, $this->service()->releaseAwardById(900, $this->now()));
+        self::assertSame('5.00', $award->getAmount());
+    }
+
+    #[Test]
+    public function anAdminOverrideToDeliveredStartsTheHold(): void
+    {
+        $order = $this->paidOrder();
+        $award = $this->pendingAward($order);
+        $this->awards->method('lockById')->willReturn($award);
+
+        $order->overrideStatus(Order::STATUS_DELIVERED);
+        $deliveredAt = $order->getDeliveredAt();
+        self::assertNotNull($deliveredAt);
+        self::assertNotNull($award->expectedReleaseAt());
+        self::assertSame(CashbackService::OUTCOME_NOT_DUE, $this->service()->releaseAwardById(900, $this->now()));
+        self::assertSame(
+            CashbackService::OUTCOME_ISSUED,
+            $this->service()->releaseAwardById(900, $deliveredAt->modify('+15 days')),
+        );
+    }
+
+    #[Test]
+    public function releaseCapsAnAwardAtTheLargestGiftCard(): void
+    {
+        $order = $this->paidOrder();
+        $rule = $this->rule(1, '5.00');
+        $award = new CashbackAward($order, $this->user, '15000.00', 'AED', 14, 365);
+        $award->addLine($rule, 1, '100.00', '7500.00');
+        $award->addLine($rule, 2, '100.00', '7500.00');
+        $this->setProp($award, 'id', 900);
+        $this->deliver($order, $this->now()->modify('-30 days'));
+        $this->awards->method('lockById')->willReturn($award);
+
+        self::assertSame(CashbackService::OUTCOME_ISSUED, $this->service()->releaseAwardById(900, $this->now()));
+        self::assertSame(GiftCard::MAX_DENOMINATION, $award->getAmount());
+        self::assertSame(GiftCard::MAX_DENOMINATION, $award->getGiftCard()?->getBalance());
+    }
+
+    #[Test]
+    public function aFailedReleaseClearsTheUnitOfWorkBeforeTheNextAward(): void
+    {
+        $this->awards->method('findDueIds')->willReturn([901, 902]);
+        $this->awards->method('lockById')->willThrowException(new \RuntimeException('boom'));
+        $this->em->method('isOpen')->willReturn(true);
+        $this->em->expects(self::exactly(2))->method('clear');
+
+        $stats = $this->service()->releaseDue($this->now());
+        self::assertSame(2, $stats['errors']);
+    }
+
+    #[Test]
+    public function aClosedEntityManagerStopsTheReleaseBatch(): void
+    {
+        $this->awards->method('findDueIds')->willReturn([901, 902, 903]);
+        $this->awards->expects(self::once())->method('lockById')->willThrowException(new \RuntimeException('flush failed'));
+        $this->em->method('isOpen')->willReturn(false);
+        $this->em->expects(self::never())->method('clear');
+
+        $stats = $this->service()->releaseDue($this->now());
+        self::assertSame(3, $stats['errors']);
+        self::assertSame(3, $stats['due']);
     }
 
     #[Test]
@@ -365,6 +472,69 @@ final class CashbackServiceTest extends TestCase
     }
 
     #[Test]
+    public function aCancelRacingAReleaseClawsBackInsteadOfLeavingTheCardIssued(): void
+    {
+        // cancelForOrder read the award as pending, but a release committed
+        // before it got the row lock: the locked re-read sees `issued`.
+        $order = $this->paidOrder();
+        $award = $this->pendingAward($order);
+        $card = GiftCard::issueCashback($this->user, '10.00', $this->now()->modify('+365 days'), 900, '3B-TEST1');
+        $this->awards->method('findOneByOrder')->willReturn($award);
+        $this->awards->method('lockById')->willReturnCallback(function () use ($award, $card): CashbackAward {
+            if ($award->isPending()) {
+                $award->markIssued($card, $this->now());
+            }
+            return $award;
+        });
+
+        $this->service()->cancelForOrder($order, 'Order cancelled');
+
+        self::assertSame(CashbackAward::STATUS_REVERSED, $award->getStatus());
+        self::assertSame('0.00', $card->getBalance());
+    }
+
+    #[Test]
+    public function aPartialRefundAfterReleaseClawsBackTheRefundedShare(): void
+    {
+        $order = $this->paidOrder();
+        $award = $this->pendingAward($order);
+        $card = GiftCard::issueCashback($this->user, '10.00', $this->now()->modify('+365 days'), 900, '3B-TEST1');
+        $award->markIssued($card, $this->now());
+        $this->awards->method('findOneByOrder')->willReturn($award);
+        $this->awards->method('lockById')->willReturn($award);
+
+        // 100 of the 200 order refunded after the card was issued.
+        $txns = $this->createMock(PaymentTransactionRepository::class);
+        $txns->method('sumRefundsForOrder')->willReturn('100.00');
+        $svc = $this->service(null, $txns);
+
+        $svc->settleIssuedForOrder($order, 'Partial refund: damaged');
+        self::assertSame(CashbackAward::STATUS_ISSUED, $award->getStatus());
+        self::assertSame('5.00', $award->getReversedAmount());
+        self::assertSame('5.00', $card->getBalance());
+
+        // Idempotent: nothing more to claw back for the same refunds.
+        $svc->settleIssuedForOrder($order, 'Partial refund: damaged');
+        self::assertSame('5.00', $award->getReversedAmount());
+    }
+
+    #[Test]
+    public function aReversalRecordsWhatTheCustomerHadAlreadySpent(): void
+    {
+        $order = $this->paidOrder();
+        $award = $this->pendingAward($order);
+        $card = GiftCard::issueCashback($this->user, '10.00', $this->now()->modify('+365 days'), 900, '3B-TEST1');
+        $award->markIssued($card, $this->now());
+        $this->awards->method('lockById')->willReturn($award);
+        $card->debit('7.00', '3B-OTHER', 999);
+
+        $out = $this->service()->reverseAward($award, 'Order refunded');
+
+        self::assertSame(['value' => '10.00', 'collected' => '3.00'], $out);
+        self::assertSame('7.00', $award->getUncollectedAmount());
+    }
+
+    #[Test]
     public function onlyAnIssuedAwardCanBeReversed(): void
     {
         $award = $this->pendingAward($this->paidOrder());
@@ -473,6 +643,21 @@ final class CashbackServiceTest extends TestCase
     {
         $this->setProp($order, 'status', Order::STATUS_DELIVERED);
         $this->setProp($order, 'deliveredAt', $at);
+    }
+
+    /**
+     * Set the item statuses (in item order), stamp every item's last change
+     * at $at and roll the order up the way the item controllers do.
+     *
+     * @param list<string> $statuses
+     */
+    private function settleItems(Order $order, array $statuses, DateTimeImmutable $at): void
+    {
+        foreach (array_values($order->getItems()->toArray()) as $i => $item) {
+            $this->setProp($item, 'itemStatus', $statuses[$i]);
+            $this->setProp($item, 'updatedAt', $at);
+        }
+        $order->recomputeStatusFromItems();
     }
 
     private function rule(int $id, string $pct): CashbackRule

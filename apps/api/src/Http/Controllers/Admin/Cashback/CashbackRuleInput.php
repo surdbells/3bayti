@@ -127,7 +127,7 @@ final class CashbackRuleInput
                     $try($field, static fn () => $rule->{$setter}(null));
                     continue;
                 }
-                $v = self::money($body[$field]);
+                $v = self::money($body[$field], $field === 'budget_total' ? 10 : 8);
                 $v === null
                     ? $errors[$field][] = "{$field} must be an amount with up to 2 decimals, or null."
                     : $try($field, static fn () => $rule->{$setter}($v));
@@ -267,12 +267,17 @@ final class CashbackRuleInput
         return $msgs;
     }
 
-    private static function money(mixed $v): ?string
+    /**
+     * $digits = integer digits allowed: 8 for the NUMERIC(10,2) columns
+     * (reward_value, max_reward_per_order, min_eligible_amount), 10 for
+     * budget_total (NUMERIC(12,2)). Anything wider is a 422, not a DB overflow.
+     */
+    private static function money(mixed $v, int $digits = 8): ?string
     {
         if (is_int($v) || is_float($v)) {
             $v = number_format((float) $v, 2, '.', '');
         }
-        if (!is_string($v) || !preg_match('/^\d{1,10}(\.\d{1,2})?$/', trim($v))) {
+        if (!is_string($v) || !preg_match('/^\d{1,' . $digits . '}(\.\d{1,2})?$/', trim($v))) {
             return null;
         }
         return bcadd(trim($v), '0', 2);
