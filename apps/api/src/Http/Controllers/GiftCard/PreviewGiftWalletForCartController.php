@@ -84,6 +84,21 @@ final class PreviewGiftWalletForCartController
         $gateway = bcsub($cartTotal, $applied, 2);
         $gateway = bccomp($gateway, '0.00', 2) < 0 ? '0.00' : $gateway;
 
+        // Cashback programme: an order that spends ANY cashback card earns
+        // no cashback, so tell the client when this draw would include one.
+        $usesCashback = false;
+        foreach ($plan as $row) {
+            if ($row['card']->isCashback()) {
+                $usesCashback = true;
+            }
+        }
+        $walletHasCashback = false;
+        foreach ($cards as $c) {
+            if ($c->isCashback()) {
+                $walletHasCashback = true;
+            }
+        }
+
         return $this->ok(['data' => [
             'wallet_balance' => $balance,
             'applied'        => $applied,
@@ -93,11 +108,14 @@ final class PreviewGiftWalletForCartController
             'delivery_fee'   => $deliveryFee,
             'fully_covered'  => bccomp($gateway, '0.00', 2) === 0 && bccomp($applied, '0.00', 2) > 0,
             'currency'       => 'AED',
+            'uses_cashback_credit'       => $usesCashback,
+            'wallet_has_cashback_credit' => $walletHasCashback,
             'cards_used'     => array_map(
                 static fn (array $row): array => [
                     'code'   => $row['card']->formattedCode(),
                     'theme'  => $row['card']->getTheme(),
                     'amount' => $row['amount'],
+                    'source' => $row['card']->getSource(),
                 ],
                 $plan,
             ),

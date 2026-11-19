@@ -728,12 +728,7 @@ class CashbackService
         if (bccomp($order->getGiftCardAmount(), '0.00', 2) <= 0) {
             return '0.00';
         }
-        $v = $this->em->getConnection()->fetchOne(
-            "SELECT COALESCE(SUM(amount), 0) FROM gift_card_transactions
-              WHERE type = 'credit' AND (order_id = :oid OR order_reference = :ref)",
-            ['oid' => (int) $order->getId(), 'ref' => $order->getOrderReference()],
-        );
-        return bcadd((string) ($v ?: '0'), '0', 2);
+        return $this->awards()->giftCardRestoredForOrder($order);
     }
 
     /**
@@ -745,30 +740,13 @@ class CashbackService
         if (bccomp($order->getGiftCardAmount(), '0.00', 2) <= 0) {
             return false;
         }
-        $n = $this->em->getConnection()->fetchOne(
-            "SELECT COUNT(*) FROM gift_card_transactions t
-               JOIN gift_cards g ON g.id = t.gift_card_id
-              WHERE g.source = 'cashback' AND t.type = 'debit'
-                AND (t.order_id = :oid OR t.order_reference = :ref)",
-            ['oid' => (int) $order->getId(), 'ref' => $order->getOrderReference()],
-        );
-        return (int) $n > 0;
+        return $this->awards()->orderSpentCashbackCredit($order);
     }
 
     /** No earlier paid product order for this customer. */
     private function isFirstOrder(User $user, ?int $orderId): bool
     {
-        $qb = $this->em->createQueryBuilder()
-            ->select('COUNT(o.id)')
-            ->from(Order::class, 'o')
-            ->where('o.user = :u')
-            ->andWhere('o.paidAt IS NOT NULL')
-            ->andWhere('o.items IS NOT EMPTY')
-            ->setParameter('u', $user);
-        if ($orderId !== null) {
-            $qb->andWhere('o.id < :oid')->setParameter('oid', $orderId);
-        }
-        return (int) $qb->getQuery()->getSingleScalarResult() === 0;
+        return $this->awards()->countEarlierPaidProductOrders($user, $orderId) === 0;
     }
 
     /** @return list<CashbackLineInput> */

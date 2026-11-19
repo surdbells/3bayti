@@ -228,4 +228,11 @@ final class ErrorCodes
      * change, ask the customer to confirm, and retry with the new signature.
      */
     public const CART_PRICES_CHANGED = 'CART_PRICES_CHANGED';
+
+    /**
+     * Cashback programme: a cashback gift card (or a wallet holding cashback
+     * credit) was offered to pay for a gift-card purchase (HTTP 422).
+     * Cashback credit can only be spent on products.
+     */
+    public const CASHBACK_CREDIT_NOT_ALLOWED = 'CASHBACK_CREDIT_NOT_ALLOWED';
 }

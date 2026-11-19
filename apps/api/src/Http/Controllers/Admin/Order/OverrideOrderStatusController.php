@@ -48,6 +48,7 @@ final class OverrideOrderStatusController
         private readonly OrderNotificationService $notifications,
         private readonly PushNotificationService $pushNotifications,
         private readonly GiftCardOrderReversal $giftCardReversal,
+        private readonly \Bayti\Api\Domain\Cashback\CashbackService $cashback,
     ) {
     }
 
@@ -124,6 +125,12 @@ final class OverrideOrderStatusController
         }
 
         $this->em->flush();
+
+        // Cashback: cancelled / failed / refunded orders earn nothing (pending
+        // award cancelled, issued award clawed back). Fail-safe.
+        if (in_array($newStatus, self::RELEASING_STATUSES, true)) {
+            $this->cashback->cancelForOrder($order, 'Order ' . $newStatus . ' by admin: ' . $reason);
+        }
 
         $this->audit->recordOverride(
             request: $request,

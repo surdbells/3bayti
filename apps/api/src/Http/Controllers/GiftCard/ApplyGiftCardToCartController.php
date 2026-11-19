@@ -111,6 +111,10 @@ final class ApplyGiftCardToCartController
             'balance_remaining' => $balanceRemaining,
             'cart_total'        => $cartTotal,
             'currency'          => $card->getCurrency(),
+            // Cashback programme: paying with a cashback card means the
+            // order earns no cashback (clients show a note).
+            'source'            => $card->getSource(),
+            'is_cashback'       => $card->isCashback(),
         ]]);
     }
 }

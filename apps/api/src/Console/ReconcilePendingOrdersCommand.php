@@ -97,6 +97,10 @@ final class ReconcilePendingOrdersCommand extends Command
         private readonly LoggerInterface $logger,
         private readonly \Bayti\Api\Domain\Catalog\FlashCampaignStockReducer $flashStock,
         private readonly ?\Bayti\Api\Domain\GiftCard\GiftCardOrderReversal $giftCardReversal = null,
+        // Cashback programme: accrues the pending award for orders this run
+        // marks paid (after the batch flush). Optional so older wiring/tests
+        // keep working; bin/console passes it.
+        private readonly ?\Bayti\Api\Domain\Cashback\CashbackService $cashback = null,
     ) {
         parent::__construct();
     }
@@ -160,6 +164,8 @@ final class ReconcilePendingOrdersCommand extends Command
         $errors = 0;
         $paid = 0;
         $failed = 0;
+        /** @var list<Order> $newlyPaid */
+        $newlyPaid = [];
 
         foreach ($candidates as $order) {
             $orderId = $order->getId();
@@ -228,6 +234,7 @@ final class ReconcilePendingOrdersCommand extends Command
                 case 'marked_paid':
                     $paid++;
                     $resolved++;
+                    $newlyPaid[] = $order;
                     break;
                 case 'marked_failed':
                     $failed++;
@@ -251,6 +258,15 @@ final class ReconcilePendingOrdersCommand extends Command
                     'error' => $e->getMessage(),
                 ]);
                 return Command::FAILURE;
+            }
+
+            // Cashback: the paid status is committed now, accrue each newly
+            // paid order's pending award (fail-safe, idempotent; item-less
+            // gift-card / customization orders earn nothing).
+            if ($this->cashback !== null) {
+                foreach ($newlyPaid as $paidOrder) {
+                    $this->cashback->accrueForPaidOrder($paidOrder);
+                }
             }
         }
 

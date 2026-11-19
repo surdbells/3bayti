@@ -120,6 +120,9 @@ final class GiftCardSerializer
             'expires_at'            => $card->getExpiresAt()?->format(\DateTimeInterface::ATOM),
             'created_at'            => $card->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'is_buyer'              => true, // caller adjusts if needed
+            // purchase | admin | cashback. Cashback cards can't buy gift
+            // cards and an order paid with one earns no cashback.
+            'source'                => $card->getSource(),
         ];
 
         if ($includeTransactions) {
@@ -169,6 +172,8 @@ final class GiftCardSerializer
             'currency'           => $card->getCurrency(),
             'status'             => $card->getStatus(),
             'is_spendable'       => $card->isSpendable(),
+            'source'             => $card->getSource(),
+            'cashback_award_id'  => $card->getCashbackAwardId(),
             'purchaser' => [
                 'id'    => $buyer->getId(),
                 'email' => $buyer->getEmail(),

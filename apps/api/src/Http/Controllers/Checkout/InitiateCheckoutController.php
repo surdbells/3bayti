@@ -126,6 +126,9 @@ final class InitiateCheckoutController
         // Gives gift-card balance back when the gateway call fails after
         // the card was debited (the debit commits with the order).
         private readonly \Bayti\Api\Domain\GiftCard\GiftCardOrderReversal $giftCardReversal,
+        // Cashback programme: accrues the pending award when a gift-card
+        // full-cover order is paid here (fail-safe, never throws).
+        private readonly \Bayti\Api\Domain\Cashback\CashbackService $cashback,
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
@@ -525,6 +528,12 @@ final class InitiateCheckoutController
                             orderReference: $orderReference,
                             orderId: $order->getId(),
                         );
+                        // Cashback guard: an order that spends ANY cashback
+                        // credit earns no cashback (no cashback on a
+                        // cashbacked sale).
+                        if ($card->isCashback()) {
+                            $order->markUsedCashbackCredit();
+                        }
                         $applied = bcadd($applied, $amount, 2);
                     }
                     if (bccomp($applied, '0.00', 2) > 0) {
@@ -582,6 +591,10 @@ final class InitiateCheckoutController
             $this->notifications->orderPaid($order);
             $this->notifications->orderPaidVendors($order);
             $this->pushNotifications->orderPaid($order);
+
+            // Cashback: pending award for this paid order (fail-safe; it
+            // earns nothing if a cashback card paid for it).
+            $this->cashback->accrueForPaidOrder($order);
 
             // Order is paid (no gateway), provision the per-item chats now.
             // Fire-and-forget: must not abort the response.
@@ -727,6 +740,12 @@ final class InitiateCheckoutController
             );
         }
 
+        // Cashback credit can't buy gift cards (it would launder cashback into
+        // ordinary, cashback-earning gift cards). A gift-card purchase never
+        // draws from gift cards anyway; reject an explicit cashback card or a
+        // wallet draw that would include one, with a clear 422.
+        $this->assertNoCashbackCreditForGiftCardPurchase($user, $input);
+
         // A gift card is a DIGITAL product, it needs no deliverable
         // shipping address. Noon only needs (a) a payer NAME on the billing
         // OrderAddress and (b) a shipping OrderAddress to merely EXIST (the
@@ -837,6 +856,32 @@ final class InitiateCheckoutController
             'idempotent'         => false,
             'gift_card_id'       => $card->getId(),
         ]);
+    }
+
+    /**
+     * Cashback guard for gift-card purchases: an explicit gift_card_code that
+     * is a cashback card, or use_gift_wallet while the wallet holds cashback
+     * credit, is refused (422 CASHBACK_CREDIT_NOT_ALLOWED).
+     */
+    private function assertNoCashbackCreditForGiftCardPurchase(User $user, InitiateCheckoutInput $input): void
+    {
+        $message = 'Cashback credit cannot be used to buy gift cards.';
+        if ($input->gift_card_code !== null) {
+            /** @var GiftCardRepository $gcRepo */
+            $gcRepo = $this->em->getRepository(GiftCard::class);
+            $paying = $gcRepo->findByCode($input->gift_card_code);
+            if ($paying !== null && $paying->isCashback()) {
+                throw HttpException::businessRuleViolation(ErrorCodes::CASHBACK_CREDIT_NOT_ALLOWED, $message);
+            }
+        }
+        if ($input->use_gift_wallet) {
+            $wallet = new GiftCardWalletService($this->em);
+            foreach ($wallet->spendableCards($user) as $walletCard) {
+                if ($walletCard->isCashback()) {
+                    throw HttpException::businessRuleViolation(ErrorCodes::CASHBACK_CREDIT_NOT_ALLOWED, $message);
+                }
+            }
+        }
     }
 
     /**

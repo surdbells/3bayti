@@ -147,6 +147,7 @@ try {
         $logger,
         $flashStock,
         $container->get(\Bayti\Api\Domain\GiftCard\GiftCardOrderReversal::class),
+        $container->get(\Bayti\Api\Domain\Cashback\CashbackService::class),
     ));
 } catch (\Throwable $e) {
     // Log the reason — visible if anyone runs `bin/console
@@ -155,6 +156,15 @@ try {
     $logger->info('reconcile command not registered: payment gateway unavailable', [
         'reason' => $e->getMessage(),
     ]);
+}
+
+// Cashback programme — release due cashback awards as gift cards (delivery +
+// hold elapsed, no open return) and cancel awards whose order died. Run
+// hourly as www: `bin/console cashback:release` (--dry-run, --limit).
+try {
+    $cli->add($container->get(\Bayti\Api\Console\ReleaseCashbackCommand::class));
+} catch (\Throwable $e) {
+    $logger->info('cashback:release not registered', ['reason' => $e->getMessage()]);
 }
 
 // M3.2.X.11-F — Cart abandonment reminders. Eagerly resolves

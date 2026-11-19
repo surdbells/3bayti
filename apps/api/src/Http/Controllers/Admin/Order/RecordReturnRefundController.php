@@ -50,6 +50,7 @@ final class RecordReturnRefundController
         private readonly ReturnRequestSerializer $serializer,
         private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
         private readonly \Psr\Log\LoggerInterface $logger,
+        private readonly \Bayti\Api\Domain\Cashback\CashbackService $cashback,
     ) {
     }
 
@@ -121,6 +122,13 @@ final class RecordReturnRefundController
         }
 
         $repo->save($returnRequest);
+
+        // Cashback: claw back what the returned items earned if the award was
+        // already issued (a pending award drops them at release). Fail-safe.
+        $this->cashback->reverseForReturn(
+            $returnRequest,
+            'Return RET-' . ($returnRequest->getId() ?? 0) . ' refunded',
+        );
 
         try {
             $this->notifications->returnRefunded($returnRequest->getOrder(), [

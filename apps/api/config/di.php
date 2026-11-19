@@ -317,7 +317,10 @@ return [
     \Bayti\Api\Http\Controllers\Vendor\Onboarding\GetOnboardingStatusController::class => \DI\autowire(),
 
     // M3.1.7-F, Cancel order service + admin/customer controllers
-    \Bayti\Api\Domain\Order\CancelOrderService::class => \DI\autowire(),
+    // The cashback hook is an optional ctor param (so tests can construct the
+    // service directly); PHP-DI skips optional params, so wire it explicitly.
+    \Bayti\Api\Domain\Order\CancelOrderService::class => \DI\autowire()
+        ->constructorParameter('cashback', \DI\get(\Bayti\Api\Domain\Cashback\CashbackService::class)),
     \Bayti\Api\Http\Controllers\Admin\Order\CancelOrderController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Order\CancelOrderController::class => \DI\autowire(),
 

@@ -61,6 +61,10 @@ final class CancelOrderService
         private readonly \Bayti\Api\Notification\Push\PushNotificationService $pushNotifications,
         private readonly LoggerInterface $logger,
         private readonly \Bayti\Api\Domain\GiftCard\GiftCardOrderReversal $giftCardReversal,
+        // Cashback programme: cancel the order's pending award (or claw back
+        // an issued one). Fail-safe; optional so direct construction keeps
+        // working.
+        private readonly ?\Bayti\Api\Domain\Cashback\CashbackService $cashback = null,
     ) {
     }
 
@@ -151,6 +155,8 @@ final class CancelOrderService
             );
 
             $this->em->flush();
+
+            $this->cashback?->cancelForOrder($order, 'Order cancelled: ' . $reason);
 
             $this->logger->info('order.cancelled', [
                 'order_id' => $order->getId(),
@@ -333,6 +339,10 @@ final class CancelOrderService
         );
 
         $this->em->flush();
+
+        // Cashback: the order no longer earns (pending award cancelled,
+        // issued award clawed back). Fail-safe.
+        $this->cashback?->cancelForOrder($order, 'Order cancelled: ' . $reason);
 
         $this->logger->info('order.cancelled', [
             'order_id' => $order->getId(),

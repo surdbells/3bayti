@@ -73,6 +73,7 @@ final class RefundOrderController
         private readonly \Bayti\Api\Notification\Push\PushNotificationService $pushNotifications,
         private readonly LoggerInterface $logger,
         private readonly GiftCardOrderReversal $giftCardReversal,
+        private readonly \Bayti\Api\Domain\Cashback\CashbackService $cashback,
     ) {
     }
 
@@ -283,6 +284,14 @@ final class RefundOrderController
         if ($isFullRefund && $order->getStatus() !== Order::STATUS_REFUNDED) {
             $order->overrideStatus(Order::STATUS_REFUNDED);
             $this->em->flush();
+        }
+
+        // Cashback: a full refund means the order earns nothing (pending
+        // award cancelled, issued award clawed back). A partial refund is
+        // handled at release, which scales the award by the refunded share.
+        // Fail-safe.
+        if ($isFullRefund) {
+            $this->cashback->cancelForOrder($order, 'Order refunded: ' . $reason);
         }
 
         // Audit with full context

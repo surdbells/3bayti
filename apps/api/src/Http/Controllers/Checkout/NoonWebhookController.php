@@ -90,6 +90,9 @@ final class NoonWebhookController
         private readonly \Bayti\Api\Notification\GiftCardDeliveryService $giftCardDelivery,
         // Gives gift-card balance back when Noon reports the payment failed.
         private readonly \Bayti\Api\Domain\GiftCard\GiftCardOrderReversal $giftCardReversal,
+        // Cashback programme: pending award on the paid transition of a real
+        // product order (fail-safe, never throws).
+        private readonly \Bayti\Api\Domain\Cashback\CashbackService $cashback,
     ) {
     }
 
@@ -355,6 +358,10 @@ final class NoonWebhookController
                         'error'           => $e->getMessage(),
                     ]);
                 }
+
+                // Cashback: accrue the pending award (never for gift-card
+                // purchases or customization payments). Fail-safe.
+                $this->cashback->accrueForPaidOrder($order);
             }
         } elseif ($transition === 'failed') {
             // A failed order is terminal (it can never be paid), so any

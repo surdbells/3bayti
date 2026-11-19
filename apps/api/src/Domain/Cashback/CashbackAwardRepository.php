@@ -90,7 +90,12 @@ class CashbackAwardRepository extends EntityRepository
                AND (
                     (o.status = 'delivered'
                      AND o.delivered_at IS NOT NULL
-                     AND o.delivered_at + (a.hold_days * INTERVAL '1 day') <= CAST(:now AS TIMESTAMPTZ))
+                     AND o.delivered_at + (a.hold_days * INTERVAL '1 day') <= CAST(:now AS TIMESTAMPTZ)
+                     AND NOT EXISTS (
+                         SELECT 1 FROM order_return_requests r
+                          WHERE r.order_id = o.id
+                            AND r.status IN ('pending', 'approved', 'picked_up')
+                     ))
                  OR o.status IN ('cancelled', 'refunded', 'failed')
                )
              ORDER BY a.id ASC
@@ -257,5 +262,52 @@ class CashbackAwardRepository extends EntityRepository
             'redeemed' => bcadd((string) ($redeemed ?: '0'), '0', 2),
             'outstanding' => bcadd((string) ($outstanding ?: '0'), '0', 2),
         ];
+    }
+
+    /**
+     * Did checkout debit any CASHBACK gift card for this order? (Ledger
+     * check behind orders.used_cashback_credit.)
+     */
+    public function orderSpentCashbackCredit(Order $order): bool
+    {
+        $n = $this->getEntityManager()->getConnection()->fetchOne(
+            "SELECT COUNT(*) FROM gift_card_transactions t
+               JOIN gift_cards g ON g.id = t.gift_card_id
+              WHERE g.source = 'cashback' AND t.type = 'debit'
+                AND (t.order_id = :oid OR t.order_reference = :ref)",
+            ['oid' => (int) $order->getId(), 'ref' => $order->getOrderReference()],
+        );
+        return (int) $n > 0;
+    }
+
+    /** Gift-card spend of this order already given back (order-tagged CREDIT rows). */
+    public function giftCardRestoredForOrder(Order $order): string
+    {
+        $v = $this->getEntityManager()->getConnection()->fetchOne(
+            "SELECT COALESCE(SUM(amount), 0) FROM gift_card_transactions
+              WHERE type = 'credit' AND (order_id = :oid OR order_reference = :ref)",
+            ['oid' => (int) $order->getId(), 'ref' => $order->getOrderReference()],
+        );
+        return bcadd((string) ($v ?: '0'), '0', 2);
+    }
+
+    /**
+     * The customer's paid PRODUCT orders (item-less gift-card / customization
+     * orders don't count) placed before $orderId (all of them when null).
+     * 0 = this is their first order.
+     */
+    public function countEarlierPaidProductOrders(User $user, ?int $orderId): int
+    {
+        $qb = $this->getEntityManager()->createQueryBuilder()
+            ->select('COUNT(o.id)')
+            ->from(Order::class, 'o')
+            ->where('o.user = :u')
+            ->andWhere('o.paidAt IS NOT NULL')
+            ->andWhere('o.items IS NOT EMPTY')
+            ->setParameter('u', $user);
+        if ($orderId !== null) {
+            $qb->andWhere('o.id < :oid')->setParameter('oid', $orderId);
+        }
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 }
