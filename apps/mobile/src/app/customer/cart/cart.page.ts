@@ -39,6 +39,8 @@ import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { AxSkeletonBlockComponent, AxSkeletonLineComponent } from '../../shared/ax-mobile/skeleton';
 import { AxWishlistSheetComponent } from '../../shared/ax-mobile/wishlist-sheet';
 import { WishlistService } from '../../core/services/wishlist.service';
+import { CashbackService, CartCashbackEstimate } from '../../core/services/cashback.service';
+import { CashbackEstimateComponent } from '../../shared/cashback-estimate.component';
 @Component({
   selector: 'app-cart',
   templateUrl: './cart.page.html',
@@ -65,7 +67,8 @@ import { WishlistService } from '../../core/services/wishlist.service';
     AxSkeletonBlockComponent,
     AxSkeletonLineComponent,
     AxWishlistSheetComponent,
-    AppTabBarComponent
+    AppTabBarComponent,
+    CashbackEstimateComponent
   ]
 })
 export class CartPage implements OnInit, OnDestroy {
@@ -91,6 +94,7 @@ export class CartPage implements OnInit, OnDestroy {
     private i18n: I18nService,
     private localCart: LocalCartService,
     private cartCount: CartCountService,
+    private cashbackService: CashbackService,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -116,6 +120,24 @@ export class CartPage implements OnInit, OnDestroy {
   /** Bumped per cart load; a reply for an older load (e.g. a quick second
    *  quantity tap) is dropped so it can't overwrite the newer cart. */
   private cartSeq = 0;
+
+  /** Cashback programme: estimate for this cart (GET /v3/cart/cashback);
+   *  null hides the line (guest, empty cart, programme off, or a failure). */
+  cashback: CartCashbackEstimate | null = null;
+
+  /** Fetch the cashback estimate for the cart load `seq`; a reply for an
+   *  older load is dropped like the cart reply itself. Best-effort. */
+  private async loadCashback(seq: number): Promise<void> {
+    if (this.isGuest || this.carts.length === 0 || !this.single_user?.token) {
+      this.cashback = null;
+      return;
+    }
+    const estimate = await this.cashbackService.estimateForCart(this.single_user.token);
+    if (seq !== this.cartSeq) {
+      return;
+    }
+    this.cashback = estimate;
+  }
   rqst_param = {
     id: 0,
     token: ""
@@ -247,6 +269,7 @@ export class CartPage implements OnInit, OnDestroy {
 
     // Guest path: read from IndexedDB, bypass network entirely.
     if (this.isGuest) {
+      this.cashback = null;
       this.loadGuestCart();
       return;
     }
@@ -304,8 +327,10 @@ export class CartPage implements OnInit, OnDestroy {
             this.cartCount.setCount(Number(this.bill.count) || 0);
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = this.carts.length === 0;
+            void this.loadCashback(seq);
           }else{
             this.carts = [];
+            this.cashback = null;
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = true;
           }

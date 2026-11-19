@@ -144,6 +144,8 @@
           <ion-text slot="end">Ð{{ bill.total }}</ion-text>
         </ion-item>
       </ion-list>
+      <!-- Cashback programme: estimate only, paid as a gift card after delivery. -->
+      <app-cashback-estimate [estimate]="cashback" />
     </ion-card>
 
     <ion-button

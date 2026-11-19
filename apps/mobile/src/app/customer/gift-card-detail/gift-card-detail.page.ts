@@ -10,6 +10,7 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { cfImage } from '../../shared/cf-image';
 import { TranslatePipe } from '../../translate.pipe';
 import { I18nService } from '../../i18n.service';
+import { isCashbackGiftCard } from '../../core/services/cashback.service';
 
 @Component({
   selector: 'app-gift-card-detail',
@@ -39,6 +40,9 @@ export class GiftCardDetailPage implements OnInit {
   }
 
   goBack() { this.navCtrl.back(); }
+
+  /** Issued by the cashback programme (source = 'cashback'). */
+  get isCashback(): boolean { return isCashbackGiftCard(this.card); }
 
   get themeMeta() { return this.card?.theme_meta ?? {}; }
 

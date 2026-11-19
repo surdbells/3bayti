@@ -245,6 +245,42 @@
         <span>{{ 'label_total' | translate }}</span>
         <span data-testid="order-total">{{ order.currency }} {{ order.total }}</span>
       </div>
+
+      <!-- Cashback programme: paid as a gift card after delivery + hold. -->
+      @if (order.cashback; as cb) {
+        <div class="cashback-row" [ngClass]="'cashback-row--' + cb.status" data-testid="order-cashback">
+          <span class="cashback-row__icon" aria-hidden="true"><ax-icon name="coins" [size]="16" /></span>
+          <div class="cashback-row__body">
+            @switch (cb.status) {
+              @case ('pending') {
+                <span class="cashback-row__title">{{ 'cashback_order_pending' | translate:{ amount: cb.currency + ' ' + cb.amount } }}</span>
+                <span class="cashback-row__hint">
+                  @if (cb.release_at) {
+                    {{ 'cashback_order_pending_until' | translate:{ date: (cb.release_at | date:'mediumDate') } }}
+                  } @else {
+                    {{ 'cashback_order_pending_after_delivery' | translate }}
+                  }
+                </span>
+              }
+              @case ('issued') {
+                <span class="cashback-row__title">{{ 'cashback_order_issued' | translate:{ amount: cb.currency + ' ' + cb.amount } }}</span>
+                <button type="button" class="cashback-row__link" (click)="openCashbackGiftCard()">
+                  {{ 'cashback_order_view_card' | translate }}
+                  <ax-icon name="chevron-right" [size]="14" aria-hidden="true" />
+                </button>
+              }
+              @case ('cancelled') {
+                <span class="cashback-row__title">{{ 'cashback_order_cancelled' | translate }}</span>
+                <span class="cashback-row__hint">{{ 'cashback_order_cancelled_hint' | translate }}</span>
+              }
+              @case ('reversed') {
+                <span class="cashback-row__title">{{ 'cashback_order_reversed' | translate }}</span>
+                <span class="cashback-row__hint">{{ 'cashback_order_reversed_hint' | translate }}</span>
+              }
+            }
+          </div>
+        </div>
+      }
     </ion-card>
 
     <!-- Addresses -->

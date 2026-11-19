@@ -29,6 +29,7 @@ import { cfImage } from '../../shared/cf-image';
 import { supportWhatsappLink } from '../../core/constants/support.constants';
 import { OrderPaymentService } from './order-payment.service';
 import { PendingOrdersService } from '../../core/services/pending-orders.service';
+import { OrderCashback, parseOrderCashback } from '../../core/services/cashback.service';
 
 /**
  * Customer order-detail screen, M3.2.Z.1.
@@ -122,6 +123,8 @@ interface OrderDetail {
   delivery_estimate: { min_days: number; max_days: number } | null;
   /** Per-vendor courier shipments (OTO tracking); empty until a store books delivery. */
   shipments?: OrderShipment[];
+  /** Cashback programme award for this order; null when it earns none. */
+  cashback: OrderCashback | null;
 }
 
 /** A per-vendor courier shipment (OTO tracking) on the order. */
@@ -526,6 +529,7 @@ export class OrderDetailPage implements OnInit {
             }
           : null,
       shipments: Array.isArray(o.shipments) ? o.shipments : [],
+      cashback: parseOrderCashback(o.cashback),
     };
   }
 
@@ -602,6 +606,12 @@ export class OrderDetailPage implements OnInit {
           this.toast.error(apiErrorMessage(err, this.i18n.t('order_detail_network_error')));
         },
       });
+  }
+
+  /** Cashback was issued as a gift card: open the wallet that holds it (the
+   *  detail view is navigation-state driven and can't open from an id). */
+  openCashbackGiftCard() {
+    this.router.navigate(['/', 'my-gift-cards']);
   }
 
   open_vendor(slug: string | undefined, name: string) {

@@ -270,6 +270,14 @@ describe('transformProductDetailResponse', () => {
     expect(r['sale_price']).toBeNull();
   });
 
+  it('passes the cashback badge through, null when absent', () => {
+    const badge = { type: 'percentage', value: '5.00', max: '50.00', channel: 'all' };
+    const withBadge = transformProductDetailResponse({ ...sampleV3Detail, cashback: badge }) as Record<string, unknown>;
+    expect(withBadge['cashback']).toEqual(badge);
+    const without = transformProductDetailResponse(sampleV3Detail) as Record<string, unknown>;
+    expect(without['cashback']).toBeNull();
+  });
+
   it('handles empty sizes array by emitting all flags false', () => {
     const r = transformProductDetailResponse({
       ...sampleV3Detail,

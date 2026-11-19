@@ -442,6 +442,10 @@ export function transformProductDetailResponse(data: unknown): unknown {
 
     // Slug for callers that want to navigate by slug:
     slug: asString(data['slug']),
+
+    // Cashback programme badge ({type, value, max, channel, …} | null).
+    // Passed through raw; the PDP parses it with parseProductCashback.
+    cashback: isRecord(data['cashback']) ? data['cashback'] : null,
   };
 }
 

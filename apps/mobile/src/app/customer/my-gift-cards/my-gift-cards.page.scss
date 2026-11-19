@@ -199,6 +199,19 @@
   &__denom { font-size: 11px; color: var(--ax-color-text-secondary); }
   &__status { font-size: 11px; font-weight: 600; }
   &__to { font-size: 12px; color: var(--ax-color-text-secondary); }
+  /* Cashback programme card (paid out as a gift card). */
+  &__tag {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--ax-color-bg-success-subtle);
+    color: var(--ax-color-text-on-success-subtle);
+  }
   &__expiry {
     display: flex;
     align-items: center;

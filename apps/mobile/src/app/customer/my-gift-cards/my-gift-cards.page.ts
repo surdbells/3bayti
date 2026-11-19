@@ -16,6 +16,7 @@ import { GlobalComponent } from '../../global-component';
 import { cfImage } from '../../shared/cf-image';
 import { TranslatePipe } from '../../translate.pipe';
 import { I18nService } from '../../i18n.service';
+import { isCashbackGiftCard } from '../../core/services/cashback.service';
 
 /** UI buckets for the wallet status filter row. */
 type GiftCardFilter = 'all' | 'active' | 'pending_payment' | 'used' | 'expired' | 'voided';
@@ -162,6 +163,11 @@ export class MyGiftCardsPage implements OnInit {
     if (this.isUnpaid(card)) { this.completePayment(card); return; }
     this.skipReloadOnEnter = true;
     this.router.navigate(['/gift-card-detail'], { state: { card } });
+  }
+
+  /** Issued by the cashback programme (source = 'cashback'). */
+  isCashback(card: any): boolean {
+    return isCashbackGiftCard(card);
   }
 
   isUnpaid(card: any): boolean {

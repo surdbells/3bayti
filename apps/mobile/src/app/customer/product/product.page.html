@@ -85,6 +85,18 @@
           <div class="product-info">
             <span class="category-label">{{ single.category_name }}</span>
             <h1 class="product-name">{{ single.name }}</h1>
+            <!-- Cashback programme: paid as a gift card after delivery. -->
+            @if (cashbackBadge) {
+              <div class="pdp-cashback" role="note" data-testid="pdp-cashback">
+                <span class="pdp-cashback__icon" aria-hidden="true">
+                  <ax-icon name="coins" [size]="16"></ax-icon>
+                </span>
+                <span class="pdp-cashback__text">
+                  <span class="pdp-cashback__title">{{ cashbackBadgeText }}</span>
+                  <span class="pdp-cashback__hint">{{ cashbackBadgeHint }}</span>
+                </span>
+              </div>
+            }
           </div>
 
           <!-- Quantity Dial -->

@@ -244,6 +244,39 @@ swiper-slide,
   }
 }
 
+/* Cashback programme badge (paid as a gift card after delivery). */
+.pdp-cashback {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--ax-color-bg-success-subtle);
+  color: var(--ax-color-text-on-success-subtle);
+  max-width: 100%;
+}
+.pdp-cashback__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.pdp-cashback__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pdp-cashback__title {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.pdp-cashback__hint {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--ax-color-text-secondary);
+}
+
 /* Sold by → vendor storefront (opens /vendors?slug=) */
 .store-row {
   display: flex;

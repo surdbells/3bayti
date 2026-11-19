@@ -50,6 +50,8 @@ import { AxPlaceAutocompleteComponent, PlaceDetails } from '../../shared/ax-mobi
 import { AddressService, SavedAddress, NewAddress } from '../../core/services/address.service';
 import { ClipboardService } from '../../core/services/clipboard.service';
 import { CheckoutActivityService } from '../../core/services/checkout-activity.service';
+import { CashbackService, CartCashbackEstimate } from '../../core/services/cashback.service';
+import { CashbackEstimateComponent } from '../../shared/cashback-estimate.component';
 
 /** API error code: prices changed since the customer last saw the cart (HTTP 409). */
 const CART_PRICES_CHANGED = 'CART_PRICES_CHANGED';
@@ -85,6 +87,7 @@ const CART_PRICES_CHANGED = 'CART_PRICES_CHANGED';
     AxTextFieldComponent,
     AxBottomSheetComponent,
     AxPlaceAutocompleteComponent,
+    CashbackEstimateComponent,
   ],
   standalone: true
 })
@@ -151,6 +154,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     private clipboard: ClipboardService,
     private checkoutActivity: CheckoutActivityService,
     private session: SessionStore,
+    private cashbackService: CashbackService,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -381,11 +385,43 @@ export class CheckoutPage implements OnInit, OnDestroy {
     this.removeGiftCard();
     this.wallet.applied = true;
     this.cdr.markForCheck();
+    this.refreshCashback();
   }
 
   removeGiftWallet(): void {
     this.wallet.applied = false;
     this.cdr.markForCheck();
+    this.refreshCashback();
+  }
+
+  // ── Cashback programme ─────────────────────────────────────────────
+  /** GET /v3/cart/cashback for the current promo / gift-card selection;
+   *  null hides the line. Paying with a cashback card earns nothing. */
+  cashback: CartCashbackEstimate | null = null;
+  private cashbackSeq = 0;
+
+  /**
+   * Re-estimate the cashback for what checkout will send (promo, the typed
+   * gift card code, or the wallet draw). Best-effort and read-only; only the
+   * latest request's answer is kept.
+   */
+  refreshCashback(): void {
+    const seq = ++this.cashbackSeq;
+    if (!this.single_user?.token) {
+      this.cashback = null;
+      return;
+    }
+    void this.cashbackService
+      .estimateForCart(this.single_user.token, {
+        promoCode: this.promo.applied ? this.promo.code : null,
+        giftCardCode: this.giftCard.applied ? this.giftCard.code : null,
+        useGiftWallet: this.wallet.applied,
+      })
+      .then((estimate) => {
+        if (seq !== this.cashbackSeq) { return; }
+        this.cashback = estimate;
+        this.cdr.markForCheck();
+      });
   }
 
   get gcAppliedAmount(): number {
@@ -989,8 +1025,12 @@ export class CheckoutPage implements OnInit, OnDestroy {
   private setGiftCode(raw: string): void {
     const cleaned = raw.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 16);
     this.giftCard.code = cleaned.match(/.{1,4}/g)?.join('-') ?? cleaned;
+    const wasApplied = this.giftCard.applied;
     this.giftCard.preview = null;
     this.giftCard.applied = false;
+    if (wasApplied) {
+      this.refreshCashback();
+    }
   }
 
   previewGiftCard() {
@@ -1012,6 +1052,8 @@ export class CheckoutPage implements OnInit, OnDestroy {
           // A specific code wins server-side, so drop the wallet selection to
           // keep the displayed totals honest.
           this.wallet.applied = false;
+          // A cashback card earns the order nothing: re-estimate.
+          this.refreshCashback();
         } else {
           // Prefer the server's specific message (e.g. "Gift card not found.",
           // "This gift card is not spendable") over a generic one.
@@ -1030,10 +1072,14 @@ export class CheckoutPage implements OnInit, OnDestroy {
   }
 
   removeGiftCard() {
+    const wasApplied = this.giftCard.applied;
     this.giftCard.preview = null;
     this.giftCard.applied = false;
     this.giftCard.code    = '';
     this.cdr.markForCheck();
+    if (wasApplied) {
+      this.refreshCashback();
+    }
   }
 
   // ── Promo code methods ────────────────────────────────────────────
@@ -1086,6 +1132,8 @@ export class CheckoutPage implements OnInit, OnDestroy {
           }
           this.promo.checking = false;
           this.cdr.markForCheck();
+          // The paid amount (and promo stacking) changed: re-estimate.
+          this.refreshCashback();
         },
         error: (err: any) => {
           // Raw HttpErrorResponse (network error or, defensively, a 4xx

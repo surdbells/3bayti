@@ -46,6 +46,7 @@ import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { GiftCardNudgeComponent } from '../../shared/gift-card-nudge.component';
 import { cfImage } from '../../shared/cf-image';
+import { ProductCashbackBadge, formatCashbackValue, parseProductCashback } from '../../core/services/cashback.service';
 export interface StoreMeasurement {
   id: number;
   token: string;
@@ -549,6 +550,29 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  /** Cashback programme: "Earn X cashback" badge, null when none applies. */
+  cashbackBadge: ProductCashbackBadge | null = null;
+
+  /** Headline for the cashback badge ("Earn 5% cashback" / "Earn AED 10 cashback"). */
+  get cashbackBadgeText(): string {
+    const b = this.cashbackBadge;
+    if (!b) return '';
+    const value = formatCashbackValue(b.value);
+    return b.type === 'percentage'
+      ? this.i18n.t('cashback_badge_percent', { value })
+      : this.i18n.t('cashback_badge_fixed', { value });
+  }
+
+  /** Secondary line: the per-order cap (when set) + how it is paid. */
+  get cashbackBadgeHint(): string {
+    const b = this.cashbackBadge;
+    if (!b) return '';
+    const hint = this.i18n.t('cashback_badge_hint');
+    return b.max
+      ? `${this.i18n.t('cashback_badge_max', { max: formatCashbackValue(b.max) })} · ${hint}`
+      : hint;
+  }
+
   single = {
     id: 0,
     token: "",
@@ -980,6 +1004,8 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.single = response.data;
+            // Cashback programme badge (null when no live rule covers it).
+            this.cashbackBadge = parseProductCashback(response.data?.cashback);
             // Clear the loading / not-found gates IMMEDIATELY on a successful
             // response, BEFORE the size/measurement processing below, so a
             // throw anywhere in that processing can never leave the skeleton

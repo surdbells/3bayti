@@ -26,6 +26,13 @@
           <span class="gcd-hero__theme">{{ themeMeta.label ?? card.theme }}</span>
         </div>
 
+        @if (isCashback) {
+          <span class="gcd-hero__tag" data-testid="gift-card-cashback-tag">
+            <ax-icon name="coins" [size]="13" aria-hidden="true" />
+            {{ 'cashback_tag' | translate }}
+          </span>
+        }
+
         @if (card.recipient_photo_url) {
           <div class="gcd-hero__photo">
             <img [src]="cfImage(card.recipient_photo_url, 'logo')" alt="Recipient" />

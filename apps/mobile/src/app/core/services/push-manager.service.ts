@@ -45,6 +45,7 @@ function pushStr(value: unknown): string {
  *                              { order_id }          -> /orders/:order_id
  *   chat.message              { conversation_uuid }  -> /chat?uuid=:uuid
  *   gift_card.expiry_nudge    { card_id }            -> /my-gift-cards
+ *   cashback.issued           { card_id }            -> /my-gift-cards
  *   cart.abandoned            { cart_id }            -> /cart
  *   re_engagement.nudge       { }                    -> /home
  *   store.new_product         { product_id }         -> /product?id=:product_id
@@ -88,6 +89,11 @@ export function resolvePushDeepLink(data: Record<string, unknown> | null | undef
     case 'gift_card.expiry_nudge': {
       // Wallet listing; the detail view is navigation-state-driven and
       // can't be reached from an id alone.
+      return '/my-gift-cards';
+    }
+    case 'cashback.issued': {
+      // Cashback paid out as a gift card: open the wallet holding it (same
+      // reason as the expiry nudge, the detail view needs navigation state).
       return '/my-gift-cards';
     }
     case 'cart.abandoned': {

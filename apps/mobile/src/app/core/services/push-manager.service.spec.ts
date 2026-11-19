@@ -70,6 +70,13 @@ describe('resolvePushDeepLink', () => {
     });
   });
 
+  describe('cashback.issued -> /my-gift-cards', () => {
+    it('routes to the wallet holding the new cashback card', () => {
+      expect(resolvePushDeepLink({ type: 'cashback.issued', card_id: '41', gift_card_id: '41', order_reference: '3B-1', amount: '12.50' }))
+        .toBe('/my-gift-cards');
+    });
+  });
+
   describe('cart.abandoned -> /cart', () => {
     it('routes to the cart', () => {
       expect(resolvePushDeepLink({ type: 'cart.abandoned', cart_id: '12' })).toBe('/cart');

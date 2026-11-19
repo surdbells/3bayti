@@ -131,6 +131,13 @@
                 </div>
               </div>
 
+              @if (isCashback(card)) {
+                <span class="mgc-card__tag" data-testid="gift-card-cashback-tag">
+                  <ax-icon name="coins" [size]="12" aria-hidden="true" />
+                  {{ 'cashback_tag' | translate }}
+                </span>
+              }
+
               @if (card.recipient_name) {
                 <div class="mgc-card__to">{{ 'gift_card_for' | translate }} {{ card.recipient_name }}</div>
               }
