@@ -41,6 +41,7 @@ final class GetProductByIdController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $serializer,
+        private readonly \Bayti\Api\Domain\Cashback\CashbackService $cashback,
     ) {
     }
 
@@ -84,8 +85,11 @@ final class GetProductByIdController
             ->getQuery()
             ->getResult();
 
-        return $this->ok(PaginatedEnvelope::single(
-            $this->serializer->configureFromRequest($request)->detailShape($product, $reviews),
-        ));
+        $shape = $this->serializer->configureFromRequest($request)->detailShape($product, $reviews);
+        // Cashback programme badge, same as GetProductController (the mobile
+        // app's product page loads through this route). Fail-safe: null.
+        $shape['cashback'] = $this->cashback->badgeForProduct($product);
+
+        return $this->ok(PaginatedEnvelope::single($shape));
     }
 }
