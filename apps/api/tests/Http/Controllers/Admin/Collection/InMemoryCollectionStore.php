@@ -13,6 +13,7 @@ use Bayti\Api\Domain\Catalog\ProductCollection;
 use Bayti\Api\Domain\Catalog\ProductCollectionRepository;
 use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\Catalog\Vendor;
+use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Infrastructure\Auth\JwtService;
@@ -82,9 +83,12 @@ trait InMemoryCollectionStore
     /** @var array{rows: list<CollectionProduct>, sort: array<int, int>, display: array<int, ?int>}|null */
     private ?array $snapshot = null;
     private ?Vendor $storeVendor = null;
+    /** @var list<int> store ids the signed-in user owns (VendorRepository::findIdsByOwnerUser) */
+    private array $ownedVendorIds = [1];
 
     private function resetStore(): void
     {
+        $this->ownedVendorIds = [1];
         $this->collections = [];
         $this->products = [];
         $this->rows = [];
@@ -118,16 +122,28 @@ trait InMemoryCollectionStore
         return $c;
     }
 
-    private function addProduct(int $id, string $name): Product
+    /** $vendor null = the default store (id 1). */
+    private function addProduct(int $id, string $name, ?Vendor $vendor = null): Product
     {
-        if ($this->storeVendor === null) {
-            $this->storeVendor = new Vendor('almas', 'Almas', 'v@example.test');
-            $this->forceId($this->storeVendor, Vendor::class, 1);
+        if ($vendor === null) {
+            if ($this->storeVendor === null) {
+                $this->storeVendor = new Vendor('almas', 'Almas', 'v@example.test');
+                $this->forceId($this->storeVendor, Vendor::class, 1);
+            }
+            $vendor = $this->storeVendor;
         }
-        $p = new Product($this->storeVendor, 'p-' . $id, $name);
+        $p = new Product($vendor, 'p-' . $id, $name);
         $this->forceId($p, Product::class, $id);
         $this->products[$id] = $p;
         return $p;
+    }
+
+    private function makeStore(int $id, string $slug): Vendor
+    {
+        $v = new Vendor($slug, ucfirst($slug), $slug . '@example.test');
+        $v->approve();
+        $this->forceId($v, Vendor::class, $id);
+        return $v;
     }
 
     private function addMember(int $collectionId, int $productId, int $sortOrder): CollectionProduct
@@ -246,8 +262,11 @@ trait InMemoryCollectionStore
         $collectionRepo->method('lockDisplayOrder')->willReturnCallback(function (): void {
             $this->acquireLock('order');
         });
-        $collectionRepo->method('findPaginated')->willReturnCallback(function (int $limit = 20, int $offset = 0): array {
-            $all = $this->orderedCollections();
+        $collectionRepo->method('findPaginated')->willReturnCallback(function (int $limit = 20, int $offset = 0, ?bool $activeOnly = null): array {
+            $all = array_values(array_filter(
+                $this->orderedCollections(),
+                static fn (ProductCollection $c): bool => $activeOnly === null || $c->isActive() === $activeOnly,
+            ));
             return ['items' => array_slice($all, $offset, $limit), 'total' => count($all)];
         });
 
@@ -326,6 +345,28 @@ trait InMemoryCollectionStore
             }
             return $rows;
         });
+        $joinRepo->method('productIdsForCollectionAndVendors')->willReturnCallback(function (int $cid, array $vids): array {
+            $this->track('join.productIdsForCollectionAndVendors');
+            return array_values(array_map(
+                static fn (CollectionProduct $r): int => (int) $r->getProduct()->getId(),
+                array_filter($this->rowsOfCollection($cid), static fn (CollectionProduct $r): bool
+                    => in_array((int) $r->getProduct()->getVendor()->getId(), $vids, true)
+                    && $r->getProduct()->getStatus() !== Product::STATUS_SOFT_DELETED),
+            ));
+        });
+        $joinRepo->method('countsByCollectionForVendors')->willReturnCallback(function (array $cids, array $vids): array {
+            $this->track('join.countsByCollectionForVendors');
+            $out = [];
+            foreach ($this->rows as $r) {
+                $cid = (int) $r->getCollection()->getId();
+                if (in_array($cid, $cids, true)
+                    && in_array((int) $r->getProduct()->getVendor()->getId(), $vids, true)
+                    && $r->getProduct()->getStatus() !== Product::STATUS_SOFT_DELETED) {
+                    $out[$cid] = ($out[$cid] ?? 0) + 1;
+                }
+            }
+            return $out;
+        });
         $joinRepo->method('countsByCollection')->willReturnCallback(function (array $cids): array {
             $this->track('join.countsByCollection');
             $out = [];
@@ -369,9 +410,15 @@ trait InMemoryCollectionStore
                 $this->inTransaction = false;
             }
         });
-        (function ($em) use ($userRepo, $collectionRepo, $productRepo, $joinRepo): void {
+        // Vendor endpoints: the stores the signed-in user owns.
+        $vendorRepo = $this->createMock(VendorRepository::class);
+        $vendorRepo->method('findIdsByOwnerUser')->willReturnCallback(fn (): array => $this->ownedVendorIds);
+        $vendorRepo->method('existsApprovedForOwnerUser')->willReturnCallback(fn (): bool => $this->ownedVendorIds !== []);
+
+        (function ($em) use ($userRepo, $collectionRepo, $productRepo, $joinRepo, $vendorRepo): void {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
+                [Vendor::class, $vendorRepo],
                 [ProductCollection::class, $collectionRepo],
                 [Product::class, $productRepo],
                 [CollectionProduct::class, $joinRepo],

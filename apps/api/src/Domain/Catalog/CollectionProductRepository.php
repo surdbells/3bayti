@@ -213,6 +213,75 @@ class CollectionProductRepository extends EntityRepository
     }
 
     /**
+     * Curated product ids of ONE collection that belong to the given stores
+     * (a vendor's own members), in curation order (sort_order ASC, then id
+     * ASC, like productIdsForCollection). Soft-deleted products are left out:
+     * the vendor no longer sees or manages them.
+     *
+     * @param list<int> $vendorIds
+     * @return list<int>
+     */
+    public function productIdsForCollectionAndVendors(int $collectionId, array $vendorIds): array
+    {
+        if ($vendorIds === []) {
+            return [];
+        }
+
+        /** @var list<array{pid: int|string}> $rows */
+        $rows = $this->createQueryBuilder('cp')
+            ->select('p.id AS pid')
+            ->join('cp.product', 'p')
+            ->where('cp.collection = :cid')
+            ->andWhere('p.vendor IN (:vids)')
+            ->andWhere('p.status <> :softDeleted')
+            ->setParameter('cid', $collectionId)
+            ->setParameter('vids', $vendorIds)
+            ->setParameter('softDeleted', Product::STATUS_SOFT_DELETED)
+            ->orderBy('cp.sortOrder', 'ASC')
+            ->addOrderBy('cp.id', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(static fn (array $r): int => (int) $r['pid'], $rows);
+    }
+
+    /**
+     * Per collection, how many of its members belong to the given stores
+     * (not soft-deleted), one grouped query. Collections with none are absent
+     * from the map (callers default them to 0).
+     *
+     * @param list<int> $collectionIds
+     * @param list<int> $vendorIds
+     * @return array<int, int> collection id => the stores' member count
+     */
+    public function countsByCollectionForVendors(array $collectionIds, array $vendorIds): array
+    {
+        if ($collectionIds === [] || $vendorIds === []) {
+            return [];
+        }
+
+        /** @var list<array{cid: int|string, agg: int|string}> $rows */
+        $rows = $this->createQueryBuilder('cp')
+            ->select('IDENTITY(cp.collection) AS cid', 'COUNT(cp.id) AS agg')
+            ->join('cp.product', 'p')
+            ->where('cp.collection IN (:cids)')
+            ->andWhere('p.vendor IN (:vids)')
+            ->andWhere('p.status <> :softDeleted')
+            ->setParameter('cids', $collectionIds)
+            ->setParameter('vids', $vendorIds)
+            ->setParameter('softDeleted', Product::STATUS_SOFT_DELETED)
+            ->groupBy('cp.collection')
+            ->getQuery()
+            ->getArrayResult();
+
+        $out = [];
+        foreach ($rows as $r) {
+            $out[(int) $r['cid']] = (int) $r['agg'];
+        }
+        return $out;
+    }
+
+    /**
      * @param list<int> $collectionIds
      * @return array<int, int>
      */

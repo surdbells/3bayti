@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 404 route keys.
+ * 408 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -193,6 +193,7 @@ export type V3RouteKey =
   | 'GET /vendor/chat/conversations/:uuid/messages'
   | 'GET /vendor/chat/unread-count'
   | 'GET /vendor/collections'
+  | 'GET /vendor/collections/:id/products'
   | 'GET /vendor/compliance'
   | 'GET /vendor/coupons'
   | 'GET /vendor/coupons/:id'
@@ -213,6 +214,7 @@ export type V3RouteKey =
   | 'GET /vendor/orders/:orderId/delivery-options'
   | 'GET /vendor/products'
   | 'GET /vendor/products/:id'
+  | 'GET /vendor/products/:id/collections'
   | 'GET /vendor/products/:id/sales'
   | 'GET /vendor/returns'
   | 'GET /vendor/returns/:id'
@@ -408,10 +410,12 @@ export type V3RouteKey =
   | 'PUT /me/measurements/:id'
   | 'PUT /me/measurements/default'
   | 'PUT /me/styles/:id'
+  | 'PUT /vendor/collections/:id/products'
   | 'PUT /vendor/coupons/:id'
   | 'PUT /vendor/labels/:id'
   | 'PUT /vendor/measurements/:id'
-  | 'PUT /vendor/products/:id';
+  | 'PUT /vendor/products/:id'
+  | 'PUT /vendor/products/:id/collections';
 
 /** Runtime set of valid route keys (frozen). */
 export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
@@ -600,6 +604,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /vendor/chat/conversations/:uuid/messages',
   'GET /vendor/chat/unread-count',
   'GET /vendor/collections',
+  'GET /vendor/collections/:id/products',
   'GET /vendor/compliance',
   'GET /vendor/coupons',
   'GET /vendor/coupons/:id',
@@ -620,6 +625,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /vendor/orders/:orderId/delivery-options',
   'GET /vendor/products',
   'GET /vendor/products/:id',
+  'GET /vendor/products/:id/collections',
   'GET /vendor/products/:id/sales',
   'GET /vendor/returns',
   'GET /vendor/returns/:id',
@@ -815,10 +821,12 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PUT /me/measurements/:id',
   'PUT /me/measurements/default',
   'PUT /me/styles/:id',
+  'PUT /vendor/collections/:id/products',
   'PUT /vendor/coupons/:id',
   'PUT /vendor/labels/:id',
   'PUT /vendor/measurements/:id',
   'PUT /vendor/products/:id',
+  'PUT /vendor/products/:id/collections',
 ] as const);
 
 /** Type guard: is an arbitrary string a known route key? */

@@ -1699,6 +1699,20 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /vendor/collections': {
     target: 'new', oldPath: '/admin/collections', newPath: '/v3/vendor/collections', shape: 'v3-envelope',
   },
+  // Vendors submit their OWN products to admin-curated collections (active
+  // collections only; new members appended at the end; v3 ids only).
+  'GET /vendor/collections/:id/products': {
+    target: 'new', oldPath: '', newPath: '/v3/vendor/collections/:id/products', shape: 'v3-envelope',
+  },
+  'PUT /vendor/collections/:id/products': {
+    target: 'new', oldPath: '', newPath: '/v3/vendor/collections/:id/products', shape: 'v3-envelope',
+  },
+  'GET /vendor/products/:id/collections': {
+    target: 'new', oldPath: '', newPath: '/v3/vendor/products/:id/collections', shape: 'v3-envelope',
+  },
+  'PUT /vendor/products/:id/collections': {
+    target: 'new', oldPath: '', newPath: '/v3/vendor/products/:id/collections', shape: 'v3-envelope',
+  },
   'GET /vendor/labels': {
     target: 'new', oldPath: '/vendors/labels/read-label', newPath: '/v3/vendor/labels', shape: 'v3-envelope',
   },

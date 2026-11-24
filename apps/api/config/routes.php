@@ -1411,11 +1411,20 @@ return function (App $app): void {
         $group->get('/coupons/{id:[0-9]+}/analytics',
             [\Bayti\Api\Http\Controllers\Vendor\Coupon\VendorCouponAnalyticsController::class, 'analytics']);
 
-        // Vendor read-only collections list (for the product form picker).
-        // Reuses the admin controller's list method, read-only, no writes
-        // exposed under the vendor group.
+        // Vendors submit their OWN products to admin-curated collections:
+        // active collections only, own (not soft-deleted) products only,
+        // appended at the end of the curation order. Collections themselves
+        // stay admin-managed (no create/edit/delete/reorder here).
         $group->get('/collections',
-            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'list']);
+            [\Bayti\Api\Http\Controllers\Vendor\Collection\VendorCollectionController::class, 'list']);
+        $group->get('/collections/{id:[0-9]+}/products',
+            [\Bayti\Api\Http\Controllers\Vendor\Collection\VendorCollectionController::class, 'listProducts']);
+        $group->put('/collections/{id:[0-9]+}/products',
+            [\Bayti\Api\Http\Controllers\Vendor\Collection\VendorCollectionController::class, 'setProducts']);
+        $group->get('/products/{id:[0-9]+}/collections',
+            [\Bayti\Api\Http\Controllers\Vendor\Collection\VendorCollectionController::class, 'forProduct']);
+        $group->put('/products/{id:[0-9]+}/collections',
+            [\Bayti\Api\Http\Controllers\Vendor\Collection\VendorCollectionController::class, 'setForProduct']);
 
         // F2, Vendor size chart (the store's published size guide).
         // Named "measurements" for portal/legacy continuity; this is the

@@ -198,6 +198,61 @@ final class CollectionCurationRepositoryDqlTest extends TestCase
         self::assertMatchesRegularExpression(self::NULLS_LAST_SQL, $sql);
     }
 
+    #[Test]
+    public function productIdsForCollectionAndVendorsReadsOnlyTheStoresLiveMembersInCurationOrder(): void
+    {
+        $this->joinRepo()->productIdsForCollectionAndVendors(5, [11, 12]);
+
+        self::assertCount(1, $this->captured);
+        $dql = $this->captured[0];
+        self::assertStringContainsString('INNER JOIN cp.product p', $dql);
+        self::assertStringContainsString('cp.collection = :cid AND p.vendor IN (:vids) AND p.status <> :softDeleted', $dql);
+        self::assertStringEndsWith('ORDER BY cp.sortOrder ASC, cp.id ASC', $dql);
+        self::assertSame(5, $this->params['cid']);
+        self::assertSame([11, 12], $this->params['vids']);
+        self::assertSame('soft_deleted', $this->params['softDeleted']);
+
+        $sql = $this->compile($dql);
+        self::assertMatchesRegularExpression(
+            '/FROM collection_products (\w+) INNER JOIN products (\w+) ON \1\.product_id = \2\.id'
+            . ' WHERE \1\.collection_id = \? AND \2\.vendor_id IN \(\?\) AND \2\.status <> \?'
+            . ' ORDER BY \1\.sort_order ASC, \1\.id ASC$/',
+            $sql,
+        );
+    }
+
+    #[Test]
+    public function countsByCollectionForVendorsIsOneGroupedQueryOverTheStoresLiveMembers(): void
+    {
+        $this->joinRepo()->countsByCollectionForVendors([1, 2], [11]);
+
+        self::assertCount(1, $this->captured);
+        $dql = $this->captured[0];
+        self::assertStringContainsString('COUNT(cp.id) AS agg', $dql);
+        self::assertStringContainsString('cp.collection IN (:cids) AND p.vendor IN (:vids) AND p.status <> :softDeleted', $dql);
+        self::assertStringEndsWith('GROUP BY cp.collection', $dql);
+        self::assertSame([1, 2], $this->params['cids']);
+        self::assertSame([11], $this->params['vids']);
+
+        $sql = $this->compile($dql);
+        self::assertMatchesRegularExpression(
+            '/^SELECT (\w+)\.collection_id AS \w+, COUNT\(\1\.id\) AS \w+ FROM collection_products \1'
+            . ' INNER JOIN products (\w+) ON \1\.product_id = \2\.id'
+            . ' WHERE \1\.collection_id IN \(\?\) AND \2\.vendor_id IN \(\?\) AND \2\.status <> \?'
+            . ' GROUP BY \1\.collection_id$/',
+            $sql,
+        );
+    }
+
+    #[Test]
+    public function vendorScopedReadsWithNoStoresOrCollectionsRunNoQuery(): void
+    {
+        self::assertSame([], $this->joinRepo()->productIdsForCollectionAndVendors(5, []));
+        self::assertSame([], $this->joinRepo()->countsByCollectionForVendors([], [11]));
+        self::assertSame([], $this->joinRepo()->countsByCollectionForVendors([1], []));
+        self::assertSame([], $this->captured);
+    }
+
     // ── advisory locks ──────────────────────────────────────────────
 
     #[Test]

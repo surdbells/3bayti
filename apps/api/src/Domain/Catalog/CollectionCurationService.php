@@ -16,7 +16,11 @@ use Doctrine\ORM\EntityManagerInterface;
  *     (collection side, PUT /admin/collections/{id}/products).
  *   - setProductCollections(): a single product's complete membership set
  *     across collections (product side, PUT /admin/products/{id}/collections;
- *     a product can sit in any number of collections).
+ *     a product can sit in any number of collections). The vendor product
+ *     page uses it too, scoped to active collections ($activeOnly).
+ *   - setVendorProductsInCollection(): a VENDOR's own products in one
+ *     collection (PUT /vendor/collections/{id}/products), appended at the
+ *     end, never touching other stores' rows.
  *
  * Callers validate ids first (unknown ids are a 422 at the HTTP edge); this
  * service only applies an already-valid plan. Every change goes through the
@@ -172,6 +176,13 @@ final class CollectionCurationService
      *   - collections it stays in keep its existing sort_order.
      * An empty set removes the product from every collection.
      *
+     * $activeOnly (the VENDOR product page, which only sees active
+     * collections): the write is scoped to ACTIVE collections. Memberships in
+     * inactive collections are neither removed nor part of the precondition,
+     * so a vendor saving its product never drops it from a collection an
+     * admin has temporarily switched off. Callers then pass active
+     * collections only. Activity is judged on the rows read under the locks.
+     *
      * @param list<ProductCollection> $collections
      * @param list<int>|null $expectedCollectionIds optional precondition: the
      *        collection ids (any order) the client loaded for this product;
@@ -181,12 +192,16 @@ final class CollectionCurationService
      *         the stored ids, ascending) or a concurrent writer won a
      *         unique-key race
      */
-    public function setProductCollections(Product $product, array $collections, ?array $expectedCollectionIds = null): void
-    {
+    public function setProductCollections(
+        Product $product,
+        array $collections,
+        ?array $expectedCollectionIds = null,
+        bool $activeOnly = false,
+    ): void {
         $productId = (int) $product->getId();
 
         $stale = $this->guardUniqueRace(fn (): ?array => $this->em->wrapInTransaction(
-            function () use ($product, $productId, $collections, $expectedCollectionIds): ?array {
+            function () use ($product, $productId, $collections, $expectedCollectionIds, $activeOnly): ?array {
                 $joinRepo = $this->joinRepo();
 
                 $wanted = [];
@@ -205,6 +220,9 @@ final class CollectionCurationService
                 // Authoritative read, under the locks.
                 $current = [];
                 foreach ($joinRepo->findForProduct($productId) as $row) {
+                    if ($activeOnly && !$row->getCollection()->isActive()) {
+                        continue; // out of scope: kept as is, not compared
+                    }
                     $current[(int) $row->getCollection()->getId()] = $row;
                 }
 
@@ -230,6 +248,104 @@ final class CollectionCurationService
                     foreach ($toAdd as $collectionId => $collection) {
                         $sortOrder = isset($maxSort[$collectionId]) ? $maxSort[$collectionId] + 1 : 0;
                         $this->em->persist(new CollectionProduct($collection, $product, $sortOrder));
+                    }
+                }
+
+                $this->em->flush();
+                return null;
+            },
+        ));
+
+        if ($stale !== null) {
+            throw new StaleCollectionMembershipException($stale);
+        }
+    }
+
+    /**
+     * A VENDOR's write to one collection: make $products (the vendor's own,
+     * live products) exactly the vendor's members of $collection, without
+     * touching anyone else's rows. In one locked transaction:
+     *   - "own" rows = members whose product belongs to one of $vendorIds and
+     *     is not soft-deleted (the set the vendor can see);
+     *   - own rows not in $products are removed; other rows are never
+     *     removed, re-positioned or renumbered (gaps left by a removal are
+     *     harmless: every reader orders by (sort_order, id), and the next
+     *     admin save rewrites 0..n-1);
+     *   - $products not yet members are APPENDED after every current row
+     *     (max sort_order over ALL rows + 1, incrementing, in request order;
+     *     0 for an empty collection), so a vendor never displaces the admin's
+     *     curation or the card image (the first product);
+     *   - own rows that stay keep their position (an idempotent PUT writes
+     *     nothing).
+     * Same lock discipline as the admin collection side (lock, then read).
+     *
+     * @param list<int>      $vendorIds      the caller's store ids
+     * @param list<Product>  $products       distinct products, all owned by
+     *        $vendorIds and not soft-deleted (validated by the caller)
+     * @param list<int>|null $expectedOwnIds optional precondition: the own
+     *        product ids (any order) the client loaded; when the stored own
+     *        set differs nothing is written
+     *
+     * @throws StaleCollectionMembershipException precondition failed (carries
+     *         the stored own ids in curation order) or a unique-key race
+     */
+    public function setVendorProductsInCollection(
+        ProductCollection $collection,
+        array $vendorIds,
+        array $products,
+        ?array $expectedOwnIds = null,
+    ): void {
+        $collectionId = (int) $collection->getId();
+        $vendorSet = array_fill_keys($vendorIds, true);
+
+        $stale = $this->guardUniqueRace(fn (): ?array => $this->em->wrapInTransaction(
+            function () use ($collection, $collectionId, $vendorSet, $products, $expectedOwnIds): ?array {
+                $joinRepo = $this->joinRepo();
+                $joinRepo->lockCollections([$collectionId]);
+
+                // Authoritative read, under the lock.
+                $rows = $joinRepo->findForCollection($collectionId);
+
+                $maxSort = null;
+                $own = [];
+                $memberIds = [];
+                foreach ($rows as $row) {
+                    $maxSort = $maxSort === null ? $row->getSortOrder() : max($maxSort, $row->getSortOrder());
+                    $product = $row->getProduct();
+                    $pid = (int) $product->getId();
+                    $memberIds[$pid] = true;
+                    if (isset($vendorSet[(int) $product->getVendor()->getId()])
+                        && $product->getStatus() !== Product::STATUS_SOFT_DELETED) {
+                        $own[$pid] = $row;
+                    }
+                }
+
+                if ($expectedOwnIds !== null) {
+                    $currentIds = array_keys($own);
+                    $sortedCurrent = $currentIds;
+                    $expected = array_values(array_unique($expectedOwnIds));
+                    sort($sortedCurrent);
+                    sort($expected);
+                    if ($sortedCurrent !== $expected) {
+                        return $currentIds;
+                    }
+                }
+
+                $wanted = [];
+                foreach ($products as $p) {
+                    $wanted[(int) $p->getId()] = $p;
+                }
+
+                foreach ($own as $pid => $row) {
+                    if (!isset($wanted[$pid])) {
+                        $this->em->remove($row);
+                    }
+                }
+
+                $next = $maxSort === null ? 0 : $maxSort + 1;
+                foreach ($wanted as $pid => $p) {
+                    if (!isset($memberIds[$pid])) {
+                        $this->em->persist(new CollectionProduct($collection, $p, $next++));
                     }
                 }
 
