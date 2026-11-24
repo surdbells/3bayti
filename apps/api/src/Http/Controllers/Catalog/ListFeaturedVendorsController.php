@@ -21,7 +21,11 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Designer Spotlight feed for apps/web home page. Returns curated
  * vendors (is_active = true AND is_featured = true) with up to N
- * embedded product thumbnails per vendor.
+ * embedded product thumbnails per vendor. Ranked by live follower
+ * count DESC, then name ASC, then id ASC: the same follower definition
+ * and order as the GET /v3/vendors store directory (the curated set
+ * stays curated, only its order is by followers). The fallback set
+ * below is ranked the same way and the loop keeps the repo order.
  *
  * Query parameters
  * ================
@@ -140,7 +144,8 @@ final class ListFeaturedVendorsController
         $vendorRepo = $this->em->getRepository(Vendor::class);
 
         // Primary source: admin-curated featured vendors.
-        // Q-Sort = A: alphabetical name ASC, applied in the repo method.
+        // Ranked by live follower count DESC, then name, then id (the same
+        // ranking as the GET /v3/vendors directory), applied in the repo.
         $vendorRows = $vendorRepo->findFeaturedWithStats($limit, 0);
 
         // Fallback (Stores H0.1): when no vendor has been admin-flagged

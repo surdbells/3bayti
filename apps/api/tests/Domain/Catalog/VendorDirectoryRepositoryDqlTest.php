@@ -225,6 +225,85 @@ final class VendorDirectoryRepositoryDqlTest extends TestCase
         );
     }
 
+    // ── Spotlight (GET /v3/featured-vendors) ───────────────────────
+
+    /** @return iterable<string, array{string, string}> */
+    public static function spotlightQueries(): iterable
+    {
+        yield 'curated featured set' => ['findFeaturedWithStats', 'v.isFeatured = true'];
+        yield 'verified fallback' => ['findTopVerifiedWithStats', 'v.isVerified = true'];
+    }
+
+    #[Test]
+    #[\PHPUnit\Framework\Attributes\DataProvider('spotlightQueries')]
+    public function spotlightRanksByTheSameLiveFollowerCountAsTheDirectory(string $method, string $selector): void
+    {
+        $this->repo()->{$method}(4, 0);
+
+        self::assertCount(1, $this->captured);
+        $dql = $this->captured[0];
+
+        self::assertStringContainsString(self::FOLLOWERS_SUBSELECT, $dql);
+        self::assertStringContainsString(
+            'WHERE v.isActive = true AND ' . $selector . ' AND v.status = :approved',
+            $dql,
+            'the curated / verified set stays filtered; only its order changes',
+        );
+        self::assertStringEndsWith('GROUP BY v.id ORDER BY followersCount DESC, v.name ASC, v.id ASC', $dql);
+        self::assertSame('approved', $this->params[0]['reviewApproved']);
+        self::assertSame('approved', $this->params[0]['approved']);
+        self::assertSame(['first' => 0, 'max' => 4], $this->windows[0]);
+
+        $sql = $this->compile($dql);
+        $matched = preg_match(
+            '/\(SELECT COUNT\((\w+)\.id\) AS \w+ FROM vendor_follow \1 INNER JOIN users (\w+) ON \1\.user_id = \2\.id'
+            . ' WHERE \1\.vendor_id = (\w+)\.id AND \2\.deleted_at IS NULL AND \2\.is_active = true\) AS (sclr_\d+)/',
+            $sql,
+            $m,
+        );
+        self::assertSame(1, $matched, 'correlated live-follower subselect: ' . $sql);
+        self::assertMatchesRegularExpression(
+            '/GROUP BY ' . $m[3] . '\.id ORDER BY ' . $m[4] . ' DESC, ' . $m[3] . '\.name ASC, ' . $m[3] . '\.id ASC/',
+            $sql,
+        );
+    }
+
+    #[Test]
+    #[\PHPUnit\Framework\Attributes\DataProvider('spotlightQueries')]
+    public function spotlightFollowerCountNeverJoinsTheOuterQuery(string $method, string $selector): void
+    {
+        $this->repo()->{$method}(12, 0);
+
+        $outer = str_replace(self::FOLLOWERS_SUBSELECT, '', $this->captured[0]);
+        self::assertSame(1, substr_count($outer, 'JOIN'), 'the review LEFT JOIN is the only outer join');
+        self::assertStringNotContainsString('VendorFollow', $outer);
+
+        $sql = $this->compile($this->captured[0]);
+        $outerSql = (string) preg_replace('/\(SELECT COUNT\(\w+\.id\) AS sclr_\d+ FROM vendor_follow .*?\) AS sclr_\d+/', '', $sql, -1, $stripped);
+        self::assertSame(1, $stripped);
+        self::assertStringNotContainsString('vendor_follow', $outerSql);
+        self::assertSame(1, substr_count($outerSql, ' JOIN '));
+    }
+
+    #[Test]
+    #[\PHPUnit\Framework\Attributes\DataProvider('spotlightQueries')]
+    public function spotlightRowsCarryAnIntegerFollowerCount(string $method, string $selector): void
+    {
+        $popular = new Vendor('popular', 'Popular', 'popular@example.test');
+        $quiet = new Vendor('quiet', 'Quiet', 'quiet@example.test');
+        $this->resultQueue[] = [
+            [0 => $popular, 'rating' => '4.0000', 'ratingCount' => '3', 'followersCount' => '12'],
+            [0 => $quiet, 'rating' => null, 'ratingCount' => 0, 'followersCount' => 0],
+        ];
+
+        $rows = $this->repo()->{$method}(4, 0);
+
+        self::assertSame([
+            ['vendor' => $popular, 'rating' => 4.0, 'ratingCount' => 3, 'followersCount' => 12],
+            ['vendor' => $quiet, 'rating' => null, 'ratingCount' => 0, 'followersCount' => 0],
+        ], $rows);
+    }
+
     // ── harness ─────────────────────────────────────────────────────
 
     private function repo(): VendorRepository

@@ -28,7 +28,7 @@ use PHPUnit\Framework\TestCase;
  * infrastructure baseline.
  *
  * Sub-phase C will verify the end-to-end behavior (active +
- * featured filter, alphabetical order, etc.) via mocked repository
+ * featured filter, follower-ranked order, etc.) via mocked repository
  * returning canned vendor lists.
  */
 #[CoversClass(Vendor::class)]

@@ -6,6 +6,7 @@ namespace Bayti\Api\Domain\Catalog;
 
 use Bayti\Api\Domain\Following\VendorFollow;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\QueryBuilder;
 
 /**
  * @extends EntityRepository<Vendor>
@@ -359,14 +360,20 @@ class VendorRepository extends EntityRepository
      *
      * SQL shape
      * =========
-     * SELECT v, AVG(pr.star) AS rating, COUNT(pr.id) AS ratingCount
+     * SELECT v, AVG(pr.star) AS rating, COUNT(pr.id) AS ratingCount,
+     *        (live follower subselect) AS followersCount
      *   FROM Vendor v
      *   LEFT JOIN ProductReview pr WITH pr.vendor = v
-     *       AND pr.status = 'approved'
-     *  WHERE v.isActive = true AND v.isFeatured = true
+     *       AND pr.status = :reviewApproved
+     *  WHERE v.isActive = true AND v.isFeatured = true AND v.status = :approved
      *  GROUP BY v.id
-     *  ORDER BY v.name ASC
+     *  ORDER BY followersCount DESC, v.name ASC, v.id ASC
      *  LIMIT :limit
+     *
+     * The curated set stays curated (only admin-flagged featured vendors),
+     * it is just ORDERED by live follower count, the same definition and
+     * tie-breaks as the store directory ({@see findActiveWithStatsPaginated}),
+     * so every customer-facing store list ranks the same way.
      *
      * `LEFT JOIN` so vendors with zero reviews still appear with
      * NULL rating (matches apps/web's `rating: number | null` typing).
@@ -374,50 +381,13 @@ class VendorRepository extends EntityRepository
      * pending/rejected/spam reviews don't pollute the average.
      *
      * Q-Rating = A (locked in M3.2.X.2 plan): real-time aggregate.
-     * Spotlight is at most 4 vendors; cost is negligible.
-     * Denormalized columns deferred to M3.2.X.13 (vendor analytics).
+     * Spotlight is at most a handful of vendors; cost is negligible.
      *
-     * @return list<array{vendor: Vendor, rating: float|null, ratingCount: int}>
+     * @return list<array{vendor: Vendor, rating: float|null, ratingCount: int, followersCount: int}>
      */
     public function findFeaturedWithStats(int $limit = 4, int $offset = 0): array
     {
-        $rows = $this->createQueryBuilder('v')
-            ->select('v', 'AVG(pr.star) AS rating', 'COUNT(pr.id) AS ratingCount')
-            ->leftJoin(
-                \Bayti\Api\Domain\Catalog\ProductReview::class,
-                'pr',
-                'WITH',
-                "pr.vendor = v AND pr.status = 'approved'"
-            )
-            ->where('v.isActive = true')
-            ->andWhere('v.isFeatured = true')
-            ->andWhere('v.status = :approved')
-            ->setParameter('approved', Vendor::STATUS_APPROVED)
-            ->groupBy('v.id')
-            ->orderBy('v.name', 'ASC')
-            ->setMaxResults($limit)
-            ->setFirstResult($offset)
-            ->getQuery()
-            ->getResult();
-
-        // Doctrine returns mixed-array shape when SELECT mixes
-        // entities + scalars. Normalize into typed dicts so callers
-        // don't deal with the raw column-name conventions.
-        $out = [];
-        foreach ($rows as $row) {
-            // Row shape: [0 => Vendor entity, 'rating' => string|null, 'ratingCount' => string|int]
-            $vendor = $row[0];
-            $rating = $row['rating'] !== null ? (float) $row['rating'] : null;
-            $ratingCount = (int) $row['ratingCount'];
-
-            $out[] = [
-                'vendor' => $vendor,
-                'rating' => $rating,
-                'ratingCount' => $ratingCount,
-            ];
-        }
-
-        return $out;
+        return $this->spotlightWithStats('v.isFeatured = true', $limit, $offset);
     }
 
     /**
@@ -430,49 +400,55 @@ class VendorRepository extends EntityRepository
      * curated as featured, so the storefront's "Stores we love" surface
      * is never empty just because curation hasn't been configured yet.
      *
-     * Sort: name ASC (Q-Sort = A, matching the featured query). The
+     * Sort: live follower count DESC, then name ASC, then id ASC (the same
+     * ranking as the featured query and the store directory). The
      * controller over-fetches against this and skips any vendor with no
-     * in-stock products, so callers should request more than they need.
+     * in-stock products (keeping this order), so callers should request
+     * more than they need.
      *
-     * @return list<array{vendor: Vendor, rating: float|null, ratingCount: int}>
+     * @return list<array{vendor: Vendor, rating: float|null, ratingCount: int, followersCount: int}>
      */
     public function findTopVerifiedWithStats(int $limit = 4, int $offset = 0): array
     {
-        $rows = $this->createQueryBuilder('v')
-            ->select('v', 'AVG(pr.star) AS rating', 'COUNT(pr.id) AS ratingCount')
+        return $this->spotlightWithStats('v.isVerified = true', $limit, $offset);
+    }
+
+    /**
+     * Shared body of the two Spotlight queries: active + approved vendors
+     * matching `$selector` (a constant DQL condition on `v`, never user
+     * input), with approved-review rating aggregates and the live follower
+     * count, ranked by followers.
+     *
+     * @return list<array{vendor: Vendor, rating: float|null, ratingCount: int, followersCount: int}>
+     */
+    private function spotlightWithStats(string $selector, int $limit, int $offset): array
+    {
+        $qb = $this->createQueryBuilder('v')
+            ->select(
+                'v',
+                'AVG(pr.star) AS rating',
+                'COUNT(pr.id) AS ratingCount',
+                '(' . $this->liveFollowersCountDql() . ') AS followersCount',
+            )
             ->leftJoin(
-                \Bayti\Api\Domain\Catalog\ProductReview::class,
+                ProductReview::class,
                 'pr',
                 'WITH',
-                "pr.vendor = v AND pr.status = 'approved'"
+                // Bound (not an inline 'approved' literal) so the DQL compiles
+                // to SQL without a live connection (VendorDirectoryRepositoryDqlTest).
+                'pr.vendor = v AND pr.status = :reviewApproved'
             )
+            ->setParameter('reviewApproved', ProductReview::STATUS_APPROVED)
             ->where('v.isActive = true')
-            ->andWhere('v.isVerified = true')
+            ->andWhere($selector)
             ->andWhere('v.status = :approved')
             ->setParameter('approved', Vendor::STATUS_APPROVED)
             ->groupBy('v.id')
-            ->orderBy('v.name', 'ASC')
             ->setMaxResults($limit)
-            ->setFirstResult($offset)
-            ->getQuery()
-            ->getResult();
+            ->setFirstResult($offset);
+        $this->applyFollowerRanking($qb);
 
-        // Same normalization as findFeaturedWithStats: Doctrine returns a
-        // mixed-array shape when SELECT mixes entities + scalars.
-        $out = [];
-        foreach ($rows as $row) {
-            $vendor = $row[0];
-            $rating = $row['rating'] !== null ? (float) $row['rating'] : null;
-            $ratingCount = (int) $row['ratingCount'];
-
-            $out[] = [
-                'vendor' => $vendor,
-                'rating' => $rating,
-                'ratingCount' => $ratingCount,
-            ];
-        }
-
-        return $out;
+        return $this->normalizeStatsRows($qb->getQuery()->getResult());
     }
 
     /** Directory order: most-followed stores first (the default). */
@@ -529,14 +505,7 @@ class VendorRepository extends EntityRepository
         ?string $q = null,
         string $sort = self::DIRECTORY_SORT_FOLLOWERS,
     ): array {
-        $followersDql = $this->getEntityManager()->createQueryBuilder()
-            ->select('COUNT(vf.id)')
-            ->from(VendorFollow::class, 'vf')
-            ->innerJoin('vf.user', 'vfu')
-            ->where('vf.vendor = v')
-            ->andWhere('vfu.deletedAt IS NULL')
-            ->andWhere('vfu.isActive = true')
-            ->getDQL();
+        $followersDql = $this->liveFollowersCountDql();
 
         $qb = $this->createQueryBuilder('v')
             ->select(
@@ -562,11 +531,10 @@ class VendorRepository extends EntityRepository
             ->setFirstResult($offset);
 
         if ($sort === self::DIRECTORY_SORT_NAME) {
-            $qb->orderBy('v.name', 'ASC');
+            $qb->orderBy('v.name', 'ASC')->addOrderBy('v.id', 'ASC');
         } else {
-            $qb->orderBy('followersCount', 'DESC')->addOrderBy('v.name', 'ASC');
+            $this->applyFollowerRanking($qb);
         }
-        $qb->addOrderBy('v.id', 'ASC');
 
         $countQb = $this->createQueryBuilder('v')
             ->select('COUNT(v.id)')
@@ -584,20 +552,60 @@ class VendorRepository extends EntityRepository
         $rows = $qb->getQuery()->getResult();
         $total = (int) $countQb->getQuery()->getSingleScalarResult();
 
+        return ['items' => $this->normalizeStatsRows($rows), 'total' => $total];
+    }
+
+    /**
+     * The ONE follower-count definition every customer-facing store list
+     * ranks by: a correlated scalar subselect (correlated on the outer
+     * vendor alias `v`) counting follows whose user account is live
+     * (users.deleted_at IS NULL AND users.is_active = true). Select it as
+     * `'(' . dql . ') AS followersCount'`. Never turn it into a JOIN: that
+     * would multiply the review rows and inflate the rating aggregates.
+     */
+    private function liveFollowersCountDql(): string
+    {
+        return $this->getEntityManager()->createQueryBuilder()
+            ->select('COUNT(vf.id)')
+            ->from(VendorFollow::class, 'vf')
+            ->innerJoin('vf.user', 'vfu')
+            ->where('vf.vendor = v')
+            ->andWhere('vfu.deletedAt IS NULL')
+            ->andWhere('vfu.isActive = true')
+            ->getDQL();
+    }
+
+    /**
+     * Follower ranking: most-followed first, then name ASC, then the unique
+     * id ASC, a total order (ties never shuffle between requests). Needs the
+     * `followersCount` select alias from {@see liveFollowersCountDql}.
+     */
+    private function applyFollowerRanking(QueryBuilder $qb): void
+    {
+        $qb->orderBy('followersCount', 'DESC')
+            ->addOrderBy('v.name', 'ASC')
+            ->addOrderBy('v.id', 'ASC');
+    }
+
+    /**
+     * Normalize the mixed entity+scalar rows of the spotlight queries.
+     *
+     * @param array<int, mixed> $rows
+     * @return list<array{vendor: Vendor, rating: float|null, ratingCount: int, followersCount: int}>
+     */
+    private function normalizeStatsRows(array $rows): array
+    {
         $out = [];
         foreach ($rows as $row) {
-            $vendor = $row[0];
-            $rating = $row['rating'] !== null ? (float) $row['rating'] : null;
-            $ratingCount = (int) $row['ratingCount'];
-
+            // Row shape: [0 => Vendor, 'rating' => string|null, 'ratingCount' => string|int, 'followersCount' => string|int]
+            /** @var array{0: Vendor, rating: string|float|null, ratingCount: string|int, followersCount: string|int} $row */
             $out[] = [
-                'vendor' => $vendor,
-                'rating' => $rating,
-                'ratingCount' => $ratingCount,
+                'vendor' => $row[0],
+                'rating' => $row['rating'] !== null ? (float) $row['rating'] : null,
+                'ratingCount' => (int) $row['ratingCount'],
                 'followersCount' => (int) $row['followersCount'],
             ];
         }
-
-        return ['items' => $out, 'total' => $total];
+        return $out;
     }
 }
