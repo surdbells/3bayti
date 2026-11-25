@@ -12,6 +12,7 @@ import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { PermissionService } from '../../../services/permission.service';
 import { HotToastService } from '../../../shared/toast/toast.service';
 import { AxConfirmService } from '../../../shared/overlays/ax-confirm.service';
+import { I18nService } from '../../../i18n.service';
 
 /** This collection's id in every test. */
 const COLLECTION_ID = 7;
@@ -160,7 +161,25 @@ describe('EditCollectionComponent (logic)', () => {
     component.form.name = 'Summer edit';
     component.saveChanges();
     const call = adapter.put_v3.calls.allArgs().find(([key]) => key === 'PUT /admin/collections/:id');
-    expect(call?.[1]).toEqual({ name: 'Summer edit', description: null, is_active: true });
+    expect(call?.[1]).toEqual({ name: 'Summer edit', description: null, is_active: true, vendor_contributions_enabled: true });
+  });
+
+  it('treats a collection without the flag as open to vendors (older API)', () => {
+    expect(component.form.vendor_contributions_enabled).toBeTrue();
+    expect(component.detailsDirty).toBeFalse();
+  });
+
+  it('closing to vendors is an unsaved details change and is PUT as vendor_contributions_enabled: false', () => {
+    component.form.vendor_contributions_enabled = false;
+    expect(component.detailsDirty).toBeTrue();
+
+    component.saveChanges();
+
+    const call = adapter.put_v3.calls.allArgs().find(([key]) => key === 'PUT /admin/collections/:id');
+    expect(call?.[1]).toEqual({ name: 'Summer', description: null, is_active: true, vendor_contributions_enabled: false });
+    // The response becomes the new baseline.
+    expect(component.form.vendor_contributions_enabled).toBeFalse();
+    expect(component.detailsDirty).toBeFalse();
   });
 
   it('keeps curation locked (and the list intact) while a save is in flight', () => {
@@ -350,6 +369,7 @@ describe('EditCollectionComponent (DOM)', () => {
         { provide: HotToastService, useValue: toastStub() },
         { provide: AxConfirmService, useValue: confirmStub() },
         { provide: NavigationHistoryService, useValue: { back: () => undefined } },
+        { provide: I18nService, useValue: { t: (key: string) => key } },
       ],
     })
       .overrideComponent(EditCollectionComponent, {
@@ -464,5 +484,19 @@ describe('EditCollectionComponent (DOM)', () => {
     expect(el.querySelector('[role="dialog"]')).toBeNull();
     expect(fixture.componentInstance.isAdded(3)).toBeTrue();
     expect(toggle.textContent).toContain('Remove');
+  });
+
+  it('shows an "Open to vendors" switch with its hint, bound to the form', async () => {
+    const input = el.querySelector<HTMLInputElement>('#collection_vendor_open')!;
+    expect(input).not.toBeNull();
+    expect(el.querySelector('label[for="collection_vendor_open"]')?.textContent).toContain('collections_admin.open_to_vendors');
+    expect(el.querySelector('#collection_vendor_open_hint')?.textContent).toContain('collections_admin.open_to_vendors_hint');
+    await fixture.whenStable();
+    expect(input.checked).toBeTrue();
+
+    input.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.form.vendor_contributions_enabled).toBeFalse();
+    expect(fixture.componentInstance.detailsDirty).toBeTrue();
   });
 });

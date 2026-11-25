@@ -45,6 +45,16 @@ class ProductCollection
     #[ORM\Column(name: 'is_active', type: 'boolean', options: ['default' => true])]
     private bool $isActive = true;
 
+    /**
+     * "Open to vendors": when true (the default, so collections created
+     * before the switch existed stay open) stores may add / remove their own
+     * products here from the vendor endpoints. Switching it off hides the
+     * collection from vendors exactly like an inactive one; products vendors
+     * already added stay members (an admin removes them in the editor).
+     */
+    #[ORM\Column(name: 'vendor_contributions_enabled', type: 'boolean', options: ['default' => true])]
+    private bool $vendorContributionsEnabled = true;
+
     #[ORM\Column(name: 'display_order', type: 'smallint', nullable: true)]
     private ?int $displayOrder = null;
 
@@ -74,6 +84,10 @@ class ProductCollection
     public function getCoverImageUrl(): ?string{ return $this->coverImageUrl; }
     public function isActive(): bool          { return $this->isActive; }
     public function getDisplayOrder(): ?int   { return $this->displayOrder; }
+    public function isVendorContributionsEnabled(): bool { return $this->vendorContributionsEnabled; }
+
+    /** Vendors may see and write their products here: active AND open to vendors. */
+    public function isOpenToVendors(): bool   { return $this->isActive && $this->vendorContributionsEnabled; }
     public function getCreatedAt(): DateTimeImmutable { return $this->createdAt; }
     public function getUpdatedAt(): DateTimeImmutable { return $this->updatedAt; }
 
@@ -83,4 +97,5 @@ class ProductCollection
     public function setCoverImageUrl(?string $u): void      { $this->coverImageUrl = $u; }
     public function setActive(bool $active): void           { $this->isActive = $active; }
     public function setDisplayOrder(?int $order): void      { $this->displayOrder = $order; }
+    public function setVendorContributionsEnabled(bool $enabled): void { $this->vendorContributionsEnabled = $enabled; }
 }

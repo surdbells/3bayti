@@ -32,11 +32,15 @@ class ProductCollectionRepository extends EntityRepository
     /**
      * @return array{items: list<ProductCollection>, total: int}
      */
-    public function findPaginated(int $limit = 20, int $offset = 0, ?bool $activeOnly = null): array
+    public function findPaginated(int $limit = 20, int $offset = 0, ?bool $activeOnly = null, bool $openToVendorsOnly = false): array
     {
         $qb = $this->createQueryBuilder('c')->orderBy('c.displayOrder', 'ASC')->addOrderBy('c.id', 'DESC');
         if ($activeOnly !== null) {
-            $qb->where('c.isActive = :a')->setParameter('a', $activeOnly);
+            $qb->andWhere('c.isActive = :a')->setParameter('a', $activeOnly);
+        }
+        if ($openToVendorsOnly) {
+            // The vendor endpoints: active AND switched open to vendors.
+            $qb->andWhere('c.isActive = TRUE')->andWhere('c.vendorContributionsEnabled = TRUE');
         }
         $countQb = clone $qb;
         $total   = (int) $countQb->select('COUNT(c.id)')->resetDQLPart('orderBy')->getQuery()->getSingleScalarResult();

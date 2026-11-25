@@ -156,6 +156,13 @@
             <span class="ax-badge" [class.ax-badge-success]="r.is_active" [class.ax-badge-neutral]="!r.is_active">
               {{ r.is_active ? 'Active' : 'Inactive' }}
             </span>
+            <span
+              *ngIf="!r.vendor_contributions_enabled"
+              class="ax-badge ax-badge-neutral cl-vendor-closed"
+              [title]="'collections_admin.closed_to_vendors_hint' | translate">
+              <app-icon name="storefront" aria-hidden="true"></app-icon>
+              {{ 'collections_admin.closed_to_vendors' | translate }}
+            </span>
             <span class="cl-count">
               <strong>{{ r.product_count | number }}</strong> {{ r.product_count === 1 ? 'product' : 'products' }}
             </span>

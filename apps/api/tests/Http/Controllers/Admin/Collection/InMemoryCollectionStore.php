@@ -112,12 +112,13 @@ trait InMemoryCollectionStore
 
     // ── seeding ─────────────────────────────────────────────────────
 
-    private function addCollection(int $id, string $name, ?int $displayOrder = null, bool $active = true): ProductCollection
+    private function addCollection(int $id, string $name, ?int $displayOrder = null, bool $active = true, bool $openToVendors = true): ProductCollection
     {
         $c = new ProductCollection($name, strtolower(str_replace(' ', '-', $name)));
         $this->forceId($c, ProductCollection::class, $id);
         $c->setDisplayOrder($displayOrder);
         $c->setActive($active);
+        $c->setVendorContributionsEnabled($openToVendors);
         $this->collections[$id] = $c;
         return $c;
     }
@@ -262,10 +263,11 @@ trait InMemoryCollectionStore
         $collectionRepo->method('lockDisplayOrder')->willReturnCallback(function (): void {
             $this->acquireLock('order');
         });
-        $collectionRepo->method('findPaginated')->willReturnCallback(function (int $limit = 20, int $offset = 0, ?bool $activeOnly = null): array {
+        $collectionRepo->method('findPaginated')->willReturnCallback(function (int $limit = 20, int $offset = 0, ?bool $activeOnly = null, bool $openToVendorsOnly = false): array {
             $all = array_values(array_filter(
                 $this->orderedCollections(),
-                static fn (ProductCollection $c): bool => $activeOnly === null || $c->isActive() === $activeOnly,
+                static fn (ProductCollection $c): bool => ($activeOnly === null || $c->isActive() === $activeOnly)
+                    && (!$openToVendorsOnly || $c->isOpenToVendors()),
             ));
             return ['items' => array_slice($all, $offset, $limit), 'total' => count($all)];
         });
@@ -330,6 +332,7 @@ trait InMemoryCollectionStore
                 'name'       => $r->getCollection()->getName(),
                 'slug'       => $r->getCollection()->getSlug(),
                 'is_active'  => $r->getCollection()->isActive(),
+                'vendor_contributions_enabled' => $r->getCollection()->isVendorContributionsEnabled(),
                 'sort_order' => $r->getSortOrder(),
             ], $rows);
         });

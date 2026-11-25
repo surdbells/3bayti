@@ -17,6 +17,7 @@ import { AxDropdownDirective, AxDropdownItemDirective } from '../../shared/overl
 import { AxCanDirective } from '../../shared/security/ax-can.directive';
 import { AxExportService, type AxColumnDef } from '../../shared/data/enterprise';
 import { CollectionRow, collectionRowsFromApi, fetchAllCollections } from './collection-list.api';
+import { TranslatePipe } from '../../translate.pipe';
 
 export type { CollectionRow } from './collection-list.api';
 
@@ -50,6 +51,7 @@ type MoveFocus = 'handle' | 'up' | 'down';
     AxCanDirective,
     AxDropdownDirective,
     AxDropdownItemDirective,
+    TranslatePipe,
   ],
   templateUrl: './collections.component.html',
   styleUrl: './collections.component.css',
@@ -320,6 +322,7 @@ export class CollectionsComponent implements OnInit, OnDestroy {
     { key: 'name', label: 'Name' },
     { key: 'slug', label: 'Slug' },
     { key: 'is_active', label: 'Status', value: (r) => (r.is_active ? 'Active' : 'Inactive') },
+    { key: 'vendor_contributions_enabled', label: 'Open to vendors', value: (r) => (r.vendor_contributions_enabled ? 'Yes' : 'No') },
     { key: 'product_count', label: 'Products' },
   ];
 

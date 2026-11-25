@@ -5,7 +5,7 @@ import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { Observable, Subject, of, throwError } from 'rxjs';
 
 import { CollectionsComponent } from './collections.component';
-import { CollectionRow } from './collection-list.api';
+import { CollectionRow, collectionRowFromApi } from './collection-list.api';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
@@ -13,6 +13,7 @@ import { PermissionService } from '../../services/permission.service';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { AxConfirmService } from '../../shared/overlays/ax-confirm.service';
 import { AxExportService } from '../../shared/data/enterprise';
+import { I18nService } from '../../i18n.service';
 
 const apiCollection = (id: number, name: string, display_order: number | null, product_count = 0) => ({
   id, name, collection: name, slug: name.toLowerCase(), description: null, cover_image_url: null,
@@ -238,12 +239,13 @@ class AdminShellStubComponent {}
 describe('CollectionsComponent (DOM)', () => {
   let fixture: ComponentFixture<CollectionsComponent>;
 
-  const setup = async (canManage: boolean) => {
+  const setup = async (canManage: boolean, adapter: FakeAdapter = fakeAdapter()) => {
     await TestBed.configureTestingModule({
       imports: [CollectionsComponent],
       providers: [
         provideRouter([]),
-        { provide: PortalCrudAdapter, useValue: fakeAdapter() },
+        { provide: PortalCrudAdapter, useValue: adapter },
+        { provide: I18nService, useValue: { t: (key: string) => key } },
         { provide: PermissionService, useValue: { can: (p: string) => canManage || p !== 'catalog.collections_manage' } },
         { provide: HotToastService, useValue: jasmine.createSpyObj('HotToastService', ['success', 'error']) },
         { provide: AxConfirmService, useValue: jasmine.createSpyObj('AxConfirmService', ['confirm']) },
@@ -274,5 +276,23 @@ describe('CollectionsComponent (DOM)', () => {
     expect(el.querySelectorAll('.cl-row').length).toBe(3);
     expect(el.querySelector('.cl-handle')).toBeNull();
     expect(el.querySelector('.cl-actions')).toBeNull();
+  });
+
+  it('marks collections closed to vendors (and only those)', async () => {
+    const adapter = fakeAdapter();
+    const list = [LIST[0], { ...LIST[1], vendor_contributions_enabled: false }, { ...LIST[2], vendor_contributions_enabled: true }];
+    adapter.get_v3.and.returnValue(of({ data: list, meta: { total: list.length, limit: 100, offset: 0 } }));
+    await setup(true, adapter);
+    const rows = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.cl-row'));
+    expect(rows.map((r) => !!r.querySelector('.cl-vendor-closed'))).toEqual([false, true, false]);
+    expect(rows[1].querySelector('.cl-vendor-closed')?.textContent).toContain('collections_admin.closed_to_vendors');
+  });
+});
+
+describe('collectionRowFromApi', () => {
+  it('reads vendor_contributions_enabled, treating a missing flag as open', () => {
+    expect(collectionRowFromApi({ id: 1, name: 'A' }).vendor_contributions_enabled).toBeTrue();
+    expect(collectionRowFromApi({ id: 1, name: 'A', vendor_contributions_enabled: true }).vendor_contributions_enabled).toBeTrue();
+    expect(collectionRowFromApi({ id: 1, name: 'A', vendor_contributions_enabled: false }).vendor_contributions_enabled).toBeFalse();
   });
 });

@@ -70,7 +70,7 @@ final class CollectionCurationRepositoryDqlTest extends TestCase
         self::assertStringContainsString('cp.product IN (:pids)', $dql);
         self::assertMatchesRegularExpression(self::NULLS_LAST_ORDER, $dql);
         self::assertSame([7, 3, 4], $this->params['pids']);
-        foreach (['IDENTITY(cp.product) AS pid', 'c.id AS cid', 'c.name AS cname', 'c.slug AS cslug', 'c.isActive AS cactive', 'cp.sortOrder AS cpsort'] as $select) {
+        foreach (['IDENTITY(cp.product) AS pid', 'c.id AS cid', 'c.name AS cname', 'c.slug AS cslug', 'c.isActive AS cactive', 'c.vendorContributionsEnabled AS cvendor', 'cp.sortOrder AS cpsort'] as $select) {
             self::assertStringContainsString($select, $dql);
         }
 

@@ -149,6 +149,23 @@
                 </label>
               </div>
 
+              <div class="ax-form-field">
+                <label class="ax-label" for="collection_vendor_open">{{ 'collections_admin.open_to_vendors' | translate }}</label>
+                <label class="ax-switch">
+                  <input
+                    id="collection_vendor_open"
+                    type="checkbox"
+                    name="vendor_contributions_enabled"
+                    aria-describedby="collection_vendor_open_hint"
+                    [(ngModel)]="form.vendor_contributions_enabled" />
+                  <span class="ax-switch-track"></span>
+                  <span class="ax-switch-label">
+                    {{ (form.vendor_contributions_enabled ? 'collections_admin.open_to_vendors_on' : 'collections_admin.open_to_vendors_off') | translate }}
+                  </span>
+                </label>
+                <span class="ax-hint" id="collection_vendor_open_hint">{{ 'collections_admin.open_to_vendors_hint' | translate }}</span>
+              </div>
+
               <div class="ax-form-field ec-details__wide">
                 <label class="ax-label" for="collection_description">Description</label>
                 <textarea

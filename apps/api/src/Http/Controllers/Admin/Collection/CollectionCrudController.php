@@ -32,6 +32,11 @@ use Psr\Http\Message\ServerRequestInterface;
  * Every collection shape carries "product_count" (curated members), computed
  * with one grouped count query per response (no per-collection N+1), and
  * "position" (1-based row in the admin Collections list order).
+ *
+ * "vendor_contributions_enabled" (bool, optional on create/update, default
+ * true): the per-collection "Open to vendors" switch. Off = stores no longer
+ * see the collection on the vendor endpoints; members they already added stay.
+ * Changes are audited by the EntityAuditListener like every other field.
  */
 final class CollectionCrudController
 {
@@ -81,6 +86,7 @@ final class CollectionCrudController
         if (isset($body['cover_image_url']))           $col->setCoverImageUrl((string) $body['cover_image_url']);
         if (isset($body['is_active']))                 $col->setActive((bool) $body['is_active']);
         if (array_key_exists('display_order', $body)) $col->setDisplayOrder($this->normaliseDisplayOrder($body['display_order']));
+        if (array_key_exists('vendor_contributions_enabled', $body)) $col->setVendorContributionsEnabled($this->parseFlag($body['vendor_contributions_enabled'], 'vendor_contributions_enabled'));
 
         /** @var ProductCollectionRepository $repo */
         $repo = $this->em->getRepository(ProductCollection::class);
@@ -102,6 +108,7 @@ final class CollectionCrudController
         if (array_key_exists('cover_image_url', $body))     $col->setCoverImageUrl($body['cover_image_url'] !== '' ? (string) $body['cover_image_url'] : null);
         if (array_key_exists('is_active', $body))           $col->setActive((bool) $body['is_active']);
         if (array_key_exists('display_order', $body))       $col->setDisplayOrder($this->normaliseDisplayOrder($body['display_order']));
+        if (array_key_exists('vendor_contributions_enabled', $body)) $col->setVendorContributionsEnabled($this->parseFlag($body['vendor_contributions_enabled'], 'vendor_contributions_enabled'));
 
         /** @var ProductCollectionRepository $repo */
         $repo = $this->em->getRepository(ProductCollection::class);
@@ -269,6 +276,24 @@ final class CollectionCrudController
         return $d === '' ? null : $d;
     }
 
+    /**
+     * A boolean switch: true/false, 1/0 or "true"/"false"/"1"/"0". Anything
+     * else is a 422 on $field (a stray string must not silently cast to true).
+     */
+    private function parseFlag(mixed $raw, string $field): bool
+    {
+        if (is_bool($raw)) {
+            return $raw;
+        }
+        if ($raw === 1 || $raw === '1' || $raw === 'true') {
+            return true;
+        }
+        if ($raw === 0 || $raw === '0' || $raw === 'false') {
+            return false;
+        }
+        throw HttpException::validation([$field => ['Must be true or false.']]);
+    }
+
     /** display_order is SMALLINT; accept null/'' (unset) or a whole number 0..32767. */
     private function normaliseDisplayOrder(mixed $raw): ?int
     {
@@ -388,6 +413,7 @@ final class CollectionCrudController
             'cover_image_url' => $c->getCoverImageUrl(),
             'is_active'       => $c->isActive(),
             'display_order'   => $c->getDisplayOrder(),
+            'vendor_contributions_enabled' => $c->isVendorContributionsEnabled(),
             'position'        => $position,
             'product_count'   => $productCount,
             'created_at'      => $c->getCreatedAt()->format(\DateTimeInterface::ATOM),

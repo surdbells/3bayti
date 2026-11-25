@@ -971,5 +971,11 @@
   "vendor_collections.add_product": "إضافة {{name}} إلى هذه المجموعة",
   "vendor_collections.remove_product": "إزالة {{name}} من هذه المجموعة",
   "vendor_collections.product_added": "تمت إضافة «{{name}}» إلى المجموعة.",
-  "vendor_collections.product_removed": "تمت إزالة «{{name}}» من المجموعة."
+  "vendor_collections.product_removed": "تمت إزالة «{{name}}» من المجموعة.",
+  "collections_admin.open_to_vendors": "مفتوحة للمتاجر",
+  "collections_admin.open_to_vendors_hint": "اسمح للمتاجر بإضافة منتجاتها إلى هذه المجموعة",
+  "collections_admin.open_to_vendors_on": "مفتوحة: يمكن للمتاجر إضافة منتجاتها",
+  "collections_admin.open_to_vendors_off": "مغلقة: المشرفون فقط يضيفون المنتجات",
+  "collections_admin.closed_to_vendors": "مغلقة أمام المتاجر",
+  "collections_admin.closed_to_vendors_hint": "لا يمكن للمتاجر إضافة منتجاتها إلى هذه المجموعة. تبقى المنتجات التي أضافتها سابقاً."
 }

@@ -130,7 +130,7 @@ class CollectionProductRepository extends EntityRepository
      * rows by product_id keeps every product's list in that order.
      *
      * @param list<int> $productIds
-     * @return list<array{product_id: int, id: int, name: string, slug: string, is_active: bool, sort_order: int}>
+     * @return list<array{product_id: int, id: int, name: string, slug: string, is_active: bool, vendor_contributions_enabled: bool, sort_order: int}>
      */
     public function membershipsForProducts(array $productIds): array
     {
@@ -138,7 +138,7 @@ class CollectionProductRepository extends EntityRepository
             return [];
         }
 
-        /** @var list<array{pid: int|string, cid: int|string, cname: string, cslug: string, cactive: bool, cpsort: int|string}> $rows */
+        /** @var list<array{pid: int|string, cid: int|string, cname: string, cslug: string, cactive: bool, cvendor: bool, cpsort: int|string}> $rows */
         $rows = $this->createQueryBuilder('cp')
             ->select(
                 'IDENTITY(cp.product) AS pid',
@@ -146,6 +146,7 @@ class CollectionProductRepository extends EntityRepository
                 'c.name AS cname',
                 'c.slug AS cslug',
                 'c.isActive AS cactive',
+                'c.vendorContributionsEnabled AS cvendor',
                 'cp.sortOrder AS cpsort',
             )
             ->join('cp.collection', 'c')
@@ -164,6 +165,7 @@ class CollectionProductRepository extends EntityRepository
             'name'       => (string) $r['cname'],
             'slug'       => (string) $r['cslug'],
             'is_active'  => (bool) $r['cactive'],
+            'vendor_contributions_enabled' => (bool) $r['cvendor'],
             'sort_order' => (int) $r['cpsort'],
         ], $rows);
     }

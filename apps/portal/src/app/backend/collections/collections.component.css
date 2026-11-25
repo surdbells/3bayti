@@ -333,3 +333,12 @@
     animation: none;
   }
 }
+.cl-vendor-closed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+.cl-vendor-closed app-icon {
+  font-size: 0.875rem;
+}

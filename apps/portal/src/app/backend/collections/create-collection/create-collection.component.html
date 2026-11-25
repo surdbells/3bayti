@@ -48,6 +48,23 @@
             <span class="ax-hint">Optional. Shown on the storefront collection page.</span>
           </div>
 
+          <div class="ax-form-field ax-mb-4">
+            <label class="ax-label" for="collection_vendor_open">{{ 'collections_admin.open_to_vendors' | translate }}</label>
+            <label class="ax-switch">
+              <input
+                id="collection_vendor_open"
+                type="checkbox"
+                name="vendor_contributions_enabled"
+                aria-describedby="collection_vendor_open_hint"
+                [(ngModel)]="create.vendor_contributions_enabled" />
+              <span class="ax-switch-track"></span>
+              <span class="ax-switch-label">
+                {{ (create.vendor_contributions_enabled ? 'collections_admin.open_to_vendors_on' : 'collections_admin.open_to_vendors_off') | translate }}
+              </span>
+            </label>
+            <span class="ax-hint" id="collection_vendor_open_hint">{{ 'collections_admin.open_to_vendors_hint' | translate }}</span>
+          </div>
+
           <p class="ax-hint ax-mb-4">
             A new collection is listed after the collections already placed in the storefront order. To move it, drag it on the Collections list.
           </p>

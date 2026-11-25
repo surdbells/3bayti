@@ -34,15 +34,17 @@ use Psr\Http\Message\ServerRequestInterface;
  * vendor-added products are ordinary members the admin can see, reorder and
  * remove.
  *
- *   GET /v3/vendor/collections                   active collections + my_product_count
+ *   GET /v3/vendor/collections                   open collections + my_product_count
  *   GET /v3/vendor/collections/{id}/products     my products in one collection
  *   PUT /v3/vendor/collections/{id}/products     set my products in one collection
- *   GET /v3/vendor/products/{id}/collections     the active collections my product is in
+ *   GET /v3/vendor/products/{id}/collections     the open collections my product is in
  *   PUT /v3/vendor/products/{id}/collections     set them
  *
  * Scope: the caller's stores (VendorRepository::findIdsByOwnerUser, the same
- * resolution as the other vendor product endpoints). Only ACTIVE collections
- * exist for a vendor (an inactive one is a 404 / an unknown id), and only
+ * resolution as the other vendor product endpoints). Only OPEN collections
+ * exist for a vendor: active AND switched "Open to vendors"
+ * (ProductCollection::isOpenToVendors). An inactive or closed one is a 404 /
+ * an unknown id, and its existing members are left as they are. Only
  * the vendor's own, not soft-deleted products. Another store's product id is
  * treated exactly like an unknown id (404 / 422), so ids are never revealed.
  * Ids are v3 ids only.
@@ -67,7 +69,7 @@ final class VendorCollectionController
     /**
      * GET /v3/vendor/collections?limit=20&offset=0
      *
-     * Active collections in storefront order, each with my_product_count (how
+     * Open collections in storefront order, each with my_product_count (how
      * many of the caller's live products it holds). No admin-only fields.
      */
     public function list(ServerRequestInterface $request): ResponseInterface
@@ -79,7 +81,7 @@ final class VendorCollectionController
 
         /** @var ProductCollectionRepository $repo */
         $repo   = $this->em->getRepository(ProductCollection::class);
-        $result = $repo->findPaginated($limit, $offset, true);
+        $result = $repo->findPaginated($limit, $offset, openToVendorsOnly: true);
 
         $counts = $this->joinRepo()->countsByCollectionForVendors(
             array_map(static fn (ProductCollection $c): int => (int) $c->getId(), $result['items']),
@@ -107,14 +109,14 @@ final class VendorCollectionController
     /**
      * GET /v3/vendor/collections/{id}/products
      *
-     * The caller's own (not soft-deleted) products in this active collection,
+     * The caller's own (not soft-deleted) products in this open collection,
      * in curation order, as vendor product cards (the GET /vendor/products
      * shape). Other stores' members are never included.
      */
     public function listProducts(ServerRequestInterface $request): ResponseInterface
     {
         $vendorIds  = $this->vendorIdsOrFail($request);
-        $collection = $this->activeCollectionOrFail($request->getAttribute('id'));
+        $collection = $this->openCollectionOrFail($request->getAttribute('id'));
 
         return $this->ownProductsResponse((int) $collection->getId(), $vendorIds);
     }
@@ -136,7 +138,7 @@ final class VendorCollectionController
     public function setProducts(ServerRequestInterface $request): ResponseInterface
     {
         $vendorIds  = $this->vendorIdsOrFail($request);
-        $collection = $this->activeCollectionOrFail($request->getAttribute('id'));
+        $collection = $this->openCollectionOrFail($request->getAttribute('id'));
 
         $body = (array) ($request->getParsedBody() ?? []);
         $ids = IdListParser::fromArray($body['product_ids'] ?? null, 'product_ids');
@@ -162,7 +164,7 @@ final class VendorCollectionController
     /**
      * GET /v3/vendor/products/{id}/collections
      *
-     * The ACTIVE collections the caller's product is in:
+     * The OPEN collections the caller's product is in:
      * {"data": [{id, name, slug, sort_order}]} in storefront collection order.
      * Unknown, foreign or soft-deleted product → 404.
      */
@@ -171,22 +173,22 @@ final class VendorCollectionController
         $vendorIds = $this->vendorIdsOrFail($request);
         $product   = $this->ownProductOrFail($request->getAttribute('id'), $vendorIds);
 
-        return $this->ok(['data' => $this->activeMemberships((int) $product->getId())]);
+        return $this->ok(['data' => $this->openMemberships((int) $product->getId())]);
     }
 
     /**
      * PUT /v3/vendor/products/{id}/collections
      *
      * Body: { "collection_ids": [3, 8], "expected_collection_ids": [3] }
-     *   collection_ids: the COMPLETE set of ACTIVE collections the product
+     *   collection_ids: the COMPLETE set of OPEN collections the product
      *     should be in (empty = none). Newly listed ones get it appended at
      *     the end; it keeps its position in ones it stays in; it is removed
-     *     from active ones not listed. Memberships in INACTIVE collections
+     *     from open ones not listed. Memberships in INACTIVE or CLOSED collections
      *     (which the vendor cannot see) are kept as they are.
-     *   expected_collection_ids (optional): the active collection ids the
+     *   expected_collection_ids (optional): the open collection ids the
      *     client loaded; a mismatch writes nothing: 409 CONFLICT_STALE,
      *     error.details.current_collection_ids (ascending).
-     * Unknown or inactive collection ids → 422 collection_ids; unknown,
+     * Unknown, inactive or closed collection ids → 422 collection_ids; unknown,
      * foreign or soft-deleted product → 404. Responds like the GET.
      */
     public function setForProduct(ServerRequestInterface $request): ResponseInterface
@@ -206,7 +208,7 @@ final class VendorCollectionController
             $collectionRepo = $this->em->getRepository(ProductCollection::class);
             $byId = [];
             foreach ($collectionRepo->findBy(['id' => $ids]) as $c) {
-                if ($c->isActive()) {
+                if ($c->isOpenToVendors()) {
                     $byId[(int) $c->getId()] = $c;
                 }
             }
@@ -222,7 +224,7 @@ final class VendorCollectionController
         }
 
         try {
-            $this->curation->setProductCollections($product, $collections, $expected, activeOnly: true);
+            $this->curation->setProductCollections($product, $collections, $expected, openToVendorsOnly: true);
         } catch (StaleCollectionMembershipException $e) {
             throw HttpException::conflict(
                 ErrorCodes::CONFLICT_STALE,
@@ -231,7 +233,7 @@ final class VendorCollectionController
             );
         }
 
-        return $this->ok(['data' => $this->activeMemberships((int) $product->getId())]);
+        return $this->ok(['data' => $this->openMemberships((int) $product->getId())]);
     }
 
     // ── helpers ─────────────────────────────────────────────────────
@@ -253,13 +255,13 @@ final class VendorCollectionController
     }
 
     /** @param mixed $rawId the {id:[0-9]+} route attribute */
-    private function activeCollectionOrFail(mixed $rawId): ProductCollection
+    private function openCollectionOrFail(mixed $rawId): ProductCollection
     {
         $id = self::routeId($rawId);
         /** @var ProductCollectionRepository $repo */
         $repo = $this->em->getRepository(ProductCollection::class);
         $collection = $id > 0 ? $repo->find($id) : null;
-        if ($collection === null || !$collection->isActive()) {
+        if ($collection === null || !$collection->isOpenToVendors()) {
             throw HttpException::notFound('Collection not found.');
         }
         return $collection;
@@ -346,11 +348,11 @@ final class VendorCollectionController
     }
 
     /** @return list<array{id: int, name: string, slug: string, sort_order: int}> */
-    private function activeMemberships(int $productId): array
+    private function openMemberships(int $productId): array
     {
         $out = [];
         foreach ($this->joinRepo()->membershipsForProducts([$productId]) as $row) {
-            if (!$row['is_active']) {
+            if (!$row['is_active'] || !$row['vendor_contributions_enabled']) {
                 continue;
             }
             $out[] = [

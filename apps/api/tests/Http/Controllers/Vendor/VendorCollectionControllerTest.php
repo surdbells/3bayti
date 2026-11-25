@@ -400,6 +400,120 @@ final class VendorCollectionControllerTest extends HttpTestCase
         self::assertSame([5 => 1, 8 => 0], $this->membershipOf(10));
     }
 
+    // ── "Open to vendors" switch (vendor_contributions_enabled) ─────
+
+    /** Spring (7): ACTIVE but CLOSED to vendors, holding Almas 10 and Noor 20. */
+    private function addClosedSpring(): void
+    {
+        $this->addCollection(7, 'Spring', 3, openToVendors: false);
+        $this->addMember(7, 20, 0);
+        $this->addMember(7, 10, 1);
+    }
+
+    #[Test]
+    public function listExcludesCollectionsClosedToVendors(): void
+    {
+        $this->addClosedSpring();
+        $vendor = $this->vendorUser();
+        $this->bindStore($vendor);
+
+        $body = $this->jsonBody($this->send($vendor, 'GET', '/v3/vendor/collections?limit=100'));
+
+        self::assertSame([6, 5, 9], array_column($body['data'], 'id'), 'closed Spring and inactive Gifts hidden');
+        self::assertSame(3, $body['meta']['total']);
+    }
+
+    #[Test]
+    public function aClosedCollectionIs404LikeAnInactiveOneAndNothingIsWritten(): void
+    {
+        $this->addClosedSpring();
+        $vendor = $this->vendorUser();
+        $this->bindStore($vendor);
+
+        self::assertSame(404, $this->send($vendor, 'GET', '/v3/vendor/collections/7/products')->getStatusCode());
+        self::assertSame(404, $this->send($vendor, 'PUT', '/v3/vendor/collections/7/products', ['product_ids' => [11]])->getStatusCode());
+        self::assertSame(404, $this->send($vendor, 'PUT', '/v3/vendor/collections/7/products', ['product_ids' => []])->getStatusCode());
+        self::assertSame([20 => 0, 10 => 1], $this->positions(7), 'existing members stay');
+        self::assertSame(0, $this->transactions);
+    }
+
+    #[Test]
+    public function aClosedCollectionIdIs422OnTheProductSide(): void
+    {
+        $this->addClosedSpring();
+        $vendor = $this->vendorUser();
+        $this->bindStore($vendor);
+
+        $res = $this->send($vendor, 'PUT', '/v3/vendor/products/11/collections', ['collection_ids' => [6, 7]]);
+
+        self::assertSame(422, $res->getStatusCode(), (string) $res->getBody());
+        self::assertSame(
+            'Unknown collection id(s): 7',
+            $this->jsonBody($res)['error']['details']['fields']['collection_ids'][0],
+        );
+        self::assertSame([], $this->membershipOf(11));
+        self::assertSame(0, $this->transactions);
+    }
+
+    #[Test]
+    public function productSideHidesAndPreservesClosedMemberships(): void
+    {
+        $this->addClosedSpring();
+        $vendor = $this->vendorUser();
+        $this->bindStore($vendor);
+
+        $get = $this->send($vendor, 'GET', '/v3/vendor/products/10/collections');
+        self::assertSame([5], array_column($this->jsonBody($get)['data'], 'id'), 'closed Spring + inactive Gifts hidden');
+
+        // The client loaded [5] (the open set); closed / inactive rows are not
+        // part of the precondition, so this is not stale.
+        $res = $this->send($vendor, 'PUT', '/v3/vendor/products/10/collections', [
+            'collection_ids' => [],
+            'expected_collection_ids' => [5],
+        ]);
+
+        self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
+        self::assertSame([], $this->jsonBody($res)['data']);
+        self::assertSame([7 => 1, 8 => 0], $this->membershipOf(10), 'out of Summer; closed Spring + inactive Gifts kept');
+        self::assertSame([20 => 0, 10 => 1], $this->positions(7), 'closed collection untouched');
+        $this->assertSingleTransaction();
+    }
+
+    #[Test]
+    public function aStaleSetReportsOpenIdsOnlyWhenClosedMembershipsExist(): void
+    {
+        $this->addClosedSpring();
+        $vendor = $this->vendorUser();
+        $this->bindStore($vendor);
+
+        $res = $this->send($vendor, 'PUT', '/v3/vendor/products/10/collections', [
+            'collection_ids' => [6],
+            'expected_collection_ids' => [5, 7],
+        ]);
+
+        self::assertSame(409, $res->getStatusCode(), (string) $res->getBody());
+        self::assertSame([5], $this->jsonBody($res)['error']['details']['current_collection_ids']);
+        self::assertSame([5 => 1, 7 => 1, 8 => 0], $this->membershipOf(10));
+    }
+
+    #[Test]
+    public function closingAnOpenCollectionKeepsVendorAddedProducts(): void
+    {
+        $vendor = $this->vendorUser();
+        $this->bindStore($vendor);
+        $put = $this->send($vendor, 'PUT', '/v3/vendor/collections/9/products', ['product_ids' => [11]]);
+        self::assertSame(200, $put->getStatusCode(), (string) $put->getBody());
+
+        $this->collections[9]->setVendorContributionsEnabled(false);
+
+        self::assertSame([11 => 0], $this->positions(9), 'still a member after closing');
+        self::assertSame(404, $this->send($vendor, 'GET', '/v3/vendor/collections/9/products')->getStatusCode());
+        self::assertSame([], array_column(
+            $this->jsonBody($this->send($vendor, 'GET', '/v3/vendor/products/11/collections'))['data'],
+            'id',
+        ));
+    }
+
     // ── access ──────────────────────────────────────────────────────
 
     #[Test]

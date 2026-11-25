@@ -971,5 +971,11 @@
   "vendor_collections.add_product": "Add {{name}} to this collection",
   "vendor_collections.remove_product": "Remove {{name}} from this collection",
   "vendor_collections.product_added": "“{{name}}” added to the collection.",
-  "vendor_collections.product_removed": "“{{name}}” removed from the collection."
+  "vendor_collections.product_removed": "“{{name}}” removed from the collection.",
+  "collections_admin.open_to_vendors": "Open to vendors",
+  "collections_admin.open_to_vendors_hint": "Let stores add their own products to this collection",
+  "collections_admin.open_to_vendors_on": "Open: stores can add their products",
+  "collections_admin.open_to_vendors_off": "Closed: only admins add products",
+  "collections_admin.closed_to_vendors": "Closed to vendors",
+  "collections_admin.closed_to_vendors_hint": "Stores cannot add their products to this collection. Products they already added stay."
 }

@@ -33,6 +33,7 @@ import {
   productsFromApi,
 } from './collection-builder.model';
 import { CollectionMembershipCache } from './collection-membership-cache';
+import { TranslatePipe } from '../../../translate.pipe';
 import {
   CollectionProductPanelComponent,
   PanelDetailState,
@@ -64,6 +65,8 @@ interface DetailsForm {
   name: string;
   description: string;
   is_active: boolean;
+  /** "Open to vendors": stores may add their own products. */
+  vendor_contributions_enabled: boolean;
 }
 
 /** How the curated list is laid out. */
@@ -107,6 +110,7 @@ const CURATED_VIEW_KEY = 'ax.collectionBuilder.curatedView';
     IconComponent,
     AxComboboxComponent,
     CollectionProductPanelComponent,
+    TranslatePipe,
   ],
   templateUrl: './edit-collection.component.html',
   styleUrl: './edit-collection.component.css',
@@ -130,9 +134,9 @@ export class EditCollectionComponent implements OnInit, OnDestroy {
   collectionId = 0;
   slug = '';
 
-  form: DetailsForm = { name: '', description: '', is_active: true };
+  form: DetailsForm = { name: '', description: '', is_active: true, vendor_contributions_enabled: true };
   /** The fields as last loaded/saved (unsaved-changes + Discard). */
-  private savedForm: DetailsForm = { name: '', description: '', is_active: true };
+  private savedForm: DetailsForm = { name: '', description: '', is_active: true, vendor_contributions_enabled: true };
 
   /** Curated products, in storefront order (index 0 = cover). */
   items: CuratedProduct[] = [];
@@ -415,6 +419,7 @@ export class EditCollectionComponent implements OnInit, OnDestroy {
       name: c.name ?? c.collection ?? '',
       description: c.description ?? '',
       is_active: c.is_active ?? true,
+      vendor_contributions_enabled: c.vendor_contributions_enabled ?? true,
     };
     this.savedForm = { ...this.form };
     this.slug = c.slug ?? '';
@@ -579,7 +584,8 @@ export class EditCollectionComponent implements OnInit, OnDestroy {
     return (
       this.form.name.trim() !== this.savedForm.name.trim() ||
       (this.form.description ?? '').trim() !== (this.savedForm.description ?? '').trim() ||
-      !!this.form.is_active !== !!this.savedForm.is_active
+      !!this.form.is_active !== !!this.savedForm.is_active ||
+      !!this.form.vendor_contributions_enabled !== !!this.savedForm.vendor_contributions_enabled
     );
   }
 
@@ -1223,6 +1229,7 @@ export class EditCollectionComponent implements OnInit, OnDestroy {
       name,
       description: this.form.description?.trim() || null,
       is_active: !!this.form.is_active,
+      vendor_contributions_enabled: !!this.form.vendor_contributions_enabled,
     };
     return this.adapter
       .put_v3('PUT /admin/collections/:id', body, { params: { id: String(forId) } })

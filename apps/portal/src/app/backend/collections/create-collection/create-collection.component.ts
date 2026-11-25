@@ -9,6 +9,7 @@ import { FormsModule } from '@angular/forms';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { TranslatePipe } from '../../../translate.pipe';
 
 /**
  * Create an admin-curated storefront collection (name + optional
@@ -18,7 +19,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 @Component({
   selector: 'app-create-collection',
   standalone: true,
-  imports: [AdminShellComponent, NgIf, FormsModule, IconComponent],
+  imports: [AdminShellComponent, NgIf, FormsModule, IconComponent, TranslatePipe],
   templateUrl: './create-collection.component.html',
   styleUrl: './create-collection.component.css',
 })
@@ -36,7 +37,7 @@ export class CreateCollectionComponent implements OnInit {
     is_vendor: false, is_customer: false,
   };
 
-  create = { collection: '', description: '' };
+  create = { collection: '', description: '', vendor_contributions_enabled: true };
 
   constructor(
     private router: Router,
@@ -69,7 +70,10 @@ export class CreateCollectionComponent implements OnInit {
       this.error_notification('Collection name cannot be empty');
       return;
     }
-    const body: { name: string; description?: string } = { name };
+    const body: { name: string; description?: string; vendor_contributions_enabled: boolean } = {
+      name,
+      vendor_contributions_enabled: !!this.create.vendor_contributions_enabled,
+    };
     const description = this.create.description.trim();
     if (description) body.description = description;
 

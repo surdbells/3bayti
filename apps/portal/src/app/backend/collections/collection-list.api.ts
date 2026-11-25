@@ -9,6 +9,8 @@ export interface CollectionRow {
   name: string;
   slug: string;
   is_active: boolean;
+  /** "Open to vendors": stores may add their own products (absent = open). */
+  vendor_contributions_enabled: boolean;
   display_order: number | null;
   product_count: number;
   cover_image_url: string | null;
@@ -28,6 +30,7 @@ export function collectionRowFromApi(c: any): CollectionRow {
     name: String(c?.name ?? c?.collection ?? '').trim() || '—',
     slug: typeof c?.slug === 'string' ? c.slug : '',
     is_active: c?.is_active === true,
+    vendor_contributions_enabled: c?.vendor_contributions_enabled !== false,
     display_order: c?.display_order == null || !Number.isFinite(order) ? null : order,
     product_count: Number.isFinite(count) && count >= 0 ? count : 0,
     cover_image_url: typeof c?.cover_image_url === 'string' && c.cover_image_url ? c.cover_image_url : null,

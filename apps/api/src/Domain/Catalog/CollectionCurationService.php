@@ -17,7 +17,8 @@ use Doctrine\ORM\EntityManagerInterface;
  *   - setProductCollections(): a single product's complete membership set
  *     across collections (product side, PUT /admin/products/{id}/collections;
  *     a product can sit in any number of collections). The vendor product
- *     page uses it too, scoped to active collections ($activeOnly).
+ *     page uses it too, scoped to collections open to vendors
+ *     ($openToVendorsOnly).
  *   - setVendorProductsInCollection(): a VENDOR's own products in one
  *     collection (PUT /vendor/collections/{id}/products), appended at the
  *     end, never touching other stores' rows.
@@ -176,12 +177,13 @@ final class CollectionCurationService
      *   - collections it stays in keep its existing sort_order.
      * An empty set removes the product from every collection.
      *
-     * $activeOnly (the VENDOR product page, which only sees active
-     * collections): the write is scoped to ACTIVE collections. Memberships in
-     * inactive collections are neither removed nor part of the precondition,
-     * so a vendor saving its product never drops it from a collection an
-     * admin has temporarily switched off. Callers then pass active
-     * collections only. Activity is judged on the rows read under the locks.
+     * $openToVendorsOnly (the VENDOR product page, which only sees collections
+     * that are active AND open to vendors, see ProductCollection::isOpenToVendors):
+     * the write is scoped to those collections. Memberships in inactive or
+     * closed-to-vendors collections are neither removed nor part of the
+     * precondition, so a vendor saving its product never drops it from a
+     * collection an admin has switched off or closed. Callers then pass open
+     * collections only. Openness is judged on the rows read under the locks.
      *
      * @param list<ProductCollection> $collections
      * @param list<int>|null $expectedCollectionIds optional precondition: the
@@ -196,12 +198,12 @@ final class CollectionCurationService
         Product $product,
         array $collections,
         ?array $expectedCollectionIds = null,
-        bool $activeOnly = false,
+        bool $openToVendorsOnly = false,
     ): void {
         $productId = (int) $product->getId();
 
         $stale = $this->guardUniqueRace(fn (): ?array => $this->em->wrapInTransaction(
-            function () use ($product, $productId, $collections, $expectedCollectionIds, $activeOnly): ?array {
+            function () use ($product, $productId, $collections, $expectedCollectionIds, $openToVendorsOnly): ?array {
                 $joinRepo = $this->joinRepo();
 
                 $wanted = [];
@@ -220,7 +222,7 @@ final class CollectionCurationService
                 // Authoritative read, under the locks.
                 $current = [];
                 foreach ($joinRepo->findForProduct($productId) as $row) {
-                    if ($activeOnly && !$row->getCollection()->isActive()) {
+                    if ($openToVendorsOnly && !$row->getCollection()->isOpenToVendors()) {
                         continue; // out of scope: kept as is, not compared
                     }
                     $current[(int) $row->getCollection()->getId()] = $row;
