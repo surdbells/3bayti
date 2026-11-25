@@ -94,6 +94,7 @@ export class MoreSheetComponent {
         { route: '/payment_info', icon: 'credit_card', labelKey: 'payment_information' },
         { route: '/tax_information', icon: 'receipt', labelKey: 'tax_information' },
         { route: '/labels', icon: 'label', labelKey: 'product_labels' },
+        { route: '/my-collections', icon: 'collections_bookmark', labelKey: 'vendor_collections.nav' },
         { route: '/measurements', icon: 'straighten', labelKey: 'measurements' },
       ],
     },

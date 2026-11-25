@@ -154,6 +154,16 @@
         </li>
         <li>
           <a
+            routerLink="/my-collections"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <app-icon name="collections_bookmark" aria-hidden="true"></app-icon>
+            <span class="ax-sidenav-link-label">{{ 'vendor_collections.nav' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
             routerLink="/measurements"
             routerLinkActive="ax-sidenav-link-active"
             class="ax-sidenav-link"

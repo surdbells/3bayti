@@ -123,6 +123,14 @@ export const routes: Routes = [
     title: 'Create product'
   },
   {
+    // Vendor: put own products into active storefront collections.
+    // ('collections' is taken by the legacy admin redirect below.)
+    path: 'my-collections',
+    loadComponent: () => import('./vendor/vendor-collections/vendor-collections.component').then(m => m.VendorCollectionsComponent),
+    canActivate: [vendorGuard],
+    title: 'Collections'
+  },
+  {
     path: 'edit-product',
     loadComponent: () => import('./vendor/edit-product/edit-product.component').then(m => m.EditProductComponent),
     canActivate: [vendorGuard],

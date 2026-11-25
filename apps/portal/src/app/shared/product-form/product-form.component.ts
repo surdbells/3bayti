@@ -23,6 +23,8 @@ import {
   AxUploadFile,
 } from '../rich/ax-file-upload.component';
 import { AxComboboxComponent, AxComboboxOption } from '../forms/ax-combobox.component';
+import { TranslatePipe } from '../../translate.pipe';
+import { VendorProductCollectionsComponent } from '../../vendor/vendor-product-collections/vendor-product-collections.component';
 import {
   AxAccordionComponent,
   AxAccordionItemComponent,
@@ -138,11 +140,14 @@ function toPositiveIntOrNull(v: unknown): number | null {
  * navigates back on success. The host page only supplies the shell + these
  * inputs, so the form stays shell-agnostic.
  *
- * There is deliberately NO collection picker: storefront collections are
- * admin-curated (Collections admin page → collection_products join table).
- * The legacy single products.collection_id the old picker wrote is never
- * read by the storefront, so the form neither shows nor sends it (omitting
- * it leaves any existing value untouched server-side).
+ * The form itself has NO collection field: storefront collections live in
+ * the collection_products join table (admin-curated; vendors may add their
+ * OWN products to active collections). In vendor edit mode the right column
+ * mounts <app-vendor-product-collections>, which saves on its own through
+ * GET/PUT /vendor/products/:id/collections. The legacy single
+ * products.collection_id the old picker wrote is never read by the
+ * storefront, so the form neither shows nor sends it (omitting it leaves any
+ * existing value untouched server-side).
  *
  * Edit round-trip: every control is loaded from the product detail shape
  * (ProductSerializer::vendorDetailShape, served by GET /vendor/products/:id
@@ -166,6 +171,8 @@ function toPositiveIntOrNull(v: unknown): number | null {
     AxAccordionItemComponent,
     IconComponent,
     AxComboboxComponent,
+    TranslatePipe,
+    VendorProductCollectionsComponent,
   ],
   templateUrl: './product-form.component.html',
   styleUrl: './product-form.component.css',

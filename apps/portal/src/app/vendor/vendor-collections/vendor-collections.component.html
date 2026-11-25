@@ -1,0 +1,161 @@
+<app-vendor-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <span class="ax-page-header-eyebrow">{{ 'vendor_collections.eyebrow' | translate }}</span>
+        <h1 class="ax-page-title">{{ 'vendor_collections.page_title' | translate }}</h1>
+        <p class="ax-page-subtitle">{{ 'vendor_collections.page_subtitle' | translate }}</p>
+      </div>
+    </header>
+
+    <!-- Loading -->
+    <div *ngIf="loading && !collections.length" class="vc-grid" aria-hidden="true">
+      <div *ngFor="let _ of [1, 2, 3]" class="ax-card vc-card">
+        <span class="ax-skeleton vc-card__cover"></span>
+        <div class="vc-card__body">
+          <span class="ax-skeleton vc-skel-line"></span>
+          <span class="ax-skeleton vc-skel-line vc-skel-line--short"></span>
+        </div>
+      </div>
+    </div>
+    <span *ngIf="loading" class="ax-sr-only" role="status">{{ 'vendor_collections.loading' | translate }}</span>
+
+    <!-- Error -->
+    <div *ngIf="!loading && loadError" class="ax-card ax-p-5 vc-error" role="alert">
+      <app-icon name="error" aria-hidden="true"></app-icon>
+      <span>{{ loadError }}</span>
+      <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="load()">
+        <app-icon name="refresh" aria-hidden="true"></app-icon> {{ 'vendor_collections.retry' | translate }}
+      </button>
+    </div>
+
+    <!-- Empty -->
+    <div *ngIf="!loading && !loadError && !collections.length" class="ax-card ax-p-6 vc-empty">
+      <app-icon name="collections_bookmark" aria-hidden="true" class="vc-empty__icon"></app-icon>
+      <p class="ax-m-0">{{ 'vendor_collections.no_active_collections' | translate }}</p>
+    </div>
+
+    <!-- Collections -->
+    <ul *ngIf="!loadError && collections.length" class="vc-grid" [attr.aria-label]="'vendor_collections.page_title' | translate">
+      <li *ngFor="let c of collections; trackBy: trackById" class="ax-card vc-card" [class.vc-card--open]="openId === c.id">
+        <div class="vc-card__cover">
+          <img *ngIf="c.cover_image_url; else noCover" [src]="c.cover_image_url" alt="" loading="lazy" />
+          <ng-template #noCover><app-icon name="collections_bookmark" aria-hidden="true"></app-icon></ng-template>
+        </div>
+        <div class="vc-card__body">
+          <h2 class="ax-h6 ax-m-0 vc-card__name">{{ c.name }}</h2>
+          <p *ngIf="c.description" class="vc-card__desc">{{ c.description }}</p>
+          <span class="ax-badge" [class.ax-badge-success]="c.my_product_count > 0" [class.ax-badge-neutral]="!c.my_product_count">
+            {{ 'vendor_collections.my_product_count' | translate: { count: c.my_product_count } }}
+          </span>
+        </div>
+        <button
+          type="button"
+          class="ax-btn ax-btn-sm vc-card__toggle"
+          [class.ax-btn-primary]="openId !== c.id"
+          [class.ax-btn-outline]="openId === c.id"
+          (click)="toggle(c)"
+          [attr.aria-expanded]="openId === c.id"
+          [attr.aria-controls]="'vc-panel-' + c.id">
+          <app-icon [name]="openId === c.id ? 'expand_less' : 'edit'" aria-hidden="true"></app-icon>
+          {{ (openId === c.id ? 'vendor_collections.close' : 'vendor_collections.manage_my_products') | translate }}
+        </button>
+
+        <!-- Panel -->
+        <section *ngIf="openId === c.id" class="vc-panel" [id]="'vc-panel-' + c.id" [attr.aria-label]="c.name">
+          <h3 class="vc-panel__title">{{ 'vendor_collections.my_products_in_collection' | translate }}</h3>
+
+          <div *ngIf="membersLoading" class="vc-inline">
+            <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> {{ 'vendor_collections.loading' | translate }}
+          </div>
+          <div *ngIf="!membersLoading && membersError" class="vc-inline vc-inline--error" role="alert">
+            <app-icon name="error" aria-hidden="true"></app-icon>
+            <span>{{ membersError }}</span>
+            <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="loadMembers()">
+              <app-icon name="refresh" aria-hidden="true"></app-icon> {{ 'vendor_collections.retry' | translate }}
+            </button>
+          </div>
+
+          <ul *ngIf="!membersLoading && !membersError && members.length" class="vc-list">
+            <li *ngFor="let p of members; trackBy: trackById" class="vc-row">
+              <span class="vc-row__thumb">
+                <img *ngIf="p.image; else noImg" [src]="p.image" alt="" loading="lazy" />
+                <ng-template #noImg><app-icon name="image" aria-hidden="true"></app-icon></ng-template>
+              </span>
+              <span class="vc-row__text">
+                <span class="vc-row__name">{{ p.name }}</span>
+                <span class="vc-row__meta">{{ p.price_formatted }}</span>
+              </span>
+              <button
+                type="button"
+                class="ax-btn ax-btn-ghost ax-btn-sm"
+                (click)="remove(p)"
+                [disabled]="saving"
+                [attr.aria-label]="'vendor_collections.remove_product' | translate: { name: p.name }">
+                <app-icon name="remove_circle_outline" aria-hidden="true"></app-icon>
+                <span class="vc-hide-sm">{{ 'vendor_collections.remove' | translate }}</span>
+              </button>
+            </li>
+          </ul>
+          <p *ngIf="!membersLoading && !membersError && !members.length" class="vc-muted">
+            {{ 'vendor_collections.none_in_collection' | translate }}
+          </p>
+
+          <!-- Picker -->
+          <div class="vc-picker">
+            <label class="ax-label" [for]="'vc-search-' + c.id">{{ 'vendor_collections.add_your_products' | translate }}</label>
+            <input
+              type="search"
+              class="ax-input ax-input-sm"
+              [id]="'vc-search-' + c.id"
+              [(ngModel)]="search"
+              (ngModelChange)="onSearch($event)"
+              [placeholder]="'vendor_collections.search_products' | translate"
+              autocomplete="off" />
+            <span class="ax-hint">{{ 'vendor_collections.collections_append_hint' | translate }}</span>
+
+            <div *ngIf="searching" class="vc-inline">
+              <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> {{ 'vendor_collections.loading' | translate }}
+            </div>
+            <p *ngIf="!searching && searchError" class="vc-inline vc-inline--error" role="alert">{{ searchError }}</p>
+            <ul *ngIf="!searching && !searchError && results.length" class="vc-list">
+              <li *ngFor="let p of results; trackBy: trackById" class="vc-row">
+                <span class="vc-row__thumb">
+                  <img *ngIf="p.image; else noImg2" [src]="p.image" alt="" loading="lazy" />
+                  <ng-template #noImg2><app-icon name="image" aria-hidden="true"></app-icon></ng-template>
+                </span>
+                <span class="vc-row__text">
+                  <span class="vc-row__name">{{ p.name }}</span>
+                  <span class="vc-row__meta">{{ p.price_formatted }}</span>
+                </span>
+                <span *ngIf="isMember(p); else addBtn" class="ax-badge ax-badge-success">
+                  <app-icon name="check" aria-hidden="true"></app-icon> {{ 'vendor_collections.added' | translate }}
+                </span>
+                <ng-template #addBtn>
+                  <button
+                    type="button"
+                    class="ax-btn ax-btn-outline ax-btn-sm"
+                    (click)="add(p)"
+                    [disabled]="saving || membersLoading || !!membersError"
+                    [attr.aria-label]="'vendor_collections.add_product' | translate: { name: p.name }">
+                    <app-icon name="add" aria-hidden="true"></app-icon>
+                    <span class="vc-hide-sm">{{ 'vendor_collections.add' | translate }}</span>
+                  </button>
+                </ng-template>
+              </li>
+            </ul>
+            <p *ngIf="!searching && !searchError && !results.length" class="vc-muted">
+              {{ 'vendor_collections.no_products_found' | translate }}
+            </p>
+          </div>
+
+          <p class="vc-status" role="status" aria-live="polite">
+            <ng-container *ngIf="saving">
+              <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> {{ 'vendor_collections.saving' | translate }}
+            </ng-container>
+          </p>
+        </section>
+      </li>
+    </ul>
+  </div>
+</app-vendor-shell>

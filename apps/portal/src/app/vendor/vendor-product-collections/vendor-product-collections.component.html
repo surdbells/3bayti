@@ -1,0 +1,96 @@
+<div class="vpc">
+  <div class="vpc__head">
+    <p class="vpc__hint">{{ 'vendor_collections.collections_product_hint' | translate }}</p>
+    <button
+      *ngIf="!editing && !loading && !loadError"
+      type="button"
+      class="ax-btn ax-btn-outline ax-btn-sm"
+      (click)="startEditing()"
+      [disabled]="saving">
+      <app-icon name="add" aria-hidden="true"></app-icon>
+      {{ 'vendor_collections.add_to_collections' | translate }}
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="vpc__chips" aria-hidden="true">
+    <span class="ax-skeleton vpc__skel"></span>
+    <span class="ax-skeleton vpc__skel vpc__skel--short"></span>
+  </div>
+  <span *ngIf="loading" class="ax-sr-only" role="status">{{ 'vendor_collections.loading' | translate }}</span>
+
+  <!-- Error -->
+  <div *ngIf="!loading && loadError" class="vpc__error" role="alert">
+    <app-icon name="error" aria-hidden="true"></app-icon>
+    <span>{{ loadError }}</span>
+    <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="load()">
+      <app-icon name="refresh" aria-hidden="true"></app-icon> {{ 'vendor_collections.retry' | translate }}
+    </button>
+  </div>
+
+  <!-- Chips -->
+  <ul *ngIf="!loading && !loadError && collections.length" class="vpc__chips" [attr.aria-label]="'vendor_collections.collections' | translate">
+    <li *ngFor="let c of collections; trackBy: trackById" class="ax-chip vpc-chip">
+      <span class="vpc-chip__name">{{ c.name }}</span>
+      <button
+        *ngIf="!editing"
+        type="button"
+        class="ax-chip-close vpc-chip__remove"
+        (click)="remove(c)"
+        [disabled]="saving"
+        [attr.aria-label]="'vendor_collections.collections_remove_from' | translate: { name: c.name }">
+        <app-icon name="close" aria-hidden="true"></app-icon>
+      </button>
+    </li>
+  </ul>
+  <p *ngIf="!loading && !loadError && !collections.length" class="vpc__empty">{{ 'vendor_collections.collections_none_yet' | translate }}</p>
+
+  <!-- Save feedback -->
+  <p class="vpc__status" role="status" aria-live="polite">
+    <ng-container *ngIf="saving">
+      <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> {{ 'vendor_collections.saving' | translate }}
+    </ng-container>
+    <ng-container *ngIf="!saving && savedNote">
+      <app-icon name="check_circle" aria-hidden="true" class="vpc__ok"></app-icon> {{ savedNote }}
+    </ng-container>
+  </p>
+
+  <!-- Picker -->
+  <div *ngIf="editing" class="vpc__editor">
+    <span class="ax-label">{{ 'vendor_collections.collections_choose' | translate }}</span>
+
+    <div *ngIf="allLoading" class="vpc__inline">
+      <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> {{ 'vendor_collections.loading' | translate }}
+    </div>
+    <div *ngIf="!allLoading && allError" class="vpc__error" role="alert">
+      <app-icon name="error" aria-hidden="true"></app-icon>
+      <span>{{ allError }}</span>
+      <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="loadAllCollections()">
+        <app-icon name="refresh" aria-hidden="true"></app-icon> {{ 'vendor_collections.retry' | translate }}
+      </button>
+    </div>
+    <p *ngIf="allCollections && !allCollections.length" class="vpc__empty">{{ 'vendor_collections.no_active_collections' | translate }}</p>
+
+    <app-ax-multiselect
+      *ngIf="allCollections && allCollections.length"
+      [options]="options"
+      [ngModel]="draftIds"
+      (ngModelChange)="onDraftChange($event)"
+      [placeholder]="'vendor_collections.collections_choose_placeholder' | translate"
+      [searchPlaceholder]="'vendor_collections.collections_search' | translate"
+      [showSelectAll]="false"
+      [chipLimit]="3"
+      [ariaLabel]="'vendor_collections.collections' | translate">
+    </app-ax-multiselect>
+    <span class="ax-hint">{{ 'vendor_collections.collections_append_hint' | translate }}</span>
+
+    <div class="vpc__editor-actions">
+      <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="cancelEditing()" [disabled]="saving">{{ 'cancel' | translate }}</button>
+      <button type="button" class="ax-btn ax-btn-primary ax-btn-sm" (click)="saveDraft()" [disabled]="!draftChanged || saving || !allCollections">
+        <span *ngIf="saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+        <app-icon *ngIf="!saving" name="save" aria-hidden="true"></app-icon>
+        {{ 'vendor_collections.save_collections' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

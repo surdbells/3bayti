@@ -330,6 +330,17 @@
           </div>
         </app-ax-accordion-item>
 
+        <!-- Vendor only: storefront collections this product is in. Saves on its
+             own through PUT /vendor/products/:id/collections (the
+             collection_products join table), independent of the form submit;
+             never the legacy collection_id. Admins use the product page card. -->
+        <app-ax-accordion-item *ngIf="!adminMode" [title]="'vendor_collections.collections' | translate">
+          <app-vendor-product-collections *ngIf="isEdit && productId; else saveFirstForCollections" [productId]="productId"></app-vendor-product-collections>
+          <ng-template #saveFirstForCollections>
+            <p class="ax-hint ax-m-0">{{ 'vendor_collections.save_product_first' | translate }}</p>
+          </ng-template>
+        </app-ax-accordion-item>
+
         @if (showSizing) {
           <app-ax-accordion-item title="Sizing options *">
             <div class="ax-grid ax-grid-cols-3 ax-gap-2">
