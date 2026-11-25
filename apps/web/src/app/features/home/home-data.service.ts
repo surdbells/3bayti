@@ -109,8 +109,10 @@ export class HomeDataService {
   /**
    * Featured vendors, on /v3/featured-vendors per M3.2.X.2. Each vendor
    * comes with up to 4 embedded product thumbnails for the Store
-   * Spotlight section. Backend computes rating aggregate + alphabetical-
-   * by-name ordering.
+   * Spotlight section. Backend computes the rating aggregate and ranks the
+   * stores by live follower count (most followed first), then name, then
+   * id. The ranking only orders the curated featured set; it does not
+   * change which stores are in it.
    *
    * Curation: admin flags vendors via PUT /v3/admin/vendors/{id} with
    * { is_featured: true }. Empty curation returns 200 with data: [] -
